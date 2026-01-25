@@ -1,31 +1,33 @@
-# nnrti-mechanisms
+# Introduction
 
-Structural mechanisms of NNRTI resistance in HIV-1 patients.
+We wish to understand structural mechanisms of Non-Nucleoside Reverse Transcriptase Inhibitor (NNRTI) resistance in HIV-1 patients.
 
 This repository contains code, data, and analysis for evaluating the structural
 impact of clinically relevant NNRTI resistance mutations on Rilpivirine (RPV)
-and Doravirine (DOR) using cryo-EM RT/DNA/drug structures.
+and Doravirine (DOR) using publicly available cryo-EM RT/DNA/drug structures.
 
-## What this repo does
-- Curates drug-resistance mutation (DRM) lists in `data/DRMs.csv` (with chain IDs)
-- Generates ligand SDFs directly from the CIF structures (with explicit H)
-- Performs in silico mutagenesis on cryo-EM structures
+## Basic Workflow
+- Starts with 
+  1. Curated drug-resistance mutation (DRM) lists for RPV and DOR in `data/DRMs.csv` 
+  2. Cryo-EM structures downloaded from PDB: RT/DNA/RPV ([7z2d](https://www.rcsb.org/structure/7Z2D)) and RT/DNA/DOR ([7z2g](https://www.rcsb.org/structure/7Z2G))
+- Generates ligand SDFs from the CIF structures
+- Performs _in silico_ mutagenesis on cryo-EM structures
 - Minimizes WT and mutant complexes with OpenMM
 - Computes relative binding proxies and structural metrics:
   - Binding energy proxy (OpenMM potential energy delta)
   - Ligand-protein contacts
   - H-bond count
-  - Binding pocket volume proxy (A^3)
-- Produces per-drug bar charts of mutant minus WT deltas
+  - Binding pocket volume proxy (Å^3)
+- Plots bar charts of mutant minus WT deltas for each NNRTI
 
 ## Key inputs
 - Structures:
   - `data/structures/7Z2D.cif` (RT/DNA/RPV)
   - `data/structures/7Z2G.cif` (RT/DNA/DOR)
 - DRM list:
-  - `data/DRMs.csv` (includes a `chain` column; chain-to-subunit mapping is parsed from CIFs)
+  - `data/DRMs.csv` (created manually by reading recent papers from Stanford HIVDB)
 
-## DRM table format
+### DRM table format
 `data/DRMs.csv` must include:
 - `drug`: `RPV` or `DOR`
 - `mutation`: one or more mutations, e.g. `K101E` or `K101E+E138K`
@@ -43,38 +45,23 @@ chain is applied to every mutation in the combo.
   - `data/generated/<drug>/wt/` (WT minimized structures)
 - Metrics table:
   - `results/metrics_summary.csv`
-  - `results/metrics_summary.xlsx` (two sheets: `RPV`, `DOR`; WT rows stored once per drug; no `structure`/chain/subunit columns)
+  - `results/metrics_summary.xlsx`
 - Plots:
   - `results/plots/rpv_delta_metrics.png`
   - `results/plots/dor_delta_metrics.png`
 
-## Dependencies
-- openmm
-- pdbfixer
-- openmmforcefields
-- openff-toolkit
-- openff-units
-- openff-utilities
-- openff-interchange
-- openff-forcefields
-- mdanalysis
-- rdkit
-- gemmi (only required for `src.ligand_from_cif`)
+## Dependencies (Sorry)
+- pdbfixer, openmm, openmmforcefields, openff-interchange, openff-forcefields, openff-toolkit, openff-units, openff-utilities
+- gemmi, mdanalysis, rdkit
 - numpy, pandas, matplotlib
 - lxml, xmltodict, networkx, cachetools, python-constraint
 
 ## How to run
-1) Generate ligand SDFs from CIF metadata:
-```bash
-uv run python -m src.ligand_from_cif
-```
-
-2) Run the DRM batch pipeline (uses `data/DRMs.csv` for all mutations/combos):
 ```bash
 uv run python -m src.main
 ```
 
-The pipeline writes `results/metrics_summary.csv` and updates the per-drug plots
+The DRM batch pipeline, uses `data/DRMs.csv` for all mutations/combos, writes `results/metrics_summary.csv`, and updates the per-drug plots
 in `results/plots/`.
 
 ## Pipeline logic (step-by-step)
@@ -88,7 +75,7 @@ in `results/plots/`.
 4) Write `results/metrics_summary.csv` with both WT and MUT rows for every metric.
 5) Plot per-drug MUT–WT deltas for each metric to `results/plots/*.png`.
 
-## Data preprocessing
+### Data preprocessing
 - Ligand SDFs are generated from CIF metadata using `src/ligand_from_cif.py`,
   with explicit hydrogens added by RDKit.
 - For OpenMM compatibility, the ligand in original cryo-EM CIF is replaced by the SDF ligand
@@ -105,7 +92,7 @@ an approximation; in these structures it is part of the DNA aptamer and is
 typically distant from the NNRTI pocket, so the impact on ligand-proximal
 metrics is expected to be small.
 
-## Minimization procedure
+### Minimization procedure
 Minimization is performed with OpenMM on each WT and mutant complex:
 - Input: the processed cryo-EM CIF with the ligand added.
 - Force field: AMBER14 protein (`ff14SB`) + AMBER14 DNA (`bsc1`), with a SMIRNOFF
@@ -118,7 +105,7 @@ Minimization is performed with OpenMM on each WT and mutant complex:
   and runs `Simulation.minimizeEnergy()` (no dynamics).
 - Outputs: minimized `*.cif` and a corresponding `*.pdb` for metric calculations.
 
-## Binding proxy definition and interpretation
+### Binding proxy definition and interpretation
 For each minimized structure, the pipeline computes:
 - `E_complex`: potential energy of the full system (protein + DNA + ligand)
 - `E_receptor`: potential energy after removing the ligand (protein + DNA only)
@@ -140,7 +127,7 @@ The plotted delta is:
 Positive Δ indicates a less favorable binding proxy in the mutant; negative Δ
 indicates a more favorable binding proxy.
 
-## Contacts definition and interpretation
+### Contacts definition and interpretation
 Contacts are computed on the minimized structure using MDAnalysis. The pipeline:
 - Selects the ligand by residue name (`resname`).
 - Selects the protein with `protein and not resname <ligand>` (DNA excluded).
@@ -164,7 +151,7 @@ Interpretation:
 - Hydrogens are included if present in the minimized structure, so absolute
   values can be sensitive to hydrogen placement.
 
-## H-bonds definition and interpretation
+### H-bonds definition and interpretation
 H-bonds are computed on the minimized structure using MDAnalysis'
 `HydrogenBondAnalysis`:
 - Donors: protein or ligand.
@@ -189,7 +176,7 @@ Interpretation:
 - Negative Δ means fewer protein–ligand H-bonds in the mutant.
 - It depends on hydrogen placement and the geometric criteria above.
 
-## Binding pocket volume proxy definition and interpretation
+### Binding pocket volume proxy definition and interpretation
 The pocket volume proxy is computed on a cubic grid centered at the ligand:
 - All grid points within an 8 Å radius of the ligand centroid are considered.
 - Grid spacing is 0.5 Å (voxel volume = 0.125 Å^3).
