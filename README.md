@@ -43,6 +43,7 @@ chain is applied to every mutation in the combo.
   - `data/generated/<drug>/wt/` (WT minimized structures)
 - Metrics table:
   - `results/metrics_summary.csv`
+  - `results/metrics_summary.xlsx` (two sheets: `RPV`, `DOR`; WT rows stored once per drug; no `structure`/chain/subunit columns)
 - Plots:
   - `results/plots/rpv_delta_metrics.png`
   - `results/plots/dor_delta_metrics.png`
