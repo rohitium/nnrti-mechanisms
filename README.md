@@ -37,6 +37,8 @@ and Doravirine (DOR) using publicly available cryo-EM RT/DNA/drug structures.
 The chain spec is positional: `K101E+E138K` with `A+B` applies K101E to chain A
 and E138K to chain B. If the chain spec has only one chain (e.g. `A`), that
 chain is applied to every mutation in the combo.
+Combination DRMs are expanded into all unique subsets (e.g. `L100I+K103N`
+also runs `L100I` and `K103N` if they are not already listed).
 
 ## Outputs
 - Minimized structures and artifacts:
@@ -64,19 +66,30 @@ uv run python -m src.main
 The DRM batch pipeline, uses `data/DRMs.csv` for all mutations/combos, writes `results/metrics_summary.csv`, and updates the per-drug plots
 in `results/plots/`.
 
+Validation only (no OpenMM/minimization):
+```bash
+uv run python -m src.main --validate-only
+```
+
+Verify only (apply DRMs and verify substitutions; no OpenMM):
+```bash
+uv run python -m src.main --verify-only
+```
+
 ## Pipeline logic (step-by-step)
 1) Load `data/DRMs.csv` and filter rows by drug (`RPV`, `DOR`).
 2) Parse chain-to-subunit mapping from the CIF files via `_entity_name_com` /
    `_entity.pdbx_description` + `_struct_asym` to label chains as `p66` or `p51`.
 3) For each drug:
-   - Minimize the WT complex once (`wt_minimized.cif/.pdb`) and compute metrics.
+   - Expand combination DRMs into missing singletons/pairs.
+   - Minimize the WT complex once (`wt_minimized.pdb`) and compute metrics.
    - For each DRM row, apply mutations (single or combo) to the specified chain(s),
      minimize, and compute metrics.
 4) Write `results/metrics_summary.csv` with both WT and MUT rows for every metric.
 5) Plot per-drug MUT–WT deltas for each metric to `results/plots/*.png`.
 
 ### Data preprocessing
-- Ligand SDFs are generated from CIF metadata using `src/ligand_from_cif.py`,
+- Ligand SDFs are generated from CIF metadata using `src/ligand_cif/from_cif.py`,
   with explicit hydrogens added by RDKit.
 - For OpenMM compatibility, the ligand in original cryo-EM CIF is replaced by the SDF ligand
   (same residue name) before minimization.
@@ -93,7 +106,7 @@ typically distant from the NNRTI pocket, so the impact on ligand-proximal
 metrics is expected to be small.
 
 ### Minimization procedure
-Minimization is performed with OpenMM on each WT and mutant complex:
+Each WT and mutant complex goes through the following:
 - Input: the processed cryo-EM CIF with the ligand added.
 - Force field: AMBER14 protein (`ff14SB`) + AMBER14 DNA (`bsc1`), with a SMIRNOFF
   template for the ligand (Gasteiger charges).
@@ -103,7 +116,8 @@ Minimization is performed with OpenMM on each WT and mutant complex:
   Restraint strength is 500 kJ/mol/nm^2.
 - Minimization uses a Langevin integrator (300 K, 1/ps friction, 2 fs step)
   and runs `Simulation.minimizeEnergy()` (no dynamics).
-- Outputs: minimized `*.cif` and a corresponding `*.pdb` for metric calculations.
+- A second unrestrained minimization is performed (no positional restraints).
+- Outputs: minimized `*.pdb` for metric calculations.
 
 ### Binding proxy definition and interpretation
 For each minimized structure, the pipeline computes:

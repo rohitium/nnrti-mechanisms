@@ -1,155 +1,87 @@
 # src/ module reference
 
-This document lists each Python module in `src/`, its purpose, inputs/outputs,
-and the functions/classes defined in that module.
+Each module in `src/` is listed with purpose, inputs/outputs, and key symbols.
+
+## __init__.py
+Purpose: package marker for the NNRTI mutagenesis pipeline.
+Symbols: (none; module docstring only).
 
 ## analysis_metrics.py
-Purpose
-- Compute ligand-protein contact metrics and a pocket-volume proxy from minimized structures.
-
-Inputs
-- `pdbx_path`: path to minimized structure (`.pdb`).
-- `ligand_resname`: ligand residue name.
-
-Outputs
-- Contact counts, H-bond counts, and pocket volume proxy (A^3).
-
-Defined symbols
-- `ContactMetrics` (dataclass): `contact_count`, `hbond_count`.
-- `compute_contacts(pdbx_path: Path, ligand_resname: str, cutoff_angstrom: float = 4.0) -> ContactMetrics`
-- `pocket_volume_proxy(pdbx_path: Path, ligand_resname: str, grid_spacing: float = 0.5, radius_angstrom: float = 8.0) -> float`
+Purpose: compute contacts, H-bonds, and pocket-volume proxy.
+Inputs: minimized `.pdb`, ligand resname. Outputs: `ContactMetrics`, volume.
+Symbols: `ContactMetrics`, `compute_contacts`, `pocket_volume_proxy`.
 
 ## config.py
-Purpose
-- Central configuration for RPV/DOR structures and default run parameters.
+Purpose: structure/run specs for RPV/DOR.
+Symbols: `MutationSpec`, `StructureSpec`, `RunSpec`, `rpv_spec`, `dor_spec`.
 
-Inputs
-- `root`: repository root path.
-
-Outputs
-- `RunSpec` objects for RPV and DOR.
-
-Defined symbols
-- `MutationSpec` (dataclass)
-- `StructureSpec` (dataclass)
-- `RunSpec` (dataclass)
-- `rpv_spec(root: Path) -> RunSpec`
-- `dor_spec(root: Path) -> RunSpec`
-
-## ligand_from_cif.py
-Purpose
-- Generate hydrogenated ligand SDF files from CIF metadata.
-
-Inputs
-- CIF file, ligand residue name (comp_id), ligand chain id, output SDF path.
-
-Outputs
-- Hydrogenated ligand SDF at the requested path.
-
-Defined symbols
-- `LigandAtom` (dataclass)
-- `LigandBond` (dataclass)
-- `_require(module_name: str)` (internal import helper)
-- `_bond_order(value_order: str) -> int`
-- `_normalize_element(element: str) -> str`
-- `_load_block(cif_path: Path)`
-- `_chem_comp_atoms(block, comp_id: str) -> dict[str, tuple[str, bool]]`
-- `_chem_comp_bonds(block, comp_id: str) -> list[LigandBond]`
-- `_atom_site_category(block) -> dict`
-- `_ligand_atoms(block, comp_id: str, chain_id: str, atom_elements: dict[str, tuple[str, bool]]) -> list[LigandAtom]`
-- `_build_rdkit_mol(atoms: list[LigandAtom], bonds: list[LigandBond])`
-- `generate_ligand_sdf(cif_path: Path, comp_id: str, chain_id: str, out_path: Path) -> Path`
-- `_add_explicit_hydrogens(mol)`
-- `_write_sdf_file(mol, out_path: Path) -> None`
-- `main() -> None`
+## drm_io.py
+Purpose: load and normalize `data/DRMs.csv`.
+Symbols: `load_drms`.
 
 ## main.py
-Purpose
-- Orchestrate the full DRM pipeline: WT minimization, mutation application,
-  metrics computation, and plot generation.
+Purpose: CLI entrypoint for validation and pipeline runs.
+Inputs: DRM CSV, structures, ligands. Outputs: metrics + plots.
+Symbols: `main`.
 
-Inputs
-- `data/DRMs.csv` (mutation list with chain column).
-- Structure/ligand paths from `config.py`.
+## metrics_io.py
+Purpose: write `metrics_summary.xlsx` (RPV/DOR sheets).
+Symbols: `write_metrics_xlsx`.
 
-Outputs
-- `results/metrics_summary.csv`
-- `results/plots/*_delta_metrics.png`
-
-Defined symbols
-- `_load_drms(drms_path: Path) -> pd.DataFrame`
-- `_prepare_structure(cif_path: Path, ligand_resname: str, ligand_sdf: Path, restraint_radius: float, restraint_k: float, output_path: Path)`
-- `_mutation_worker(task: dict) -> dict`
-- `_run_mutations(run_spec, paths, mutation_rows: pd.DataFrame, chain_map: dict[str, str])`
-- `main() -> None`
-
-## mutagenesis.py
-Purpose
-- Apply one or multiple point mutations to a CIF structure using PDBFixer.
-
-Inputs
-- CIF path, chain id, residue id, new residue.
-
-Outputs
-- Mutated CIF written to output path.
-
-Defined symbols
-- `_require(module_name: str)` (internal import helper)
-- `_three_letter(res_name: str) -> str`
-- `_mutation_strings(old_res: str, res_id: str, new_res: str) -> Iterable[str]`
-- `_residue_name_in_chain(fixer, chain_id: str, residue_id: str) -> str`
-- `apply_mutation(cif_path: Path, chain_id: str, residue_id: str, new_residue: str, output_path: Path) -> Path`
-- `apply_mutations(cif_path: Path, mutations: Iterable[tuple[str, str, str]], output_path: Path) -> Path`
-
-## openmm_pipeline.py
-Purpose
-- Minimize complexes with OpenMM and compute energy-based binding proxy terms.
-
-Inputs
-- CIF path, ligand residue name, ligand SDF, restraint settings.
-
-Outputs
-- Minimized CIF/PDB files and energy proxy values.
-
-Defined symbols
-- `_require(module_name: str)` (internal import helper)
-- `EnergyResult` (dataclass)
-- `load_ligand_molecule(ligand_sdf: Path)`
-- `build_forcefield(ligand_molecules) -> "openmm.app.ForceField"`
-- `_minimize(topology, positions, forcefield, restraint_indices: Sequence[int], restraint_k_kj_mol_nm2: float)`
-- `_modeller_without(topology, positions, residues_to_delete)`
-- `_compute_energy(topology, positions, forcefield) -> float`
-- `_heavy_atom_indices(topology, exclude_resname: str) -> list[int]`
-- `_restrained_indices(positions, ligand_indices: Sequence[int], candidate_indices: Sequence[int], radius_angstrom: float) -> list[int]`
-- `minimize_with_restraints(cif_path: Path, ligand_resname: str, ligand_sdf: Path, restraint_radius_angstrom: float, restraint_k_kj_mol_nm2: float, output_path: Path) -> tuple`
-- `_get_platform()`
-- `compute_binding_proxy(topology, positions, forcefield, ligand_resname: str) -> EnergyResult`
+## numbering.py
+Purpose: detect auth vs label numbering used by PDBFixer.
+Symbols: `detect_numbering_scheme`.
 
 ## plotting.py
-Purpose
-- Generate per-drug delta metric bar charts.
+Purpose: generate per-drug delta bar plots.
+Symbols: `plot_delta_metrics`.
 
-Inputs
-- DataFrame with metrics and a `Paths` object for output locations.
+## structure_prep.py
+Purpose: restrained minimization, unrestrained minimization, and metrics.
+Symbols: `prepare_structure`.
 
-Outputs
-- `results/plots/*_delta_metrics.png`
+## validation.py
+Purpose: validate DRM substitutions and optionally verify mutations without OpenMM.
+Symbols: `validate_mutations`, `verify_mutations_only`.
 
-Defined symbols
-- `plot_delta_metrics(df: pd.DataFrame, paths) -> None`
+## ligand_cif/
+Purpose: CIF ligand parsing and SDF generation.
+- `ligand_cif/types.py`: data classes for CIF ligand parsing (`LigandAtom`, `LigandBond`).
+- `ligand_cif/block.py`: CIF block utilities (`bond_order`, `normalize_element`, `load_block`).
+- `ligand_cif/comp.py`: parse chem_comp atoms/bonds (`chem_comp_atoms`, `chem_comp_bonds`).
+- `ligand_cif/atoms.py`: parse ligand atom records from `_atom_site` (`atom_site_category`, `ligand_atoms`).
+- `ligand_cif/build.py`: build RDKit molecule and write SDF (`build_rdkit_mol`, `add_explicit_hydrogens`, `write_sdf_file`).
+- `ligand_cif/from_cif.py`: CLI to generate ligand SDFs (`generate_ligand_sdf`, `main`).
 
-## utils.py
-Purpose
-- Shared helpers for filesystem paths, label parsing, and CIF chain mapping.
+## mutation/
+Purpose: mutation parsing, application, verification, and orchestration.
+- `mutation/helpers.py`: shared helpers for PDBFixer mutations.
+- `mutation/mutagenesis.py`: apply one or multiple mutations to CIF.
+- `mutation/steps.py`: validate DRM tokens and map to structure residue IDs.
+- `mutation/tasks.py`: build mutation tasks (including subset expansions) and compute WT metrics.
+- `mutation/rows.py`: assemble metrics rows from results.
+- `mutation/runner.py`: run mutation tasks in parallel and collect results.
+- `mutation/worker.py`: apply a mutation task and compute metrics.
+- `mutation/verify.py`: verify applied mutations by comparing base and mutated CIFs.
 
-Inputs/Outputs
-- See function signatures below.
+## openmm/
+Purpose: OpenMM integration utilities.
+- `openmm/require.py`: shared import helper for OpenMM stack.
+- `openmm/platform.py`: select OpenMM platform and properties.
+- `openmm/ligand.py`: load ligand and build forcefield templates.
+- `openmm/restraints.py`: atom selection for restraints.
+- `openmm/minimizer.py`: run OpenMM minimization utilities (implicit MD helper optional).
+- `openmm/structure.py`: prepare complex + minimize with restraints.
+- `openmm/energy.py`: compute binding proxy energies.
+- `openmm/pipeline.py`: public OpenMM API re-exports.
 
-Defined symbols
-- `Paths` (dataclass)
-- `project_paths(root: Path) -> Paths`
-- `ensure_dirs(paths: Iterable[Path]) -> None`
-- `sanitize_label(label: str) -> str`
-- `parse_mutation_token(token: str) -> tuple[str, str, str]`
-- `parse_mutation_group(mutation: str, chains: str | list[str]) -> list[tuple[str, str, str]]`
-- `load_chain_subunits(cif_path: Path) -> dict[str, str]`
+## utils/
+Purpose: shared utilities for CIF parsing, mutations, and paths.
+- `utils/cif_parser.py`: mmCIF loop tokenizer for local parsers.
+- `utils/cif.py`: chain→subunit mapping from CIF.
+- `utils/residue_map.py`: build auth/label residue maps from CIF atom records.
+- `utils/mutations.py`: mutation token parsing and label normalization.
+- `utils/paths.py`: project paths and directory creation.
+- `utils/__init__.py`: convenience re-exports (`Paths`, `project_paths`, `ensure_dirs`,
+  `load_chain_subunits`, `load_residue_mappings`, `sanitize_label`,
+  `parse_mutation_token`, `one_to_three`).
