@@ -5,8 +5,14 @@ import time
 from pathlib import Path
 
 from .analysis_metrics import compute_contacts, pocket_volume_proxy
-from .openmm.pipeline import compute_binding_proxy, minimize_with_restraints
+from .openmm.pipeline import (
+    build_forcefield,
+    compute_binding_proxy,
+    load_ligand_molecule,
+    minimize_with_restraints,
+)
 from .openmm.minimizer import minimize_system
+from .openmm.require import require_module
 
 
 def prepare_structure(
@@ -17,6 +23,20 @@ def prepare_structure(
     restraint_k: float,
     output_path: Path,
 ):
+    if output_path.exists():
+        logging.info("Reusing existing minimized structure: %s", output_path)
+        app = require_module("openmm.app")
+        with open(output_path, "r") as handle:
+            pdb = app.PDBFile(handle)
+        ligand = load_ligand_molecule(ligand_sdf)
+        forcefield = build_forcefield([ligand])
+        energies = compute_binding_proxy(
+            pdb.topology, pdb.positions, forcefield, ligand_resname=ligand_resname
+        )
+        contacts = compute_contacts(output_path, ligand_resname=ligand_resname)
+        pocket = pocket_volume_proxy(output_path, ligand_resname=ligand_resname)
+        return energies, contacts, pocket
+
     start = time.perf_counter()
     topology, positions, forcefield = minimize_with_restraints(
         cif_path=cif_path,
