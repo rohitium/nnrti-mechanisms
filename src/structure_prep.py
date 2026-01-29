@@ -22,6 +22,8 @@ def prepare_structure(
     restraint_radius: float,
     restraint_k: float,
     output_path: Path,
+    jitter_seed: int | None = None,
+    jitter_angstrom: float = 0.0,
 ):
     if output_path.exists():
         logging.info("Reusing existing minimized structure: %s", output_path)
@@ -45,6 +47,8 @@ def prepare_structure(
         restraint_radius_angstrom=restraint_radius,
         restraint_k_kj_mol_nm2=restraint_k,
         output_path=output_path,
+        jitter_seed=jitter_seed,
+        jitter_angstrom=jitter_angstrom,
     )
     logging.info("Minimized structure in %.2fs", time.perf_counter() - start)
 
@@ -59,6 +63,9 @@ def prepare_structure(
     logging.info(
         "Unrestrained minimization completed in %.2fs", time.perf_counter() - start
     )
+    app = require_module("openmm.app")
+    with open(output_path, "w") as handle:
+        app.PDBFile.writeFile(topology, positions, handle)
 
     start = time.perf_counter()
     energies = compute_binding_proxy(

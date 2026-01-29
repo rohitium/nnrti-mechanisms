@@ -9,10 +9,16 @@ from ..structure_prep import prepare_structure
 from ..utils import ensure_dirs, sanitize_label
 
 
-def compute_wt_metrics(run_spec, out_dir):
-    wt_dir = out_dir / "wt"
+def compute_wt_metrics(
+    run_spec,
+    out_dir,
+    replicate: int = 1,
+    jitter_seed: int | None = None,
+    jitter_angstrom: float = 0.0,
+):
+    wt_dir = out_dir / "wt" / f"rep_{replicate:02d}"
     ensure_dirs([wt_dir])
-    wt_path = wt_dir / "wt_minimized.pdb"
+    wt_path = wt_dir / f"wt_minimized_rep{replicate:02d}.pdb"
     energies_wt, contacts_wt, pocket_wt = prepare_structure(
         cif_path=run_spec.structure.cif_path,
         ligand_resname=run_spec.structure.ligand_resname,
@@ -20,6 +26,8 @@ def compute_wt_metrics(run_spec, out_dir):
         restraint_radius=run_spec.restraint_radius_angstrom,
         restraint_k=run_spec.restraint_k_kj_mol_nm2,
         output_path=wt_path,
+        jitter_seed=jitter_seed,
+        jitter_angstrom=jitter_angstrom,
     )
     return {
         "binding_proxy_kj_mol": energies_wt.binding_proxy_kj_mol,
@@ -38,9 +46,11 @@ def _expand_mutation_rows(mutation_rows: pd.DataFrame) -> list[dict]:
         chains = [c.strip().upper() for c in str(chain_spec).split("+") if c.strip()]
         return "+".join(chains)
 
+    base_labels = {row["mutation"] for row in rows}
     seen = {
         (row["mutation"], _normalize_chain_spec(row.get("chain", ""))) for row in rows
     }
+    seen_labels = set(base_labels)
     max_order = max(int(row["order"]) for row in rows)
     next_order = max_order + 1
     extras = []
@@ -67,9 +77,12 @@ def _expand_mutation_rows(mutation_rows: pd.DataFrame) -> list[dict]:
                 subset_label = "+".join(subset_tokens)
                 subset_chain_spec = "+".join(subset_chains)
                 key = (subset_label, subset_chain_spec)
-                if key in seen:
+                if subset_label in base_labels:
+                    continue
+                if key in seen or subset_label in seen_labels:
                     continue
                 seen.add(key)
+                seen_labels.add(subset_label)
                 derived = dict(row)
                 derived["mutation"] = subset_label
                 derived["chain"] = subset_chain_spec
@@ -93,10 +106,23 @@ def build_tasks(
     residue_maps: dict[str, dict[str, dict[str, str]]],
     numbering_scheme: dict[str, str],
     out_dir,
+    replicate: int = 1,
+    jitter_seed_base: int | None = None,
+    jitter_angstrom: float = 0.0,
 ):
     tasks = []
     for row in _expand_mutation_rows(mutation_rows):
         mutation_label = row["mutation"]
+        if jitter_seed_base is None:
+            jitter_seed = None
+        else:
+            import zlib
+
+            jitter_seed = (
+                jitter_seed_base
+                + replicate * 100000
+                + (zlib.crc32(mutation_label.encode()) % 100000)
+            )
         chain_spec = row["chain"]
         chain_list = [c.strip().upper() for c in str(chain_spec).split("+") if c.strip()]
         if not chain_list:
@@ -120,6 +146,7 @@ def build_tasks(
                     "notes": row.get("notes"),
                     "chain": "+".join(chain_list),
                     "subunit": subunit,
+                    "replicate": replicate,
                 },
                 "mutation": mutation_label,
                 "safe_label": sanitize_label(mutation_label),
@@ -131,6 +158,9 @@ def build_tasks(
                 "restraint_radius": run_spec.restraint_radius_angstrom,
                 "restraint_k": run_spec.restraint_k_kj_mol_nm2,
                 "out_dir": out_dir,
+                "replicate": replicate,
+                "jitter_seed": jitter_seed,
+                "jitter_angstrom": jitter_angstrom,
             }
         )
     return tasks

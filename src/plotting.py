@@ -36,13 +36,43 @@ def plot_delta_metrics(df: pd.DataFrame, paths) -> None:
         bar_color = bar_colors.get(structure, "#2a6f97")
         for idx, (metric, label) in enumerate(metric_labels.items()):
             metric_df = struct_df[struct_df["metric"] == metric]
-            pivot = metric_df.pivot_table(
-                index="mutation_label", columns="state", values="value", aggfunc="first"
-            )
-            if mutations:
-                pivot = pivot.reindex(mutations)
-            delta = pivot["MUT"] - pivot["WT"]
-            axes[idx].bar(mutations, delta.values, color=bar_color)
+            if "replicate" in metric_df.columns:
+                pivot = metric_df.pivot_table(
+                    index=["mutation_label", "replicate"],
+                    columns="state",
+                    values="value",
+                    aggfunc="first",
+                )
+                pivot = pivot.dropna(subset=["WT", "MUT"], how="any")
+                pivot["delta"] = pivot["MUT"] - pivot["WT"]
+                delta_stats = (
+                    pivot["delta"]
+                    .groupby(level=0)
+                    .agg(["mean", "std", "count"])
+                    .rename(columns={"mean": "delta_mean", "std": "delta_std"})
+                )
+                if mutations:
+                    delta_stats = delta_stats.reindex(mutations)
+                y = delta_stats["delta_mean"].values
+                yerr = delta_stats["delta_std"].fillna(0.0).values
+                axes[idx].bar(
+                    range(len(mutations)),
+                    y,
+                    color=bar_color,
+                    yerr=yerr,
+                    capsize=2,
+                )
+            else:
+                pivot = metric_df.pivot_table(
+                    index="mutation_label",
+                    columns="state",
+                    values="value",
+                    aggfunc="first",
+                )
+                if mutations:
+                    pivot = pivot.reindex(mutations)
+                delta = pivot["MUT"] - pivot["WT"]
+                axes[idx].bar(range(len(mutations)), delta.values, color=bar_color)
             axes[idx].axhline(0, color="#444444", linewidth=0.8)
             axes[idx].set_ylabel(label)
             wrapped_labels = [_wrap_xtick_label(label) for label in mutations]

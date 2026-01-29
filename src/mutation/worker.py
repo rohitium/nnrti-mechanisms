@@ -10,17 +10,18 @@ def mutation_worker(task: dict) -> dict:
     mutation_label = task["mutation"]
     safe_label = task["safe_label"]
     mutation_steps = task["mutation_steps"]
+    replicate = task.get("replicate", 1)
 
-    mut_dir = task["out_dir"] / safe_label
+    mut_dir = task["out_dir"] / safe_label / f"rep_{replicate:02d}"
     ensure_dirs([mut_dir])
-    mut_cif = mut_dir / f"mut_{safe_label}.cif"
+    mut_cif = mut_dir / f"mut_{safe_label}_rep{replicate:02d}.cif"
     apply_mutations(
         cif_path=task["cif_path"],
         mutations=mutation_steps,
         output_path=mut_cif,
     )
     verify_mutations(task["cif_path"], mut_cif, task["verify_targets"])
-    mut_min_path = mut_dir / f"mut_minimized_{safe_label}.pdb"
+    mut_min_path = mut_dir / f"mut_minimized_{safe_label}_rep{replicate:02d}.pdb"
     energies_mut, contacts_mut, pocket_mut = prepare_structure(
         cif_path=mut_cif,
         ligand_resname=task["ligand_resname"],
@@ -28,6 +29,8 @@ def mutation_worker(task: dict) -> dict:
         restraint_radius=task["restraint_radius"],
         restraint_k=task["restraint_k"],
         output_path=mut_min_path,
+        jitter_seed=task.get("jitter_seed"),
+        jitter_angstrom=task.get("jitter_angstrom", 0.0),
     )
 
     mut_metrics = {

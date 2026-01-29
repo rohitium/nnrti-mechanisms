@@ -2,10 +2,24 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
+
 from .ligand import build_forcefield, load_ligand_molecule
 from .minimizer import minimize_system
 from .require import require_module
 from .restraints import heavy_atom_indices, restrained_indices
+
+
+def _jitter_positions(positions, seed: int | None, jitter_angstrom: float):
+    if jitter_angstrom <= 0.0:
+        return positions
+    unit = require_module("openmm.unit")
+    openmm = require_module("openmm")
+    rng = np.random.default_rng(seed)
+    pos_nm = np.array([p.value_in_unit(unit.nanometer) for p in positions])
+    noise = rng.normal(scale=jitter_angstrom / 10.0, size=pos_nm.shape)
+    pos_nm = pos_nm + noise
+    return [openmm.Vec3(*xyz) * unit.nanometer for xyz in pos_nm]
 
 
 def minimize_with_restraints(
@@ -15,6 +29,8 @@ def minimize_with_restraints(
     restraint_radius_angstrom: float,
     restraint_k_kj_mol_nm2: float,
     output_path: Path,
+    jitter_seed: int | None = None,
+    jitter_angstrom: float = 0.0,
 ) -> tuple:
     app = require_module("openmm.app")
     pdbfixer = require_module("pdbfixer")
@@ -34,6 +50,9 @@ def minimize_with_restraints(
     fixer.findNonstandardResidues()
     fixer.replaceNonstandardResidues()
     fixer.findMissingResidues()
+    # Keep missing-residue handling consistent across WT and mutated CIFs.
+    # Mutated CIFs lose missing-residue annotations, so we avoid adding them here too.
+    fixer.missingResidues = {}
     fixer.findMissingAtoms()
     fixer.addMissingAtoms()
     modeller = app.Modeller(fixer.topology, fixer.positions)
@@ -64,6 +83,9 @@ def minimize_with_restraints(
         ligand_positions = ligand_mol.conformers[0].to(off_unit.nanometer).magnitude
         modeller.add(ligand_topology, ligand_positions * omm_unit.nanometer)
     modeller.addHydrogens(forcefield)
+    modeller.positions = _jitter_positions(
+        modeller.positions, seed=jitter_seed, jitter_angstrom=jitter_angstrom
+    )
 
     ligand_indices = [
         atom.index for atom in modeller.topology.atoms() if atom.residue.name == ligand_resname
