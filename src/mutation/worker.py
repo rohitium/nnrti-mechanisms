@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .mutagenesis import apply_mutations
-from ..structure_prep import prepare_structure
+from ..structure_prep import compute_alchemical_binding_metric, prepare_structure
 from .verify import verify_mutations
 from ..utils import ensure_dirs
 
@@ -32,8 +32,21 @@ def mutation_worker(task: dict) -> dict:
         jitter_seed=task.get("jitter_seed"),
         jitter_angstrom=task.get("jitter_angstrom", 0.0),
     )
+    mut_alchemy_json = mut_dir / f"mut_alchemy_{safe_label}_rep{replicate:02d}.json"
+    mut_binding_dg = compute_alchemical_binding_metric(
+        minimized_pdb_path=mut_min_path,
+        ligand_resname=task["ligand_resname"],
+        ligand_sdf=task["ligand_sdf"],
+        config=task["alchemy_config"],
+        output_json=mut_alchemy_json,
+        metadata={
+            **task["base"],
+            "state": "MUT",
+        },
+    )
 
     mut_metrics = {
+        "binding_delta_g_kj_mol": mut_binding_dg,
         "binding_proxy_kj_mol": energies_mut.binding_proxy_kj_mol,
         "contact_count": contacts_mut.contact_count,
         "hbond_count": contacts_mut.hbond_count,

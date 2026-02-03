@@ -63,3 +63,20 @@ def dor_spec(root: Path) -> RunSpec:
             chain_id="A", residue_id="106", new_residue="ALA", label="V106A"
         ),
     )
+
+
+def dor_4ncg_spec(root: Path) -> RunSpec:
+    return RunSpec(
+        structure=StructureSpec(
+            name="DOR",
+            cif_path=root / "data" / "structures" / "4NCG.cif",
+            ligand_resname="2KW",
+            ligand_chain="C",
+            protein_chains=("A", "B"),
+            dna_chains=(),
+            ligand_sdf=root / "data" / "ligands" / "dor.sdf",
+        ),
+        mutation=MutationSpec(
+            chain_id="A", residue_id="106", new_residue="ALA", label="V106A"
+        ),
+    )

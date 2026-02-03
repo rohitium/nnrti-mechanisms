@@ -22,7 +22,11 @@ def build_forcefield(ligand_molecules) -> "openmm.app.ForceField":
     app = require_module("openmm.app")
     generators = require_module("openmmforcefields.generators")
 
-    forcefield = app.ForceField("amber14/protein.ff14SB.xml", "amber14/DNA.bsc1.xml")
+    forcefield = app.ForceField(
+        "amber14/protein.ff14SB.xml",
+        "amber14/DNA.bsc1.xml",
+        "amber14/tip3p.xml",
+    )
     generator = generators.SMIRNOFFTemplateGenerator(
         molecules=ligand_molecules,
         template_generator_kwargs={"partial_charge_method": "gasteiger"},

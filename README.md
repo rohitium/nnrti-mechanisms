@@ -1,33 +1,98 @@
-# Introduction
+# NNRTI Resistance Mechanisms
 
-We wish to understand structural mechanisms of Non-Nucleoside Reverse Transcriptase Inhibitor (NNRTI) resistance in HIV-1 patients.
+Understanding structural mechanisms of Non-Nucleoside Reverse Transcriptase Inhibitor (NNRTI) resistance in HIV-1.
 
 This repository contains code, data, and analysis for evaluating the structural
 impact of clinically relevant NNRTI resistance mutations on Rilpivirine (RPV)
 and Doravirine (DOR) using publicly available cryo-EM RT/DNA/drug structures.
 
-## Basic Workflow
-- Starts with 
-  1. Curated drug-resistance mutation (DRM) lists for RPV and DOR in `data/DRMs.csv` 
-  2. Cryo-EM structures downloaded from PDB: RT/DNA/RPV ([7z2d](https://www.rcsb.org/structure/7Z2D)) and RT/DNA/DOR ([7z2g](https://www.rcsb.org/structure/7Z2G))
-- Generates ligand SDFs from the CIF structures
-- Performs _in silico_ mutagenesis on cryo-EM structures
-- Minimizes WT and mutant complexes with OpenMM
-- Computes relative binding proxies and structural metrics:
-  - Binding energy proxy (OpenMM potential energy delta)
-  - Ligand-protein contacts
-  - H-bond count
-  - Binding pocket volume proxy (Å^3)
-- Plots bar charts of mutant minus WT deltas for each NNRTI
+## Workflows
 
-## Key inputs
-- Structures:
-  - `data/structures/7Z2D.cif` (RT/DNA/RPV)
-  - `data/structures/7Z2G.cif` (RT/DNA/DOR)
-- DRM list:
-  - `data/DRMs.csv` (created manually by reading recent papers from Stanford HIVDB)
+### 1. Local Analysis Pipeline (CPU)
 
-### DRM table format
+For quick structural analysis on a local machine:
+
+```bash
+uv run python -m src.main
+```
+
+This runs the DRM batch pipeline using `data/DRMs.csv`, writes `results/metrics_summary.csv`,
+and generates per-drug plots in `results/plots/`.
+
+### 2. Cluster FEP Pipeline (GPU)
+
+For rigorous alchemical free energy perturbation (FEP) calculations on Stanford Sherlock:
+
+```
+LOCAL PHASE (CPU):
+  CIF → Mutagenesis → Minimization → Contacts/H-bonds/Pocket → Manifest
+        (PDBFixer)    (OpenMM CPU)   (MDAnalysis)              (CSV)
+
+CLUSTER PHASE (GPU):
+  Manifest → SLURM Array Job → FEP per (mutation, replicate, leg) → JSON
+
+AGGREGATION PHASE (CPU):
+  JSON results → Collect → ΔΔG = ΔG_mut - ΔG_wt → Correlation Analysis
+```
+
+#### Step 1: Local Preparation
+```bash
+uv run python -m src.main --prepare-local \
+    --replicates 3 --seed 42 --jitter-angstrom 0.1
+```
+
+Outputs:
+- `data/prepared/dor_4ncg/*.pdb` - Minimized structures
+- `results/structural_metrics.csv` - Contact counts, H-bonds, pocket volumes
+- `results/fep_manifest.csv` - Task assignments (84 tasks for 14 structures × 3 replicates × 2 legs)
+
+#### Step 2: Generate SLURM Script
+```bash
+uv run python -m src.main --generate-slurm
+```
+
+Output: `scripts/sherlock/submit_fep.sh`
+
+#### Step 3: Transfer to Sherlock
+```bash
+rsync -avz --exclude='.venv' --exclude='.git' \
+    . sherlock:/scratch/users/$USER/nnrti-mechanisms/
+```
+
+#### Step 4: Submit on Sherlock
+```bash
+sbatch scripts/sherlock/submit_fep.sh
+```
+
+#### Step 5: Transfer Results Back
+```bash
+rsync -avz sherlock:/scratch/users/$USER/nnrti-mechanisms/results/fep_runs/ \
+    results/fep_runs/
+```
+
+#### Step 6: Collect and Analyze
+```bash
+uv run python -m src.main --collect-results
+```
+
+Outputs:
+- `results/ddg_summary.csv` - ΔΔG per mutation
+- `results/correlation_analysis.csv` - Pearson/Spearman correlations with fold-reduction
+- `results/plots/ddg_vs_fold_reduction.png`
+
+## Key Inputs
+
+### Structures
+- `data/structures/7Z2D.cif` - RT/DNA/RPV complex
+- `data/structures/7Z2G.cif` - RT/DNA/DOR complex
+- `data/structures/4NCG.cif` - RT/DOR complex (for FEP workflow)
+
+### DRM Data
+- `data/DRMs.csv` - Drug resistance mutations (from Stanford HIVDB)
+- `data/DRM-susceptibilities.csv.xlsx` - DOR susceptibility data with fold-reduction values
+
+### DRM Table Format
+
 `data/DRMs.csv` must include:
 - `drug`: `RPV` or `DOR`
 - `mutation`: one or more mutations, e.g. `K101E` or `K101E+E138K`
@@ -37,200 +102,102 @@ and Doravirine (DOR) using publicly available cryo-EM RT/DNA/drug structures.
 The chain spec is positional: `K101E+E138K` with `A+B` applies K101E to chain A
 and E138K to chain B. If the chain spec has only one chain (e.g. `A`), that
 chain is applied to every mutation in the combo.
-Combination DRMs are expanded into all unique subsets (e.g. `L100I+K103N`
-also runs `L100I` and `K103N` if they are not already listed).
 
 ## Outputs
-- Minimized structures and artifacts:
-  - `data/generated/rpv/<mutation_label>/` (one folder per mutation)
-  - `data/generated/dor/<mutation_label>/` (one folder per mutation)
-  - `data/generated/<drug>/wt/` (WT minimized structures)
-- Metrics table:
-  - `results/metrics_summary.csv`
-  - `results/metrics_summary.xlsx`
-- Plots:
-  - `results/plots/rpv_delta_metrics.png`
-  - `results/plots/dor_delta_metrics.png`
 
-## Dependencies (Sorry)
-- pdbfixer, openmm, openmmforcefields, openff-interchange, openff-forcefields, openff-toolkit, openff-units, openff-utilities
-- gemmi, mdanalysis, rdkit
-- numpy, pandas, matplotlib
-- lxml, xmltodict, networkx, cachetools, python-constraint
+### Local Pipeline
+- `data/generated/<drug>/<mutation_label>/` - Minimized structures per mutation
+- `results/metrics_summary.csv` - All metrics (binding proxy, contacts, H-bonds, pocket volume)
+- `results/plots/<drug>_delta_metrics.png` - Bar charts of MUT-WT deltas
 
-## How to run
+### Cluster FEP Pipeline
+- `data/prepared/dor_4ncg/` - Minimized PDB structures
+- `results/fep_runs/` - JSON results from cluster jobs
+- `results/ddg_summary.csv` - ΔΔG values per mutation
+- `results/correlation_analysis.csv` - Correlation statistics
+- `results/plots/ddg_vs_fold_reduction.png` - Correlation plots
+
+## CLI Reference
+
 ```bash
-uv run python -m src.main
-```
-
-The DRM batch pipeline, uses `data/DRMs.csv` for all mutations/combos, writes `results/metrics_summary.csv`, and updates the per-drug plots
-in `results/plots/`.
-
-Validation only (no OpenMM/minimization):
-```bash
+# Validation only (no OpenMM)
 uv run python -m src.main --validate-only
-```
 
-Verify only (apply DRMs and verify substitutions; no OpenMM):
-```bash
+# Verify mutations without minimization
 uv run python -m src.main --verify-only
+
+# Full local pipeline with replicates
+uv run python -m src.main --replicates 3 --seed 42 --jitter-angstrom 0.1
+
+# Force recomputation
+uv run python -m src.main --force
+
+# Cluster workflow
+uv run python -m src.main --prepare-local --replicates 3 --seed 42 --jitter-angstrom 0.1
+uv run python -m src.main --generate-slurm
+uv run python -m src.main --collect-results
+
+# SLURM customization
+uv run python -m src.main --generate-slurm \
+    --slurm-partition gpu \
+    --slurm-time 4:00:00 \
+    --slurm-memory 16G
+
+# FEP parameters
+uv run python -m src.main --prepare-local \
+    --alchemy-equil-steps 10000 \
+    --alchemy-prod-steps 25000 \
+    --alchemy-sample-interval 200
 ```
 
-## Pipeline logic (step-by-step)
-1) Load `data/DRMs.csv` and filter rows by drug (`RPV`, `DOR`).
-2) Parse chain-to-subunit mapping from the CIF files via `_entity_name_com` /
-   `_entity.pdbx_description` + `_struct_asym` to label chains as `p66` or `p51`.
-3) For each drug:
-   - Expand combination DRMs into missing singletons/pairs.
-   - Minimize the WT complex once (`wt_minimized.pdb`) and compute metrics.
-   - For each DRM row, apply mutations (single or combo) to the specified chain(s),
-     minimize, and compute metrics.
-4) Write `results/metrics_summary.csv` with both WT and MUT rows for every metric.
-5) Plot per-drug MUT–WT deltas for each metric to `results/plots/*.png`.
+## Dependencies
 
-### Data preprocessing
-- Ligand SDFs are generated from CIF metadata using `src/ligand_cif/from_cif.py`,
-  with explicit hydrogens added by RDKit.
-- For OpenMM compatibility, the ligand in original cryo-EM CIF is replaced by the SDF ligand
-  (same residue name) before minimization.
-- Nonstandard DNA residue `OMC` is converted to `DC` (deoxycytidine) for force
-  field compatibility.
-- All existing hydrogens in the CIF are removed before re-adding hydrogens to
-  avoid duplicates and to ensure consistent protonation/geometry under the
-  force field (CIF hydrogens can be incomplete or inconsistently named).
+- **Structure processing**: pdbfixer, gemmi
+- **Simulation**: openmm, openmmtools, openmmforcefields
+- **Force fields**: openff-interchange, openff-forcefields, openff-toolkit
+- **Analysis**: mdanalysis, rdkit
+- **Core**: numpy, pandas, matplotlib
+- **Utilities**: lxml, xmltodict, networkx, cachetools
 
-Note: `OMC` (5-methylcytosine) is converted to `DC` to keep the DNA compatible
-with the standard AMBER DNA force field. This removes the methyl group and is
-an approximation; in these structures it is part of the DNA aptamer and is
-typically distant from the NNRTI pocket, so the impact on ligand-proximal
-metrics is expected to be small.
+## Technical Details
 
-### Minimization procedure
-Each WT and mutant complex goes through the following:
-- Input: the processed cryo-EM CIF with the ligand added.
-- Force field: AMBER14 protein (`ff14SB`) + AMBER14 DNA (`bsc1`), with a SMIRNOFF
-  template for the ligand (Gasteiger charges).
-- Nonbonded interactions use `NoCutoff`; bonds to hydrogen are constrained.
-- A harmonic positional restraint is applied to heavy atoms farther than
-  8 Å from any ligand atom (ligand-adjacent region is left flexible).
-  Restraint strength is 500 kJ/mol/nm^2.
-- Minimization uses a Langevin integrator (300 K, 1/ps friction, 2 fs step)
-  and runs `Simulation.minimizeEnergy()` (no dynamics).
-- A second unrestrained minimization is performed (no positional restraints).
-- Outputs: minimized `*.pdb` for metric calculations.
+### Minimization Procedure
 
-### Binding proxy definition and interpretation
-For each minimized structure, the pipeline computes:
-- `E_complex`: potential energy of the full system (protein + DNA + ligand)
-- `E_receptor`: potential energy after removing the ligand (protein + DNA only)
-- `E_ligand`: potential energy of the ligand alone (same coordinates; no re-minimization)
+1. Load CIF structure with ligand from SDF
+2. Apply AMBER14 protein (`ff14SB`) + DNA (`bsc1`) force fields
+3. Use SMIRNOFF template for ligand (Gasteiger charges)
+4. Apply harmonic restraints (500 kJ/mol/nm²) to atoms >8Å from ligand
+5. Run `minimizeEnergy()` with restraints
+6. Run second unrestrained minimization
+7. Output minimized PDB
 
-The binding proxy is:
+### Alchemical FEP Protocol
+
+- **Lambda schedule**: 13 windows (1.0 → 0.0)
+- **Equilibration**: 10,000 steps per window
+- **Production**: 25,000 steps per window
+- **Sample interval**: 200 steps
+- **Free energy estimator**: Bennett Acceptance Ratio (BAR)
+- **Runtime**: ~1 hour per leg on V100/A100
+
+### Binding ΔG Calculation
+
 ```
-E_binding_proxy = E_complex − E_receptor − E_ligand
+ΔG_binding = ΔG_complex - ΔG_solvent
+ΔΔG = ΔG_binding(mutant) - ΔG_binding(WT)
 ```
 
-This is an interaction-energy-like proxy, not a binding free energy. It reuses
-one minimized configuration and does not relax the receptor or ligand after
-removal.
+Positive ΔΔG indicates reduced binding affinity in the mutant (resistance).
 
-The plotted delta is:
-```
-Δ = (E_binding_proxy)_MUT − (E_binding_proxy)_WT
-```
-Positive Δ indicates a less favorable binding proxy in the mutant; negative Δ
-indicates a more favorable binding proxy.
+### Structural Metrics
 
-### Contacts definition and interpretation
-Contacts are computed on the minimized structure using MDAnalysis. The pipeline:
-- Selects the ligand by residue name (`resname`).
-- Selects the protein with `protein and not resname <ligand>` (DNA excluded).
-- Computes all pairwise distances between ligand atoms and protein atoms.
-- Counts the number of atom pairs within 4.0 Å.
-
-This yields a raw contact count:
-```
-contact_count = number of (ligand atom, protein atom) pairs with distance < 4.0 Å
-```
-
-The plotted delta is:
-```
-Δ Contacts = contact_count_MUT − contact_count_WT
-```
-
-Interpretation:
-- Positive Δ means the mutant has more close atom–atom contacts (tighter packing).
-- Negative Δ means fewer close contacts (looser packing).
-- It is a geometric proxy, not weighted by atom type or interaction strength.
-- Hydrogens are included if present in the minimized structure, so absolute
-  values can be sensitive to hydrogen placement.
-
-### H-bonds definition and interpretation
-H-bonds are computed on the minimized structure using MDAnalysis'
-`HydrogenBondAnalysis`:
-- Donors: protein or ligand.
-- Acceptors: protein or ligand.
-- Hydrogens: atoms named `H*`.
-- Only protein–ligand pairs are counted.
-- Distance cutoff: 3.5 Å.
-- Angle cutoff: 135°.
-
-This yields:
-```
-hbond_count = number of protein–ligand H-bonds meeting the criteria
-```
-
-The plotted delta is:
-```
-Δ H-bonds = hbond_count_MUT − hbond_count_WT
-```
-
-Interpretation:
-- Positive Δ means more protein–ligand H-bonds in the mutant.
-- Negative Δ means fewer protein–ligand H-bonds in the mutant.
-- It depends on hydrogen placement and the geometric criteria above.
-
-### Binding pocket volume proxy definition and interpretation
-The pocket volume proxy is computed on a cubic grid centered at the ligand:
-- All grid points within an 8 Å radius of the ligand centroid are considered.
-- Grid spacing is 0.5 Å (voxel volume = 0.125 Å^3).
-- Receptor atoms are all non-hydrogen atoms excluding the ligand.
-- A grid point is considered "free" if it is outside the van der Waals radius
-  (element-specific) of every receptor atom.
-
-The proxy is:
-```
-pocket_volume_proxy = number of free grid points * voxel volume (Å^3)
-```
-
-The plotted delta is:
-```
-Δ Pocket Volume = pocket_volume_proxy_MUT − pocket_volume_proxy_WT
-```
-
-Interpretation:
-- Positive Δ means a larger empty pocket around the ligand in the mutant.
-- Negative Δ means a more constricted pocket.
-- This is a coarse geometric proxy, not a solvent-accessible or physical volume.
-
-## Metrics table columns
-Each row in `results/metrics_summary.csv` includes:
-- `structure`: `RPV` or `DOR`
-- `mutation`: original mutation string from the DRM table
-- `chain`: chain id(s) used (e.g. `A` or `A+B`)
-- `subunit`: derived subunit label(s) (e.g. `p66` or `p66+p51`)
-- `category`, `notes`: passthrough from DRM table
-- `state`: `WT` or `MUT`
-- `metric`: `binding_proxy_kj_mol`, `contact_count`, `hbond_count`, `pocket_volume_proxy`
-- `value`: metric value (binding energy in kJ/mol; pocket volume in A^3)
-
-## Performance
-- Mutations are processed in parallel across all CPU cores using multiprocessing.
-- The WT minimization is performed once per drug and reused for all deltas.
+- **Contacts**: Atom pairs within 4.0Å between ligand and protein
+- **H-bonds**: MDAnalysis HydrogenBondAnalysis (3.5Å, 135° cutoff)
+- **Pocket volume**: Grid-based void volume within 8Å of ligand centroid
 
 ## Notes
-- DNA is retained in the complex and lightly restrained outside a ligand-centric
-  shell during minimization to reduce drift.
-- Energies are OpenMM potential energies used as relative binding proxies.
-- The OpenMM build in the current venv uses CPU; Metal GPU support requires a
-  conda-forge OpenMM build (not yet configured here).
+
+- DNA is retained and lightly restrained during minimization
+- The cluster workflow uses CUDA for GPU acceleration
+- Local workflow defaults to Metal (macOS) or CPU
+- Ligand SDFs are auto-generated from CIF metadata with RDKit hydrogens

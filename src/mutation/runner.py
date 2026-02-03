@@ -18,6 +18,7 @@ def run_mutations(
     replicates: int = 1,
     jitter_seed_base: int | None = None,
     jitter_angstrom: float = 0.0,
+    alchemy_config=None,
 ):
     out_dir = paths.generated / run_spec.structure.name.lower()
     ensure_dirs([out_dir, paths.results, paths.plots])
@@ -33,6 +34,7 @@ def run_mutations(
             replicate=replicate,
             jitter_seed=wt_seed,
             jitter_angstrom=jitter_angstrom,
+            alchemy_config=alchemy_config,
         )
         tasks = build_tasks(
             run_spec,
@@ -44,6 +46,7 @@ def run_mutations(
             replicate=replicate,
             jitter_seed_base=jitter_seed_base,
             jitter_angstrom=jitter_angstrom,
+            alchemy_config=alchemy_config,
         )
         if not tasks:
             continue

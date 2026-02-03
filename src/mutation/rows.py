@@ -12,6 +12,12 @@ def build_rows(results, wt_metrics):
                     {
                         **base,
                         "state": state,
+                        "metric": "binding_delta_g_kj_mol",
+                        "value": metrics["binding_delta_g_kj_mol"],
+                    },
+                    {
+                        **base,
+                        "state": state,
                         "metric": "binding_proxy_kj_mol",
                         "value": metrics["binding_proxy_kj_mol"],
                     },

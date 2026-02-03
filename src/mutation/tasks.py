@@ -5,7 +5,10 @@ from itertools import combinations
 import pandas as pd
 
 from .steps import build_mutation_steps
-from ..structure_prep import prepare_structure
+from ..structure_prep import (
+    compute_alchemical_binding_metric,
+    prepare_structure,
+)
 from ..utils import ensure_dirs, sanitize_label
 
 
@@ -15,6 +18,7 @@ def compute_wt_metrics(
     replicate: int = 1,
     jitter_seed: int | None = None,
     jitter_angstrom: float = 0.0,
+    alchemy_config=None,
 ):
     wt_dir = out_dir / "wt" / f"rep_{replicate:02d}"
     ensure_dirs([wt_dir])
@@ -29,7 +33,21 @@ def compute_wt_metrics(
         jitter_seed=jitter_seed,
         jitter_angstrom=jitter_angstrom,
     )
+    wt_alchemy_json = wt_dir / f"wt_alchemy_rep{replicate:02d}.json"
+    wt_binding_dg = compute_alchemical_binding_metric(
+        minimized_pdb_path=wt_path,
+        ligand_resname=run_spec.structure.ligand_resname,
+        ligand_sdf=run_spec.structure.ligand_sdf,
+        config=alchemy_config,
+        output_json=wt_alchemy_json,
+        metadata={
+            "structure": run_spec.structure.name,
+            "mutation": "WT",
+            "replicate": replicate,
+        },
+    )
     return {
+        "binding_delta_g_kj_mol": wt_binding_dg,
         "binding_proxy_kj_mol": energies_wt.binding_proxy_kj_mol,
         "contact_count": contacts_wt.contact_count,
         "hbond_count": contacts_wt.hbond_count,
@@ -109,6 +127,7 @@ def build_tasks(
     replicate: int = 1,
     jitter_seed_base: int | None = None,
     jitter_angstrom: float = 0.0,
+    alchemy_config=None,
 ):
     tasks = []
     for row in _expand_mutation_rows(mutation_rows):
@@ -161,6 +180,7 @@ def build_tasks(
                 "replicate": replicate,
                 "jitter_seed": jitter_seed,
                 "jitter_angstrom": jitter_angstrom,
+                "alchemy_config": alchemy_config,
             }
         )
     return tasks
