@@ -10,7 +10,7 @@ from .cluster import generate_slurm_script, run_result_collection
 from .config import dor_spec, rpv_spec
 from .dor_alchemy_pipeline import (
     prepare_dor_local_structures,
-    prepare_local_with_fep_manifest,
+    prepare_local_for_cluster,
     run_dor_alchemical_manifest,
     summarize_dor_correlations,
 )
@@ -166,6 +166,12 @@ def main(argv: list[str] | None = None) -> None:
         default="16G",
         help="SLURM memory allocation (default: 16G).",
     )
+    parser.add_argument(
+        "--conda-env",
+        type=str,
+        default=None,
+        help="Conda environment name to activate on cluster (e.g., nnrti).",
+    )
 
     args = parser.parse_args(argv)
 
@@ -211,25 +217,25 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     if args.prepare_local:
-        logging.info("Preparing local structures and generating FEP manifest")
-        structural_metrics, fep_tasks = prepare_local_with_fep_manifest(
+        logging.info("Preparing mutant CIFs and generating FEP manifest for cluster")
+        fep_tasks = prepare_local_for_cluster(
             root=root,
             susceptibility_xlsx=susceptibility_xlsx,
             prepared_dir=prepared_dir,
             fep_manifest_path=fep_manifest,
-            structural_metrics_path=paths.results / "structural_metrics.csv",
             fep_results_dir=fep_results_dir,
             replicates=args.replicates,
             jitter_seed_base=args.seed,
             jitter_angstrom=args.jitter_angstrom,
         )
+        n_structures = len(fep_tasks) // (args.replicates * 2)  # 2 legs per replicate
         logging.info(
             "Prepared %d structures, generated %d FEP tasks",
-            len(structural_metrics) // args.replicates,
+            n_structures,
             len(fep_tasks),
         )
-        logging.info("Structural metrics: %s", paths.results / "structural_metrics.csv")
         logging.info("FEP manifest: %s", fep_manifest)
+        logging.info("Minimization will run on the cluster (GPU)")
         return
 
     if args.generate_slurm:
@@ -246,6 +252,7 @@ def main(argv: list[str] | None = None) -> None:
             equil_steps=args.alchemy_equil_steps,
             prod_steps=args.alchemy_prod_steps,
             sample_interval=args.alchemy_sample_interval,
+            conda_env=args.conda_env,
         )
         logging.info("Generated SLURM script: %s", output)
         return
@@ -254,12 +261,13 @@ def main(argv: list[str] | None = None) -> None:
         if not fep_manifest.exists():
             logging.error("FEP manifest not found: %s", fep_manifest)
             return
-        structural_metrics_path = paths.results / "structural_metrics.csv"
+        from .config import dor_4ncg_spec
+        spec = dor_4ncg_spec(root)
         ddg_summary, correlations, ddg_df = run_result_collection(
             manifest_path=fep_manifest,
             fep_results_dir=fep_results_dir,
-            structural_metrics_path=structural_metrics_path,
             output_dir=paths.results,
+            ligand_resname=spec.structure.ligand_resname,
         )
         logging.info("ΔΔG summary: %s", paths.results / "ddg_summary.csv")
         logging.info("Correlations: %s", paths.results / "correlation_analysis.csv")

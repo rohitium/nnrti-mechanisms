@@ -14,7 +14,6 @@ from .mutation.steps import build_mutation_steps
 from .mutation.mutagenesis import apply_mutations
 from .numbering import detect_numbering_scheme
 from .openmm.alchemy import AlchemicalConfig
-from .structure_prep import prepare_structure_local
 from .susceptibility_io import load_dor_susceptibilities
 from .utils import (
     ensure_dirs,
@@ -76,39 +75,33 @@ def prepare_dor_local_structures(
     return manifest
 
 
-def prepare_local_with_fep_manifest(
+def prepare_local_for_cluster(
     root: Path,
     susceptibility_xlsx: Path,
     prepared_dir: Path,
     fep_manifest_path: Path,
-    structural_metrics_path: Path,
     fep_results_dir: Path,
     replicates: int = 3,
     jitter_seed_base: int | None = None,
     jitter_angstrom: float = 0.1,
-) -> tuple[pd.DataFrame, list[FEPTask]]:
-    """Prepare structures locally and generate FEP manifest for cluster runs.
+) -> list[FEPTask]:
+    """Prepare mutant CIF files and generate FEP manifest for cluster runs.
 
-    This function:
-    1. Loads mutation data from susceptibility spreadsheet
-    2. Creates mutant CIF files using PDBFixer
-    3. Minimizes all structures (WT + mutants) with restraints
-    4. Computes structural metrics (contacts, H-bonds, pocket volume)
-    5. Generates FEP manifest with task assignments for cluster execution
+    This function performs mutagenesis only (no minimization). Minimization
+    and FEP calculations are done on the GPU cluster.
 
     Args:
         root: Project root directory.
         susceptibility_xlsx: Path to DOR susceptibility workbook.
-        prepared_dir: Directory for prepared/minimized PDB files.
+        prepared_dir: Directory for prepared CIF files.
         fep_manifest_path: Path to write FEP manifest CSV.
-        structural_metrics_path: Path to write structural metrics CSV.
         fep_results_dir: Directory where FEP results will be written.
         replicates: Number of replicates per mutation.
-        jitter_seed_base: Base seed for coordinate jitter.
-        jitter_angstrom: Coordinate jitter magnitude.
+        jitter_seed_base: Base seed for coordinate jitter (used on cluster).
+        jitter_angstrom: Coordinate jitter magnitude (used on cluster).
 
     Returns:
-        Tuple of (structural_metrics_df, fep_tasks).
+        List of FEPTask objects.
     """
     spec = dor_4ncg_spec(root)
     dor_df = load_dor_susceptibilities(susceptibility_xlsx, default_chain="A")
@@ -116,12 +109,14 @@ def prepare_local_with_fep_manifest(
     residue_maps = load_residue_mappings(spec.structure.cif_path)
     numbering = detect_numbering_scheme(spec.structure.cif_path, chain_map)
 
-    ensure_dirs([prepared_dir, fep_manifest_path.parent, structural_metrics_path.parent])
+    ensure_dirs([prepared_dir, fep_manifest_path.parent])
 
+    # Copy WT CIF
     wt_cif = prepared_dir / "wt_4ncg.cif"
     if not wt_cif.exists():
         shutil.copy2(spec.structure.cif_path, wt_cif)
 
+    # Build list of structures (WT + mutants)
     structures: list[dict] = [
         {
             "mutation": "WT",
@@ -151,47 +146,22 @@ def prepare_local_with_fep_manifest(
             "fold_reduction": float(row["dor_fold_reduction"]),
         })
 
-    logging.info("Prepared %d structures (1 WT + %d mutants)", len(structures), len(structures) - 1)
+    logging.info(
+        "Created %d structures (1 WT + %d mutants)", len(structures), len(structures) - 1
+    )
 
-    metrics_rows = []
+    # Generate FEP tasks
     fep_tasks = []
     task_id = 0
 
     for struct in structures:
         for replicate in range(1, replicates + 1):
             safe_label = struct["safe_label"]
-            mut_dir = prepared_dir / safe_label / f"rep_{replicate:02d}"
-            ensure_dirs([mut_dir])
 
-            min_pdb = mut_dir / f"{safe_label}_minimized_rep{replicate:02d}.pdb"
-
+            # Compute jitter seed for this replicate
             seed = None
             if jitter_seed_base is not None:
                 seed = jitter_seed_base + hash((safe_label, replicate)) % 100000
-
-            logging.info(
-                "Minimizing %s replicate %d", struct["mutation"], replicate
-            )
-            contacts, pocket_vol = prepare_structure_local(
-                cif_path=struct["cif_path"],
-                ligand_resname=spec.structure.ligand_resname,
-                ligand_sdf=spec.structure.ligand_sdf,
-                restraint_radius=spec.restraint_radius_angstrom,
-                restraint_k=spec.restraint_k_kj_mol_nm2,
-                output_path=min_pdb,
-                jitter_seed=seed,
-                jitter_angstrom=jitter_angstrom,
-            )
-
-            metrics_rows.append({
-                "structure": "DOR",
-                "mutation": struct["mutation"],
-                "safe_label": safe_label,
-                "replicate": replicate,
-                "contact_count": contacts.contact_count,
-                "hbond_count": contacts.hbond_count,
-                "pocket_volume_proxy": pocket_vol,
-            })
 
             for leg in ["complex", "solvent"]:
                 output_json = (
@@ -205,24 +175,26 @@ def prepare_local_with_fep_manifest(
                     safe_label=safe_label,
                     replicate=replicate,
                     leg=leg,
-                    minimized_pdb=str(min_pdb.resolve()),
+                    minimized_pdb="",  # Will be set by worker after minimization
                     ligand_sdf=str(spec.structure.ligand_sdf.resolve()),
                     ligand_resname=spec.structure.ligand_resname,
                     fold_reduction=struct["fold_reduction"],
                     output_json=str(output_json),
+                    # Additional fields for cluster worker
+                    input_cif=str(struct["cif_path"].resolve()),
+                    jitter_seed=seed,
+                    jitter_angstrom=jitter_angstrom,
+                    restraint_radius=spec.restraint_radius_angstrom,
+                    restraint_k=spec.restraint_k_kj_mol_nm2,
                 ))
                 task_id += 1
-
-    structural_metrics = pd.DataFrame(metrics_rows)
-    structural_metrics.to_csv(structural_metrics_path, index=False)
-    logging.info("Wrote structural metrics to %s", structural_metrics_path)
 
     save_manifest(fep_tasks, fep_manifest_path)
     logging.info(
         "Wrote FEP manifest with %d tasks to %s", len(fep_tasks), fep_manifest_path
     )
 
-    return structural_metrics, fep_tasks
+    return fep_tasks
 
 
 def run_dor_alchemical_manifest(

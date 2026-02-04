@@ -8,7 +8,13 @@ import pandas as pd
 
 @dataclass(frozen=True)
 class FEPTask:
-    """Represents a single FEP computation task for cluster execution."""
+    """Represents a single FEP computation task for cluster execution.
+
+    The cluster worker will:
+    1. Minimize the structure from input_cif (with jitter)
+    2. Run the specified FEP leg (complex or solvent)
+    3. Save results to output_json
+    """
 
     task_id: int
     structure: str
@@ -16,11 +22,17 @@ class FEPTask:
     safe_label: str
     replicate: int
     leg: str  # "complex" or "solvent"
-    minimized_pdb: str
+    minimized_pdb: str  # Output path for minimized structure
     ligand_sdf: str
     ligand_resname: str
     fold_reduction: float | None
     output_json: str
+    # Fields for cluster minimization
+    input_cif: str = ""  # Input CIF to minimize
+    jitter_seed: int | None = None
+    jitter_angstrom: float = 0.1
+    restraint_radius: float = 8.0
+    restraint_k: float = 500.0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -30,6 +42,13 @@ class FEPTask:
         fold = data.get("fold_reduction")
         if fold is not None and pd.isna(fold):
             fold = None
+
+        jitter_seed = data.get("jitter_seed")
+        if jitter_seed is not None and pd.isna(jitter_seed):
+            jitter_seed = None
+        elif jitter_seed is not None:
+            jitter_seed = int(jitter_seed)
+
         return cls(
             task_id=int(data["task_id"]),
             structure=str(data["structure"]),
@@ -37,11 +56,16 @@ class FEPTask:
             safe_label=str(data["safe_label"]),
             replicate=int(data["replicate"]),
             leg=str(data["leg"]),
-            minimized_pdb=str(data["minimized_pdb"]),
+            minimized_pdb=str(data.get("minimized_pdb", "")),
             ligand_sdf=str(data["ligand_sdf"]),
             ligand_resname=str(data["ligand_resname"]),
             fold_reduction=float(fold) if fold is not None else None,
             output_json=str(data["output_json"]),
+            input_cif=str(data.get("input_cif", "")),
+            jitter_seed=jitter_seed,
+            jitter_angstrom=float(data.get("jitter_angstrom", 0.1)),
+            restraint_radius=float(data.get("restraint_radius", 8.0)),
+            restraint_k=float(data.get("restraint_k", 500.0)),
         )
 
 

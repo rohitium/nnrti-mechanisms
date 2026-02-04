@@ -16,15 +16,16 @@ SLURM_TEMPLATE = """\
 #SBATCH --output={log_dir}/fep_%A_%a.out
 #SBATCH --error={log_dir}/fep_%A_%a.err
 
-# Load modules
-module load python/3.11
-module load cuda/12.2
-
-# Activate conda environment
-source activate nnrti
+# Load conda module and activate environment
+# (adjust module name if needed - run 'module avail anaconda' to check)
+ml anaconda3
+{env_activation}
 
 # Force CUDA platform for OpenMM
 export OPENMM_PLATFORM=CUDA
+
+# Create log directory if needed
+mkdir -p {log_dir}
 
 # Run FEP worker for this array task
 python -m src.cluster.fep_worker \\
@@ -46,6 +47,7 @@ def generate_slurm_script(
     equil_steps: int = 10_000,
     prod_steps: int = 25_000,
     sample_interval: int = 200,
+    conda_env: str | None = None,
 ) -> Path:
     """Generate a SLURM array job submission script.
 
@@ -59,12 +61,19 @@ def generate_slurm_script(
         equil_steps: Equilibration steps per lambda window.
         prod_steps: Production steps per lambda window.
         sample_interval: Sample interval for energy evaluations.
+        conda_env: Conda environment name to activate (optional).
 
     Returns:
         Path to the generated script.
     """
     tasks = load_manifest(manifest_path)
     max_task_id = len(tasks) - 1
+
+    # Build environment activation line
+    if conda_env:
+        env_activation = f"mamba activate {conda_env}"
+    else:
+        env_activation = "# TODO: Add conda activation, e.g.:\n# mamba activate nnrti"
 
     script_content = SLURM_TEMPLATE.format(
         partition=partition,
@@ -76,6 +85,7 @@ def generate_slurm_script(
         equil_steps=equil_steps,
         prod_steps=prod_steps,
         sample_interval=sample_interval,
+        env_activation=env_activation,
     )
 
     output_script.parent.mkdir(parents=True, exist_ok=True)

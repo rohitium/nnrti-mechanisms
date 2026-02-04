@@ -22,7 +22,7 @@ def collect_fep_results(
 
     Returns:
         DataFrame with columns: task_id, structure, mutation, safe_label,
-        replicate, leg, delta_g_kj_mol, fold_reduction.
+        replicate, leg, delta_g_kj_mol, fold_reduction, minimized_pdb.
     """
     tasks = load_manifest(manifest_path)
     rows = []
@@ -49,7 +49,57 @@ def collect_fep_results(
             "leg": task.leg,
             "delta_g_kj_mol": data.get("delta_g_kj_mol"),
             "fold_reduction": task.fold_reduction,
+            "minimized_pdb": data.get("minimized_pdb", ""),
         })
+
+    return pd.DataFrame(rows)
+
+
+def compute_structural_metrics(fep_df: pd.DataFrame, ligand_resname: str) -> pd.DataFrame:
+    """Compute structural metrics from minimized PDB files.
+
+    Args:
+        fep_df: DataFrame from collect_fep_results().
+        ligand_resname: Ligand residue name for contact calculations.
+
+    Returns:
+        DataFrame with structural metrics per (mutation, replicate).
+    """
+    from ..analysis_metrics import compute_contacts, pocket_volume_proxy
+
+    # Get unique (mutation, replicate, minimized_pdb) combinations
+    # (both legs share the same minimized structure)
+    unique_structs = fep_df[["mutation", "safe_label", "replicate", "minimized_pdb", "fold_reduction"]].drop_duplicates()
+
+    rows = []
+    for _, row in unique_structs.iterrows():
+        pdb_path = row["minimized_pdb"]
+        if not pdb_path or not Path(pdb_path).exists():
+            logging.warning(
+                "Missing minimized PDB for %s rep%d: %s",
+                row["mutation"], row["replicate"], pdb_path
+            )
+            continue
+
+        try:
+            contacts = compute_contacts(Path(pdb_path), ligand_resname=ligand_resname)
+            pocket_vol = pocket_volume_proxy(Path(pdb_path), ligand_resname=ligand_resname)
+
+            rows.append({
+                "structure": "DOR",
+                "mutation": row["mutation"],
+                "safe_label": row["safe_label"],
+                "replicate": row["replicate"],
+                "contact_count": contacts.contact_count,
+                "hbond_count": contacts.hbond_count,
+                "pocket_volume_proxy": pocket_vol,
+                "fold_reduction": row["fold_reduction"],
+            })
+        except Exception as e:
+            logging.error(
+                "Failed to compute metrics for %s rep%d: %s",
+                row["mutation"], row["replicate"], e
+            )
 
     return pd.DataFrame(rows)
 
@@ -106,31 +156,30 @@ def compute_binding_ddg(fep_df: pd.DataFrame) -> pd.DataFrame:
 
 def merge_with_structural_metrics(
     ddg_df: pd.DataFrame,
-    structural_metrics_path: Path,
+    structural_metrics_df: pd.DataFrame,
 ) -> pd.DataFrame:
     """Merge ΔΔG results with structural metrics.
 
     Args:
         ddg_df: DataFrame from compute_binding_ddg().
-        structural_metrics_path: Path to structural_metrics.csv.
+        structural_metrics_df: DataFrame from compute_structural_metrics().
 
     Returns:
         Merged DataFrame with ΔΔG and structural metrics.
     """
-    if not structural_metrics_path.exists():
-        logging.warning(
-            "Structural metrics file not found: %s", structural_metrics_path
-        )
+    if structural_metrics_df.empty:
         return ddg_df
 
-    struct_df = pd.read_csv(structural_metrics_path)
-
     merged = ddg_df.merge(
-        struct_df,
-        on=["structure", "mutation", "replicate"],
+        structural_metrics_df,
+        on=["structure", "mutation", "safe_label", "replicate"],
         how="left",
         suffixes=("", "_struct"),
     )
+
+    # Handle duplicate fold_reduction column
+    if "fold_reduction_struct" in merged.columns:
+        merged = merged.drop(columns=["fold_reduction_struct"])
 
     return merged
 
@@ -211,16 +260,16 @@ def summarize_ddg_by_mutation(ddg_df: pd.DataFrame) -> pd.DataFrame:
 def run_result_collection(
     manifest_path: Path,
     fep_results_dir: Path,
-    structural_metrics_path: Path | None,
     output_dir: Path,
+    ligand_resname: str = "2KW",
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Run the full result collection and analysis pipeline.
 
     Args:
         manifest_path: Path to FEP manifest CSV.
         fep_results_dir: Directory containing FEP result JSONs.
-        structural_metrics_path: Optional path to structural metrics CSV.
         output_dir: Directory for output files.
+        ligand_resname: Ligand residue name for structural metrics.
 
     Returns:
         Tuple of (ddg_summary, correlation_analysis, full_ddg_df).
@@ -236,9 +285,11 @@ def run_result_collection(
     logging.info("Computing binding ΔG and ΔΔG")
     ddg_df = compute_binding_ddg(fep_df)
 
-    if structural_metrics_path:
-        logging.info("Merging with structural metrics")
-        ddg_df = merge_with_structural_metrics(ddg_df, structural_metrics_path)
+    logging.info("Computing structural metrics from minimized structures")
+    struct_df = compute_structural_metrics(fep_df, ligand_resname)
+    if not struct_df.empty:
+        struct_df.to_csv(output_dir / "structural_metrics.csv", index=False)
+        ddg_df = merge_with_structural_metrics(ddg_df, struct_df)
 
     ddg_df.to_csv(output_dir / "ddg_full.csv", index=False)
 

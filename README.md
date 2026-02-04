@@ -2,202 +2,322 @@
 
 Understanding structural mechanisms of Non-Nucleoside Reverse Transcriptase Inhibitor (NNRTI) resistance in HIV-1.
 
-This repository contains code, data, and analysis for evaluating the structural
-impact of clinically relevant NNRTI resistance mutations on Rilpivirine (RPV)
-and Doravirine (DOR) using publicly available cryo-EM RT/DNA/drug structures.
+This repository computes binding free energy changes (ΔΔG) for drug resistance mutations using alchemical free energy perturbation (FEP) on GPU clusters.
 
-## Workflows
+## Quick Start: Cluster FEP Pipeline
 
-### 1. Local Analysis Pipeline (CPU)
+### Overview
 
-For quick structural analysis on a local machine:
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LOCAL (CPU)                                                                 │
+│                                                                             │
+│   CIF structure ──► Mutagenesis ──► Mutant CIFs ──► FEP Manifest (CSV)     │
+│                     (PDBFixer)       (14 structures)  (84 tasks)            │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼ rsync to cluster
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CLUSTER (GPU)                                                               │
+│                                                                             │
+│   For each task (mutation × replicate × leg):                               │
+│     1. Minimize structure (OpenMM CUDA)                                     │
+│     2. Solvate with TIP3P water + 0.15M ions                               │
+│     3. Run FEP: annihilate ligand across 13 λ windows                      │
+│     4. Save ΔG to JSON                                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼ rsync results back
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LOCAL (CPU)                                                                 │
+│                                                                             │
+│   Collect JSONs ──► Compute ΔΔG ──► Structural metrics ──► Correlations    │
+│                     (ΔG_mut - ΔG_wt)  (contacts, H-bonds)   (vs resistance) │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Step 1: Prepare Locally (creates mutant CIFs + manifest)
 
 ```bash
-uv run python -m src.main
+uv run python -m src.main --prepare-local --replicates 3 --seed 42 --jitter-angstrom 0.1
 ```
 
-This runs the DRM batch pipeline using `data/DRMs.csv`, writes `results/metrics_summary.csv`,
-and generates per-drug plots in `results/plots/`.
+**Outputs:**
+- `data/prepared/dor_4ncg/wt_4ncg.cif` - Wild-type structure
+- `data/prepared/dor_4ncg/mut_*.cif` - Mutant structures (13 mutations)
+- `results/fep_manifest.csv` - Task manifest (84 tasks)
 
-### 2. Cluster FEP Pipeline (GPU)
+**What's in the manifest:**
+| Column | Description |
+|--------|-------------|
+| `task_id` | 0-83, used by SLURM array |
+| `mutation` | "WT" or mutation label (e.g., "V106A") |
+| `replicate` | 1, 2, or 3 |
+| `leg` | "complex" or "solvent" (see below) |
+| `input_cif` | Path to CIF for minimization |
+| `jitter_seed` | Random seed for coordinate perturbation |
 
-For rigorous alchemical free energy perturbation (FEP) calculations on Stanford Sherlock:
+### Step 2: Generate SLURM Script
 
-```
-LOCAL PHASE (CPU):
-  CIF → Mutagenesis → Minimization → Contacts/H-bonds/Pocket → Manifest
-        (PDBFixer)    (OpenMM CPU)   (MDAnalysis)              (CSV)
-
-CLUSTER PHASE (GPU):
-  Manifest → SLURM Array Job → FEP per (mutation, replicate, leg) → JSON
-
-AGGREGATION PHASE (CPU):
-  JSON results → Collect → ΔΔG = ΔG_mut - ΔG_wt → Correlation Analysis
-```
-
-#### Step 1: Local Preparation
 ```bash
-uv run python -m src.main --prepare-local \
-    --replicates 3 --seed 42 --jitter-angstrom 0.1
+uv run python -m src.main --generate-slurm --conda-env nnrti
 ```
 
-Outputs:
-- `data/prepared/dor_4ncg/*.pdb` - Minimized structures
-- `results/structural_metrics.csv` - Contact counts, H-bonds, pocket volumes
-- `results/fep_manifest.csv` - Task assignments (84 tasks for 14 structures × 3 replicates × 2 legs)
+**Output:** `scripts/sherlock/submit_fep.sh`
 
-#### Step 2: Generate SLURM Script
+### Step 3: Setup on Sherlock (one-time)
+
+Some packages (openmmtools, pdbfixer) are only available via conda-forge.
+
 ```bash
-uv run python -m src.main --generate-slurm
+# SSH to Sherlock (replace <sunet-id> with your SUNet ID)
+ssh <sunet-id>@login.sherlock.stanford.edu
+
+# Check available conda modules
+module spider conda
+module avail anaconda
+
+# Load conda module (name may vary - check output above)
+ml anaconda3  # or whatever is available
+
+# Create conda environment (one-time)
+conda create -n nnrti python=3.12 -y
+conda activate nnrti
+
+# Install dependencies from conda-forge
+conda install -c conda-forge \
+    openmm openmmtools openmmforcefields \
+    openff-toolkit openff-forcefields \
+    pdbfixer gemmi rdkit mdanalysis \
+    numpy pandas matplotlib -y
 ```
 
-Output: `scripts/sherlock/submit_fep.sh`
+Note: Installation may take a while due to dependency resolution.
 
-#### Step 3: Transfer to Sherlock
+### Step 4: Transfer to Cluster
+
 ```bash
+# Replace <sunet-id> with your SUNet ID
 rsync -avz --exclude='.venv' --exclude='.git' \
-    . sherlock:/scratch/users/$USER/nnrti-mechanisms/
+    . <sunet-id>@login.sherlock.stanford.edu:/scratch/users/<sunet-id>/nnrti-mechanisms/
 ```
 
-#### Step 4: Submit on Sherlock
+### Step 5: Submit Jobs on Cluster
+
 ```bash
+# On Sherlock (after ssh-ing in)
+cd /scratch/users/<sunet-id>/nnrti-mechanisms
 sbatch scripts/sherlock/submit_fep.sh
+
+# Monitor progress
+squeue -u <sunet-id>
 ```
 
-#### Step 5: Transfer Results Back
+This submits 84 parallel GPU jobs (one per task).
+
+### Step 6: Transfer Results Back
+
 ```bash
-rsync -avz sherlock:/scratch/users/$USER/nnrti-mechanisms/results/fep_runs/ \
+# Replace <sunet-id> with your SUNet ID
+rsync -avz <sunet-id>@login.sherlock.stanford.edu:/scratch/users/<sunet-id>/nnrti-mechanisms/results/fep_runs/ \
     results/fep_runs/
 ```
 
-#### Step 6: Collect and Analyze
+### Step 7: Collect and Analyze
+
 ```bash
 uv run python -m src.main --collect-results
 ```
 
-Outputs:
-- `results/ddg_summary.csv` - ΔΔG per mutation
-- `results/correlation_analysis.csv` - Pearson/Spearman correlations with fold-reduction
+**Outputs:**
+- `results/ddg_summary.csv` - ΔΔG per mutation (mean ± std across replicates)
+- `results/structural_metrics.csv` - Contacts, H-bonds, pocket volume
+- `results/correlation_analysis.csv` - Pearson/Spearman vs fold-reduction
 - `results/plots/ddg_vs_fold_reduction.png`
 
-## Key Inputs
+---
 
-### Structures
-- `data/structures/7Z2D.cif` - RT/DNA/RPV complex
-- `data/structures/7Z2G.cif` - RT/DNA/DOR complex
-- `data/structures/4NCG.cif` - RT/DOR complex (for FEP workflow)
+## Understanding the FEP Calculation
 
-### DRM Data
-- `data/DRMs.csv` - Drug resistance mutations (from Stanford HIVDB)
-- `data/DRM-susceptibilities.csv.xlsx` - DOR susceptibility data with fold-reduction values
+### Why Two Legs?
 
-### DRM Table Format
+Binding free energy is computed via a thermodynamic cycle:
 
-`data/DRMs.csv` must include:
-- `drug`: `RPV` or `DOR`
-- `mutation`: one or more mutations, e.g. `K101E` or `K101E+E138K`
-- `chain`: chain id(s) for each mutation, e.g. `A` or `A+B`
-- `category`, `notes`: optional metadata preserved in outputs
+```
+ΔG_binding = ΔG_complex - ΔG_solvent
+```
 
-The chain spec is positional: `K101E+E138K` with `A+B` applies K101E to chain A
-and E138K to chain B. If the chain spec has only one chain (e.g. `A`), that
-chain is applied to every mutation in the combo.
+| Leg | System | What happens |
+|-----|--------|--------------|
+| **complex** | Protein + Ligand + Water | Ligand is "turned off" while bound to protein |
+| **solvent** | Ligand + Water (no protein) | Ligand is "turned off" in bulk water |
 
-## Outputs
+The difference gives the free energy of transferring the ligand from water to the binding site.
 
-### Local Pipeline
-- `data/generated/<drug>/<mutation_label>/` - Minimized structures per mutation
-- `results/metrics_summary.csv` - All metrics (binding proxy, contacts, H-bonds, pocket volume)
-- `results/plots/<drug>_delta_metrics.png` - Bar charts of MUT-WT deltas
+### Lambda Schedule
 
-### Cluster FEP Pipeline
-- `data/prepared/dor_4ncg/` - Minimized PDB structures
-- `results/fep_runs/` - JSON results from cluster jobs
-- `results/ddg_summary.csv` - ΔΔG values per mutation
-- `results/correlation_analysis.csv` - Correlation statistics
-- `results/plots/ddg_vs_fold_reduction.png` - Correlation plots
+Each leg runs 13 windows where the ligand is gradually decoupled:
+
+```
+λ = 1.0 → 0.95 → 0.9 → 0.8 → 0.7 → 0.6 → 0.5 → 0.4 → 0.3 → 0.2 → 0.1 → 0.05 → 0.0
+    ▲                                                                              ▲
+    │                                                                              │
+  Ligand fully                                                            Ligand fully
+  interacting                                                             decoupled
+```
+
+Free energy differences between adjacent windows are computed using BAR (Bennett Acceptance Ratio).
+
+### ΔΔG Interpretation
+
+```
+ΔΔG = ΔG_binding(mutant) - ΔG_binding(WT)
+```
+
+| ΔΔG | Meaning |
+|-----|---------|
+| Positive | Mutation weakens binding → resistance |
+| Negative | Mutation strengthens binding → sensitization |
+| ~0 | No significant effect |
+
+---
 
 ## CLI Reference
 
+### Cluster Workflow Commands
+
 ```bash
-# Validation only (no OpenMM)
-uv run python -m src.main --validate-only
+# Step 1: Prepare mutant structures and manifest
+uv run python -m src.main --prepare-local \
+    --replicates 3 \
+    --seed 42 \
+    --jitter-angstrom 0.1
 
-# Verify mutations without minimization
-uv run python -m src.main --verify-only
-
-# Full local pipeline with replicates
-uv run python -m src.main --replicates 3 --seed 42 --jitter-angstrom 0.1
-
-# Force recomputation
-uv run python -m src.main --force
-
-# Cluster workflow
-uv run python -m src.main --prepare-local --replicates 3 --seed 42 --jitter-angstrom 0.1
-uv run python -m src.main --generate-slurm
-uv run python -m src.main --collect-results
-
-# SLURM customization
+# Step 2: Generate SLURM script
 uv run python -m src.main --generate-slurm \
+    --conda-env nnrti \
     --slurm-partition gpu \
     --slurm-time 4:00:00 \
     --slurm-memory 16G
 
-# FEP parameters
-uv run python -m src.main --prepare-local \
-    --alchemy-equil-steps 10000 \
-    --alchemy-prod-steps 25000 \
-    --alchemy-sample-interval 200
+# Step 7: Collect results
+uv run python -m src.main --collect-results
 ```
+
+### FEP Parameters
+
+```bash
+--alchemy-equil-steps 10000    # Equilibration steps per λ window
+--alchemy-prod-steps 25000     # Production steps per λ window
+--alchemy-sample-interval 200  # Steps between energy samples
+```
+
+### All Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--prepare-local` | - | Create mutant CIFs and FEP manifest |
+| `--generate-slurm` | - | Generate SLURM submission script |
+| `--collect-results` | - | Aggregate FEP results and compute ΔΔG |
+| `--replicates` | 1 | Number of independent replicates |
+| `--seed` | None | Base random seed for jitter |
+| `--jitter-angstrom` | 0.0 | Coordinate perturbation magnitude |
+| `--conda-env` | None | Conda environment name on cluster |
+| `--slurm-partition` | gpu | SLURM partition |
+| `--slurm-time` | 4:00:00 | Job time limit |
+| `--slurm-memory` | 16G | Memory per task |
+
+---
+
+## Input Data
+
+### Structures
+- `data/structures/4NCG.cif` - RT/DOR crystal structure (used for FEP)
+- `data/structures/7Z2D.cif` - RT/DNA/RPV cryo-EM structure
+- `data/structures/7Z2G.cif` - RT/DNA/DOR cryo-EM structure
+
+### Susceptibility Data
+- `data/DRM-susceptibilities.csv.xlsx` - DOR fold-reduction values from literature
+
+---
+
+## Output Files
+
+### After `--prepare-local`
+```
+data/prepared/dor_4ncg/
+├── wt_4ncg.cif              # Wild-type structure
+├── mut_V106A.cif            # Single mutations
+├── mut_V106M.cif
+├── mut_L100I_K103N.cif      # Double mutations
+└── ...
+
+results/
+└── fep_manifest.csv         # 84 task definitions
+```
+
+### After Cluster Run
+```
+results/fep_runs/
+├── wt/
+│   ├── rep_01/
+│   │   ├── wt_minimized_rep01.pdb
+│   │   ├── wt_complex_rep01.json
+│   │   └── wt_solvent_rep01.json
+│   ├── rep_02/
+│   └── rep_03/
+├── V106A/
+│   ├── rep_01/
+│   │   ├── V106A_minimized_rep01.pdb
+│   │   ├── V106A_complex_rep01.json
+│   │   └── V106A_solvent_rep01.json
+│   └── ...
+└── ...
+```
+
+### After `--collect-results`
+```
+results/
+├── ddg_summary.csv          # ΔΔG per mutation
+├── ddg_full.csv             # All replicates
+├── structural_metrics.csv   # Contacts, H-bonds, pocket volume
+├── correlation_analysis.csv # Pearson/Spearman statistics
+└── plots/
+    └── ddg_vs_fold_reduction.png
+```
+
+---
 
 ## Dependencies
 
-- **Structure processing**: pdbfixer, gemmi
-- **Simulation**: openmm, openmmtools, openmmforcefields
-- **Force fields**: openff-interchange, openff-forcefields, openff-toolkit
-- **Analysis**: mdanalysis, rdkit
-- **Core**: numpy, pandas, matplotlib
-- **Utilities**: lxml, xmltodict, networkx, cachetools
+```
+openmm openmmtools openmmforcefields
+openff-toolkit openff-forcefields
+pdbfixer gemmi rdkit mdanalysis
+numpy pandas matplotlib
+```
+
+---
 
 ## Technical Details
 
-### Minimization Procedure
+### Minimization (on cluster)
+- Force field: AMBER14 protein + DNA, SMIRNOFF ligand
+- Restraints: 500 kJ/mol/nm² on atoms >8Å from ligand
+- Two-stage: restrained then unrestrained
+- No explicit solvent (gas phase, NoCutoff)
 
-1. Load CIF structure with ligand from SDF
-2. Apply AMBER14 protein (`ff14SB`) + DNA (`bsc1`) force fields
-3. Use SMIRNOFF template for ligand (Gasteiger charges)
-4. Apply harmonic restraints (500 kJ/mol/nm²) to atoms >8Å from ligand
-5. Run `minimizeEnergy()` with restraints
-6. Run second unrestrained minimization
-7. Output minimized PDB
+### Solvation (on cluster)
+- Water model: TIP3P
+- Box padding: 1.0 nm
+- Ionic strength: 0.15 M (Na⁺/Cl⁻)
 
-### Alchemical FEP Protocol
+### FEP Protocol
+- Electrostatics: PME with 1.0 nm cutoff
+- Integrator: Langevin (300 K, 1/ps friction, 2 fs timestep)
+- Barostat: Monte Carlo (1 bar)
+- Free energy estimator: BAR
 
-- **Lambda schedule**: 13 windows (1.0 → 0.0)
-- **Equilibration**: 10,000 steps per window
-- **Production**: 25,000 steps per window
-- **Sample interval**: 200 steps
-- **Free energy estimator**: Bennett Acceptance Ratio (BAR)
-- **Runtime**: ~1 hour per leg on V100/A100
-
-### Binding ΔG Calculation
-
-```
-ΔG_binding = ΔG_complex - ΔG_solvent
-ΔΔG = ΔG_binding(mutant) - ΔG_binding(WT)
-```
-
-Positive ΔΔG indicates reduced binding affinity in the mutant (resistance).
-
-### Structural Metrics
-
-- **Contacts**: Atom pairs within 4.0Å between ligand and protein
-- **H-bonds**: MDAnalysis HydrogenBondAnalysis (3.5Å, 135° cutoff)
-- **Pocket volume**: Grid-based void volume within 8Å of ligand centroid
-
-## Notes
-
-- DNA is retained and lightly restrained during minimization
-- The cluster workflow uses CUDA for GPU acceleration
-- Local workflow defaults to Metal (macOS) or CPU
-- Ligand SDFs are auto-generated from CIF metadata with RDKit hydrogens
+### Expected Runtime
+- ~1 hour per leg on V100/A100
+- Total: ~84 GPU-hours for full dataset
