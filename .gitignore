@@ -211,3 +211,6 @@ __marimo__/
 
 .claude
 .mplconfig
+
+# Local outputs
+results/
