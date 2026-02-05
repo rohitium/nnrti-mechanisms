@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
+import time
 from pathlib import Path
 
 import numpy as np
@@ -115,18 +117,78 @@ def _collect_neighbor_delta_u(simulation, current: float, neighbor: float) -> fl
     return float(e_neighbor - e_current)
 
 
-def _run_leg(
-    topology,
-    positions,
-    forcefield,
-    ligand_resname: str,
-    config: AlchemicalConfig,
-) -> AlchemicalLegResult:
+def _run_leg_from_simulation(simulation, config: AlchemicalConfig) -> AlchemicalLegResult:
+    unit = require_module("openmm.unit")
+    lambdas = tuple(config.lambda_schedule)
+    beta = 1.0 / (
+        unit.MOLAR_GAS_CONSTANT_R
+        * config.temperature_k
+        * unit.kelvin
+    ).value_in_unit(unit.kilojoule_per_mole)
+    forward = [None] * (len(lambdas) - 1)
+    reverse = [None] * (len(lambdas) - 1)
+
+    if config.production_steps < config.sample_interval:
+        raise ValueError("production_steps must be >= sample_interval.")
+    samples = max(1, config.production_steps // config.sample_interval)
+
+    start_wall = None
+    for i, lam in enumerate(lambdas):
+        if start_wall is None:
+            start_wall = time.perf_counter()
+        _set_lambda(simulation, lam)
+        simulation.step(config.equilibration_steps)
+
+        to_next = []
+        to_prev = []
+        for _ in range(samples):
+            simulation.step(config.sample_interval)
+            if i < len(lambdas) - 1:
+                delta_u = _collect_neighbor_delta_u(simulation, lam, lambdas[i + 1])
+                to_next.append(beta * delta_u)
+            if i > 0:
+                delta_u = _collect_neighbor_delta_u(simulation, lam, lambdas[i - 1])
+                to_prev.append(beta * delta_u)
+
+        if i < len(lambdas) - 1:
+            forward[i] = np.array(to_next, dtype=float)
+        if i > 0:
+            reverse[i - 1] = np.array(to_prev, dtype=float)
+
+        elapsed = time.perf_counter() - start_wall
+        done = i + 1
+        total = len(lambdas)
+        per_window = elapsed / done if done else 0.0
+        remaining = per_window * (total - done)
+        logging.info(
+            "Lambda %d/%d (%.2f) done. Elapsed %.1fs, ETA %.1fs",
+            done,
+            total,
+            lam,
+            elapsed,
+            remaining,
+        )
+
+    pair_delta_f = []
+    for i in range(len(lambdas) - 1):
+        w_f = forward[i]
+        w_r = reverse[i]
+        if w_f is None or w_r is None:
+            raise RuntimeError(f"Missing BAR work arrays for lambda pair {i}-{i + 1}.")
+        pair_delta_f.append(_bar_delta_f(w_f, w_r))
+
+    pair_delta_g = [float(df / beta) for df in pair_delta_f]
+    return AlchemicalLegResult(
+        delta_g_kj_mol=float(np.sum(pair_delta_g)),
+        pair_delta_g_kj_mol=tuple(pair_delta_g),
+    )
+
+
+def _build_alchemical_system(topology, forcefield, ligand_resname: str, config: AlchemicalConfig):
     app = require_module("openmm.app")
     openmm = require_module("openmm")
     unit = require_module("openmm.unit")
     alchemy = require_module("openmmtools.alchemy")
-    platform, properties = get_platform()
 
     ligand_atom_indices = [
         atom.index for atom in topology.atoms() if atom.residue.name == ligand_resname
@@ -156,7 +218,26 @@ def _run_leg(
         annihilate_sterics=True,
     )
     factory = alchemy.AbsoluteAlchemicalFactory()
-    alchemical_system = factory.create_alchemical_system(base_system, region)
+    return factory.create_alchemical_system(base_system, region)
+
+
+def _run_leg(
+    topology,
+    positions,
+    forcefield,
+    ligand_resname: str,
+    config: AlchemicalConfig,
+) -> AlchemicalLegResult:
+    app = require_module("openmm.app")
+    openmm = require_module("openmm")
+    unit = require_module("openmm.unit")
+    platform, properties = get_platform()
+    alchemical_system = _build_alchemical_system(
+        topology=topology,
+        forcefield=forcefield,
+        ligand_resname=ligand_resname,
+        config=config,
+    )
 
     integrator = openmm.LangevinMiddleIntegrator(
         config.temperature_k * unit.kelvin,
@@ -168,53 +249,7 @@ def _run_leg(
     )
     simulation.context.setPositions(positions)
     simulation.context.setVelocitiesToTemperature(config.temperature_k * unit.kelvin)
-
-    lambdas = tuple(config.lambda_schedule)
-    beta = 1.0 / (
-        unit.MOLAR_GAS_CONSTANT_R
-        * config.temperature_k
-        * unit.kelvin
-    ).value_in_unit(unit.kilojoule_per_mole)
-    forward = [None] * (len(lambdas) - 1)
-    reverse = [None] * (len(lambdas) - 1)
-
-    if config.production_steps < config.sample_interval:
-        raise ValueError("production_steps must be >= sample_interval.")
-    samples = max(1, config.production_steps // config.sample_interval)
-
-    for i, lam in enumerate(lambdas):
-        _set_lambda(simulation, lam)
-        simulation.step(config.equilibration_steps)
-
-        to_next = []
-        to_prev = []
-        for _ in range(samples):
-            simulation.step(config.sample_interval)
-            if i < len(lambdas) - 1:
-                delta_u = _collect_neighbor_delta_u(simulation, lam, lambdas[i + 1])
-                to_next.append(beta * delta_u)
-            if i > 0:
-                delta_u = _collect_neighbor_delta_u(simulation, lam, lambdas[i - 1])
-                to_prev.append(beta * delta_u)
-
-        if i < len(lambdas) - 1:
-            forward[i] = np.array(to_next, dtype=float)
-        if i > 0:
-            reverse[i - 1] = np.array(to_prev, dtype=float)
-
-    pair_delta_f = []
-    for i in range(len(lambdas) - 1):
-        w_f = forward[i]
-        w_r = reverse[i]
-        if w_f is None or w_r is None:
-            raise RuntimeError(f"Missing BAR work arrays for lambda pair {i}-{i + 1}.")
-        pair_delta_f.append(_bar_delta_f(w_f, w_r))
-
-    pair_delta_g = [float(df / beta) for df in pair_delta_f]
-    return AlchemicalLegResult(
-        delta_g_kj_mol=float(np.sum(pair_delta_g)),
-        pair_delta_g_kj_mol=tuple(pair_delta_g),
-    )
+    return _run_leg_from_simulation(simulation, config)
 
 
 def _extract_ligand_only(topology, positions, ligand_resname: str):
@@ -369,6 +404,125 @@ def run_single_leg(
         config=cfg,
     )
 
+    result = SingleLegResult(
+        leg=leg,
+        delta_g_kj_mol=leg_result.delta_g_kj_mol,
+        pair_delta_g_kj_mol=leg_result.pair_delta_g_kj_mol,
+        lambda_schedule=cfg.lambda_schedule,
+    )
+
+    if output_json is not None:
+        write_single_leg_result(output_json, result, metadata or {})
+
+    return result
+
+
+def prepare_single_leg_assets(
+    minimized_pdb_path: Path,
+    ligand_resname: str,
+    ligand_sdf: Path,
+    leg: str,
+    topology_pdb_path: Path,
+    system_xml_path: Path,
+    config: AlchemicalConfig | None = None,
+) -> None:
+    """Prepare serialized alchemical assets locally for OpenMM-only cluster execution."""
+    from .pipeline import build_forcefield, load_ligand_molecule
+
+    if leg not in ("complex", "solvent"):
+        raise ValueError(f"leg must be 'complex' or 'solvent', got {leg!r}")
+
+    app = require_module("openmm.app")
+    openmm = require_module("openmm")
+    cfg = config or AlchemicalConfig()
+
+    with open(minimized_pdb_path, "r") as handle:
+        pdb = app.PDBFile(handle)
+
+    ligand = load_ligand_molecule(ligand_sdf)
+    forcefield = build_forcefield([ligand])
+
+    if leg == "complex":
+        top, pos = _solvate(pdb.topology, pdb.positions, forcefield, cfg)
+    else:
+        lig_top, lig_pos = _extract_ligand_only(
+            pdb.topology, pdb.positions, ligand_resname
+        )
+        top, pos = _solvate(lig_top, lig_pos, forcefield, cfg)
+
+    system = _build_alchemical_system(
+        topology=top,
+        forcefield=forcefield,
+        ligand_resname=ligand_resname,
+        config=cfg,
+    )
+
+    # Minimize solvated alchemical system locally to reduce NaNs on cluster.
+    openmm = require_module("openmm")
+    unit = require_module("openmm.unit")
+    integrator = openmm.LangevinMiddleIntegrator(
+        cfg.temperature_k * unit.kelvin,
+        1.0 / unit.picosecond,
+        cfg.timestep_fs * unit.femtoseconds,
+    )
+    simulation = app.Simulation(top, system, integrator)
+    simulation.context.setPositions(pos)
+    simulation.minimizeEnergy()
+    pos = simulation.context.getState(getPositions=True).getPositions()
+
+    topology_pdb_path.parent.mkdir(parents=True, exist_ok=True)
+    system_xml_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(topology_pdb_path, "w") as handle:
+        app.PDBFile.writeFile(top, pos, handle)
+    system_xml_path.write_text(openmm.XmlSerializer.serialize(system))
+
+
+def run_single_leg_prepared(
+    prepared_topology_pdb: Path,
+    prepared_system_xml: Path,
+    leg: str,
+    config: AlchemicalConfig | None = None,
+    output_json: Path | None = None,
+    metadata: dict | None = None,
+) -> SingleLegResult:
+    """Run a single FEP leg from prebuilt serialized assets (OpenMM-only runtime)."""
+    if leg not in ("complex", "solvent"):
+        raise ValueError(f"leg must be 'complex' or 'solvent', got {leg!r}")
+
+    app = require_module("openmm.app")
+    openmm = require_module("openmm")
+    unit = require_module("openmm.unit")
+    cfg = config or AlchemicalConfig()
+    platform, properties = get_platform()
+
+    with open(prepared_topology_pdb, "r") as handle:
+        pdb = app.PDBFile(handle)
+    system = openmm.XmlSerializer.deserialize(prepared_system_xml.read_text())
+    integrator = openmm.LangevinMiddleIntegrator(
+        cfg.temperature_k * unit.kelvin,
+        1.0 / unit.picosecond,
+        cfg.timestep_fs * unit.femtoseconds,
+    )
+    simulation = app.Simulation(
+        pdb.topology, system, integrator, platform, properties
+    )
+    simulation.context.setPositions(pdb.positions)
+    # Minimize solvated system to avoid NaNs during equilibration.
+    simulation.minimizeEnergy()
+    simulation.context.setVelocitiesToTemperature(cfg.temperature_k * unit.kelvin)
+    # Gentle warmup with a smaller timestep to reduce initial instabilities.
+    try:
+        original_step = integrator.getStepSize()
+        warmup_step = min(original_step, 0.5 * unit.femtoseconds)
+        if warmup_step < original_step:
+            integrator.setStepSize(warmup_step)
+        simulation.step(200)
+        if warmup_step < original_step:
+            integrator.setStepSize(original_step)
+    except Exception:
+        simulation.step(100)
+
+    leg_result = _run_leg_from_simulation(simulation, cfg)
     result = SingleLegResult(
         leg=leg,
         delta_g_kj_mol=leg_result.delta_g_kj_mol,

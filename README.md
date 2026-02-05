@@ -12,8 +12,8 @@ This repository computes binding free energy changes (ΔΔG) for drug resistance
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ LOCAL (CPU)                                                                 │
 │                                                                             │
-│   CIF structure ──► Mutagenesis ──► Mutant CIFs ──► FEP Manifest (CSV)     │
-│                     (PDBFixer)       (14 structures)  (84 tasks)            │
+│   CIF structure ──► Mutagenesis ──► Min/solvate ──► FEP Manifest (CSV)      │
+│                     (PDBFixer)       (assets)         (N tasks)            │
 └─────────────────────────────────────────────────────────────────────────────┘
                                         │
                                         ▼ rsync to cluster
@@ -21,10 +21,9 @@ This repository computes binding free energy changes (ΔΔG) for drug resistance
 │ CLUSTER (GPU)                                                               │
 │                                                                             │
 │   For each task (mutation × replicate × leg):                               │
-│     1. Minimize structure (OpenMM CUDA)                                     │
-│     2. Solvate with TIP3P water + 0.15M ions                               │
-│     3. Run FEP: annihilate ligand across 13 λ windows                      │
-│     4. Save ΔG to JSON                                                      │
+│     1. Load prebuilt alchemical system                                     │
+│     2. Run FEP: annihilate ligand across 13 λ windows                      │
+│     3. Save ΔG to JSON                                                     │
 └─────────────────────────────────────────────────────────────────────────────┘
                                         │
                                         ▼ rsync results back
@@ -36,63 +35,75 @@ This repository computes binding free energy changes (ΔΔG) for drug resistance
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Step 1: Prepare Locally (creates mutant CIFs + manifest)
+### Step 1: Prepare Locally (recommended: prebuild OpenMM-only assets)
 
 ```bash
-uv run python -m src.main --prepare-local --replicates 3 --seed 42 --jitter-angstrom 0.1
+# Pilot run: WT + V106A only (OpenMM-only runtime on Sherlock)
+# Use a conda environment with OpenMM + OpenMMTools for preparation.
+conda activate nnrti-prep
+export OPENMM_PLATFORM=CPU
+python -m src.main \
+  --prepare-local-openmm-only \
+  --mutation V106A \
+  --replicates 1 \
+  --seed 42 \
+  --jitter-angstrom 0.1
 ```
 
 **Outputs:**
 - `data/prepared/dor_4ncg/wt_4ncg.cif` - Wild-type structure
-- `data/prepared/dor_4ncg/mut_*.cif` - Mutant structures (13 mutations)
-- `results/fep_manifest.csv` - Task manifest (84 tasks)
+- `data/prepared/dor_4ncg/mut_v106a.cif` - V106A mutant structure
+- `results/fep_runs/*/rep_*/assets/*_system.xml` - prebuilt alchemical systems
+- `results/fep_runs/*/rep_*/assets/*_start.pdb` - minimized solvated topologies
+- `results/fep_manifest.csv` - Task manifest (WT + V106A, complex/solvent legs)
 
 **What's in the manifest:**
 | Column | Description |
 |--------|-------------|
-| `task_id` | 0-83, used by SLURM array |
+| `task_id` | 0..N, used by SLURM array |
 | `mutation` | "WT" or mutation label (e.g., "V106A") |
 | `replicate` | 1, 2, or 3 |
 | `leg` | "complex" or "solvent" (see below) |
-| `input_cif` | Path to CIF for minimization |
+| `input_cif` | Source CIF path used during local preparation |
 | `jitter_seed` | Random seed for coordinate perturbation |
+| `prepared_system_xml` | Prebuilt alchemical OpenMM system |
+| `prepared_topology_pdb` | Starting solvated topology/coordinates |
 
 ### Step 2: Generate SLURM Script
 
 ```bash
-uv run python -m src.main --generate-slurm --conda-env nnrti
+python -m src.main --generate-slurm --use-openmm-module
 ```
 
 **Output:** `scripts/sherlock/submit_fep.sh`
 
 ### Step 3: Setup on Sherlock (one-time)
 
-Some packages (openmmtools, pdbfixer) are only available via conda-forge.
+For this OpenMM-only Sherlock path, use the site OpenMM module.
 
 ```bash
 # SSH to Sherlock (replace <sunet-id> with your SUNet ID)
 ssh <sunet-id>@login.sherlock.stanford.edu
 
-# Check available conda modules
-module spider conda
-module avail anaconda
+# Load Sherlock OpenMM stack
+ml chemistry py-openmm/8.1.1_py312
 
-# Load conda module (name may vary - check output above)
-ml anaconda3  # or whatever is available
-
-# Create conda environment (one-time)
-conda create -n nnrti python=3.12 -y
-conda activate nnrti
-
-# Install dependencies from conda-forge
-conda install -c conda-forge \
-    openmm openmmtools openmmforcefields \
-    openff-toolkit openff-forcefields \
-    pdbfixer gemmi rdkit mdanalysis \
-    numpy pandas matplotlib -y
+# Quick check (use python3 on Sherlock)
+python3 -c "import openmm; print(openmm.__version__)"
 ```
 
-Note: Installation may take a while due to dependency resolution.
+If module import fails, fall back to a minimal conda environment:
+
+```bash
+ml miniforge/24.11.0-0
+mamba create -n nnrti python=3.12 -y
+mamba activate nnrti
+
+# Runtime deps needed on Sherlock for prebuilt-asset mode
+conda install -c conda-forge openmm numpy -y
+```
+
+Note: `openmmtools`, `openff*`, `openmmforcefields`, and `pdbfixer` are needed locally for preparation, not on Sherlock in this mode.
 
 ### Step 4: Transfer to Cluster
 
@@ -100,6 +111,9 @@ Note: Installation may take a while due to dependency resolution.
 # Replace <sunet-id> with your SUNet ID
 rsync -avz --exclude='.venv' --exclude='.git' \
     . <sunet-id>@login.sherlock.stanford.edu:/scratch/users/<sunet-id>/nnrti-mechanisms/
+
+# For OpenMM-only assets, sync the prepared assets directory as well
+rsync -avz results/fep_runs/ <sunet-id>@login.sherlock.stanford.edu:/scratch/users/<sunet-id>/nnrti-mechanisms/results/fep_runs/
 ```
 
 ### Step 5: Submit Jobs on Cluster
@@ -113,7 +127,15 @@ sbatch scripts/sherlock/submit_fep.sh
 squeue -u <sunet-id>
 ```
 
-This submits 84 parallel GPU jobs (one per task).
+For WT + V106A with 1 replicate, this submits 4 GPU jobs (2 mutations × 1 replicate × 2 legs).
+
+### Step 5b: Fix manifest paths on Sherlock
+
+Local manifests store absolute paths from your workstation. Rewrite them on Sherlock before submitting jobs:
+
+```bash
+python3 scripts/sherlock/rewrite_manifest_paths.py
+```
 
 ### Step 6: Transfer Results Back
 
@@ -126,7 +148,7 @@ rsync -avz <sunet-id>@login.sherlock.stanford.edu:/scratch/users/<sunet-id>/nnrt
 ### Step 7: Collect and Analyze
 
 ```bash
-uv run python -m src.main --collect-results
+python -m src.main --collect-results
 ```
 
 **Outputs:**
@@ -187,21 +209,22 @@ Free energy differences between adjacent windows are computed using BAR (Bennett
 ### Cluster Workflow Commands
 
 ```bash
-# Step 1: Prepare mutant structures and manifest
-uv run python -m src.main --prepare-local \
-    --replicates 3 \
+# Step 1: Prepare OpenMM-only assets locally (example: WT + V106A, 1 replicate)
+python -m src.main --prepare-local-openmm-only \
+    --mutation V106A \
+    --replicates 1 \
     --seed 42 \
     --jitter-angstrom 0.1
 
-# Step 2: Generate SLURM script
-uv run python -m src.main --generate-slurm \
-    --conda-env nnrti \
+# Step 2: Generate SLURM script (OpenMM module on Sherlock)
+python -m src.main --generate-slurm \
+    --use-openmm-module \
     --slurm-partition gpu \
     --slurm-time 4:00:00 \
     --slurm-memory 16G
 
 # Step 7: Collect results
-uv run python -m src.main --collect-results
+python -m src.main --collect-results
 ```
 
 ### FEP Parameters
@@ -216,13 +239,16 @@ uv run python -m src.main --collect-results
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--prepare-local` | - | Create mutant CIFs and FEP manifest |
+| `--prepare-local` | - | Create mutant CIFs and FEP manifest (legacy) |
+| `--prepare-local-openmm-only` | - | Prebuild OpenMM-only assets for cluster |
+| `--mutation` | None | Filter to a specific mutation label (e.g., V106A) |
 | `--generate-slurm` | - | Generate SLURM submission script |
 | `--collect-results` | - | Aggregate FEP results and compute ΔΔG |
 | `--replicates` | 1 | Number of independent replicates |
 | `--seed` | None | Base random seed for jitter |
 | `--jitter-angstrom` | 0.0 | Coordinate perturbation magnitude |
 | `--conda-env` | None | Conda environment name on cluster |
+| `--use-openmm-module` | False | Generate SLURM script for Sherlock OpenMM module |
 | `--slurm-partition` | gpu | SLURM partition |
 | `--slurm-time` | 4:00:00 | Job time limit |
 | `--slurm-memory` | 16G | Memory per task |
@@ -253,7 +279,7 @@ data/prepared/dor_4ncg/
 └── ...
 
 results/
-└── fep_manifest.csv         # 84 task definitions
+└── fep_manifest.csv         # task definitions (absolute paths)
 ```
 
 ### After Cluster Run
@@ -263,14 +289,24 @@ results/fep_runs/
 │   ├── rep_01/
 │   │   ├── wt_minimized_rep01.pdb
 │   │   ├── wt_complex_rep01.json
-│   │   └── wt_solvent_rep01.json
+│   │   ├── wt_solvent_rep01.json
+│   │   └── assets/
+│   │       ├── wt_complex_rep01_start.pdb
+│   │       ├── wt_complex_rep01_system.xml
+│   │       ├── wt_solvent_rep01_start.pdb
+│   │       └── wt_solvent_rep01_system.xml
 │   ├── rep_02/
 │   └── rep_03/
 ├── V106A/
 │   ├── rep_01/
 │   │   ├── V106A_minimized_rep01.pdb
 │   │   ├── V106A_complex_rep01.json
-│   │   └── V106A_solvent_rep01.json
+│   │   ├── V106A_solvent_rep01.json
+│   │   └── assets/
+│   │       ├── V106A_complex_rep01_start.pdb
+│   │       ├── V106A_complex_rep01_system.xml
+│   │       ├── V106A_solvent_rep01_start.pdb
+│   │       └── V106A_solvent_rep01_system.xml
 │   └── ...
 └── ...
 ```
@@ -291,23 +327,27 @@ results/
 ## Dependencies
 
 ```
-openmm openmmtools openmmforcefields
+Cluster runtime (FEP worker):
+openmm numpy
+
+Local prep / analysis tooling:
+openmmtools openmmforcefields
 openff-toolkit openff-forcefields
-pdbfixer gemmi rdkit mdanalysis
-numpy pandas matplotlib
+pdbfixer pandas openpyxl
+gemmi rdkit mdanalysis matplotlib
 ```
 
 ---
 
 ## Technical Details
 
-### Minimization (on cluster)
+### Minimization (local prep)
 - Force field: AMBER14 protein + DNA, SMIRNOFF ligand
 - Restraints: 500 kJ/mol/nm² on atoms >8Å from ligand
 - Two-stage: restrained then unrestrained
 - No explicit solvent (gas phase, NoCutoff)
 
-### Solvation (on cluster)
+### Solvation (local prep)
 - Water model: TIP3P
 - Box padding: 1.0 nm
 - Ionic strength: 0.15 M (Na⁺/Cl⁻)

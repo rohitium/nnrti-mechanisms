@@ -9,6 +9,7 @@ import pandas as pd
 from .cluster import generate_slurm_script, run_result_collection
 from .config import dor_spec, rpv_spec
 from .dor_alchemy_pipeline import (
+    prepare_local_openmm_only_for_cluster,
     prepare_dor_local_structures,
     prepare_local_for_cluster,
     run_dor_alchemical_manifest,
@@ -121,6 +122,23 @@ def main(argv: list[str] | None = None) -> None:
         help="Prepare structures, compute structural metrics, and generate FEP manifest for cluster.",
     )
     parser.add_argument(
+        "--prepare-local-openmm-only",
+        action="store_true",
+        help=(
+            "Prepare minimized structures + prebuilt alchemical assets locally so Sherlock "
+            "can run with OpenMM-only runtime dependencies."
+        ),
+    )
+    parser.add_argument(
+        "--mutation",
+        type=str,
+        default=None,
+        help=(
+            "Optional mutation label filter for preparation (e.g., V106A). "
+            "WT is always included."
+        ),
+    )
+    parser.add_argument(
         "--generate-slurm",
         action="store_true",
         help="Generate SLURM submission script for Sherlock cluster.",
@@ -171,6 +189,11 @@ def main(argv: list[str] | None = None) -> None:
         type=str,
         default=None,
         help="Conda environment name to activate on cluster (e.g., nnrti).",
+    )
+    parser.add_argument(
+        "--use-openmm-module",
+        action="store_true",
+        help="Generate SLURM script to use Sherlock chemistry/py-openmm module stack.",
     )
 
     args = parser.parse_args(argv)
@@ -238,6 +261,37 @@ def main(argv: list[str] | None = None) -> None:
         logging.info("Minimization will run on the cluster (GPU)")
         return
 
+    if args.prepare_local_openmm_only:
+        selected_mutations = {args.mutation} if args.mutation else None
+        if selected_mutations:
+            logging.info(
+                "Preparing OpenMM-only assets for WT + selected mutation(s): %s",
+                ", ".join(sorted(selected_mutations)),
+            )
+        else:
+            logging.info("Preparing OpenMM-only assets for WT + all DOR mutations")
+        fep_tasks = prepare_local_openmm_only_for_cluster(
+            root=root,
+            susceptibility_xlsx=susceptibility_xlsx,
+            prepared_dir=prepared_dir,
+            fep_manifest_path=fep_manifest,
+            fep_results_dir=fep_results_dir,
+            replicates=args.replicates,
+            jitter_seed_base=args.seed,
+            jitter_angstrom=args.jitter_angstrom,
+            alchemy_config=alchemy_cfg,
+            selected_mutations=selected_mutations,
+        )
+        n_structures = len({(task.mutation, task.replicate) for task in fep_tasks})
+        logging.info(
+            "Prepared %d structure/replicate setups and %d FEP tasks",
+            n_structures,
+            len(fep_tasks),
+        )
+        logging.info("FEP manifest: %s", fep_manifest)
+        logging.info("Sherlock can execute these tasks with OpenMM-only runtime")
+        return
+
     if args.generate_slurm:
         if not fep_manifest.exists():
             logging.error("FEP manifest not found: %s", fep_manifest)
@@ -253,6 +307,7 @@ def main(argv: list[str] | None = None) -> None:
             prod_steps=args.alchemy_prod_steps,
             sample_interval=args.alchemy_sample_interval,
             conda_env=args.conda_env,
+            use_openmm_module=args.use_openmm_module,
         )
         logging.info("Generated SLURM script: %s", output)
         return

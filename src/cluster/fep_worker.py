@@ -96,32 +96,17 @@ def run_fep_task(
     Returns:
         Dictionary with task result including delta_g_kj_mol.
     """
-    from ..openmm.alchemy import AlchemicalConfig, run_single_leg
+    from ..openmm.alchemy import AlchemicalConfig, run_single_leg, run_single_leg_prepared
 
     output_path = Path(task.output_json)
     output_dir = output_path.parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Step 1: Minimize structure (if not already done)
-    min_pdb = minimize_structure(task, output_dir)
-
-    # Step 2: Run FEP leg
     config = AlchemicalConfig(
         equilibration_steps=equil_steps,
         production_steps=prod_steps,
         sample_interval=sample_interval,
     )
-
-    metadata = {
-        "task_id": task.task_id,
-        "structure": task.structure,
-        "mutation": task.mutation,
-        "safe_label": task.safe_label,
-        "replicate": task.replicate,
-        "leg": task.leg,
-        "fold_reduction": task.fold_reduction,
-        "minimized_pdb": str(min_pdb),
-    }
 
     logging.info(
         "Running FEP task %d: %s rep%d %s leg",
@@ -132,16 +117,49 @@ def run_fep_task(
     )
 
     start_time = time.perf_counter()
-
-    result = run_single_leg(
-        minimized_pdb_path=min_pdb,
-        ligand_resname=task.ligand_resname,
-        ligand_sdf=Path(task.ligand_sdf),
-        leg=task.leg,
-        config=config,
-        output_json=output_path,
-        metadata=metadata,
-    )
+    use_prepared_assets = bool(task.prepared_system_xml and task.prepared_topology_pdb)
+    if use_prepared_assets:
+        min_pdb = Path(task.minimized_pdb) if task.minimized_pdb else Path(task.prepared_topology_pdb)
+        metadata = {
+            "task_id": task.task_id,
+            "structure": task.structure,
+            "mutation": task.mutation,
+            "safe_label": task.safe_label,
+            "replicate": task.replicate,
+            "leg": task.leg,
+            "fold_reduction": task.fold_reduction,
+            "minimized_pdb": str(min_pdb),
+        }
+        result = run_single_leg_prepared(
+            prepared_topology_pdb=Path(task.prepared_topology_pdb),
+            prepared_system_xml=Path(task.prepared_system_xml),
+            leg=task.leg,
+            config=config,
+            output_json=output_path,
+            metadata=metadata,
+        )
+    else:
+        # Legacy path: minimize and build alchemical system on cluster.
+        min_pdb = minimize_structure(task, output_dir)
+        metadata = {
+            "task_id": task.task_id,
+            "structure": task.structure,
+            "mutation": task.mutation,
+            "safe_label": task.safe_label,
+            "replicate": task.replicate,
+            "leg": task.leg,
+            "fold_reduction": task.fold_reduction,
+            "minimized_pdb": str(min_pdb),
+        }
+        result = run_single_leg(
+            minimized_pdb_path=min_pdb,
+            ligand_resname=task.ligand_resname,
+            ligand_sdf=Path(task.ligand_sdf),
+            leg=task.leg,
+            config=config,
+            output_json=output_path,
+            metadata=metadata,
+        )
 
     elapsed = time.perf_counter() - start_time
     logging.info(

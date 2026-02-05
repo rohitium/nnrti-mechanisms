@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+import csv
+from dataclasses import dataclass, asdict, fields
 from pathlib import Path
-
-import pandas as pd
 
 
 @dataclass(frozen=True)
@@ -33,21 +32,28 @@ class FEPTask:
     jitter_angstrom: float = 0.1
     restraint_radius: float = 8.0
     restraint_k: float = 500.0
+    # Optional OpenMM-only execution assets (prepared locally)
+    prepared_topology_pdb: str = ""
+    prepared_system_xml: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict) -> FEPTask:
-        fold = data.get("fold_reduction")
-        if fold is not None and pd.isna(fold):
-            fold = None
+        def _norm(value):
+            if value is None:
+                return None
+            text = str(value).strip()
+            if not text or text.lower() in {"nan", "none"}:
+                return None
+            return text
 
-        jitter_seed = data.get("jitter_seed")
-        if jitter_seed is not None and pd.isna(jitter_seed):
-            jitter_seed = None
-        elif jitter_seed is not None:
-            jitter_seed = int(jitter_seed)
+        fold_txt = _norm(data.get("fold_reduction"))
+        fold = float(fold_txt) if fold_txt is not None else None
+
+        jitter_txt = _norm(data.get("jitter_seed"))
+        jitter_seed = int(jitter_txt) if jitter_txt is not None else None
 
         return cls(
             task_id=int(data["task_id"]),
@@ -66,26 +72,32 @@ class FEPTask:
             jitter_angstrom=float(data.get("jitter_angstrom", 0.1)),
             restraint_radius=float(data.get("restraint_radius", 8.0)),
             restraint_k=float(data.get("restraint_k", 500.0)),
+            prepared_topology_pdb=str(data.get("prepared_topology_pdb", "")),
+            prepared_system_xml=str(data.get("prepared_system_xml", "")),
         )
 
 
 def save_manifest(tasks: list[FEPTask], output_path: Path) -> None:
     """Save a list of FEPTasks to a CSV manifest file."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    df = pd.DataFrame([t.to_dict() for t in tasks])
-    df.to_csv(output_path, index=False)
+    fieldnames = [f.name for f in fields(FEPTask)]
+    with output_path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for task in tasks:
+            writer.writerow(task.to_dict())
 
 
 def load_manifest(manifest_path: Path) -> list[FEPTask]:
     """Load FEPTasks from a CSV manifest file."""
-    df = pd.read_csv(manifest_path)
-    return [FEPTask.from_dict(row) for _, row in df.iterrows()]
+    with manifest_path.open("r", newline="") as handle:
+        reader = csv.DictReader(handle)
+        return [FEPTask.from_dict(row) for row in reader]
 
 
 def get_task_by_id(manifest_path: Path, task_id: int) -> FEPTask:
     """Load a single FEPTask by its task_id from the manifest."""
-    df = pd.read_csv(manifest_path)
-    row = df[df["task_id"] == task_id]
-    if row.empty:
-        raise ValueError(f"Task ID {task_id} not found in manifest {manifest_path}")
-    return FEPTask.from_dict(row.iloc[0])
+    for task in load_manifest(manifest_path):
+        if task.task_id == task_id:
+            return task
+    raise ValueError(f"Task ID {task_id} not found in manifest {manifest_path}")

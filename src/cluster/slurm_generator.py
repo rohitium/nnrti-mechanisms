@@ -16,10 +16,8 @@ SLURM_TEMPLATE = """\
 #SBATCH --output={log_dir}/fep_%A_%a.out
 #SBATCH --error={log_dir}/fep_%A_%a.err
 
-# Load conda module and activate environment
-# (adjust module name if needed - run 'module avail anaconda' to check)
-ml anaconda3
-{env_activation}
+# Runtime setup
+{runtime_setup}
 
 # Force CUDA platform for OpenMM
 export OPENMM_PLATFORM=CUDA
@@ -28,7 +26,7 @@ export OPENMM_PLATFORM=CUDA
 mkdir -p {log_dir}
 
 # Run FEP worker for this array task
-python -m src.cluster.fep_worker \\
+{python_cmd} -m src.cluster.fep_worker \\
     --manifest {manifest_path} \\
     --task-id $SLURM_ARRAY_TASK_ID \\
     --equil-steps {equil_steps} \\
@@ -48,6 +46,7 @@ def generate_slurm_script(
     prod_steps: int = 25_000,
     sample_interval: int = 200,
     conda_env: str | None = None,
+    use_openmm_module: bool = False,
 ) -> Path:
     """Generate a SLURM array job submission script.
 
@@ -62,6 +61,7 @@ def generate_slurm_script(
         prod_steps: Production steps per lambda window.
         sample_interval: Sample interval for energy evaluations.
         conda_env: Conda environment name to activate (optional).
+        use_openmm_module: Use Sherlock's chemistry/py-openmm module stack.
 
     Returns:
         Path to the generated script.
@@ -69,11 +69,19 @@ def generate_slurm_script(
     tasks = load_manifest(manifest_path)
     max_task_id = len(tasks) - 1
 
-    # Build environment activation line
-    if conda_env:
-        env_activation = f"mamba activate {conda_env}"
+    if use_openmm_module:
+        runtime_setup = "ml chemistry py-openmm/8.1.1_py312"
+        python_cmd = "python3"
+    elif conda_env:
+        runtime_setup = f"ml miniforge/24.11.0-0\nmamba activate {conda_env}"
+        python_cmd = "python"
     else:
-        env_activation = "# TODO: Add conda activation, e.g.:\n# mamba activate nnrti"
+        runtime_setup = (
+            "# TODO: choose runtime stack:\n"
+            "# 1) Module: ml chemistry py-openmm/8.1.1_py312\n"
+            "# 2) Conda:  ml miniforge/24.11.0-0 && mamba activate nnrti-fep"
+        )
+        python_cmd = "python3"
 
     script_content = SLURM_TEMPLATE.format(
         partition=partition,
@@ -85,7 +93,8 @@ def generate_slurm_script(
         equil_steps=equil_steps,
         prod_steps=prod_steps,
         sample_interval=sample_interval,
-        env_activation=env_activation,
+        runtime_setup=runtime_setup,
+        python_cmd=python_cmd,
     )
 
     output_script.parent.mkdir(parents=True, exist_ok=True)
