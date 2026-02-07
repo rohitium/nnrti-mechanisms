@@ -49,7 +49,7 @@ def collect_fep_results(
             "leg": task.leg,
             "delta_g_kj_mol": data.get("delta_g_kj_mol"),
             "fold_reduction": task.fold_reduction,
-            "minimized_pdb": data.get("minimized_pdb", ""),
+            "minimized_pdb": task.minimized_pdb or data.get("minimized_pdb", ""),
         })
 
     return pd.DataFrame(rows)
@@ -114,12 +114,20 @@ def compute_binding_ddg(fep_df: pd.DataFrame) -> pd.DataFrame:
         DataFrame with columns: structure, mutation, replicate, complex_dg,
         solvent_dg, binding_dg, wt_binding_dg, ddg, fold_reduction.
     """
+    # Keep fold_reduction out of the pivot index to avoid dropping WT rows
+    # (WT has fold_reduction=NaN, and pivot_table drops NaN index values).
+    fold_map = fep_df.drop_duplicates(
+        subset=["structure", "mutation", "safe_label", "replicate"]
+    )[["structure", "mutation", "safe_label", "replicate", "fold_reduction"]]
+
     pivot = fep_df.pivot_table(
-        index=["structure", "mutation", "safe_label", "replicate", "fold_reduction"],
+        index=["structure", "mutation", "safe_label", "replicate"],
         columns="leg",
         values="delta_g_kj_mol",
         aggfunc="first",
     ).reset_index()
+
+    pivot = pivot.merge(fold_map, on=["structure", "mutation", "safe_label", "replicate"], how="left")
 
     if "complex" not in pivot.columns or "solvent" not in pivot.columns:
         logging.error("Missing complex or solvent leg in results")

@@ -21,20 +21,25 @@ class AlchemicalConfig:
     sample_interval: int = 200
     solvent_padding_nm: float = 1.0
     ionic_strength_molar: float = 0.15
-    lambda_schedule: tuple[float, ...] = (
-        1.0,
-        0.95,
-        0.9,
-        0.8,
-        0.7,
-        0.6,
-        0.5,
-        0.4,
-        0.3,
-        0.2,
-        0.1,
-        0.05,
-        0.0,
+    # Each entry is (lambda_electrostatics, lambda_sterics).
+    # Phase 1: turn off electrostatics while sterics stay fully on.
+    # Phase 2: turn off sterics with electrostatics already off.
+    lambda_protocol: tuple[tuple[float, float], ...] = (
+        # Phase 1 — electrostatics
+        (1.00, 1.00),
+        (0.75, 1.00),
+        (0.50, 1.00),
+        (0.25, 1.00),
+        (0.00, 1.00),
+        # Phase 2 — sterics (softcore)
+        (0.00, 0.90),
+        (0.00, 0.80),
+        (0.00, 0.70),
+        (0.00, 0.60),
+        (0.00, 0.50),
+        (0.00, 0.35),
+        (0.00, 0.20),
+        (0.00, 0.00),
     )
 
 
@@ -49,7 +54,7 @@ class AlchemicalResult:
     complex_leg_kj_mol: float
     solvent_leg_kj_mol: float
     binding_delta_g_kj_mol: float
-    lambda_schedule: tuple[float, ...]
+    lambda_protocol: tuple[tuple[float, float], ...]
 
 
 def _logmeanexp(values: np.ndarray) -> float:
@@ -94,87 +99,111 @@ def _bar_delta_f(w_forward: np.ndarray, w_reverse: np.ndarray) -> float:
     return 0.5 * (lo + hi)
 
 
-def _set_lambda(simulation, value: float) -> None:
-    simulation.context.setParameter("lambda_electrostatics", value)
-    simulation.context.setParameter("lambda_sterics", value)
+def _set_lambda(simulation, elec: float, sterics: float) -> None:
+    simulation.context.setParameter("lambda_electrostatics", elec)
+    simulation.context.setParameter("lambda_sterics", sterics)
 
 
-def _collect_neighbor_delta_u(simulation, current: float, neighbor: float) -> float:
+def _collect_neighbor_delta_u(
+    simulation,
+    current: tuple[float, float],
+    neighbor: tuple[float, float],
+) -> float:
     unit = require_module("openmm.unit")
-    _set_lambda(simulation, current)
+    _set_lambda(simulation, *current)
     e_current = (
         simulation.context.getState(getEnergy=True)
         .getPotentialEnergy()
         .value_in_unit(unit.kilojoule_per_mole)
     )
-    _set_lambda(simulation, neighbor)
+    _set_lambda(simulation, *neighbor)
     e_neighbor = (
         simulation.context.getState(getEnergy=True)
         .getPotentialEnergy()
         .value_in_unit(unit.kilojoule_per_mole)
     )
-    _set_lambda(simulation, current)
+    _set_lambda(simulation, *current)
     return float(e_neighbor - e_current)
+
+
+def _stabilize_after_lambda_change(simulation, temperature_k: float) -> None:
+    """Re-minimize and run a short reduced-timestep warmup after a lambda change."""
+    unit = require_module("openmm.unit")
+    simulation.minimizeEnergy(maxIterations=100)
+    simulation.context.setVelocitiesToTemperature(temperature_k * unit.kelvin)
+    integrator = simulation.integrator
+    original_step = integrator.getStepSize()
+    warmup_step = 0.5 * unit.femtoseconds
+    if warmup_step < original_step:
+        integrator.setStepSize(warmup_step)
+        simulation.step(500)
+        integrator.setStepSize(original_step)
 
 
 def _run_leg_from_simulation(simulation, config: AlchemicalConfig) -> AlchemicalLegResult:
     unit = require_module("openmm.unit")
-    lambdas = tuple(config.lambda_schedule)
+    protocol = tuple(config.lambda_protocol)
     beta = 1.0 / (
         unit.MOLAR_GAS_CONSTANT_R
         * config.temperature_k
         * unit.kelvin
     ).value_in_unit(unit.kilojoule_per_mole)
-    forward = [None] * (len(lambdas) - 1)
-    reverse = [None] * (len(lambdas) - 1)
+    forward = [None] * (len(protocol) - 1)
+    reverse = [None] * (len(protocol) - 1)
 
     if config.production_steps < config.sample_interval:
         raise ValueError("production_steps must be >= sample_interval.")
     samples = max(1, config.production_steps // config.sample_interval)
 
     start_wall = None
-    for i, lam in enumerate(lambdas):
+    for i, (lam_elec, lam_sterics) in enumerate(protocol):
         if start_wall is None:
             start_wall = time.perf_counter()
-        _set_lambda(simulation, lam)
+        _set_lambda(simulation, lam_elec, lam_sterics)
+        _stabilize_after_lambda_change(simulation, config.temperature_k)
         simulation.step(config.equilibration_steps)
 
         to_next = []
         to_prev = []
         for _ in range(samples):
             simulation.step(config.sample_interval)
-            if i < len(lambdas) - 1:
-                delta_u = _collect_neighbor_delta_u(simulation, lam, lambdas[i + 1])
+            if i < len(protocol) - 1:
+                delta_u = _collect_neighbor_delta_u(
+                    simulation, protocol[i], protocol[i + 1]
+                )
                 to_next.append(beta * delta_u)
             if i > 0:
-                delta_u = _collect_neighbor_delta_u(simulation, lam, lambdas[i - 1])
+                delta_u = _collect_neighbor_delta_u(
+                    simulation, protocol[i], protocol[i - 1]
+                )
                 to_prev.append(beta * delta_u)
 
-        if i < len(lambdas) - 1:
+        if i < len(protocol) - 1:
             forward[i] = np.array(to_next, dtype=float)
         if i > 0:
             reverse[i - 1] = np.array(to_prev, dtype=float)
 
         elapsed = time.perf_counter() - start_wall
         done = i + 1
-        total = len(lambdas)
+        total = len(protocol)
         per_window = elapsed / done if done else 0.0
         remaining = per_window * (total - done)
         logging.info(
-            "Lambda %d/%d (%.2f) done. Elapsed %.1fs, ETA %.1fs",
+            "Window %d/%d (elec=%.2f, sterics=%.2f) done. Elapsed %.1fs, ETA %.1fs",
             done,
             total,
-            lam,
+            lam_elec,
+            lam_sterics,
             elapsed,
             remaining,
         )
 
     pair_delta_f = []
-    for i in range(len(lambdas) - 1):
+    for i in range(len(protocol) - 1):
         w_f = forward[i]
         w_r = reverse[i]
         if w_f is None or w_r is None:
-            raise RuntimeError(f"Missing BAR work arrays for lambda pair {i}-{i + 1}.")
+            raise RuntimeError(f"Missing BAR work arrays for window pair {i}-{i + 1}.")
         pair_delta_f.append(_bar_delta_f(w_f, w_r))
 
     pair_delta_g = [float(df / beta) for df in pair_delta_f]
@@ -306,7 +335,7 @@ def compute_alchemical_binding_free_energy(
         complex_leg_kj_mol=complex_leg.delta_g_kj_mol,
         solvent_leg_kj_mol=solvent_leg.delta_g_kj_mol,
         binding_delta_g_kj_mol=binding,
-        lambda_schedule=cfg.lambda_schedule,
+        lambda_protocol=cfg.lambda_protocol,
     )
 
 
@@ -318,7 +347,7 @@ def write_alchemical_result(path: Path, result: AlchemicalResult, metadata: dict
         "complex_leg_kj_mol": result.complex_leg_kj_mol,
         "solvent_leg_kj_mol": result.solvent_leg_kj_mol,
         "binding_delta_g_kj_mol": result.binding_delta_g_kj_mol,
-        "lambda_schedule": list(result.lambda_schedule),
+        "lambda_protocol": [list(pair) for pair in result.lambda_protocol],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2))
@@ -331,7 +360,7 @@ class SingleLegResult:
     leg: str
     delta_g_kj_mol: float
     pair_delta_g_kj_mol: tuple[float, ...]
-    lambda_schedule: tuple[float, ...]
+    lambda_protocol: tuple[tuple[float, float], ...]
 
 
 def write_single_leg_result(
@@ -345,7 +374,7 @@ def write_single_leg_result(
         "leg": result.leg,
         "delta_g_kj_mol": result.delta_g_kj_mol,
         "pair_delta_g_kj_mol": list(result.pair_delta_g_kj_mol),
-        "lambda_schedule": list(result.lambda_schedule),
+        "lambda_protocol": [list(pair) for pair in result.lambda_protocol],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2))
@@ -408,7 +437,7 @@ def run_single_leg(
         leg=leg,
         delta_g_kj_mol=leg_result.delta_g_kj_mol,
         pair_delta_g_kj_mol=leg_result.pair_delta_g_kj_mol,
-        lambda_schedule=cfg.lambda_schedule,
+        lambda_protocol=cfg.lambda_protocol,
     )
 
     if output_json is not None:
@@ -507,27 +536,17 @@ def run_single_leg_prepared(
         pdb.topology, system, integrator, platform, properties
     )
     simulation.context.setPositions(pdb.positions)
-    # Minimize solvated system to avoid NaNs during equilibration.
+    # Initial minimization; per-window stabilization is handled by
+    # _stabilize_after_lambda_change inside _run_leg_from_simulation.
     simulation.minimizeEnergy()
     simulation.context.setVelocitiesToTemperature(cfg.temperature_k * unit.kelvin)
-    # Gentle warmup with a smaller timestep to reduce initial instabilities.
-    try:
-        original_step = integrator.getStepSize()
-        warmup_step = min(original_step, 0.5 * unit.femtoseconds)
-        if warmup_step < original_step:
-            integrator.setStepSize(warmup_step)
-        simulation.step(200)
-        if warmup_step < original_step:
-            integrator.setStepSize(original_step)
-    except Exception:
-        simulation.step(100)
 
     leg_result = _run_leg_from_simulation(simulation, cfg)
     result = SingleLegResult(
         leg=leg,
         delta_g_kj_mol=leg_result.delta_g_kj_mol,
         pair_delta_g_kj_mol=leg_result.pair_delta_g_kj_mol,
-        lambda_schedule=cfg.lambda_schedule,
+        lambda_protocol=cfg.lambda_protocol,
     )
 
     if output_json is not None:

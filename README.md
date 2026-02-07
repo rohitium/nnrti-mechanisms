@@ -129,6 +129,19 @@ squeue -u <sunet-id>
 
 For WT + V106A with 1 replicate, this submits 4 GPU jobs (2 mutations × 1 replicate × 2 legs).
 
+**GPU allocation note:** The default `sh_dev -g 1` on Sherlock may land you
+on an NVIDIA A30 with **MIG (Multi-Instance GPU) enabled**, giving you only
+a ~6 GB / 14 SM slice instead of the full 24 GB / 56 SM GPU. This makes the
+445K-atom complex leg extremely slow. For interactive testing, use `salloc`
+on the `gpu` partition directly:
+
+```bash
+salloc -p gpu --gres=gpu:1 --time=4:00:00 --mem=32G
+```
+
+Verify you have a full GPU (no MIG section) with `nvidia-smi` after
+allocation.
+
 ### Step 5b: Fix manifest paths on Sherlock
 
 Local manifests store absolute paths from your workstation. Rewrite them on Sherlock before submitting jobs:
@@ -353,11 +366,37 @@ gemmi rdkit mdanalysis matplotlib
 - Ionic strength: 0.15 M (Na⁺/Cl⁻)
 
 ### FEP Protocol
+- Lambda protocol: two-phase decoupling (electrostatics first, then sterics)
+  - Phase 1: λ_elec 1.0→0.0 with λ_sterics=1.0 (4 windows)
+  - Phase 2: λ_sterics 1.0→0.0 with λ_elec=0.0 (9 windows)
 - Electrostatics: PME with 1.0 nm cutoff
 - Integrator: Langevin (300 K, 1/ps friction, 2 fs timestep)
 - Barostat: Monte Carlo (1 bar)
 - Free energy estimator: BAR
+- Per-window stabilization: 100-iter minimization + 500-step warmup at 0.5 fs
 
-### Expected Runtime
-- ~1 hour per leg on V100/A100
-- Total: ~84 GPU-hours for full dataset
+### Sherlock Benchmarks (RTX 3090, DOR/4NCG system)
+
+Measured from pilot run (WT + V106A, 1 replicate, job 15246033):
+
+| Leg | Atoms | Wall time | Memory | GPU |
+|-----|-------|-----------|--------|-----|
+| Complex | 445,756 | ~1h 55m | 3.3 GB | RTX 3090 |
+| Solvent | 1,065 | ~4 min | 140 MB | RTX 3090 |
+
+Resource recommendations for SLURM:
+- **Memory:** 8 GB is sufficient (peak 3.3 GB for complex leg)
+- **Time:** 2.5 hrs per mutation (both legs sequentially on same GPU)
+- **GPU:** 1× full GPU (no MIG). Use `salloc -p gpu` not `sh_dev`
+- **Strategy:** Run both legs (complex + solvent) in the same job to halve
+  the number of GPU allocations. The solvent leg adds only ~4 min overhead.
+
+### Pilot Results (V106A, 1 replicate)
+
+| Mutation | Complex ΔG | Solvent ΔG | Binding ΔG | ΔΔG |
+|----------|-----------|-----------|-----------|-----|
+| WT | -48.78 kJ/mol | -57.44 kJ/mol | +8.66 kJ/mol | 0 (ref) |
+| V106A | -50.36 kJ/mol | -56.01 kJ/mol | +5.65 kJ/mol | -3.01 kJ/mol |
+
+Note: Single replicate with short sampling (10K equil / 25K prod per window).
+More replicates needed for reliable ΔΔG estimates.
