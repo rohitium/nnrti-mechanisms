@@ -30,11 +30,7 @@ def minimize_structure(task: FEPTask, output_dir: Path) -> Path:
     Returns:
         Path to the minimized PDB file.
     """
-    from ..openmm.pipeline import (
-        build_forcefield,
-        load_ligand_molecule,
-        minimize_with_restraints,
-    )
+    from ..openmm.structure import minimize_with_restraints
     from ..openmm.minimizer import minimize_system
     from ..openmm.require import require_module
 
@@ -84,6 +80,8 @@ def run_fep_task(
     equil_steps: int = 10_000,
     prod_steps: int = 25_000,
     sample_interval: int = 200,
+    save_trajectories: bool = True,
+    trajectory_interval: int = 2000,
 ) -> dict:
     """Execute a single FEP leg task.
 
@@ -106,6 +104,7 @@ def run_fep_task(
         equilibration_steps=equil_steps,
         production_steps=prod_steps,
         sample_interval=sample_interval,
+        trajectory_interval=trajectory_interval,
     )
 
     logging.info(
@@ -117,9 +116,16 @@ def run_fep_task(
     )
 
     start_time = time.perf_counter()
+    trajectory_dcd = output_path.with_suffix(".dcd") if save_trajectories else None
+    physical_dcd = (
+        output_path.with_name(f"{output_path.stem}_physical_lambda1.dcd")
+        if save_trajectories and task.leg == "complex"
+        else None
+    )
     use_prepared_assets = bool(task.prepared_system_xml and task.prepared_topology_pdb)
     if use_prepared_assets:
         min_pdb = Path(task.minimized_pdb) if task.minimized_pdb else Path(task.prepared_topology_pdb)
+        topology_pdb = Path(task.prepared_topology_pdb)
         metadata = {
             "task_id": task.task_id,
             "structure": task.structure,
@@ -129,6 +135,9 @@ def run_fep_task(
             "leg": task.leg,
             "fold_reduction": task.fold_reduction,
             "minimized_pdb": str(min_pdb),
+            "topology_pdb": str(topology_pdb),
+            "trajectory_dcd": str(trajectory_dcd) if trajectory_dcd else "",
+            "physical_trajectory_dcd": str(physical_dcd) if physical_dcd else "",
         }
         result = run_single_leg_prepared(
             prepared_topology_pdb=Path(task.prepared_topology_pdb),
@@ -137,10 +146,13 @@ def run_fep_task(
             config=config,
             output_json=output_path,
             metadata=metadata,
+            trajectory_dcd_path=trajectory_dcd,
+            physical_trajectory_dcd_path=physical_dcd,
         )
     else:
         # Legacy path: minimize and build alchemical system on cluster.
         min_pdb = minimize_structure(task, output_dir)
+        topology_pdb = min_pdb
         metadata = {
             "task_id": task.task_id,
             "structure": task.structure,
@@ -150,6 +162,9 @@ def run_fep_task(
             "leg": task.leg,
             "fold_reduction": task.fold_reduction,
             "minimized_pdb": str(min_pdb),
+            "topology_pdb": str(topology_pdb),
+            "trajectory_dcd": str(trajectory_dcd) if trajectory_dcd else "",
+            "physical_trajectory_dcd": str(physical_dcd) if physical_dcd else "",
         }
         result = run_single_leg(
             minimized_pdb_path=min_pdb,
@@ -159,6 +174,8 @@ def run_fep_task(
             config=config,
             output_json=output_path,
             metadata=metadata,
+            trajectory_dcd_path=trajectory_dcd,
+            physical_trajectory_dcd_path=physical_dcd,
         )
 
     elapsed = time.perf_counter() - start_time
@@ -174,6 +191,8 @@ def run_fep_task(
         "delta_g_kj_mol": result.delta_g_kj_mol,
         "elapsed_seconds": elapsed,
         "minimized_pdb": str(min_pdb),
+        "trajectory_dcd": str(trajectory_dcd) if trajectory_dcd else "",
+        "physical_trajectory_dcd": str(physical_dcd) if physical_dcd else "",
     }
 
 
@@ -217,6 +236,25 @@ def main(argv: list[str] | None = None) -> int:
         default=200,
         help="Sample interval for energy evaluations (default: 200)",
     )
+    parser.add_argument(
+        "--trajectory-interval",
+        type=int,
+        default=2000,
+        help="Step interval for trajectory frame writing (default: 2000)",
+    )
+    parser.add_argument(
+        "--save-trajectories",
+        dest="save_trajectories",
+        action="store_true",
+        default=True,
+        help="Write DCD trajectories for each leg (default: enabled).",
+    )
+    parser.add_argument(
+        "--no-save-trajectories",
+        dest="save_trajectories",
+        action="store_false",
+        help="Disable DCD trajectory output.",
+    )
 
     args = parser.parse_args(argv)
 
@@ -232,6 +270,8 @@ def main(argv: list[str] | None = None) -> int:
             equil_steps=args.equil_steps,
             prod_steps=args.prod_steps,
             sample_interval=args.sample_interval,
+            save_trajectories=args.save_trajectories,
+            trajectory_interval=args.trajectory_interval,
         )
     except Exception as e:
         logging.error("Task %d failed: %s", args.task_id, e, exc_info=True)

@@ -19,6 +19,7 @@ class AlchemicalConfig:
     equilibration_steps: int = 10_000
     production_steps: int = 40_000
     sample_interval: int = 200
+    trajectory_interval: int = 2000
     solvent_padding_nm: float = 1.0
     ionic_strength_molar: float = 0.15
     # Each entry is (lambda_electrostatics, lambda_sterics).
@@ -140,7 +141,13 @@ def _stabilize_after_lambda_change(simulation, temperature_k: float) -> None:
         integrator.setStepSize(original_step)
 
 
-def _run_leg_from_simulation(simulation, config: AlchemicalConfig) -> AlchemicalLegResult:
+def _run_leg_from_simulation(
+    simulation,
+    config: AlchemicalConfig,
+    full_trajectory_dcd: Path | None = None,
+    physical_trajectory_dcd: Path | None = None,
+) -> AlchemicalLegResult:
+    app = require_module("openmm.app")
     unit = require_module("openmm.unit")
     protocol = tuple(config.lambda_protocol)
     beta = 1.0 / (
@@ -156,7 +163,21 @@ def _run_leg_from_simulation(simulation, config: AlchemicalConfig) -> Alchemical
     samples = max(1, config.production_steps // config.sample_interval)
 
     start_wall = None
+    if full_trajectory_dcd is not None:
+        full_trajectory_dcd.parent.mkdir(parents=True, exist_ok=True)
+        simulation.reporters.append(
+            app.DCDReporter(str(full_trajectory_dcd), config.trajectory_interval)
+        )
+
     for i, (lam_elec, lam_sterics) in enumerate(protocol):
+        physical_reporter = None
+        if i == 0 and physical_trajectory_dcd is not None:
+            physical_trajectory_dcd.parent.mkdir(parents=True, exist_ok=True)
+            physical_reporter = app.DCDReporter(
+                str(physical_trajectory_dcd),
+                config.trajectory_interval,
+            )
+            simulation.reporters.append(physical_reporter)
         if start_wall is None:
             start_wall = time.perf_counter()
         _set_lambda(simulation, lam_elec, lam_sterics)
@@ -182,6 +203,8 @@ def _run_leg_from_simulation(simulation, config: AlchemicalConfig) -> Alchemical
             forward[i] = np.array(to_next, dtype=float)
         if i > 0:
             reverse[i - 1] = np.array(to_prev, dtype=float)
+        if physical_reporter is not None and physical_reporter in simulation.reporters:
+            simulation.reporters.remove(physical_reporter)
 
         elapsed = time.perf_counter() - start_wall
         done = i + 1
@@ -256,6 +279,8 @@ def _run_leg(
     forcefield,
     ligand_resname: str,
     config: AlchemicalConfig,
+    full_trajectory_dcd: Path | None = None,
+    physical_trajectory_dcd: Path | None = None,
 ) -> AlchemicalLegResult:
     app = require_module("openmm.app")
     openmm = require_module("openmm")
@@ -278,7 +303,12 @@ def _run_leg(
     )
     simulation.context.setPositions(positions)
     simulation.context.setVelocitiesToTemperature(config.temperature_k * unit.kelvin)
-    return _run_leg_from_simulation(simulation, config)
+    return _run_leg_from_simulation(
+        simulation,
+        config,
+        full_trajectory_dcd=full_trajectory_dcd,
+        physical_trajectory_dcd=physical_trajectory_dcd,
+    )
 
 
 def _extract_ligand_only(topology, positions, ligand_resname: str):
@@ -388,6 +418,8 @@ def run_single_leg(
     config: AlchemicalConfig | None = None,
     output_json: Path | None = None,
     metadata: dict | None = None,
+    trajectory_dcd_path: Path | None = None,
+    physical_trajectory_dcd_path: Path | None = None,
 ) -> SingleLegResult:
     """Run a single FEP leg (complex or solvent) for cluster execution.
 
@@ -403,7 +435,7 @@ def run_single_leg(
     Returns:
         SingleLegResult containing the free energy for this leg.
     """
-    from .pipeline import build_forcefield, load_ligand_molecule
+    from .ligand import build_forcefield, load_ligand_molecule
 
     if leg not in ("complex", "solvent"):
         raise ValueError(f"leg must be 'complex' or 'solvent', got {leg!r}")
@@ -431,6 +463,8 @@ def run_single_leg(
         forcefield=forcefield,
         ligand_resname=ligand_resname,
         config=cfg,
+        full_trajectory_dcd=trajectory_dcd_path,
+        physical_trajectory_dcd=physical_trajectory_dcd_path,
     )
 
     result = SingleLegResult(
@@ -456,7 +490,7 @@ def prepare_single_leg_assets(
     config: AlchemicalConfig | None = None,
 ) -> None:
     """Prepare serialized alchemical assets locally for OpenMM-only cluster execution."""
-    from .pipeline import build_forcefield, load_ligand_molecule
+    from .ligand import build_forcefield, load_ligand_molecule
 
     if leg not in ("complex", "solvent"):
         raise ValueError(f"leg must be 'complex' or 'solvent', got {leg!r}")
@@ -513,6 +547,8 @@ def run_single_leg_prepared(
     config: AlchemicalConfig | None = None,
     output_json: Path | None = None,
     metadata: dict | None = None,
+    trajectory_dcd_path: Path | None = None,
+    physical_trajectory_dcd_path: Path | None = None,
 ) -> SingleLegResult:
     """Run a single FEP leg from prebuilt serialized assets (OpenMM-only runtime)."""
     if leg not in ("complex", "solvent"):
@@ -541,7 +577,12 @@ def run_single_leg_prepared(
     simulation.minimizeEnergy()
     simulation.context.setVelocitiesToTemperature(cfg.temperature_k * unit.kelvin)
 
-    leg_result = _run_leg_from_simulation(simulation, cfg)
+    leg_result = _run_leg_from_simulation(
+        simulation,
+        cfg,
+        full_trajectory_dcd=trajectory_dcd_path,
+        physical_trajectory_dcd=physical_trajectory_dcd_path,
+    )
     result = SingleLegResult(
         leg=leg,
         delta_g_kj_mol=leg_result.delta_g_kj_mol,

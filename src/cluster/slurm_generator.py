@@ -26,12 +26,14 @@ export OPENMM_PLATFORM=CUDA
 mkdir -p {log_dir}
 
 # Run FEP worker for this array task
-{python_cmd} -m src.cluster.fep_worker \\
+    {python_cmd} -m src.cluster.fep_worker \\
     --manifest {manifest_path} \\
     --task-id $SLURM_ARRAY_TASK_ID \\
     --equil-steps {equil_steps} \\
     --prod-steps {prod_steps} \\
-    --sample-interval {sample_interval}
+    --sample-interval {sample_interval} \\
+    --trajectory-interval {trajectory_interval} \\
+    {save_trajectory_flag}
 """
 
 
@@ -45,6 +47,8 @@ def generate_slurm_script(
     equil_steps: int = 10_000,
     prod_steps: int = 25_000,
     sample_interval: int = 200,
+    trajectory_interval: int = 2000,
+    save_trajectories: bool = True,
     conda_env: str | None = None,
     use_openmm_module: bool = False,
 ) -> Path:
@@ -60,6 +64,8 @@ def generate_slurm_script(
         equil_steps: Equilibration steps per lambda window.
         prod_steps: Production steps per lambda window.
         sample_interval: Sample interval for energy evaluations.
+        trajectory_interval: Step interval for writing DCD frames.
+        save_trajectories: Whether to save DCD trajectories during FEP.
         conda_env: Conda environment name to activate (optional).
         use_openmm_module: Use Sherlock's chemistry/py-openmm module stack.
 
@@ -93,6 +99,8 @@ def generate_slurm_script(
         equil_steps=equil_steps,
         prod_steps=prod_steps,
         sample_interval=sample_interval,
+        trajectory_interval=trajectory_interval,
+        save_trajectory_flag="--save-trajectories" if save_trajectories else "--no-save-trajectories",
         runtime_setup=runtime_setup,
         python_cmd=python_cmd,
     )

@@ -1,1 +1,1 @@
-"""NNRTI mutagenesis pipeline."""
+"""NNRTI OpenMM-only Sherlock FEP pipeline."""

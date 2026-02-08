@@ -1,93 +1,6 @@
 from __future__ import annotations
 
-import textwrap
-
 import pandas as pd
-
-
-def plot_delta_metrics(df: pd.DataFrame, paths) -> None:
-    import matplotlib.pyplot as plt
-
-    metric_labels = {
-        "binding_delta_g_kj_mol": "Δ Binding Free Energy (kJ/mol)",
-        "binding_proxy_kj_mol": "Δ Binding Energy (kJ/mol)",
-        "contact_count": "Δ Contacts",
-        "hbond_count": "Δ H-bonds",
-        "pocket_volume_proxy": "Δ Binding Pocket\nVolume (A^3)",
-    }
-    bar_colors = {"DOR": "#7CB342", "RPV": "#FFB74D"}
-
-    def _wrap_xtick_label(label: str) -> str:
-        label = label.replace("+", "+\n")
-        return textwrap.fill(label, width=10)
-
-    for structure in df["structure"].unique():
-        struct_df = df[df["structure"] == structure].copy()
-        struct_df["mutation_label"] = struct_df["mutation"].astype(str)
-        mutation_order = (
-            struct_df[struct_df["state"] == "MUT"][
-                ["mutation_label", "mutation_order"]
-            ]
-            .drop_duplicates()
-            .sort_values("mutation_order")
-        )
-        mutations = mutation_order["mutation_label"].tolist()
-        fig_width = max(6, 0.45 * max(1, len(mutations)))
-        fig, axes = plt.subplots(
-            nrows=len(metric_labels), ncols=1, figsize=(fig_width, 10), sharex=True
-        )
-        bar_color = bar_colors.get(structure, "#2a6f97")
-        for idx, (metric, label) in enumerate(metric_labels.items()):
-            metric_df = struct_df[struct_df["metric"] == metric]
-            if "replicate" in metric_df.columns:
-                pivot = metric_df.pivot_table(
-                    index=["mutation_label", "replicate"],
-                    columns="state",
-                    values="value",
-                    aggfunc="first",
-                )
-                pivot = pivot.dropna(subset=["WT", "MUT"], how="any")
-                pivot["delta"] = pivot["MUT"] - pivot["WT"]
-                delta_stats = (
-                    pivot["delta"]
-                    .groupby(level=0)
-                    .agg(["mean", "std", "count"])
-                    .rename(columns={"mean": "delta_mean", "std": "delta_std"})
-                )
-                if mutations:
-                    delta_stats = delta_stats.reindex(mutations)
-                y = delta_stats["delta_mean"].values
-                yerr = delta_stats["delta_std"].fillna(0.0).values
-                axes[idx].bar(
-                    range(len(mutations)),
-                    y,
-                    color=bar_color,
-                    yerr=yerr,
-                    capsize=2,
-                )
-            else:
-                pivot = metric_df.pivot_table(
-                    index="mutation_label",
-                    columns="state",
-                    values="value",
-                    aggfunc="first",
-                )
-                if mutations:
-                    pivot = pivot.reindex(mutations)
-                delta = pivot["MUT"] - pivot["WT"]
-                axes[idx].bar(range(len(mutations)), delta.values, color=bar_color)
-            axes[idx].axhline(0, color="#444444", linewidth=0.8)
-            axes[idx].set_ylabel(label)
-            wrapped_labels = [_wrap_xtick_label(label) for label in mutations]
-            axes[idx].set_xticks(range(len(mutations)))
-            axes[idx].set_xticklabels(
-                wrapped_labels, fontsize=6, rotation=45, ha="center"
-            )
-        axes[-1].set_xlabel("")
-        fig.suptitle(f"{structure} (Δ = Mutation - WT)", y=0.98)
-        fig.tight_layout(rect=[0, 0, 1, 0.96])
-        fig.savefig(paths.plots / f"{structure.lower()}_delta_metrics.png", dpi=150)
-        plt.close(fig)
 
 
 def plot_ddg_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
@@ -194,3 +107,40 @@ def plot_ddg_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
     fig.tight_layout()
     fig.savefig(paths.plots / "ddg_vs_fold_reduction.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
+
+
+def plot_lambda_profiles(lambda_summary_df: pd.DataFrame, paths) -> None:
+    """Plot cumulative ΔG profiles across lambda windows for sanity checks."""
+    import matplotlib.pyplot as plt
+
+    if lambda_summary_df.empty:
+        return
+
+    for leg in sorted(lambda_summary_df["leg"].dropna().unique()):
+        leg_df = lambda_summary_df[lambda_summary_df["leg"] == leg].copy()
+        if leg_df.empty:
+            continue
+        fig, ax = plt.subplots(figsize=(8, 5))
+        for mutation in sorted(leg_df["mutation"].dropna().unique()):
+            mdf = leg_df[leg_df["mutation"] == mutation].sort_values("window_index")
+            ax.plot(
+                mdf["window_index"],
+                mdf["cumulative_delta_g_mean"],
+                linewidth=1.5 if mutation == "WT" else 1.0,
+                alpha=0.9 if mutation == "WT" else 0.45,
+                label=mutation if mutation == "WT" else None,
+                color="#1f77b4" if mutation == "WT" else "#999999",
+            )
+        ax.set_title(f"Cumulative ΔG Profile Across Lambda Windows ({leg} leg)")
+        ax.set_xlabel("Window index")
+        ax.set_ylabel("Cumulative ΔG (kJ/mol)")
+        ax.axhline(0.0, color="#888888", linewidth=0.7, linestyle="--")
+        if "WT" in set(leg_df["mutation"]):
+            ax.legend(frameon=False)
+        fig.tight_layout()
+        fig.savefig(
+            paths.plots / f"lambda_profile_{leg}.png",
+            dpi=150,
+            bbox_inches="tight",
+        )
+        plt.close(fig)

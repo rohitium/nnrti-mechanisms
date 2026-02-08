@@ -166,9 +166,13 @@ python -m src.main --collect-results
 
 **Outputs:**
 - `results/ddg_summary.csv` - ΔΔG per mutation (mean ± std across replicates)
-- `results/structural_metrics.csv` - Contacts, H-bonds, pocket volume
-- `results/correlation_analysis.csv` - Pearson/Spearman vs fold-reduction
+- `results/structural_metrics.csv` - Ensemble-averaged contacts, H-bonds, pocket volume
+- `results/lambda_window_profiles.csv` - Per-window ΔG profile for each task
+- `results/lambda_window_summary.csv` - WT/mutant window profile summary across replicates
+- `results/correlation_analysis.csv` - Correlations vs fold-reduction for ΔΔG and structural metrics
 - `results/plots/ddg_vs_fold_reduction.png`
+- `results/plots/lambda_profile_complex.png`
+- `results/plots/lambda_profile_solvent.png`
 
 ---
 
@@ -246,20 +250,22 @@ python -m src.main --collect-results
 --alchemy-equil-steps 10000    # Equilibration steps per λ window
 --alchemy-prod-steps 25000     # Production steps per λ window
 --alchemy-sample-interval 200  # Steps between energy samples
+--trajectory-interval 2000     # Steps between saved DCD frames
 ```
 
 ### All Options
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--prepare-local` | - | Create mutant CIFs and FEP manifest (legacy) |
 | `--prepare-local-openmm-only` | - | Prebuild OpenMM-only assets for cluster |
 | `--mutation` | None | Filter to a specific mutation label (e.g., V106A) |
 | `--generate-slurm` | - | Generate SLURM submission script |
 | `--collect-results` | - | Aggregate FEP results and compute ΔΔG |
 | `--replicates` | 1 | Number of independent replicates |
 | `--seed` | None | Base random seed for jitter |
-| `--jitter-angstrom` | 0.0 | Coordinate perturbation magnitude |
+| `--jitter-angstrom` | 0.1 | Coordinate perturbation magnitude |
+| `--trajectory-interval` | 2000 | Steps between saved trajectory frames |
+| `--no-save-trajectories` | False | Disable DCD trajectory output during FEP |
 | `--conda-env` | None | Conda environment name on cluster |
 | `--use-openmm-module` | False | Generate SLURM script for Sherlock OpenMM module |
 | `--slurm-partition` | gpu | SLURM partition |
@@ -272,8 +278,6 @@ python -m src.main --collect-results
 
 ### Structures
 - `data/structures/4NCG.cif` - RT/DOR crystal structure (used for FEP)
-- `data/structures/7Z2D.cif` - RT/DNA/RPV cryo-EM structure
-- `data/structures/7Z2G.cif` - RT/DNA/DOR cryo-EM structure
 
 ### Susceptibility Data
 - `data/DRM-susceptibilities.csv.xlsx` - DOR fold-reduction values from literature
@@ -282,7 +286,7 @@ python -m src.main --collect-results
 
 ## Output Files
 
-### After `--prepare-local`
+### After `--prepare-local-openmm-only`
 ```
 data/prepared/dor_4ncg/
 ├── wt_4ncg.cif              # Wild-type structure
@@ -302,7 +306,10 @@ results/fep_runs/
 │   ├── rep_01/
 │   │   ├── wt_minimized_rep01.pdb
 │   │   ├── wt_complex_rep01.json
+│   │   ├── wt_complex_rep01.dcd
+│   │   ├── wt_complex_rep01_physical_lambda1.dcd
 │   │   ├── wt_solvent_rep01.json
+│   │   ├── wt_solvent_rep01.dcd
 │   │   └── assets/
 │   │       ├── wt_complex_rep01_start.pdb
 │   │       ├── wt_complex_rep01_system.xml
@@ -314,7 +321,10 @@ results/fep_runs/
 │   ├── rep_01/
 │   │   ├── V106A_minimized_rep01.pdb
 │   │   ├── V106A_complex_rep01.json
+│   │   ├── V106A_complex_rep01.dcd
+│   │   ├── V106A_complex_rep01_physical_lambda1.dcd
 │   │   ├── V106A_solvent_rep01.json
+│   │   ├── V106A_solvent_rep01.dcd
 │   │   └── assets/
 │   │       ├── V106A_complex_rep01_start.pdb
 │   │       ├── V106A_complex_rep01_system.xml
@@ -329,10 +339,14 @@ results/fep_runs/
 results/
 ├── ddg_summary.csv          # ΔΔG per mutation
 ├── ddg_full.csv             # All replicates
-├── structural_metrics.csv   # Contacts, H-bonds, pocket volume
-├── correlation_analysis.csv # Pearson/Spearman statistics
+├── structural_metrics.csv   # Ensemble contacts, H-bonds, pocket volume
+├── lambda_window_profiles.csv
+├── lambda_window_summary.csv
+├── correlation_analysis.csv # Correlations vs susceptibility
 └── plots/
-    └── ddg_vs_fold_reduction.png
+    ├── ddg_vs_fold_reduction.png
+    ├── lambda_profile_complex.png
+    └── lambda_profile_solvent.png
 ```
 
 ---
