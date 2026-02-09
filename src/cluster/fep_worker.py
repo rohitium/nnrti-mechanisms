@@ -18,6 +18,7 @@ def run_md_task(
     report_interval: int,
 ) -> dict:
     from ..openmm.md_protocol import MDProtocolConfig, run_prepared_md
+    from ..openmm.platform import get_platform
 
     output_path = Path(task.output_json)
     output_dir = output_path.parent
@@ -32,6 +33,9 @@ def run_md_task(
         production_ns=production_ns,
         report_interval_steps=report_interval,
     )
+
+    platform, _props = get_platform()
+    logging.info("Using OpenMM platform: %s", platform.getName())
 
     if not task.prepared_system_xml or not task.prepared_topology_pdb:
         raise ValueError("Task is missing prepared MD assets (prepared_system_xml/prepared_topology_pdb).")

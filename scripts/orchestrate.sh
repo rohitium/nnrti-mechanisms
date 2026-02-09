@@ -64,6 +64,11 @@ log() { echo "$(date '+%H:%M:%S') [$1] $2"; }
 pass() { echo "$(date '+%H:%M:%S') [PASS] $1"; }
 fail() { echo "$(date '+%H:%M:%S') [FAIL] $1"; }
 
+LOCAL_MANIFEST="${PROJECT_DIR}/results/fep_manifest.csv"
+LOCAL_QUICK_MANIFEST="${PROJECT_DIR}/results/fep_manifest.quick.csv"
+REMOTE_MANIFEST="results/fep_manifest.csv"
+REMOTE_QUICK_MANIFEST="results/fep_manifest.quick.csv"
+
 # ---------------------------------------------------------------------------
 # --test: Verify SSH, rsync, and remote commands work
 # ---------------------------------------------------------------------------
@@ -167,6 +172,40 @@ fi
 # ---------------------------------------------------------------------------
 # Phase 1: Local preparation
 # ---------------------------------------------------------------------------
+if [ "$QUICK_TEST" = true ] && [ "$SKIP_PREP" = true ]; then
+    NEED_QUICK_PREP=0
+    if [ ! -f "$LOCAL_MANIFEST" ]; then
+        NEED_QUICK_PREP=1
+    elif python - <<'PY'
+import csv
+from pathlib import Path
+p=Path("results/fep_manifest.csv")
+with p.open(newline="") as h:
+    r=csv.DictReader(h)
+    legacy=any(str(row.get("leg","")).strip().lower()=="solvent" for row in r)
+raise SystemExit(0 if legacy else 1)
+PY
+    then
+        NEED_QUICK_PREP=1
+    elif [ ! -f "${PROJECT_DIR}/results/fep_runs/wt/rep_01/assets/wt_md_rep01_start.pdb" ] || \
+         [ ! -f "${PROJECT_DIR}/results/fep_runs/Y188L/rep_01/assets/Y188L_md_rep01_start.pdb" ]; then
+        NEED_QUICK_PREP=1
+    fi
+
+    if [ "$NEED_QUICK_PREP" -eq 1 ]; then
+        log PREP "Quick-test requires fresh local prep (WT + Y188L). Running prep now..."
+        cd "$PROJECT_DIR"
+        python -m src.main \
+            --prepare-local-openmm-only \
+            --mutation Y188L \
+            --replicates "$REPLICATES" \
+            --seed "$SEED" \
+            --jitter-angstrom "$JITTER"
+        log PREP "Quick-test local preparation complete."
+        SKIP_PREP=true
+    fi
+fi
+
 if [ "$SKIP_PREP" = false ]; then
     log PREP "Preparing OpenMM assets locally (${REPLICATES} replicates, seed ${SEED})..."
     cd "$PROJECT_DIR"
@@ -182,13 +221,30 @@ fi
 
 if [ "$COLLECT_ONLY" = true ]; then
     log COLLECT "Transferring results from Sherlock..."
-    rsync -avz -e "ssh $SSH_OPTS" \
-        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/fep_runs/" \
-        "${PROJECT_DIR}/results/fep_runs/"
+    if [ "$QUICK_TEST" = true ]; then
+        rsync -avz -e "ssh $SSH_OPTS" \
+            --include='*/' \
+            --include='wt/***' \
+            --include='Y188L/***' \
+            --exclude='*' \
+            "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/fep_runs/" \
+            "${PROJECT_DIR}/results/fep_runs/"
+        rsync -avz -e "ssh $SSH_OPTS" \
+            "${SHERLOCK_DEST}:${SHERLOCK_DIR}/${REMOTE_QUICK_MANIFEST}" \
+            "${PROJECT_DIR}/results/" || true
+    else
+        rsync -avz -e "ssh $SSH_OPTS" \
+            "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/fep_runs/" \
+            "${PROJECT_DIR}/results/fep_runs/"
+    fi
 
     log COLLECT "Running result collection..."
     cd "$PROJECT_DIR"
-    python -m src.main --collect-results
+    if [ "$QUICK_TEST" = true ]; then
+        python -m src.main --collect-results --manifest "$LOCAL_QUICK_MANIFEST"
+    else
+        python -m src.main --collect-results
+    fi
 
     log DONE "Results collected. Check results/ for output files."
     exit 0
@@ -208,9 +264,78 @@ log SYNC "Transfer complete."
 # ---------------------------------------------------------------------------
 log SUBMIT "Rewriting manifest paths and submitting jobs on Sherlock..."
 
-N_TASKS=$(tail -n +2 "${PROJECT_DIR}/results/fep_manifest.csv" | wc -l | tr -d ' ')
-ARRAY_MAX=$((N_TASKS - 1))
-log SUBMIT "Manifest has ${N_TASKS} tasks -> ${N_TASKS} array jobs (0-${ARRAY_MAX})"
+if [ "$QUICK_TEST" = true ]; then
+    if [ ! -f "$LOCAL_MANIFEST" ]; then
+        log ERROR "Manifest not found: $LOCAL_MANIFEST"
+        exit 1
+    fi
+    if python - <<'PY'
+import csv
+from pathlib import Path
+p=Path("results/fep_manifest.csv")
+with p.open(newline="") as h:
+    r=csv.DictReader(h)
+    legacy=any(str(row.get("leg","")).strip().lower()=="solvent" for row in r)
+raise SystemExit(0 if legacy else 1)
+PY
+    then
+        log ERROR "Detected legacy manifest with solvent-leg rows: $LOCAL_MANIFEST"
+        log ERROR "Please regenerate preparation with current MD workflow before --quick-test."
+        log ERROR "Run: python -m src.main --prepare-local-openmm-only --mutation Y188L --replicates 3 --seed 42"
+        exit 1
+    fi
+    python - <<'PY'
+import csv
+from pathlib import Path
+
+src = Path("results/fep_manifest.csv")
+dst = Path("results/fep_manifest.quick.csv")
+keep_mut = {"WT", "Y188L"}
+rows = []
+with src.open("r", newline="") as h:
+    reader = csv.DictReader(h)
+    fieldnames = reader.fieldnames
+    for row in reader:
+        if str(row.get("mutation", "")).strip() in keep_mut and int(row.get("replicate", "0")) == 1:
+            rows.append(row)
+if not rows:
+    raise SystemExit("Quick-test selection produced zero tasks.")
+for i, row in enumerate(rows):
+    row["task_id"] = str(i)
+    out = Path(row["output_json"])
+    row["output_json"] = str(out.with_name(out.stem + "_quick.json"))
+with dst.open("w", newline="") as h:
+    writer = csv.DictWriter(h, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(rows)
+print(f"Wrote quick manifest: {dst} ({len(rows)} tasks)")
+PY
+    N_TASKS=$(tail -n +2 "$LOCAL_QUICK_MANIFEST" | wc -l | tr -d ' ')
+    ARRAY_MAX=$((N_TASKS - 1))
+    log SUBMIT "Quick-test manifest has ${N_TASKS} tasks -> array 0-${ARRAY_MAX}"
+    rsync -avz -e "ssh $SSH_OPTS" \
+        "$LOCAL_QUICK_MANIFEST" \
+        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/"
+else
+    if python - <<'PY'
+import csv
+from pathlib import Path
+p=Path("results/fep_manifest.csv")
+with p.open(newline="") as h:
+    r=csv.DictReader(h)
+    legacy=any(str(row.get("leg","")).strip().lower()=="solvent" for row in r)
+raise SystemExit(0 if legacy else 1)
+PY
+    then
+        log ERROR "Detected legacy manifest with solvent-leg rows: $LOCAL_MANIFEST"
+        log ERROR "Please regenerate preparation with current MD workflow."
+        log ERROR "Run: python -m src.main --prepare-local-openmm-only --replicates 3 --seed 42"
+        exit 1
+    fi
+    N_TASKS=$(tail -n +2 "$LOCAL_MANIFEST" | wc -l | tr -d ' ')
+    ARRAY_MAX=$((N_TASKS - 1))
+    log SUBMIT "Manifest has ${N_TASKS} tasks -> ${N_TASKS} array jobs (0-${ARRAY_MAX})"
+fi
 
 REMOTE_QUICK_FLAG=0
 if [ "$QUICK_TEST" = true ]; then
@@ -231,36 +356,7 @@ python3 scripts/sherlock/rewrite_manifest_paths.py >&2
 
 MANIFEST_PATH="results/fep_manifest.csv"
 if [ "$QUICK_FLAG" = "1" ]; then
-    python3 - <<'PY'
-import csv
-from pathlib import Path
-
-src = Path("results/fep_manifest.csv")
-dst = Path("results/fep_manifest.quick.csv")
-keep_mut = {"WT", "Y188L"}
-rows = []
-with src.open("r", newline="") as h:
-    reader = csv.DictReader(h)
-    fieldnames = reader.fieldnames
-    for row in reader:
-        if str(row.get("mutation", "")).strip() in keep_mut and int(row.get("replicate", "0")) == 1:
-            rows.append(row)
-
-if not rows:
-    raise SystemExit("Quick-test selection produced zero tasks.")
-
-for i, row in enumerate(rows):
-    row["task_id"] = str(i)
-    out = Path(row["output_json"])
-    row["output_json"] = str(out.with_name(out.stem + "_quick.json"))
-
-with dst.open("w", newline="") as h:
-    writer = csv.DictWriter(h, fieldnames=fieldnames)
-    writer.writeheader()
-    writer.writerows(rows)
-
-print(f"Quick-test manifest: {dst} ({len(rows)} tasks)")
-PY
+    python3 scripts/sherlock/rewrite_manifest_paths.py --manifest results/fep_manifest.quick.csv >&2
     MANIFEST_PATH="results/fep_manifest.quick.csv"
     ARRAY_MAX=$(($(tail -n +2 "$MANIFEST_PATH" | wc -l | tr -d ' ') - 1))
 fi
@@ -315,13 +411,30 @@ fi
 # Phase 5: Transfer results back + collect
 # ---------------------------------------------------------------------------
 log COLLECT "Transferring results from Sherlock..."
-rsync -avz -e "ssh $SSH_OPTS" \
-    "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/fep_runs/" \
-    "${PROJECT_DIR}/results/fep_runs/"
+if [ "$QUICK_TEST" = true ]; then
+    rsync -avz -e "ssh $SSH_OPTS" \
+        --include='*/' \
+        --include='wt/***' \
+        --include='Y188L/***' \
+        --exclude='*' \
+        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/fep_runs/" \
+        "${PROJECT_DIR}/results/fep_runs/"
+    rsync -avz -e "ssh $SSH_OPTS" \
+        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/${REMOTE_QUICK_MANIFEST}" \
+        "${PROJECT_DIR}/results/" || true
+else
+    rsync -avz -e "ssh $SSH_OPTS" \
+        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/fep_runs/" \
+        "${PROJECT_DIR}/results/fep_runs/"
+fi
 
 log COLLECT "Running result collection and analysis..."
 cd "$PROJECT_DIR"
-python -m src.main --collect-results
+if [ "$QUICK_TEST" = true ]; then
+    python -m src.main --collect-results --manifest "$LOCAL_QUICK_MANIFEST"
+else
+    python -m src.main --collect-results
+fi
 
 ssh $SSH_OPTS -O exit "${SHERLOCK_DEST}" 2>/dev/null || true
 

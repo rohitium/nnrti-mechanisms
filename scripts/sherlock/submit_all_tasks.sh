@@ -13,9 +13,21 @@ set -euo pipefail
 source /etc/profile.d/modules.sh 2>/dev/null || true
 ml chemistry py-openmm/8.1.1_py312
 
-export OPENMM_PLATFORM=CUDA
+# Optional override. If unset, runtime auto-selects CUDA/OpenCL/CPU.
+export OPENMM_PLATFORM="${OPENMM_PLATFORM:-}"
 mkdir -p logs
 MANIFEST_PATH="${MANIFEST_PATH:-results/fep_manifest.csv}"
+
+if [ "${OPENMM_PLATFORM}" = "CUDA" ] || [ -z "${OPENMM_PLATFORM}" ]; then
+  if ! command -v nvidia-smi >/dev/null 2>&1; then
+    echo "ERROR: nvidia-smi not found; GPU node/runtime not available." >&2
+    exit 1
+  fi
+  if ! nvidia-smi -L >/dev/null 2>&1; then
+    echo "ERROR: GPU not visible to job (nvidia-smi -L failed)." >&2
+    exit 1
+  fi
+fi
 
 python3 -m src.cluster.fep_worker \
   --manifest "${MANIFEST_PATH}" \

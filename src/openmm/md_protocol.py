@@ -172,12 +172,29 @@ def run_prepared_md(
     restraint_force = base_system.getForce(restraint_force_idx)
 
     platform, properties = get_platform()
+
+    allow_fallback = str(__import__("os").environ.get("OPENMM_ALLOW_FALLBACK", "0")).strip() in {"1", "true", "TRUE", "yes", "YES"}
+
+    def _make_simulation(topology, system, integrator):
+        try:
+            return app.Simulation(topology, system, integrator, platform, properties)
+        except Exception as exc:
+            if not allow_fallback:
+                raise
+            # Optional fallback mode for diagnostics only.
+            import logging
+            logging.warning(
+                "Failed to initialize platform %s (%s). OPENMM_ALLOW_FALLBACK=1 so falling back to default platform.",
+                platform.getName(),
+                exc,
+            )
+            return app.Simulation(topology, system, integrator)
     integrator = openmm.LangevinMiddleIntegrator(
         cfg.temperature_target_k * unit.kelvin,
         1.0 / unit.picosecond,
         cfg.timestep_fs * unit.femtoseconds,
     )
-    sim = app.Simulation(pdb.topology, base_system, integrator, platform, properties)
+    sim = _make_simulation(pdb.topology, base_system, integrator)
     sim.context.setPositions(pdb.positions)
 
     t0 = time.perf_counter()
@@ -216,7 +233,7 @@ def run_prepared_md(
         1.0 / unit.picosecond,
         cfg.timestep_fs * unit.femtoseconds,
     )
-    prod = app.Simulation(pdb.topology, prod_system, prod_integrator, platform, properties)
+    prod = _make_simulation(pdb.topology, prod_system, prod_integrator)
     prod.context.setPositions(state.getPositions())
     prod.context.setVelocities(state.getVelocities())
 
