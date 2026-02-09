@@ -10,21 +10,12 @@ from .config import dor_4ncg_spec
 from .mutation.mutagenesis import apply_mutations
 from .mutation.steps import build_mutation_steps
 from .numbering import detect_numbering_scheme
-from .openmm.alchemy import AlchemicalConfig
+from .openmm.md_protocol import MDProtocolConfig, prepare_md_assets
 from .susceptibility_io import load_dor_susceptibilities
-from .utils import (
-    ensure_dirs,
-    load_chain_subunits,
-    load_residue_mappings,
-    sanitize_label,
-)
+from .utils import ensure_dirs, load_chain_subunits, load_residue_mappings, sanitize_label
 
 
-def _deterministic_seed(
-    jitter_seed_base: int | None,
-    safe_label: str,
-    replicate: int,
-) -> int | None:
+def _deterministic_seed(jitter_seed_base: int | None, safe_label: str, replicate: int) -> int | None:
     if jitter_seed_base is None:
         return None
     token = f"{safe_label}:{replicate}".encode()
@@ -40,11 +31,10 @@ def prepare_local_openmm_only_for_cluster(
     replicates: int = 3,
     jitter_seed_base: int | None = None,
     jitter_angstrom: float = 0.1,
-    alchemy_config: AlchemicalConfig | None = None,
+    alchemy_config: MDProtocolConfig | None = None,
     selected_mutations: set[str] | None = None,
 ) -> list[FEPTask]:
-    """Prepare prebuilt alchemical assets locally for OpenMM-only cluster execution."""
-    from .openmm.alchemy import prepare_single_leg_assets
+    """Prepare WT/mutant systems for Sherlock explicit MD (no alchemical protocol)."""
     from .openmm.minimizer import minimize_system
     from .openmm.require import require_module
     from .openmm.structure import minimize_with_restraints
@@ -56,7 +46,7 @@ def prepare_local_openmm_only_for_cluster(
             if token.strip()
         )
 
-    cfg = alchemy_config or AlchemicalConfig()
+    cfg = alchemy_config or MDProtocolConfig()
     spec = dor_4ncg_spec(root)
     dor_df = load_dor_susceptibilities(susceptibility_xlsx, default_chain="A")
     chain_map = load_chain_subunits(spec.structure.cif_path)
@@ -67,9 +57,7 @@ def prepare_local_openmm_only_for_cluster(
     if selected is not None:
         dor_df = dor_df[dor_df["mutation"].map(_norm_mutation).isin(selected)].copy()
         if dor_df.empty:
-            raise ValueError(
-                f"No rows matched selected mutations: {', '.join(sorted(selected))}"
-            )
+            raise ValueError(f"No rows matched selected mutations: {', '.join(sorted(selected))}")
 
     ensure_dirs([prepared_dir, fep_manifest_path.parent, fep_results_dir])
 
@@ -78,12 +66,7 @@ def prepare_local_openmm_only_for_cluster(
         shutil.copy2(spec.structure.cif_path, wt_cif)
 
     structures: list[dict] = [
-        {
-            "mutation": "WT",
-            "safe_label": "wt",
-            "cif_path": wt_cif,
-            "fold_reduction": None,
-        }
+        {"mutation": "WT", "safe_label": "wt", "cif_path": wt_cif, "fold_reduction": None}
     ]
     for _, row in dor_df.iterrows():
         mutation = row["mutation"]
@@ -107,13 +90,9 @@ def prepare_local_openmm_only_for_cluster(
             }
         )
 
-    logging.info(
-        "Preparing OpenMM-only assets for %d structures (%d replicates)",
-        len(structures),
-        replicates,
-    )
+    logging.info("Preparing MD assets for %d structures (%d replicates)", len(structures), replicates)
 
-    fep_tasks: list[FEPTask] = []
+    tasks: list[FEPTask] = []
     task_id = 0
     app = require_module("openmm.app")
 
@@ -148,50 +127,44 @@ def prepare_local_openmm_only_for_cluster(
                 with open(min_pdb, "w") as handle:
                     app.PDBFile.writeFile(topology, positions, handle)
 
-            for leg in ("complex", "solvent"):
-                system_xml = assets_dir / f"{safe_label}_{leg}_rep{replicate:02d}_system.xml"
-                topology_pdb = assets_dir / f"{safe_label}_{leg}_rep{replicate:02d}_start.pdb"
+            system_xml = assets_dir / f"{safe_label}_md_rep{replicate:02d}_system.xml"
+            topology_pdb = assets_dir / f"{safe_label}_md_rep{replicate:02d}_start.pdb"
 
-                if not (system_xml.exists() and topology_pdb.exists()):
-                    prepare_single_leg_assets(
-                        minimized_pdb_path=min_pdb,
-                        ligand_resname=spec.structure.ligand_resname,
-                        ligand_sdf=spec.structure.ligand_sdf,
-                        leg=leg,
-                        topology_pdb_path=topology_pdb,
-                        system_xml_path=system_xml,
-                        config=cfg,
-                    )
-
-                output_json = run_dir / f"{safe_label}_{leg}_rep{replicate:02d}.json"
-                fep_tasks.append(
-                    FEPTask(
-                        task_id=task_id,
-                        structure="DOR",
-                        mutation=struct["mutation"],
-                        safe_label=safe_label,
-                        replicate=replicate,
-                        leg=leg,
-                        minimized_pdb=str(min_pdb.resolve()),
-                        ligand_sdf=str(spec.structure.ligand_sdf.resolve()),
-                        ligand_resname=spec.structure.ligand_resname,
-                        fold_reduction=struct["fold_reduction"],
-                        output_json=str(output_json),
-                        input_cif=str(Path(struct["cif_path"]).resolve()),
-                        jitter_seed=seed,
-                        jitter_angstrom=jitter_angstrom,
-                        restraint_radius=spec.restraint_radius_angstrom,
-                        restraint_k=spec.restraint_k_kj_mol_nm2,
-                        prepared_topology_pdb=str(topology_pdb.resolve()),
-                        prepared_system_xml=str(system_xml.resolve()),
-                    )
+            if not (system_xml.exists() and topology_pdb.exists()):
+                prepare_md_assets(
+                    minimized_pdb_path=min_pdb,
+                    ligand_resname=spec.structure.ligand_resname,
+                    ligand_sdf=spec.structure.ligand_sdf,
+                    topology_pdb_path=topology_pdb,
+                    system_xml_path=system_xml,
+                    config=cfg,
                 )
-                task_id += 1
 
-    save_manifest(fep_tasks, fep_manifest_path)
-    logging.info(
-        "Wrote OpenMM-only FEP manifest with %d tasks to %s",
-        len(fep_tasks),
-        fep_manifest_path,
-    )
-    return fep_tasks
+            output_json = run_dir / f"{safe_label}_rep{replicate:02d}.json"
+            tasks.append(
+                FEPTask(
+                    task_id=task_id,
+                    structure="DOR",
+                    mutation=struct["mutation"],
+                    safe_label=safe_label,
+                    replicate=replicate,
+                    leg="complex",
+                    minimized_pdb=str(min_pdb.resolve()),
+                    ligand_sdf=str(spec.structure.ligand_sdf.resolve()),
+                    ligand_resname=spec.structure.ligand_resname,
+                    fold_reduction=struct["fold_reduction"],
+                    output_json=str(output_json),
+                    input_cif=str(Path(struct["cif_path"]).resolve()),
+                    jitter_seed=seed,
+                    jitter_angstrom=jitter_angstrom,
+                    restraint_radius=spec.restraint_radius_angstrom,
+                    restraint_k=spec.restraint_k_kj_mol_nm2,
+                    prepared_topology_pdb=str(topology_pdb.resolve()),
+                    prepared_system_xml=str(system_xml.resolve()),
+                )
+            )
+            task_id += 1
+
+    save_manifest(tasks, fep_manifest_path)
+    logging.info("Wrote MD manifest with %d tasks to %s", len(tasks), fep_manifest_path)
+    return tasks

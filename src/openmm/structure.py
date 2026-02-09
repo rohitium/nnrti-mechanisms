@@ -72,16 +72,70 @@ def minimize_with_restraints(
     if hydrogens:
         modeller.delete(hydrogens)
 
-    ligand_residues = [res for res in modeller.topology.residues() if res.name == ligand_resname]
-    if ligand_residues:
-        modeller.delete(ligand_residues)
-        off_unit = require_module("openff.units").unit
-        omm_unit = require_module("openmm.unit")
-        ligand_topology = ligand_mol.to_topology().to_openmm()
-        for residue in ligand_topology.residues():
-            residue.name = ligand_resname
-        ligand_positions = ligand_mol.conformers[0].to(off_unit.nanometer).magnitude
-        modeller.add(ligand_topology, ligand_positions * omm_unit.nanometer)
+    # Rebuild ligand from the SDF template so ForceField templates match, but preserve
+    # the bound pose by rigidly aligning template coordinates to the input CIF ligand.
+    ligand_atoms = [
+        atom for atom in modeller.topology.atoms() if atom.residue.name == ligand_resname
+    ]
+    if not ligand_atoms:
+        raise ValueError(
+            f"Ligand residue '{ligand_resname}' not found in {cif_path}. "
+            "Cannot prepare bound complex."
+        )
+    omm_unit = require_module("openmm.unit")
+    off_unit = require_module("openff.units").unit
+    def _is_hydrogen(atom) -> bool:
+        if getattr(atom, "element", None) is not None:
+            return atom.element.symbol.upper() == "H"
+        return atom.name.upper().startswith("H")
+
+    original_ligand_xyz = np.array(
+        [modeller.positions[a.index].value_in_unit(omm_unit.nanometer) for a in ligand_atoms],
+        dtype=float,
+    )
+    original_heavy_xyz = np.array(
+        [
+            modeller.positions[a.index].value_in_unit(omm_unit.nanometer)
+            for a in ligand_atoms
+            if not _is_hydrogen(a)
+        ],
+        dtype=float,
+    )
+    ligand_residues = [
+        res for res in modeller.topology.residues() if res.name == ligand_resname
+    ]
+    modeller.delete(ligand_residues)
+    ligand_topology = ligand_mol.to_topology().to_openmm()
+    for residue in ligand_topology.residues():
+        residue.name = ligand_resname
+    ligand_template_xyz = np.asarray(
+        ligand_mol.conformers[0].to(off_unit.nanometer).magnitude,
+        dtype=float,
+    )
+    template_heavy_mask = np.array(
+        [a.atomic_number != 1 for a in ligand_mol.atoms],
+        dtype=bool,
+    )
+    template_heavy_xyz = ligand_template_xyz[template_heavy_mask]
+    if template_heavy_xyz.shape[0] != original_heavy_xyz.shape[0]:
+        raise ValueError(
+            "Ligand heavy-atom count mismatch between CIF and SDF; cannot align bound pose "
+            f"({original_heavy_xyz.shape[0]} vs {template_heavy_xyz.shape[0]})."
+        )
+
+    # Kabsch rigid alignment on heavy atoms: template (mobile) -> CIF ligand (target).
+    mobile_centroid = template_heavy_xyz.mean(axis=0)
+    target_centroid = original_heavy_xyz.mean(axis=0)
+    m = template_heavy_xyz - mobile_centroid
+    t = original_heavy_xyz - target_centroid
+    cov = m.T @ t
+    u, _, vt = np.linalg.svd(cov)
+    r = vt.T @ u.T
+    if np.linalg.det(r) < 0:
+        vt[-1, :] *= -1
+        r = vt.T @ u.T
+    aligned_xyz = ((ligand_template_xyz - mobile_centroid) @ r) + target_centroid
+    modeller.add(ligand_topology, aligned_xyz * omm_unit.nanometer)
     modeller.addHydrogens(forcefield)
     modeller.positions = _jitter_positions(
         modeller.positions, seed=jitter_seed, jitter_angstrom=jitter_angstrom

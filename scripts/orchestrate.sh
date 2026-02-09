@@ -1,15 +1,16 @@
 #!/bin/bash
-# End-to-end FEP pipeline: local prep → Sherlock → collect results
+# End-to-end Sherlock workflow: local prep -> Sherlock run -> collect/analyze
 #
 # Prerequisites:
-#   - conda activate nnrti-prep  (for local OpenMM prep & analysis)
-#   - SSH key auth to Sherlock    (ssh-copy-id $SHERLOCK_USER@login.sherlock.stanford.edu)
+#   - conda activate nnrti-prep  (for local prep and analysis)
+#   - SSH key auth to Sherlock   (ssh-copy-id $SHERLOCK_USER@login.sherlock.stanford.edu)
 #
 # Usage:
 #   ./scripts/orchestrate.sh --test          # Test SSH/rsync connectivity
 #   ./scripts/orchestrate.sh                 # Full pipeline
 #   ./scripts/orchestrate.sh --skip-prep     # Skip local prep (already done)
 #   ./scripts/orchestrate.sh --collect-only  # Just rsync results back + analyze
+#   ./scripts/orchestrate.sh --quick-test    # Submit only WT + Y188L (replicate 1)
 #
 # Environment variables:
 #   SHERLOCK_USER   (required) Your SUNet ID
@@ -34,8 +35,6 @@ JITTER="0.1"
 POLL_INTERVAL="${POLL_INTERVAL:-300}"
 
 # SSH multiplexing — authenticate once (Duo), reuse for all subsequent calls.
-# ControlPersist=10800 keeps the socket alive for 3 hours without activity,
-# which covers the full cluster wait time.
 SSH_SOCKET="/tmp/ssh-sherlock-${SHERLOCK_USER}"
 SSH_OPTS="-o ControlMaster=auto -o ControlPath=${SSH_SOCKET} -o ControlPersist=10800 -o ServerAliveInterval=60"
 
@@ -45,12 +44,14 @@ SSH_OPTS="-o ControlMaster=auto -o ControlPath=${SSH_SOCKET} -o ControlPersist=1
 SKIP_PREP=false
 COLLECT_ONLY=false
 TEST_MODE=false
+QUICK_TEST=false
 
 for arg in "$@"; do
     case $arg in
         --skip-prep)    SKIP_PREP=true ;;
         --collect-only) COLLECT_ONLY=true; SKIP_PREP=true ;;
         --test)         TEST_MODE=true; SKIP_PREP=true ;;
+        --quick-test)   QUICK_TEST=true; SKIP_PREP=true ;;
         --help|-h)
             head -18 "$0" | tail -16
             exit 0
@@ -75,10 +76,8 @@ if [ "$TEST_MODE" = true ]; then
     echo "Target: ${SHERLOCK_DEST}:${SHERLOCK_DIR}"
     echo ""
 
-    # Test 1: SSH connection
     echo "--- Test 1: SSH connection ---"
-    echo "  (You may be prompted for Duo 2FA — this authenticates the"
-    echo "   multiplexed socket so later commands won't re-prompt.)"
+    echo "  (You may be prompted for Duo 2FA.)"
     echo ""
     if ssh $SSH_OPTS "${SHERLOCK_DEST}" "echo 'SSH OK'; hostname" 2>&1; then
         pass "SSH connection works"
@@ -93,7 +92,6 @@ if [ "$TEST_MODE" = true ]; then
     fi
     echo ""
 
-    # Test 2: Scratch directory exists
     echo "--- Test 2: Scratch directory ---"
     if ssh $SSH_OPTS "${SHERLOCK_DEST}" "ls -d /scratch/users/${SHERLOCK_USER}" 2>&1; then
         pass "Scratch directory exists"
@@ -104,7 +102,6 @@ if [ "$TEST_MODE" = true ]; then
     fi
     echo ""
 
-    # Test 3: rsync a small test file
     echo "--- Test 3: rsync transfer ---"
     TESTFILE=$(mktemp "${PROJECT_DIR}/.rsync_test_XXXXXX")
     echo "orchestrate test $(date)" > "$TESTFILE"
@@ -112,7 +109,6 @@ if [ "$TEST_MODE" = true ]; then
     if rsync -avz -e "ssh $SSH_OPTS" "$TESTFILE" \
         "${SHERLOCK_DEST}:${SHERLOCK_DIR}/${TESTBASE}" 2>&1; then
         pass "rsync to Sherlock works"
-        # Cleanup
         ssh $SSH_OPTS "${SHERLOCK_DEST}" "rm -f ${SHERLOCK_DIR}/${TESTBASE}" 2>/dev/null
     else
         fail "rsync failed"
@@ -121,7 +117,6 @@ if [ "$TEST_MODE" = true ]; then
     rm -f "$TESTFILE"
     echo ""
 
-    # Test 4: Remote module loading + python
     echo "--- Test 4: Remote OpenMM module ---"
     if ssh $SSH_OPTS "${SHERLOCK_DEST}" bash -c "'
         source /etc/profile.d/modules.sh 2>/dev/null || true
@@ -134,7 +129,6 @@ if [ "$TEST_MODE" = true ]; then
     fi
     echo ""
 
-    # Test 5: SLURM commands
     echo "--- Test 5: SLURM access ---"
     if ssh $SSH_OPTS "${SHERLOCK_DEST}" "squeue -u ${SHERLOCK_USER} --noheader | head -5; echo 'squeue OK'" 2>&1; then
         pass "SLURM squeue works"
@@ -143,13 +137,11 @@ if [ "$TEST_MODE" = true ]; then
     fi
     echo ""
 
-    # Test 6: Check manifest
     echo "--- Test 6: Local manifest ---"
     MANIFEST="${PROJECT_DIR}/results/fep_manifest.csv"
     if [ -f "$MANIFEST" ]; then
         N_TASKS=$(tail -n +2 "$MANIFEST" | wc -l | tr -d ' ')
-        N_PAIRS=$((N_TASKS / 2))
-        pass "Manifest found: ${N_TASKS} tasks (${N_PAIRS} array jobs)"
+        pass "Manifest found: ${N_TASKS} tasks (${N_TASKS} array jobs)"
 
         echo "  Mutations in manifest:"
         tail -n +2 "$MANIFEST" | cut -d',' -f3 | sort -u | while read -r mut; do
@@ -164,9 +156,6 @@ if [ "$TEST_MODE" = true ]; then
     echo "=============================="
     echo " All tests passed!"
     echo "=============================="
-    echo ""
-    echo "The SSH socket is now open and will persist for 3 hours."
-    echo "Subsequent runs of this script will reuse it (no re-auth)."
     echo ""
     echo "Ready to run:"
     echo "  ./scripts/orchestrate.sh --skip-prep"
@@ -192,7 +181,6 @@ else
 fi
 
 if [ "$COLLECT_ONLY" = true ]; then
-    # Jump straight to Phase 5
     log COLLECT "Transferring results from Sherlock..."
     rsync -avz -e "ssh $SSH_OPTS" \
         "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/fep_runs/" \
@@ -220,33 +208,68 @@ log SYNC "Transfer complete."
 # ---------------------------------------------------------------------------
 log SUBMIT "Rewriting manifest paths and submitting jobs on Sherlock..."
 
-# Count tasks in manifest to compute array range
 N_TASKS=$(tail -n +2 "${PROJECT_DIR}/results/fep_manifest.csv" | wc -l | tr -d ' ')
-N_PAIRS=$((N_TASKS / 2))
-ARRAY_MAX=$((N_PAIRS - 1))
-log SUBMIT "Manifest has ${N_TASKS} tasks -> ${N_PAIRS} array jobs (0-${ARRAY_MAX})"
+ARRAY_MAX=$((N_TASKS - 1))
+log SUBMIT "Manifest has ${N_TASKS} tasks -> ${N_TASKS} array jobs (0-${ARRAY_MAX})"
 
-# Run remote commands via SSH
-JOB_ID=$(ssh $SSH_OPTS "${SHERLOCK_DEST}" bash -s "$SHERLOCK_DIR" "$ARRAY_MAX" <<'REMOTE_SCRIPT'
+REMOTE_QUICK_FLAG=0
+if [ "$QUICK_TEST" = true ]; then
+    log SUBMIT "Quick-test mode enabled: submitting WT + Y188L (replicate 1) only."
+    REMOTE_QUICK_FLAG=1
+fi
+
+JOB_ID=$(ssh $SSH_OPTS "${SHERLOCK_DEST}" bash -s "$SHERLOCK_DIR" "$ARRAY_MAX" "$REMOTE_QUICK_FLAG" <<'REMOTE_SCRIPT'
 set -euo pipefail
 WORK_DIR="$1"
 ARRAY_MAX="$2"
+QUICK_FLAG="$3"
 cd "$WORK_DIR"
 
-# Rewrite manifest paths (local Mac → Sherlock scratch)
 source /etc/profile.d/modules.sh 2>/dev/null || true
 ml chemistry py-openmm/8.1.1_py312
 python3 scripts/sherlock/rewrite_manifest_paths.py >&2
 
-# Update array range in submit script
-sed -i "s/^#SBATCH --array=.*/#SBATCH --array=0-${ARRAY_MAX}/" \
-    scripts/sherlock/submit_all_tasks.sh
+MANIFEST_PATH="results/fep_manifest.csv"
+if [ "$QUICK_FLAG" = "1" ]; then
+    python3 - <<'PY'
+import csv
+from pathlib import Path
 
-# Create log directory
+src = Path("results/fep_manifest.csv")
+dst = Path("results/fep_manifest.quick.csv")
+keep_mut = {"WT", "Y188L"}
+rows = []
+with src.open("r", newline="") as h:
+    reader = csv.DictReader(h)
+    fieldnames = reader.fieldnames
+    for row in reader:
+        if str(row.get("mutation", "")).strip() in keep_mut and int(row.get("replicate", "0")) == 1:
+            rows.append(row)
+
+if not rows:
+    raise SystemExit("Quick-test selection produced zero tasks.")
+
+for i, row in enumerate(rows):
+    row["task_id"] = str(i)
+    out = Path(row["output_json"])
+    row["output_json"] = str(out.with_name(out.stem + "_quick.json"))
+
+with dst.open("w", newline="") as h:
+    writer = csv.DictWriter(h, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(rows)
+
+print(f"Quick-test manifest: {dst} ({len(rows)} tasks)")
+PY
+    MANIFEST_PATH="results/fep_manifest.quick.csv"
+    ARRAY_MAX=$(($(tail -n +2 "$MANIFEST_PATH" | wc -l | tr -d ' ') - 1))
+fi
+
+sed -i "s/^#SBATCH --array=.*/#SBATCH --array=0-${ARRAY_MAX}/" scripts/sherlock/submit_all_tasks.sh
+
 mkdir -p logs
 
-# Submit and capture job ID
-SUBMIT_OUT=$(sbatch scripts/sherlock/submit_all_tasks.sh 2>&1)
+SUBMIT_OUT=$(sbatch --export=ALL,MANIFEST_PATH="${MANIFEST_PATH}" scripts/sherlock/submit_all_tasks.sh 2>&1)
 echo "$SUBMIT_OUT" | grep -oP '\d+$'
 REMOTE_SCRIPT
 )
@@ -255,7 +278,7 @@ if [ -z "$JOB_ID" ]; then
     log ERROR "Failed to submit SLURM job"
     exit 1
 fi
-log SUBMIT "Submitted SLURM array job: ${JOB_ID} (${N_PAIRS} tasks)"
+log SUBMIT "Submitted SLURM array job: ${JOB_ID} (${N_TASKS} tasks)"
 
 # ---------------------------------------------------------------------------
 # Phase 4: Poll for completion
@@ -263,7 +286,6 @@ log SUBMIT "Submitted SLURM array job: ${JOB_ID} (${N_PAIRS} tasks)"
 log WAIT "Polling job status every ${POLL_INTERVAL}s..."
 
 while true; do
-    # Count running/pending tasks for this job
     ACTIVE=$(ssh $SSH_OPTS "${SHERLOCK_DEST}" \
         "squeue -j ${JOB_ID} -h 2>/dev/null | wc -l" || echo "0")
     ACTIVE=$(echo "$ACTIVE" | tr -d '[:space:]')
@@ -277,7 +299,6 @@ while true; do
     sleep "$POLL_INTERVAL"
 done
 
-# Check for failures via sacct
 log WAIT "Checking job exit statuses..."
 FAILED=$(ssh $SSH_OPTS "${SHERLOCK_DEST}" \
     "sacct -j ${JOB_ID} --format=JobID,State,ExitCode --noheader -P 2>/dev/null | grep -c 'FAILED'" \
@@ -302,11 +323,6 @@ log COLLECT "Running result collection and analysis..."
 cd "$PROJECT_DIR"
 python -m src.main --collect-results
 
-# Close SSH multiplexed connection
 ssh $SSH_OPTS -O exit "${SHERLOCK_DEST}" 2>/dev/null || true
 
-log DONE "Pipeline complete! Results in ${PROJECT_DIR}/results/"
-log DONE "Key outputs:"
-log DONE "  results/ddg_summary.csv"
-log DONE "  results/correlation_analysis.csv"
-log DONE "  results/plots/ddg_vs_fold_reduction.png"
+log DONE "Pipeline complete. Results in ${PROJECT_DIR}/results/"

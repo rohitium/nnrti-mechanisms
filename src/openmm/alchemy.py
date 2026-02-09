@@ -48,6 +48,12 @@ class AlchemicalConfig:
 class AlchemicalLegResult:
     delta_g_kj_mol: float
     pair_delta_g_kj_mol: tuple[float, ...]
+    pair_component: tuple[str, ...]
+    electrostatic_delta_g_kj_mol: float
+    steric_delta_g_kj_mol: float
+    convergence_sample_fraction: tuple[float, ...]
+    convergence_total_delta_g_kj_mol: tuple[float, ...]
+    convergence_pair_delta_g_kj_mol: tuple[tuple[float, ...], ...]
 
 
 @dataclass(frozen=True)
@@ -222,17 +228,66 @@ def _run_leg_from_simulation(
         )
 
     pair_delta_f = []
+    pair_component = []
+    convergence_fractions = tuple(float(x) for x in np.linspace(0.1, 1.0, 10))
+    per_window_prefix_delta_g: list[list[float]] = []
     for i in range(len(protocol) - 1):
         w_f = forward[i]
         w_r = reverse[i]
         if w_f is None or w_r is None:
             raise RuntimeError(f"Missing BAR work arrays for window pair {i}-{i + 1}.")
         pair_delta_f.append(_bar_delta_f(w_f, w_r))
+        lam0_e, lam0_s = protocol[i]
+        lam1_e, lam1_s = protocol[i + 1]
+        if lam0_e != lam1_e and lam0_s == lam1_s:
+            pair_component.append("electrostatic")
+        elif lam0_s != lam1_s and lam0_e == lam1_e:
+            pair_component.append("steric")
+        else:
+            pair_component.append("mixed")
+
+        n_min = min(w_f.size, w_r.size)
+        prefix_values: list[float] = []
+        for frac in convergence_fractions:
+            n_take = max(3, int(round(frac * n_min)))
+            n_take = min(n_take, n_min)
+            if n_take < 3:
+                prefix_values.append(float("nan"))
+                continue
+            try:
+                prefix_df = _bar_delta_f(w_f[:n_take], w_r[:n_take])
+                prefix_values.append(float(prefix_df / beta))
+            except Exception:
+                prefix_values.append(float("nan"))
+        per_window_prefix_delta_g.append(prefix_values)
 
     pair_delta_g = [float(df / beta) for df in pair_delta_f]
+    electrostatic_delta_g = float(
+        sum(
+            dg for dg, comp in zip(pair_delta_g, pair_component, strict=False)
+            if comp == "electrostatic"
+        )
+    )
+    steric_delta_g = float(
+        sum(
+            dg for dg, comp in zip(pair_delta_g, pair_component, strict=False)
+            if comp == "steric"
+        )
+    )
+    total_prefix_delta_g: list[float] = []
+    for j in range(len(convergence_fractions)):
+        vals = [per_window_prefix_delta_g[i][j] for i in range(len(per_window_prefix_delta_g))]
+        arr = np.asarray(vals, dtype=float)
+        total_prefix_delta_g.append(float(np.nansum(arr)))
     return AlchemicalLegResult(
         delta_g_kj_mol=float(np.sum(pair_delta_g)),
         pair_delta_g_kj_mol=tuple(pair_delta_g),
+        pair_component=tuple(pair_component),
+        electrostatic_delta_g_kj_mol=electrostatic_delta_g,
+        steric_delta_g_kj_mol=steric_delta_g,
+        convergence_sample_fraction=convergence_fractions,
+        convergence_total_delta_g_kj_mol=tuple(total_prefix_delta_g),
+        convergence_pair_delta_g_kj_mol=tuple(tuple(x) for x in per_window_prefix_delta_g),
     )
 
 
@@ -271,6 +326,25 @@ def _build_alchemical_system(topology, forcefield, ligand_resname: str, config: 
     )
     factory = alchemy.AbsoluteAlchemicalFactory()
     return factory.create_alchemical_system(base_system, region)
+
+
+def _min_ligand_protein_distance_from_topology_positions(topology, positions, ligand_resname: str) -> float:
+    unit = require_module("openmm.unit")
+    pos_nm = np.array([p.value_in_unit(unit.nanometer) for p in positions], dtype=float)
+    lig_idx: list[int] = []
+    prot_idx: list[int] = []
+    for atom in topology.atoms():
+        if atom.residue.name == ligand_resname:
+            lig_idx.append(atom.index)
+        elif atom.residue.chain is not None:
+            prot_idx.append(atom.index)
+    if not lig_idx or not prot_idx:
+        return float("nan")
+    lig = pos_nm[np.array(lig_idx, dtype=int)]
+    prot = pos_nm[np.array(prot_idx, dtype=int)]
+    d2 = ((lig[:, None, :] - prot[None, :, :]) ** 2).sum(axis=2)
+    min_nm = float(np.sqrt(d2.min()))
+    return 10.0 * min_nm  # Angstrom
 
 
 def _run_leg(
@@ -390,6 +464,12 @@ class SingleLegResult:
     leg: str
     delta_g_kj_mol: float
     pair_delta_g_kj_mol: tuple[float, ...]
+    pair_component: tuple[str, ...]
+    electrostatic_delta_g_kj_mol: float
+    steric_delta_g_kj_mol: float
+    convergence_sample_fraction: tuple[float, ...]
+    convergence_total_delta_g_kj_mol: tuple[float, ...]
+    convergence_pair_delta_g_kj_mol: tuple[tuple[float, ...], ...]
     lambda_protocol: tuple[tuple[float, float], ...]
 
 
@@ -404,6 +484,14 @@ def write_single_leg_result(
         "leg": result.leg,
         "delta_g_kj_mol": result.delta_g_kj_mol,
         "pair_delta_g_kj_mol": list(result.pair_delta_g_kj_mol),
+        "pair_component": list(result.pair_component),
+        "electrostatic_delta_g_kj_mol": result.electrostatic_delta_g_kj_mol,
+        "steric_delta_g_kj_mol": result.steric_delta_g_kj_mol,
+        "convergence_sample_fraction": list(result.convergence_sample_fraction),
+        "convergence_total_delta_g_kj_mol": list(result.convergence_total_delta_g_kj_mol),
+        "convergence_pair_delta_g_kj_mol": [
+            list(x) for x in result.convergence_pair_delta_g_kj_mol
+        ],
         "lambda_protocol": [list(pair) for pair in result.lambda_protocol],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -471,6 +559,12 @@ def run_single_leg(
         leg=leg,
         delta_g_kj_mol=leg_result.delta_g_kj_mol,
         pair_delta_g_kj_mol=leg_result.pair_delta_g_kj_mol,
+        pair_component=leg_result.pair_component,
+        electrostatic_delta_g_kj_mol=leg_result.electrostatic_delta_g_kj_mol,
+        steric_delta_g_kj_mol=leg_result.steric_delta_g_kj_mol,
+        convergence_sample_fraction=leg_result.convergence_sample_fraction,
+        convergence_total_delta_g_kj_mol=leg_result.convergence_total_delta_g_kj_mol,
+        convergence_pair_delta_g_kj_mol=leg_result.convergence_pair_delta_g_kj_mol,
         lambda_protocol=cfg.lambda_protocol,
     )
 
@@ -530,8 +624,22 @@ def prepare_single_leg_assets(
     )
     simulation = app.Simulation(top, system, integrator)
     simulation.context.setPositions(pos)
+    # Ensure the prepared snapshot corresponds to the physical (fully coupled) state.
+    _set_lambda(simulation, *cfg.lambda_protocol[0])
     simulation.minimizeEnergy()
     pos = simulation.context.getState(getPositions=True).getPositions()
+
+    if leg == "complex":
+        min_dist_ang = _min_ligand_protein_distance_from_topology_positions(
+            top,
+            pos,
+            ligand_resname,
+        )
+        if np.isfinite(min_dist_ang) and min_dist_ang > 15.0:
+            raise ValueError(
+                f"Prepared complex appears unbound (min ligand-protein distance "
+                f"{min_dist_ang:.2f} Å > 15 Å). Aborting asset generation."
+            )
 
     topology_pdb_path.parent.mkdir(parents=True, exist_ok=True)
     system_xml_path.parent.mkdir(parents=True, exist_ok=True)
@@ -572,6 +680,8 @@ def run_single_leg_prepared(
         pdb.topology, system, integrator, platform, properties
     )
     simulation.context.setPositions(pdb.positions)
+    # Avoid minimizing in a decoupled state: explicitly set physical lambda first.
+    _set_lambda(simulation, *cfg.lambda_protocol[0])
     # Initial minimization; per-window stabilization is handled by
     # _stabilize_after_lambda_change inside _run_leg_from_simulation.
     simulation.minimizeEnergy()
@@ -587,6 +697,12 @@ def run_single_leg_prepared(
         leg=leg,
         delta_g_kj_mol=leg_result.delta_g_kj_mol,
         pair_delta_g_kj_mol=leg_result.pair_delta_g_kj_mol,
+        pair_component=leg_result.pair_component,
+        electrostatic_delta_g_kj_mol=leg_result.electrostatic_delta_g_kj_mol,
+        steric_delta_g_kj_mol=leg_result.steric_delta_g_kj_mol,
+        convergence_sample_fraction=leg_result.convergence_sample_fraction,
+        convergence_total_delta_g_kj_mol=leg_result.convergence_total_delta_g_kj_mol,
+        convergence_pair_delta_g_kj_mol=leg_result.convergence_pair_delta_g_kj_mol,
         lambda_protocol=cfg.lambda_protocol,
     )
 

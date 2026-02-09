@@ -1,280 +1,108 @@
 #!/usr/bin/env python
-"""FEP worker for SLURM array job execution.
-
-This module is the entry point for each SLURM array task. It:
-1. Minimizes the structure from input CIF (with optional jitter)
-2. Runs a single FEP leg (complex or solvent)
-3. Saves results to JSON
-
-Usage:
-    python -m src.cluster.fep_worker --manifest results/fep_manifest.csv --task-id 0
-"""
+"""Cluster worker for explicit-MD task execution (no alchemical protocol)."""
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
-import time
 from pathlib import Path
 
-from .manifest import get_task_by_id, FEPTask
+from .manifest import FEPTask, get_task_by_id
 
 
-def minimize_structure(task: FEPTask, output_dir: Path) -> Path:
-    """Minimize the input CIF structure.
-
-    Args:
-        task: The FEPTask containing minimization parameters.
-        output_dir: Directory to write minimized PDB.
-
-    Returns:
-        Path to the minimized PDB file.
-    """
-    from ..openmm.structure import minimize_with_restraints
-    from ..openmm.minimizer import minimize_system
-    from ..openmm.require import require_module
-
-    min_pdb = output_dir / f"{task.safe_label}_minimized_rep{task.replicate:02d}.pdb"
-
-    if min_pdb.exists():
-        logging.info("Reusing existing minimized structure: %s", min_pdb)
-        return min_pdb
-
-    logging.info("Minimizing structure from %s", task.input_cif)
-    start = time.perf_counter()
-
-    topology, positions, forcefield = minimize_with_restraints(
-        cif_path=Path(task.input_cif),
-        ligand_resname=task.ligand_resname,
-        ligand_sdf=Path(task.ligand_sdf),
-        restraint_radius_angstrom=task.restraint_radius,
-        restraint_k_kj_mol_nm2=task.restraint_k,
-        output_path=min_pdb,
-        jitter_seed=task.jitter_seed,
-        jitter_angstrom=task.jitter_angstrom,
-    )
-
-    logging.info("Restrained minimization done in %.1fs", time.perf_counter() - start)
-
-    # Second unrestrained minimization
-    start = time.perf_counter()
-    _, positions = minimize_system(
-        topology,
-        positions,
-        forcefield,
-        restraint_indices=[],
-        restraint_k_kj_mol_nm2=0.0,
-    )
-    logging.info("Unrestrained minimization done in %.1fs", time.perf_counter() - start)
-
-    # Write final structure
-    app = require_module("openmm.app")
-    with open(min_pdb, "w") as handle:
-        app.PDBFile.writeFile(topology, positions, handle)
-
-    return min_pdb
-
-
-def run_fep_task(
+def run_md_task(
     task: FEPTask,
-    equil_steps: int = 10_000,
-    prod_steps: int = 25_000,
-    sample_interval: int = 200,
-    save_trajectories: bool = True,
-    trajectory_interval: int = 2000,
+    heating_ps: float,
+    production_ns: float,
+    report_interval: int,
 ) -> dict:
-    """Execute a single FEP leg task.
-
-    Args:
-        task: The FEPTask to execute.
-        equil_steps: Equilibration steps per lambda window.
-        prod_steps: Production steps per lambda window.
-        sample_interval: Sample interval for energy evaluations.
-
-    Returns:
-        Dictionary with task result including delta_g_kj_mol.
-    """
-    from ..openmm.alchemy import AlchemicalConfig, run_single_leg, run_single_leg_prepared
+    from ..openmm.md_protocol import MDProtocolConfig, run_prepared_md
 
     output_path = Path(task.output_json)
     output_dir = output_path.parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    config = AlchemicalConfig(
-        equilibration_steps=equil_steps,
-        production_steps=prod_steps,
-        sample_interval=sample_interval,
-        trajectory_interval=trajectory_interval,
+    traj_dcd = output_dir / f"{task.safe_label}_rep{task.replicate:02d}_md.dcd"
+    final_pdb = output_dir / f"{task.safe_label}_rep{task.replicate:02d}_md_final.pdb"
+    state_csv = output_dir / f"{task.safe_label}_rep{task.replicate:02d}_md_state.csv"
+
+    cfg = MDProtocolConfig(
+        heating_ps=heating_ps,
+        production_ns=production_ns,
+        report_interval_steps=report_interval,
     )
 
-    logging.info(
-        "Running FEP task %d: %s rep%d %s leg",
-        task.task_id,
-        task.mutation,
-        task.replicate,
-        task.leg,
+    if not task.prepared_system_xml or not task.prepared_topology_pdb:
+        raise ValueError("Task is missing prepared MD assets (prepared_system_xml/prepared_topology_pdb).")
+
+    result = run_prepared_md(
+        prepared_topology_pdb=Path(task.prepared_topology_pdb),
+        prepared_system_xml=Path(task.prepared_system_xml),
+        trajectory_dcd_path=traj_dcd,
+        final_pdb_path=final_pdb,
+        state_csv_path=state_csv,
+        config=cfg,
     )
 
-    start_time = time.perf_counter()
-    trajectory_dcd = output_path.with_suffix(".dcd") if save_trajectories else None
-    physical_dcd = (
-        output_path.with_name(f"{output_path.stem}_physical_lambda1.dcd")
-        if save_trajectories and task.leg == "complex"
-        else None
-    )
-    use_prepared_assets = bool(task.prepared_system_xml and task.prepared_topology_pdb)
-    if use_prepared_assets:
-        min_pdb = Path(task.minimized_pdb) if task.minimized_pdb else Path(task.prepared_topology_pdb)
-        topology_pdb = Path(task.prepared_topology_pdb)
-        metadata = {
-            "task_id": task.task_id,
-            "structure": task.structure,
-            "mutation": task.mutation,
-            "safe_label": task.safe_label,
-            "replicate": task.replicate,
-            "leg": task.leg,
-            "fold_reduction": task.fold_reduction,
-            "minimized_pdb": str(min_pdb),
-            "topology_pdb": str(topology_pdb),
-            "trajectory_dcd": str(trajectory_dcd) if trajectory_dcd else "",
-            "physical_trajectory_dcd": str(physical_dcd) if physical_dcd else "",
-        }
-        result = run_single_leg_prepared(
-            prepared_topology_pdb=Path(task.prepared_topology_pdb),
-            prepared_system_xml=Path(task.prepared_system_xml),
-            leg=task.leg,
-            config=config,
-            output_json=output_path,
-            metadata=metadata,
-            trajectory_dcd_path=trajectory_dcd,
-            physical_trajectory_dcd_path=physical_dcd,
-        )
-    else:
-        # Legacy path: minimize and build alchemical system on cluster.
-        min_pdb = minimize_structure(task, output_dir)
-        topology_pdb = min_pdb
-        metadata = {
-            "task_id": task.task_id,
-            "structure": task.structure,
-            "mutation": task.mutation,
-            "safe_label": task.safe_label,
-            "replicate": task.replicate,
-            "leg": task.leg,
-            "fold_reduction": task.fold_reduction,
-            "minimized_pdb": str(min_pdb),
-            "topology_pdb": str(topology_pdb),
-            "trajectory_dcd": str(trajectory_dcd) if trajectory_dcd else "",
-            "physical_trajectory_dcd": str(physical_dcd) if physical_dcd else "",
-        }
-        result = run_single_leg(
-            minimized_pdb_path=min_pdb,
-            ligand_resname=task.ligand_resname,
-            ligand_sdf=Path(task.ligand_sdf),
-            leg=task.leg,
-            config=config,
-            output_json=output_path,
-            metadata=metadata,
-            trajectory_dcd_path=trajectory_dcd,
-            physical_trajectory_dcd_path=physical_dcd,
-        )
-
-    elapsed = time.perf_counter() - start_time
-    logging.info(
-        "Task %d completed in %.1f s: dG = %.2f kJ/mol",
-        task.task_id,
-        elapsed,
-        result.delta_g_kj_mol,
-    )
-
-    return {
+    payload = {
         "task_id": task.task_id,
-        "delta_g_kj_mol": result.delta_g_kj_mol,
-        "elapsed_seconds": elapsed,
-        "minimized_pdb": str(min_pdb),
-        "trajectory_dcd": str(trajectory_dcd) if trajectory_dcd else "",
-        "physical_trajectory_dcd": str(physical_dcd) if physical_dcd else "",
+        "structure": task.structure,
+        "mutation": task.mutation,
+        "safe_label": task.safe_label,
+        "replicate": task.replicate,
+        "fold_reduction": task.fold_reduction,
+        "ligand_resname": task.ligand_resname,
+        "ligand_sdf": task.ligand_sdf,
+        "minimized_pdb": task.minimized_pdb,
+        "prepared_topology_pdb": task.prepared_topology_pdb,
+        "prepared_system_xml": task.prepared_system_xml,
+        "trajectory_dcd": str(traj_dcd),
+        "state_csv": str(state_csv),
+        "final_pdb": str(final_pdb),
+        "md_heating_steps": result.heating_steps,
+        "md_production_steps": result.production_steps,
+        "md_total_steps": result.total_steps,
+        "elapsed_seconds": result.elapsed_seconds,
+        "status": "ok",
     }
+    output_path.write_text(json.dumps(payload, indent=2))
+    return payload
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Main entry point for the FEP worker."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-    parser = argparse.ArgumentParser(
-        description="Run a single FEP leg for SLURM array job"
-    )
-    parser.add_argument(
-        "--manifest",
-        type=Path,
-        required=True,
-        help="Path to FEP manifest CSV",
-    )
-    parser.add_argument(
-        "--task-id",
-        type=int,
-        required=True,
-        help="Task ID from SLURM_ARRAY_TASK_ID",
-    )
-    parser.add_argument(
-        "--equil-steps",
-        type=int,
-        default=10_000,
-        help="Equilibration steps per lambda window (default: 10000)",
-    )
-    parser.add_argument(
-        "--prod-steps",
-        type=int,
-        default=25_000,
-        help="Production steps per lambda window (default: 25000)",
-    )
-    parser.add_argument(
-        "--sample-interval",
-        type=int,
-        default=200,
-        help="Sample interval for energy evaluations (default: 200)",
-    )
-    parser.add_argument(
-        "--trajectory-interval",
-        type=int,
-        default=2000,
-        help="Step interval for trajectory frame writing (default: 2000)",
-    )
-    parser.add_argument(
-        "--save-trajectories",
-        dest="save_trajectories",
-        action="store_true",
-        default=True,
-        help="Write DCD trajectories for each leg (default: enabled).",
-    )
-    parser.add_argument(
-        "--no-save-trajectories",
-        dest="save_trajectories",
-        action="store_false",
-        help="Disable DCD trajectory output.",
-    )
-
+    parser = argparse.ArgumentParser(description="Run one explicit-MD task from manifest")
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--task-id", type=int, required=True)
+    parser.add_argument("--heating-ps", type=float, default=25.0)
+    parser.add_argument("--production-ns", type=float, default=2.0)
+    parser.add_argument("--report-interval", type=int, default=2000)
     args = parser.parse_args(argv)
 
     try:
         task = get_task_by_id(args.manifest, args.task_id)
-    except ValueError as e:
-        logging.error("Failed to load task: %s", e)
+    except Exception as exc:
+        logging.error("Failed to load task %s: %s", args.task_id, exc)
         return 1
 
     try:
-        run_fep_task(
+        out = run_md_task(
             task,
-            equil_steps=args.equil_steps,
-            prod_steps=args.prod_steps,
-            sample_interval=args.sample_interval,
-            save_trajectories=args.save_trajectories,
-            trajectory_interval=args.trajectory_interval,
+            heating_ps=args.heating_ps,
+            production_ns=args.production_ns,
+            report_interval=args.report_interval,
         )
-    except Exception as e:
-        logging.error("Task %d failed: %s", args.task_id, e, exc_info=True)
+        logging.info(
+            "Completed task %d (%s rep%d) in %.1fs",
+            task.task_id,
+            task.mutation,
+            task.replicate,
+            out["elapsed_seconds"],
+        )
+    except Exception as exc:
+        logging.error("Task %d failed: %s", task.task_id, exc, exc_info=True)
         return 1
 
     return 0
