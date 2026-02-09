@@ -8,34 +8,37 @@ import logging
 import sys
 from pathlib import Path
 
-from .manifest import FEPTask, get_task_by_id
+from .manifest import MDTask, get_task_by_id
 
 
 def run_md_task(
-    task: FEPTask,
+    task: MDTask,
     heating_ps: float,
     production_ns: float,
     report_interval: int,
 ) -> dict:
     from ..openmm.md_protocol import MDProtocolConfig, run_prepared_md
-    from ..openmm.platform import get_platform
 
     output_path = Path(task.output_json)
     output_dir = output_path.parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    traj_dcd = output_dir / f"{task.safe_label}_rep{task.replicate:02d}_md.dcd"
     final_pdb = output_dir / f"{task.safe_label}_rep{task.replicate:02d}_md_final.pdb"
     state_csv = output_dir / f"{task.safe_label}_rep{task.replicate:02d}_md_state.csv"
+    analysis_dcd = output_dir / f"{task.safe_label}_rep{task.replicate:02d}_analysis.dcd"
+    analysis_topo_pdb = output_dir / f"{task.safe_label}_rep{task.replicate:02d}_analysis_topology.pdb"
+
+    # ~200 analysis frames (enough for ~100 after 25% discard).
+    timestep_fs = 2.0
+    production_steps = max(1, int(round((production_ns * 1_000_000.0) / timestep_fs)))
+    analysis_interval = max(1, production_steps // 200)
 
     cfg = MDProtocolConfig(
         heating_ps=heating_ps,
         production_ns=production_ns,
         report_interval_steps=report_interval,
+        analysis_report_interval_steps=analysis_interval,
     )
-
-    platform, _props = get_platform()
-    logging.info("Using OpenMM platform: %s", platform.getName())
 
     if not task.prepared_system_xml or not task.prepared_topology_pdb:
         raise ValueError("Task is missing prepared MD assets (prepared_system_xml/prepared_topology_pdb).")
@@ -43,10 +46,11 @@ def run_md_task(
     result = run_prepared_md(
         prepared_topology_pdb=Path(task.prepared_topology_pdb),
         prepared_system_xml=Path(task.prepared_system_xml),
-        trajectory_dcd_path=traj_dcd,
         final_pdb_path=final_pdb,
         state_csv_path=state_csv,
         config=cfg,
+        analysis_dcd_path=analysis_dcd,
+        analysis_topology_pdb_path=analysis_topo_pdb,
     )
 
     payload = {
@@ -61,7 +65,8 @@ def run_md_task(
         "minimized_pdb": task.minimized_pdb,
         "prepared_topology_pdb": task.prepared_topology_pdb,
         "prepared_system_xml": task.prepared_system_xml,
-        "trajectory_dcd": str(traj_dcd),
+        "analysis_dcd": str(analysis_dcd),
+        "analysis_topology_pdb": str(analysis_topo_pdb),
         "state_csv": str(state_csv),
         "final_pdb": str(final_pdb),
         "md_heating_steps": result.heating_steps,

@@ -1,0 +1,3 @@
+structure,mutation,safe_label,replicate,contact_count,contact_count_std,hbond_count,hbond_count_std,pocket_volume_proxy,pocket_volume_proxy_std,metric_n_frames,metric_source,fold_reduction
+DOR,WT,wt,1,17.17,0.9171150418568,29.47,4.563890883884057,1171.26,19.54232105225413,100,trajectory,
+DOR,Y188L,Y188L,1,15.96,1.0190191362285597,29.98,4.140000000000001,1196.52609375,24.34663213593011,100,trajectory,149.0

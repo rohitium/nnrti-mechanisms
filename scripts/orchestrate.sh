@@ -64,10 +64,10 @@ log() { echo "$(date '+%H:%M:%S') [$1] $2"; }
 pass() { echo "$(date '+%H:%M:%S') [PASS] $1"; }
 fail() { echo "$(date '+%H:%M:%S') [FAIL] $1"; }
 
-LOCAL_MANIFEST="${PROJECT_DIR}/results/fep_manifest.csv"
-LOCAL_QUICK_MANIFEST="${PROJECT_DIR}/results/fep_manifest.quick.csv"
-REMOTE_MANIFEST="results/fep_manifest.csv"
-REMOTE_QUICK_MANIFEST="results/fep_manifest.quick.csv"
+LOCAL_MANIFEST="${PROJECT_DIR}/results/md_manifest.csv"
+LOCAL_QUICK_MANIFEST="${PROJECT_DIR}/results/md_manifest.quick.csv"
+REMOTE_MANIFEST="results/md_manifest.csv"
+REMOTE_QUICK_MANIFEST="results/md_manifest.quick.csv"
 
 # ---------------------------------------------------------------------------
 # --test: Verify SSH, rsync, and remote commands work
@@ -143,7 +143,7 @@ if [ "$TEST_MODE" = true ]; then
     echo ""
 
     echo "--- Test 6: Local manifest ---"
-    MANIFEST="${PROJECT_DIR}/results/fep_manifest.csv"
+    MANIFEST="${PROJECT_DIR}/results/md_manifest.csv"
     if [ -f "$MANIFEST" ]; then
         N_TASKS=$(tail -n +2 "$MANIFEST" | wc -l | tr -d ' ')
         pass "Manifest found: ${N_TASKS} tasks (${N_TASKS} array jobs)"
@@ -179,7 +179,7 @@ if [ "$QUICK_TEST" = true ] && [ "$SKIP_PREP" = true ]; then
     elif python - <<'PY'
 import csv
 from pathlib import Path
-p=Path("results/fep_manifest.csv")
+p=Path("results/md_manifest.csv")
 with p.open(newline="") as h:
     r=csv.DictReader(h)
     legacy=any(str(row.get("leg","")).strip().lower()=="solvent" for row in r)
@@ -187,8 +187,8 @@ raise SystemExit(0 if legacy else 1)
 PY
     then
         NEED_QUICK_PREP=1
-    elif [ ! -f "${PROJECT_DIR}/results/fep_runs/wt/rep_01/assets/wt_md_rep01_start.pdb" ] || \
-         [ ! -f "${PROJECT_DIR}/results/fep_runs/Y188L/rep_01/assets/Y188L_md_rep01_start.pdb" ]; then
+    elif [ ! -f "${PROJECT_DIR}/results/md_runs/wt/rep_01/assets/wt_md_rep01_start.pdb" ] || \
+         [ ! -f "${PROJECT_DIR}/results/md_runs/Y188L/rep_01/assets/Y188L_md_rep01_start.pdb" ]; then
         NEED_QUICK_PREP=1
     fi
 
@@ -227,15 +227,27 @@ if [ "$COLLECT_ONLY" = true ]; then
             --include='wt/***' \
             --include='Y188L/***' \
             --exclude='*' \
-            "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/fep_runs/" \
-            "${PROJECT_DIR}/results/fep_runs/"
+            "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/md_runs/" \
+            "${PROJECT_DIR}/results/md_runs/"
         rsync -avz -e "ssh $SSH_OPTS" \
             "${SHERLOCK_DEST}:${SHERLOCK_DIR}/${REMOTE_QUICK_MANIFEST}" \
             "${PROJECT_DIR}/results/" || true
     else
         rsync -avz -e "ssh $SSH_OPTS" \
-            "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/fep_runs/" \
-            "${PROJECT_DIR}/results/fep_runs/"
+            "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/md_runs/" \
+            "${PROJECT_DIR}/results/md_runs/"
+    fi
+
+    # Rewrite Sherlock paths back to local paths in manifest + result JSONs.
+    python3 scripts/sherlock/rewrite_manifest_paths.py \
+        --manifest "$LOCAL_MANIFEST" \
+        --from-root "$SHERLOCK_DIR" --to-root "$PROJECT_DIR" \
+        --rewrite-jsons "${PROJECT_DIR}/results/md_runs" 2>/dev/null || true
+    if [ "$QUICK_TEST" = true ]; then
+        python3 scripts/sherlock/rewrite_manifest_paths.py \
+            --manifest "$LOCAL_QUICK_MANIFEST" \
+            --from-root "$SHERLOCK_DIR" --to-root "$PROJECT_DIR" \
+            --rewrite-jsons "${PROJECT_DIR}/results/md_runs" 2>/dev/null || true
     fi
 
     log COLLECT "Running result collection..."
@@ -256,6 +268,7 @@ fi
 log SYNC "Transferring project to Sherlock..."
 rsync -avz -e "ssh $SSH_OPTS" \
     --exclude='.venv' --exclude='.git' --exclude='__pycache__' \
+    --exclude='*_md.dcd' --exclude='*_md_final.pdb' \
     "${PROJECT_DIR}/" "${SHERLOCK_DEST}:${SHERLOCK_DIR}/"
 log SYNC "Transfer complete."
 
@@ -272,7 +285,7 @@ if [ "$QUICK_TEST" = true ]; then
     if python - <<'PY'
 import csv
 from pathlib import Path
-p=Path("results/fep_manifest.csv")
+p=Path("results/md_manifest.csv")
 with p.open(newline="") as h:
     r=csv.DictReader(h)
     legacy=any(str(row.get("leg","")).strip().lower()=="solvent" for row in r)
@@ -288,8 +301,8 @@ PY
 import csv
 from pathlib import Path
 
-src = Path("results/fep_manifest.csv")
-dst = Path("results/fep_manifest.quick.csv")
+src = Path("results/md_manifest.csv")
+dst = Path("results/md_manifest.quick.csv")
 keep_mut = {"WT", "Y188L"}
 rows = []
 with src.open("r", newline="") as h:
@@ -320,7 +333,7 @@ else
     if python - <<'PY'
 import csv
 from pathlib import Path
-p=Path("results/fep_manifest.csv")
+p=Path("results/md_manifest.csv")
 with p.open(newline="") as h:
     r=csv.DictReader(h)
     legacy=any(str(row.get("leg","")).strip().lower()=="solvent" for row in r)
@@ -354,10 +367,10 @@ source /etc/profile.d/modules.sh 2>/dev/null || true
 ml chemistry py-openmm/8.1.1_py312
 python3 scripts/sherlock/rewrite_manifest_paths.py >&2
 
-MANIFEST_PATH="results/fep_manifest.csv"
+MANIFEST_PATH="results/md_manifest.csv"
 if [ "$QUICK_FLAG" = "1" ]; then
-    python3 scripts/sherlock/rewrite_manifest_paths.py --manifest results/fep_manifest.quick.csv >&2
-    MANIFEST_PATH="results/fep_manifest.quick.csv"
+    python3 scripts/sherlock/rewrite_manifest_paths.py --manifest results/md_manifest.quick.csv >&2
+    MANIFEST_PATH="results/md_manifest.quick.csv"
     ARRAY_MAX=$(($(tail -n +2 "$MANIFEST_PATH" | wc -l | tr -d ' ') - 1))
 fi
 
@@ -417,15 +430,27 @@ if [ "$QUICK_TEST" = true ]; then
         --include='wt/***' \
         --include='Y188L/***' \
         --exclude='*' \
-        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/fep_runs/" \
-        "${PROJECT_DIR}/results/fep_runs/"
+        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/md_runs/" \
+        "${PROJECT_DIR}/results/md_runs/"
     rsync -avz -e "ssh $SSH_OPTS" \
         "${SHERLOCK_DEST}:${SHERLOCK_DIR}/${REMOTE_QUICK_MANIFEST}" \
         "${PROJECT_DIR}/results/" || true
 else
     rsync -avz -e "ssh $SSH_OPTS" \
-        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/fep_runs/" \
-        "${PROJECT_DIR}/results/fep_runs/"
+        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/md_runs/" \
+        "${PROJECT_DIR}/results/md_runs/"
+fi
+
+# Rewrite Sherlock paths back to local paths in manifest + result JSONs.
+python3 scripts/sherlock/rewrite_manifest_paths.py \
+    --manifest "$LOCAL_MANIFEST" \
+    --from-root "$SHERLOCK_DIR" --to-root "$PROJECT_DIR" \
+    --rewrite-jsons "${PROJECT_DIR}/results/md_runs" 2>/dev/null || true
+if [ "$QUICK_TEST" = true ]; then
+    python3 scripts/sherlock/rewrite_manifest_paths.py \
+        --manifest "$LOCAL_QUICK_MANIFEST" \
+        --from-root "$SHERLOCK_DIR" --to-root "$PROJECT_DIR" \
+        --rewrite-jsons "${PROJECT_DIR}/results/md_runs" 2>/dev/null || true
 fi
 
 log COLLECT "Running result collection and analysis..."

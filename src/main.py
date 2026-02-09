@@ -8,15 +8,14 @@ import pandas as pd
 
 from .cluster import generate_slurm_script, run_result_collection
 from .config import dor_4ncg_spec
-from .dor_alchemy_pipeline import prepare_local_openmm_only_for_cluster
+from .dor_md_pipeline import prepare_local_openmm_only_for_cluster
 from .openmm.md_protocol import MDProtocolConfig
 from .plotting import (
     cleanup_legacy_plots,
     plot_all_metrics_vs_fold_reduction,
     plot_boundness_qc,
-    plot_com_distance_convergence,
     plot_si_figure_s1_like,
-    plot_si_figure_s2_like_rmsd,
+    plot_simulation_convergence,
 )
 from .utils import ensure_dirs, project_paths
 
@@ -70,9 +69,9 @@ def main(argv: list[str] | None = None) -> None:
 
     susceptibility_xlsx = args.susceptibility_xlsx or (paths.data / "DRM-susceptibilities.csv.xlsx")
     prepared_dir = args.prepared_dir or (paths.data / "prepared" / "dor_4ncg")
-    manifest = args.manifest or args.fep_manifest or (paths.results / "fep_manifest.csv")
-    slurm_script = args.slurm_script or (root / "scripts" / "sherlock" / "submit_fep.sh")
-    run_results_dir = args.results_dir or args.fep_results_dir or (paths.results / "fep_runs")
+    manifest = args.manifest or args.fep_manifest or (paths.results / "md_manifest.csv")
+    slurm_script = args.slurm_script or (root / "scripts" / "sherlock" / "submit_all_tasks.sh")
+    run_results_dir = args.results_dir or args.fep_results_dir or (paths.results / "md_runs")
 
     md_cfg = MDProtocolConfig(
         heating_ps=args.md_heating_ps,
@@ -86,12 +85,12 @@ def main(argv: list[str] | None = None) -> None:
             root=root,
             susceptibility_xlsx=susceptibility_xlsx,
             prepared_dir=prepared_dir,
-            fep_manifest_path=manifest,
-            fep_results_dir=run_results_dir,
+            manifest_path=manifest,
+            results_dir=run_results_dir,
             replicates=args.replicates,
             jitter_seed_base=args.seed,
             jitter_angstrom=args.jitter_angstrom,
-            alchemy_config=md_cfg,
+            md_config=md_cfg,
             selected_mutations=selected_mutations,
         )
         n_structures = len({(t.mutation, t.replicate) for t in tasks})
@@ -156,12 +155,11 @@ def main(argv: list[str] | None = None) -> None:
             if pos_summary_path.exists():
                 plot_si_figure_s1_like(pd.read_csv(pos_summary_path), paths)
                 logging.info("Wrote %s", paths.plots / "fig_s1_like_mutation_landscape.png")
-            if rmsd_path.exists():
-                plot_si_figure_s2_like_rmsd(pd.read_csv(rmsd_path), paths)
-                logging.info("Wrote %s", paths.plots / "fig_s2_like_ca_rmsd.png")
-            if com_path.exists():
-                plot_com_distance_convergence(pd.read_csv(com_path), paths)
-                logging.info("Wrote %s", paths.plots / "com_distance_convergence.png")
+            rmsd_data = pd.read_csv(rmsd_path) if rmsd_path.exists() else pd.DataFrame()
+            com_data = pd.read_csv(com_path) if com_path.exists() else pd.DataFrame()
+            if not rmsd_data.empty or not com_data.empty:
+                plot_simulation_convergence(rmsd_data, com_data, paths)
+                logging.info("Wrote %s", paths.plots / "simulation_convergence.png")
         except Exception as exc:
             logging.warning("Could not generate selected plots: %s", exc)
         return

@@ -16,7 +16,7 @@ ml chemistry py-openmm/8.1.1_py312
 # Optional override. If unset, runtime auto-selects CUDA/OpenCL/CPU.
 export OPENMM_PLATFORM="${OPENMM_PLATFORM:-}"
 mkdir -p logs
-MANIFEST_PATH="${MANIFEST_PATH:-results/fep_manifest.csv}"
+MANIFEST_PATH="${MANIFEST_PATH:-results/md_manifest.csv}"
 
 if [ "${OPENMM_PLATFORM}" = "CUDA" ] || [ -z "${OPENMM_PLATFORM}" ]; then
   if ! command -v nvidia-smi >/dev/null 2>&1; then
@@ -29,7 +29,7 @@ if [ "${OPENMM_PLATFORM}" = "CUDA" ] || [ -z "${OPENMM_PLATFORM}" ]; then
   fi
 fi
 
-python3 -m src.cluster.fep_worker \
+python3 -m src.cluster.md_worker \
   --manifest "${MANIFEST_PATH}" \
   --task-id ${SLURM_ARRAY_TASK_ID} \
   --heating-ps 25 \

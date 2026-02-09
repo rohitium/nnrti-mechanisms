@@ -213,4 +213,6 @@ __marimo__/
 .mplconfig
 
 # Local outputs
-results/
+*.dcd
+*.pdb
+*.xml

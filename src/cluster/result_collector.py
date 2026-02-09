@@ -54,7 +54,7 @@ def _resolve_local_path(candidate: Path | None, fallback: Path | None = None) ->
 
 
 def _infer_rep_dir(row: pd.Series) -> Path:
-    for key in ("trajectory_dcd", "prepared_topology_pdb", "minimized_pdb"):
+    for key in ("analysis_dcd", "trajectory_dcd", "prepared_topology_pdb", "minimized_pdb"):
         val = str(row.get(key) or "").strip()
         if val:
             return Path(val).parent
@@ -90,7 +90,8 @@ def collect_fep_results(manifest_path: Path, fep_results_dir: Path) -> pd.DataFr
                 "minimized_pdb": data.get("minimized_pdb") or task.minimized_pdb,
                 "prepared_topology_pdb": data.get("prepared_topology_pdb") or task.prepared_topology_pdb,
                 "prepared_system_xml": data.get("prepared_system_xml") or task.prepared_system_xml,
-                "trajectory_dcd": data.get("trajectory_dcd", ""),
+                "analysis_dcd": data.get("analysis_dcd", ""),
+                "analysis_topology_pdb": data.get("analysis_topology_pdb", ""),
                 "final_pdb": data.get("final_pdb", ""),
                 "status": data.get("status", ""),
                 "elapsed_seconds": data.get("elapsed_seconds"),
@@ -123,12 +124,12 @@ def collect_ca_rmsd_profiles(
         rep = int(row["replicate"])
 
         topo = _resolve_local_path(
-            _nonempty_path(row.get("prepared_topology_pdb")),
-            rep_dir / "assets" / f"{safe}_md_rep{rep:02d}_start.pdb",
+            _nonempty_path(row.get("analysis_topology_pdb")),
+            rep_dir / f"{safe}_rep{rep:02d}_analysis_topology.pdb",
         )
         dcd = _resolve_local_path(
-            _nonempty_path(row.get("trajectory_dcd")),
-            rep_dir / f"{safe}_rep{rep:02d}_md.dcd",
+            _nonempty_path(row.get("analysis_dcd")),
+            rep_dir / f"{safe}_rep{rep:02d}_analysis.dcd",
         )
         if topo is None or dcd is None or not topo.exists() or not dcd.exists():
             continue
@@ -210,12 +211,12 @@ def collect_com_distance_profiles(
         rep = int(row["replicate"])
 
         topo = _resolve_local_path(
-            _nonempty_path(row.get("prepared_topology_pdb")),
-            rep_dir / "assets" / f"{safe}_md_rep{rep:02d}_start.pdb",
+            _nonempty_path(row.get("analysis_topology_pdb")),
+            rep_dir / f"{safe}_rep{rep:02d}_analysis_topology.pdb",
         )
         dcd = _resolve_local_path(
-            _nonempty_path(row.get("trajectory_dcd")),
-            rep_dir / f"{safe}_rep{rep:02d}_md.dcd",
+            _nonempty_path(row.get("analysis_dcd")),
+            rep_dir / f"{safe}_rep{rep:02d}_analysis.dcd",
         )
         if topo is None or dcd is None or not topo.exists() or not dcd.exists():
             continue
@@ -298,12 +299,12 @@ def compute_boundness_qc(
         rep = int(row["replicate"])
 
         topo = _resolve_local_path(
-            _nonempty_path(row.get("prepared_topology_pdb")),
-            rep_dir / "assets" / f"{safe}_md_rep{rep:02d}_start.pdb",
+            _nonempty_path(row.get("analysis_topology_pdb")),
+            rep_dir / f"{safe}_rep{rep:02d}_analysis_topology.pdb",
         )
         dcd = _resolve_local_path(
-            _nonempty_path(row.get("trajectory_dcd")),
-            rep_dir / f"{safe}_rep{rep:02d}_md.dcd",
+            _nonempty_path(row.get("analysis_dcd")),
+            rep_dir / f"{safe}_rep{rep:02d}_analysis.dcd",
         )
 
         start_min_dist = float("nan")
@@ -390,12 +391,12 @@ def compute_structural_metrics(
         rep = int(row["replicate"])
 
         topo = _resolve_local_path(
-            _nonempty_path(row.get("prepared_topology_pdb")),
-            rep_dir / "assets" / f"{safe}_md_rep{rep:02d}_start.pdb",
+            _nonempty_path(row.get("analysis_topology_pdb")),
+            rep_dir / f"{safe}_rep{rep:02d}_analysis_topology.pdb",
         )
         dcd = _resolve_local_path(
-            _nonempty_path(row.get("trajectory_dcd")),
-            rep_dir / f"{safe}_rep{rep:02d}_md.dcd",
+            _nonempty_path(row.get("analysis_dcd")),
+            rep_dir / f"{safe}_rep{rep:02d}_analysis.dcd",
         )
         if topo is None or dcd is None or not topo.exists() or not dcd.exists():
             logging.warning("Missing trajectory inputs for %s rep%d", row["mutation"], rep)
@@ -453,32 +454,32 @@ def compute_mmgbsa_metrics(
             _nonempty_path(row.get("minimized_pdb")),
             rep_dir / f"{safe}_minimized_rep{rep:02d}.pdb",
         )
-        topo = _resolve_local_path(
-            _nonempty_path(row.get("prepared_topology_pdb")),
-            rep_dir / "assets" / f"{safe}_md_rep{rep:02d}_start.pdb",
-        )
         dcd = _resolve_local_path(
-            _nonempty_path(row.get("trajectory_dcd")),
-            rep_dir / f"{safe}_rep{rep:02d}_md.dcd",
+            _nonempty_path(row.get("analysis_dcd")),
+            rep_dir / f"{safe}_rep{rep:02d}_analysis.dcd",
+        )
+        analysis_topo = _resolve_local_path(
+            _nonempty_path(row.get("analysis_topology_pdb")),
+            rep_dir / f"{safe}_rep{rep:02d}_analysis_topology.pdb",
         )
         ligand_sdf = _resolve_local_path(_nonempty_path(row.get("ligand_sdf")))
 
-        if None in {min_pdb, topo, dcd, ligand_sdf}:
+        if None in {min_pdb, dcd, analysis_topo, ligand_sdf}:
             logging.warning("Missing MM/GBSA inputs for %s rep%d", row["mutation"], rep)
             continue
-        if not min_pdb.exists() or not topo.exists() or not dcd.exists() or not ligand_sdf.exists():
+        if not min_pdb.exists() or not dcd.exists() or not analysis_topo.exists() or not ligand_sdf.exists():
             logging.warning("Unavailable MM/GBSA paths for %s rep%d", row["mutation"], rep)
             continue
 
         try:
             mm = compute_mmgbsa_from_trajectory(
                 minimized_pdb_path=min_pdb,
-                solvated_topology_pdb_path=topo,
                 trajectory_dcd_path=dcd,
                 ligand_resname=ligand_resname,
                 ligand_sdf=ligand_sdf,
                 n_snapshots=n_snapshots,
                 discard_fraction=discard_fraction,
+                analysis_topology_pdb_path=analysis_topo,
             )
             rows.append(
                 {

@@ -1,0 +1,21 @@
+{
+  "task_id": 0,
+  "structure": "DOR",
+  "mutation": "WT",
+  "safe_label": "wt",
+  "replicate": 1,
+  "fold_reduction": null,
+  "ligand_resname": "2KW",
+  "ligand_sdf": "/Users/rohitpro/Career/00_Github/nnrti-mechanisms/data/ligands/dor.sdf",
+  "minimized_pdb": "/Users/rohitpro/Career/00_Github/nnrti-mechanisms/results/md_runs/wt/rep_01/wt_minimized_rep01.pdb",
+  "prepared_topology_pdb": "/Users/rohitpro/Career/00_Github/nnrti-mechanisms/results/md_runs/wt/rep_01/assets/wt_md_rep01_start.pdb",
+  "prepared_system_xml": "/Users/rohitpro/Career/00_Github/nnrti-mechanisms/results/md_runs/wt/rep_01/assets/wt_md_rep01_system.xml",
+  "trajectory_dcd": "/Users/rohitpro/Career/00_Github/nnrti-mechanisms/results/md_runs/wt/rep_01/wt_rep01_md.dcd",
+  "state_csv": "/Users/rohitpro/Career/00_Github/nnrti-mechanisms/results/md_runs/wt/rep_01/wt_rep01_md_state.csv",
+  "final_pdb": "/Users/rohitpro/Career/00_Github/nnrti-mechanisms/results/md_runs/wt/rep_01/wt_rep01_md_final.pdb",
+  "md_heating_steps": 12500,
+  "md_production_steps": 1000000,
+  "md_total_steps": 1012500,
+  "elapsed_seconds": 3113.8727454830077,
+  "status": "ok"
+}

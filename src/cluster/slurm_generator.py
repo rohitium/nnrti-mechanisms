@@ -19,10 +19,9 @@ SLURM_TEMPLATE = """\
 # Runtime setup
 {runtime_setup}
 
-export OPENMM_PLATFORM=CUDA
 mkdir -p {log_dir}
 
-{python_cmd} -m src.cluster.fep_worker \\
+{python_cmd} -m src.cluster.md_worker \\
     --manifest {manifest_path} \\
     --task-id $SLURM_ARRAY_TASK_ID \\
     --heating-ps {heating_ps} \\

@@ -5,7 +5,7 @@ import shutil
 import zlib
 from pathlib import Path
 
-from .cluster.manifest import FEPTask, save_manifest
+from .cluster.manifest import MDTask, save_manifest
 from .config import dor_4ncg_spec
 from .mutation.mutagenesis import apply_mutations
 from .mutation.steps import build_mutation_steps
@@ -26,18 +26,27 @@ def prepare_local_openmm_only_for_cluster(
     root: Path,
     susceptibility_xlsx: Path,
     prepared_dir: Path,
-    fep_manifest_path: Path,
-    fep_results_dir: Path,
+    manifest_path: Path,
+    results_dir: Path,
     replicates: int = 3,
     jitter_seed_base: int | None = None,
     jitter_angstrom: float = 0.1,
-    alchemy_config: MDProtocolConfig | None = None,
+    md_config: MDProtocolConfig | None = None,
     selected_mutations: set[str] | None = None,
-) -> list[FEPTask]:
+    # Backward-compatible aliases (deprecated).
+    fep_manifest_path: Path | None = None,
+    fep_results_dir: Path | None = None,
+    alchemy_config: MDProtocolConfig | None = None,
+) -> list[MDTask]:
     """Prepare WT/mutant systems for Sherlock explicit MD (no alchemical protocol)."""
     from .openmm.minimizer import minimize_system
     from .openmm.require import require_module
     from .openmm.structure import minimize_with_restraints
+
+    # Support deprecated parameter names.
+    manifest_path = fep_manifest_path or manifest_path
+    results_dir = fep_results_dir or results_dir
+    cfg = alchemy_config or md_config or MDProtocolConfig()
 
     def _norm_mutation(label: str) -> str:
         return "+".join(
@@ -46,7 +55,6 @@ def prepare_local_openmm_only_for_cluster(
             if token.strip()
         )
 
-    cfg = alchemy_config or MDProtocolConfig()
     spec = dor_4ncg_spec(root)
     dor_df = load_dor_susceptibilities(susceptibility_xlsx, default_chain="A")
     chain_map = load_chain_subunits(spec.structure.cif_path)
@@ -59,7 +67,7 @@ def prepare_local_openmm_only_for_cluster(
         if dor_df.empty:
             raise ValueError(f"No rows matched selected mutations: {', '.join(sorted(selected))}")
 
-    ensure_dirs([prepared_dir, fep_manifest_path.parent, fep_results_dir])
+    ensure_dirs([prepared_dir, manifest_path.parent, results_dir])
 
     wt_cif = prepared_dir / "wt_4ncg.cif"
     if not wt_cif.exists():
@@ -92,14 +100,14 @@ def prepare_local_openmm_only_for_cluster(
 
     logging.info("Preparing MD assets for %d structures (%d replicates)", len(structures), replicates)
 
-    tasks: list[FEPTask] = []
+    tasks: list[MDTask] = []
     task_id = 0
     app = require_module("openmm.app")
 
     for struct in structures:
         safe_label = struct["safe_label"]
         for replicate in range(1, replicates + 1):
-            run_dir = fep_results_dir / safe_label / f"rep_{replicate:02d}"
+            run_dir = results_dir / safe_label / f"rep_{replicate:02d}"
             assets_dir = run_dir / "assets"
             ensure_dirs([run_dir, assets_dir])
 
@@ -142,13 +150,12 @@ def prepare_local_openmm_only_for_cluster(
 
             output_json = run_dir / f"{safe_label}_rep{replicate:02d}.json"
             tasks.append(
-                FEPTask(
+                MDTask(
                     task_id=task_id,
                     structure="DOR",
                     mutation=struct["mutation"],
                     safe_label=safe_label,
                     replicate=replicate,
-                    leg="complex",
                     minimized_pdb=str(min_pdb.resolve()),
                     ligand_sdf=str(spec.structure.ligand_sdf.resolve()),
                     ligand_resname=spec.structure.ligand_resname,
@@ -165,6 +172,6 @@ def prepare_local_openmm_only_for_cluster(
             )
             task_id += 1
 
-    save_manifest(tasks, fep_manifest_path)
-    logging.info("Wrote MD manifest with %d tasks to %s", len(tasks), fep_manifest_path)
+    save_manifest(tasks, manifest_path)
+    logging.info("Wrote MD manifest with %d tasks to %s", len(tasks), manifest_path)
     return tasks

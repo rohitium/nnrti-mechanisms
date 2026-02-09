@@ -190,12 +190,12 @@ def _make_subtopology(topology, positions, keep_residue_name: str | None, invert
 
 def compute_mmgbsa_from_trajectory(
     minimized_pdb_path: Path,
-    solvated_topology_pdb_path: Path,
     trajectory_dcd_path: Path,
     ligand_resname: str,
     ligand_sdf: Path,
     n_snapshots: int = 100,
     discard_fraction: float = 0.25,
+    analysis_topology_pdb_path: Path | None = None,
 ) -> MMGBSAResult:
     """Compute MM/GBSA-style decomposition from explicit-MD snapshots."""
     import MDAnalysis as mda
@@ -235,7 +235,10 @@ def compute_mmgbsa_from_trajectory(
     }
     contexts = {k: _make_context(v) for k, v in systems.items()}
 
-    u = mda.Universe(str(solvated_topology_pdb_path), str(trajectory_dcd_path))
+    # Load trajectory — use stripped topology PDB if provided (solute-only DCD),
+    # otherwise fall back to minimized PDB as topology (assumes DCD matches).
+    traj_topo = analysis_topology_pdb_path if analysis_topology_pdb_path is not None else minimized_pdb_path
+    u = mda.Universe(str(traj_topo), str(trajectory_dcd_path))
     n_frames = len(u.trajectory)
     if n_frames < 1:
         raise ValueError("Empty trajectory for MM/GBSA evaluation.")
@@ -251,9 +254,11 @@ def compute_mmgbsa_from_trajectory(
     for frame in snap_idx:
         u.trajectory[int(frame)]
         pos_a = np.asarray(u.atoms.positions, dtype=float)
-        if pos_a.shape[0] < complex_n:
-            raise ValueError("Trajectory atom count is smaller than complex atom count.")
-        solute_nm = pos_a[:complex_n] / 10.0
+        if pos_a.shape[0] != complex_n:
+            raise ValueError(
+                f"Trajectory has {pos_a.shape[0]} atoms but expected {complex_n} (complex_n from minimized PDB)."
+            )
+        solute_nm = pos_a / 10.0
         rec_nm = _subset_positions(solute_nm, receptor_idx)
         lig_nm = _subset_positions(solute_nm, ligand_idx)
 

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import pandas as pd
 
+# 1 kcal = 4.184 kJ; OpenMM internally reports kJ/mol.
+_KJ_TO_KCAL = 1.0 / 4.184
+
 
 def _safe_linear_fit(x_values, y_values):
     """Return (x_line, y_line, r) for a stable linear fit, or None."""
@@ -37,6 +40,8 @@ def cleanup_legacy_plots(paths) -> None:
         "lambda_profile_solvent.png",
         "lambda_hist_overlay_complex.png",
         "lambda_hist_overlay_solvent.png",
+        "fig_s2_like_ca_rmsd.png",
+        "com_distance_convergence.png",
     ]
     for name in legacy:
         p = paths.plots / name
@@ -63,6 +68,9 @@ def plot_ddg_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
         ddg_sem=("ddg", lambda x: x.std() / np.sqrt(len(x)) if len(x) > 1 else 0),
         fold_reduction=("fold_reduction", "first"),
     )
+
+    by_mutation["ddg_mean"] = by_mutation["ddg_mean"] * _KJ_TO_KCAL
+    by_mutation["ddg_sem"] = by_mutation["ddg_sem"] * _KJ_TO_KCAL
 
     fig, ax = plt.subplots(figsize=(13, 6))
 
@@ -116,7 +124,7 @@ def plot_ddg_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
             },
         )
 
-    ax.set_xlabel("ΔΔG (kJ/mol)")
+    ax.set_xlabel("ΔΔG (kcal/mol)")
     ax.set_ylabel("Fold Reduction (FC)")
     corr = by_mutation["ddg_mean"].corr(by_mutation["fold_reduction"])
     if pd.notna(corr):
@@ -163,7 +171,7 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
         return
 
     metric_specs = [
-        ("ddg", "ΔΔG (kJ/mol)"),
+        ("ddg", "ΔΔG (kcal/mol)"),
         ("contact_count_delta", "Δ Contacts (mut - WT)"),
         ("hbond_count_delta", "Δ H-bonds (mut - WT)"),
         ("pocket_volume_proxy_delta", "Δ Pocket Volume Proxy (mut - WT)"),
@@ -178,6 +186,12 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
         agg[f"{col}_std"] = (col, "std")
         agg[f"{col}_n"] = (col, "count")
     by_mut = mut_df.groupby("mutation", as_index=False).agg(**agg)
+    # Convert energy columns (ddg) from kJ/mol to kcal/mol for display.
+    for energy_col in ("ddg",):
+        if energy_col in by_mut.columns:
+            by_mut[energy_col] = by_mut[energy_col] * _KJ_TO_KCAL
+            if f"{energy_col}_std" in by_mut.columns:
+                by_mut[f"{energy_col}_std"] = by_mut[f"{energy_col}_std"] * _KJ_TO_KCAL
     for col, _ in available:
         std_col = f"{col}_std"
         n_col = f"{col}_n"
@@ -286,6 +300,8 @@ def plot_free_energy_convergence(convergence_df: pd.DataFrame, paths) -> None:
         )
         .sort_values(["leg", "sample_fraction"])
     )
+    summary["delta_g_mean"] = summary["delta_g_mean"] * _KJ_TO_KCAL
+    summary["delta_g_std"] = summary["delta_g_std"] * _KJ_TO_KCAL
     if summary.empty:
         return
 
@@ -316,7 +332,7 @@ def plot_free_energy_convergence(convergence_df: pd.DataFrame, paths) -> None:
 
     ax.set_title("WT Free-Energy Convergence Across Sample Fraction")
     ax.set_xlabel("Fraction of production samples used")
-    ax.set_ylabel("Estimated ΔG (kJ/mol)")
+    ax.set_ylabel("Estimated ΔG (kcal/mol)")
     ax.set_xlim(0.1, 1.0)
     ax.legend(frameon=False, loc="best")
     fig.tight_layout()
@@ -409,7 +425,7 @@ def plot_si_figure_s1_like(position_df: pd.DataFrame, paths) -> None:
         alpha=0.85,
     )
     ax1.set_ylabel("Mutation count")
-    ax1.set_title("Fig S1-like: Mutation Position Landscape (Our Dataset)")
+    ax1.set_title("Mutation Position Landscape")
 
     ax2.plot(
         df["position"],
@@ -427,92 +443,92 @@ def plot_si_figure_s1_like(position_df: pd.DataFrame, paths) -> None:
     plt.close(fig)
 
 
-def plot_si_figure_s2_like_rmsd(rmsd_df: pd.DataFrame, paths) -> None:
-    """S2-like RMSD figure: C-alpha backbone RMSD vs simulation time."""
+def plot_simulation_convergence(
+    rmsd_df: pd.DataFrame,
+    com_df: pd.DataFrame,
+    paths,
+) -> None:
+    """Combined simulation convergence: Cα RMSD and ligand-protein COM distance.
+
+    Layout: columns = mutations, rows = [RMSD, COM distance].
+    """
     import matplotlib.pyplot as plt
-    import numpy as np
 
-    if rmsd_df.empty:
+    if rmsd_df.empty and com_df.empty:
         return
-    df = rmsd_df.copy()
-    if "time_ps" in df.columns and df["time_ps"].notna().any():
-        x = df["time_ps"] / 1000.0
-        xlab = "Time (ns)"
-    else:
-        x = df["frame_index"].astype(float)
-        xlab = "Frame index"
-    df["x"] = x
 
-    muts = sorted(df["mutation"].dropna().unique().tolist())
-    max_panels = min(4, len(muts))
-    muts = muts[:max_panels]
-    ncols = 2 if len(muts) > 1 else 1
-    nrows = int(np.ceil(len(muts) / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(11, 4.2 * nrows), sharex=False, sharey=True)
-    axes_arr = np.atleast_1d(axes).flatten()
+    # Determine shared mutation list from whichever DataFrame(s) are available.
+    all_muts: set[str] = set()
+    if not rmsd_df.empty:
+        all_muts |= set(rmsd_df["mutation"].dropna().unique())
+    if not com_df.empty:
+        all_muts |= set(com_df["mutation"].dropna().unique())
+    muts = sorted(all_muts)
+    if not muts:
+        return
 
-    for i, mut in enumerate(muts):
-        ax = axes_arr[i]
-        sub = df[df["mutation"] == mut].copy()
-        for rep in sorted(sub["replicate"].dropna().unique()):
-            rep_df = sub[sub["replicate"] == rep].sort_values("x")
-            ax.plot(rep_df["x"], rep_df["ca_rmsd_angstrom"], linewidth=1.2, alpha=0.9, label=f"rep {int(rep)}")
-        ax.set_title(str(mut))
-        ax.set_ylabel("Cα RMSD (Å)")
+    ncols = len(muts)
+    fig, axes = plt.subplots(
+        nrows=2,
+        ncols=ncols,
+        figsize=(5.5 * ncols, 7),
+        sharex="col",
+        squeeze=False,
+    )
+
+    def _prep_x(df):
+        df = df.copy()
+        if "time_ps" in df.columns and df["time_ps"].notna().any():
+            df["x"] = df["time_ps"] / 1000.0
+            xlab = "Time (ns)"
+        else:
+            df["x"] = df["frame_index"].astype(float)
+            xlab = "Frame index"
+        return df, xlab
+
+    xlab = "Frame index"
+    rdf = _prep_x(rmsd_df)[0] if not rmsd_df.empty else rmsd_df
+    cdf = _prep_x(com_df)[0] if not com_df.empty else com_df
+    if not rmsd_df.empty:
+        _, xlab = _prep_x(rmsd_df)
+    elif not com_df.empty:
+        _, xlab = _prep_x(com_df)
+
+    # Row 0: Cα RMSD
+    for col_i, mut in enumerate(muts):
+        ax = axes[0, col_i]
+        if rmsd_df.empty:
+            ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes, color="#999999")
+        else:
+            sub = rdf[rdf["mutation"] == mut]
+            for rep in sorted(sub["replicate"].dropna().unique()):
+                rep_df = sub[sub["replicate"] == rep].sort_values("x")
+                ax.plot(rep_df["x"], rep_df["ca_rmsd_angstrom"], linewidth=1.2, alpha=0.9, label=f"rep {int(rep)}")
+        ax.set_title(str(mut), fontsize=10)
+        if col_i == 0:
+            ax.set_ylabel("Cα RMSD (Å)")
+        ax.grid(alpha=0.2, linestyle=":")
+        ax.legend(frameon=False, fontsize=7)
+
+    # Row 1: COM distance
+    for col_i, mut in enumerate(muts):
+        ax = axes[1, col_i]
+        if com_df.empty:
+            ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes, color="#999999")
+        else:
+            sub = cdf[cdf["mutation"] == mut]
+            for rep in sorted(sub["replicate"].dropna().unique()):
+                rep_df = sub[sub["replicate"] == rep].sort_values("x")
+                ax.plot(rep_df["x"], rep_df["com_distance_angstrom"], linewidth=1.3, alpha=0.9, label=f"rep {int(rep)}")
+        if col_i == 0:
+            ax.set_ylabel("Ligand–Protein COM Distance (Å)")
         ax.set_xlabel(xlab)
         ax.grid(alpha=0.2, linestyle=":")
         ax.legend(frameon=False, fontsize=7)
 
-    for j in range(len(muts), len(axes_arr)):
-        axes_arr[j].set_visible(False)
-
-    fig.suptitle("Fig S2-like: Backbone Cα RMSD Profiles", y=1.01)
+    fig.suptitle("Simulation Convergence", y=1.01, fontsize=12)
     fig.tight_layout()
-    fig.savefig(paths.plots / "fig_s2_like_ca_rmsd.png", dpi=160, bbox_inches="tight")
-    plt.close(fig)
-
-
-def plot_com_distance_convergence(com_df: pd.DataFrame, paths) -> None:
-    """Plot DOR-RT COM distance convergence profiles by mutation/replicate."""
-    import matplotlib.pyplot as plt
-    import numpy as np
-
-    if com_df.empty:
-        return
-    df = com_df.copy()
-    if "time_ps" in df.columns and df["time_ps"].notna().any():
-        df["x"] = df["time_ps"] / 1000.0
-        xlab = "Time (ns)"
-    else:
-        df["x"] = df["frame_index"].astype(float)
-        xlab = "Frame index"
-
-    muts = sorted(df["mutation"].dropna().unique().tolist())
-    max_panels = min(4, len(muts))
-    muts = muts[:max_panels]
-    ncols = 2 if len(muts) > 1 else 1
-    nrows = int(np.ceil(len(muts) / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(11, 4.2 * nrows), sharex=False, sharey=True)
-    axes_arr = np.atleast_1d(axes).flatten()
-
-    for i, mut in enumerate(muts):
-        ax = axes_arr[i]
-        sub = df[df["mutation"] == mut].copy()
-        for rep in sorted(sub["replicate"].dropna().unique()):
-            rep_df = sub[sub["replicate"] == rep].sort_values("x")
-            ax.plot(rep_df["x"], rep_df["com_distance_angstrom"], linewidth=1.3, alpha=0.9, label=f"rep {int(rep)}")
-        ax.set_title(str(mut))
-        ax.set_ylabel("DOR-RT COM distance (Å)")
-        ax.set_xlabel(xlab)
-        ax.grid(alpha=0.2, linestyle=":")
-        ax.legend(frameon=False, fontsize=7)
-
-    for j in range(len(muts), len(axes_arr)):
-        axes_arr[j].set_visible(False)
-
-    fig.suptitle("DOR-RT Center-of-Mass Distance Convergence", y=1.01)
-    fig.tight_layout()
-    fig.savefig(paths.plots / "com_distance_convergence.png", dpi=160, bbox_inches="tight")
+    fig.savefig(paths.plots / "simulation_convergence.png", dpi=160, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -555,9 +571,9 @@ def plot_lambda_profiles(
         nrep = leg_df["n_replicates"].to_numpy(dtype=float)
         nrep = np.where(nrep > 0, nrep, 1.0)
 
-        total_mean = leg_df["cumulative_delta_g_mean"].to_numpy(dtype=float)
+        total_mean = leg_df["cumulative_delta_g_mean"].to_numpy(dtype=float) * _KJ_TO_KCAL
         total_sem = (
-            leg_df["cumulative_delta_g_std"].fillna(0.0).to_numpy(dtype=float)
+            leg_df["cumulative_delta_g_std"].fillna(0.0).to_numpy(dtype=float) * _KJ_TO_KCAL
             / np.sqrt(nrep)
         )
         total_mean = np.concatenate([[0.0], total_mean])
@@ -574,14 +590,14 @@ def plot_lambda_profiles(
             label=f"{leg} total",
         )
 
-        e_mean = leg_df["cumulative_electrostatic_delta_g_mean"].to_numpy(dtype=float)
+        e_mean = leg_df["cumulative_electrostatic_delta_g_mean"].to_numpy(dtype=float) * _KJ_TO_KCAL
         e_sem = (
-            leg_df["cumulative_electrostatic_delta_g_std"].fillna(0.0).to_numpy(dtype=float)
+            leg_df["cumulative_electrostatic_delta_g_std"].fillna(0.0).to_numpy(dtype=float) * _KJ_TO_KCAL
             / np.sqrt(nrep)
         )
-        s_mean = leg_df["cumulative_steric_delta_g_mean"].to_numpy(dtype=float)
+        s_mean = leg_df["cumulative_steric_delta_g_mean"].to_numpy(dtype=float) * _KJ_TO_KCAL
         s_sem = (
-            leg_df["cumulative_steric_delta_g_std"].fillna(0.0).to_numpy(dtype=float)
+            leg_df["cumulative_steric_delta_g_std"].fillna(0.0).to_numpy(dtype=float) * _KJ_TO_KCAL
             / np.sqrt(nrep)
         )
         e_mean = np.concatenate([[0.0], e_mean])
@@ -596,10 +612,10 @@ def plot_lambda_profiles(
         ax_comp.fill_between(x_plot, s_mean - s_sem, s_mean + s_sem, color=color, alpha=0.08, linewidth=0)
 
     ax_total.set_title("WT Cumulative ΔG Profiles (Complex vs RT-only/solvent)")
-    ax_total.set_ylabel("Total Cumulative ΔG (kJ/mol)")
+    ax_total.set_ylabel("Total Cumulative ΔG (kcal/mol)")
     ax_total.legend(frameon=False, loc="best")
 
-    ax_comp.set_ylabel("Component Cumulative ΔG (kJ/mol)")
+    ax_comp.set_ylabel("Component Cumulative ΔG (kcal/mol)")
     ax_comp.set_xlabel("Alchemical progress λ (0 = DOR+RT, 1 = RT-only)")
     ax_comp.legend(frameon=False, loc="best", ncol=2, fontsize=8)
     ax_comp.set_xlim(0.0, 1.0)

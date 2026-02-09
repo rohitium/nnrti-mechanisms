@@ -6,12 +6,12 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
-class FEPTask:
-    """Represents a single FEP computation task for cluster execution.
+class MDTask:
+    """Represents a single MD simulation task for cluster execution.
 
     The cluster worker will:
     1. Minimize the structure from input_cif (with jitter)
-    2. Run the specified FEP leg (complex or solvent)
+    2. Run explicit-solvent MD
     3. Save results to output_json
     """
 
@@ -20,12 +20,12 @@ class FEPTask:
     mutation: str
     safe_label: str
     replicate: int
-    leg: str  # "complex" or "solvent"
     minimized_pdb: str  # Output path for minimized structure
     ligand_sdf: str
     ligand_resname: str
     fold_reduction: float | None
     output_json: str
+    leg: str = "complex"
     # Fields for cluster minimization
     input_cif: str = ""  # Input CIF to minimize
     jitter_seed: int | None = None
@@ -40,7 +40,7 @@ class FEPTask:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict) -> FEPTask:
+    def from_dict(cls, data: dict) -> MDTask:
         def _norm(value):
             if value is None:
                 return None
@@ -61,12 +61,12 @@ class FEPTask:
             mutation=str(data["mutation"]),
             safe_label=str(data["safe_label"]),
             replicate=int(data["replicate"]),
-            leg=str(data["leg"]),
             minimized_pdb=str(data.get("minimized_pdb", "")),
             ligand_sdf=str(data["ligand_sdf"]),
             ligand_resname=str(data["ligand_resname"]),
             fold_reduction=float(fold) if fold is not None else None,
             output_json=str(data["output_json"]),
+            leg=str(data.get("leg", "complex")),
             input_cif=str(data.get("input_cif", "")),
             jitter_seed=jitter_seed,
             jitter_angstrom=float(data.get("jitter_angstrom", 0.1)),
@@ -77,10 +77,14 @@ class FEPTask:
         )
 
 
-def save_manifest(tasks: list[FEPTask], output_path: Path) -> None:
-    """Save a list of FEPTasks to a CSV manifest file."""
+# Backward-compatibility alias.
+FEPTask = MDTask
+
+
+def save_manifest(tasks: list[MDTask], output_path: Path) -> None:
+    """Save a list of MDTasks to a CSV manifest file."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = [f.name for f in fields(FEPTask)]
+    fieldnames = [f.name for f in fields(MDTask)]
     with output_path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
@@ -88,15 +92,15 @@ def save_manifest(tasks: list[FEPTask], output_path: Path) -> None:
             writer.writerow(task.to_dict())
 
 
-def load_manifest(manifest_path: Path) -> list[FEPTask]:
-    """Load FEPTasks from a CSV manifest file."""
+def load_manifest(manifest_path: Path) -> list[MDTask]:
+    """Load MDTasks from a CSV manifest file."""
     with manifest_path.open("r", newline="") as handle:
         reader = csv.DictReader(handle)
-        return [FEPTask.from_dict(row) for row in reader]
+        return [MDTask.from_dict(row) for row in reader]
 
 
-def get_task_by_id(manifest_path: Path, task_id: int) -> FEPTask:
-    """Load a single FEPTask by its task_id from the manifest."""
+def get_task_by_id(manifest_path: Path, task_id: int) -> MDTask:
+    """Load a single MDTask by its task_id from the manifest."""
     for task in load_manifest(manifest_path):
         if task.task_id == task_id:
             return task

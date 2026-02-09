@@ -1,0 +1,3 @@
+mutation,replicate,com_first_half_mean_angstrom,com_second_half_mean_angstrom,com_delta_second_minus_first_angstrom,n_points
+WT,1,30.27946587706611,30.44904419792977,0.16957832086366054,100
+Y188L,1,30.782717922385114,30.923832419004842,0.1411144966197284,100

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 __all__ = [
+    "MDTask",
     "FEPTask",
     "collect_fep_results",
     "compute_binding_ddg",
@@ -18,10 +19,11 @@ __all__ = [
 
 def __getattr__(name: str):
     # Lazy imports keep optional dependencies (e.g. pandas) out of GPU worker startup.
-    if name in {"FEPTask", "get_task_by_id", "load_manifest", "save_manifest"}:
-        from .manifest import FEPTask, get_task_by_id, load_manifest, save_manifest
+    if name in {"MDTask", "FEPTask", "get_task_by_id", "load_manifest", "save_manifest"}:
+        from .manifest import MDTask, FEPTask, get_task_by_id, load_manifest, save_manifest
 
         return {
+            "MDTask": MDTask,
             "FEPTask": FEPTask,
             "get_task_by_id": get_task_by_id,
             "load_manifest": load_manifest,

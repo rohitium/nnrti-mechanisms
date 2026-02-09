@@ -1,0 +1,2 @@
+structure,mutation,safe_label,fold_reduction,ddg_mean,ddg_std,ddg_sem,binding_dg_mean,binding_dg_std,binding_dg_sem,n_replicates
+DOR,Y188L,Y188L,149.0,59.36868486642837,,0.0,-82.10007840633392,,0.0,1

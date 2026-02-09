@@ -6,6 +6,9 @@ import logging
 from .require import require_module
 
 
+logger = logging.getLogger(__name__)
+
+
 def get_platform():
     openmm = require_module("openmm")
     available = [
@@ -13,6 +16,12 @@ def get_platform():
         for i in range(openmm.Platform.getNumPlatforms())
     ]
     requested = os.environ.get("OPENMM_PLATFORM", "").strip()
+
+    cuda_visible = os.environ.get("CUDA_VISIBLE_DEVICES")
+    logger.info(
+        "Platform selection: available=%s, requested=%s, CUDA_VISIBLE_DEVICES=%s",
+        available, requested or "(auto)", cuda_visible,
+    )
 
     # Preference order if not explicitly requested.
     if requested:

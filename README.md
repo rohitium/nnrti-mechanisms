@@ -109,6 +109,6 @@ python -m src.main \
 
 ## Notes
 
-- For historical compatibility, some filenames still contain `fep` (for example `results/fep_manifest.csv`, `results/fep_runs/`, `src/cluster/fep_worker.py`). These now carry MD tasks/results, not alchemical FEP jobs.
+- The workflow uses `results/md_manifest.csv` and `results/md_runs/` for task manifests and output. The cluster worker is `src/cluster/md_worker.py`.
 - Local prep is intended to run on CPU (`OPENMM_PLATFORM=CPU`) unless explicitly overridden.
 - Structural metrics require MDAnalysis in the local analysis environment.

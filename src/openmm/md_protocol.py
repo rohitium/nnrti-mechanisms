@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 import time
@@ -9,6 +10,8 @@ import numpy as np
 from .ligand import build_forcefield, load_ligand_molecule
 from .platform import get_platform
 from .require import require_module
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -27,6 +30,7 @@ class MDProtocolConfig:
     ionic_strength_molar: float = 0.15
     ca_restraint_k1_kcal_mol_a2: float = 50.0
     ca_restraint_k2_kcal_mol_a2: float = 10.0
+    analysis_report_interval_steps: int | None = None
 
 
 @dataclass(frozen=True)
@@ -57,6 +61,102 @@ def _min_ligand_protein_distance_from_topology_positions(topology, positions, li
     prot = pos_nm[np.array(prot_idx, dtype=int)]
     d2 = ((lig[:, None, :] - prot[None, :, :]) ** 2).sum(axis=2)
     return float(np.sqrt(d2.min()) * 10.0)
+
+
+class _StrippedDCDReporter:
+    """DCD reporter that writes only a subset of atoms (protein + ligand).
+
+    Uses openmm.app.DCDFile directly — compatible with OpenMM 8.1.1 which
+    lacks the ``atomSubset`` parameter on ``DCDReporter``.
+    """
+
+    def __init__(self, file_path: Path, topology, timestep_ps: float, interval: int, atom_indices: list[int]):
+        app = require_module("openmm.app")
+        openmm = require_module("openmm")
+        unit = require_module("openmm.unit")
+
+        self._interval = int(interval)
+        self._atom_indices = atom_indices
+
+        # Build stripped topology by deleting solvent/ion residues.
+        solvent_resnames = {"HOH", "WAT"}
+        ion_elements = {"NA", "CL", "K"}
+        n_atoms = sum(1 for _ in topology.atoms())
+        dummy_pos = [openmm.Vec3(0, 0, 0) * unit.nanometer] * n_atoms
+        modeller = app.Modeller(topology, dummy_pos)
+        to_delete = []
+        for res in modeller.topology.residues():
+            if res.name in solvent_resnames:
+                to_delete.append(res)
+                continue
+            atoms = list(res.atoms())
+            if len(atoms) == 1 and atoms[0].element is not None and atoms[0].element.symbol.upper() in ion_elements:
+                to_delete.append(res)
+        modeller.delete(to_delete)
+
+        self._handle = open(file_path, "wb")
+        dt = timestep_ps * interval * unit.picoseconds
+        self._dcd = app.DCDFile(self._handle, modeller.topology, dt)
+
+    def describeNextReport(self, simulation):
+        steps_done = simulation.currentStep
+        steps_left = self._interval - (steps_done % self._interval)
+        return (steps_left, True, False, False, False, None)
+
+    def report(self, simulation, state):
+        unit = require_module("openmm.unit")
+        positions = state.getPositions()
+        subset = [positions[i] for i in self._atom_indices]
+        self._dcd.writeModel(subset)
+
+    def close(self):
+        if hasattr(self, "_handle") and self._handle and not self._handle.closed:
+            self._handle.close()
+
+    def __del__(self):
+        self.close()
+
+
+def _write_stripped_topology_pdb(topology, positions, output_path: Path) -> None:
+    """Write a PDB containing only solute atoms (no water/ions)."""
+    app = require_module("openmm.app")
+    solvent_resnames = {"HOH", "WAT"}
+    ion_elements = {"NA", "CL", "K"}
+    modeller = app.Modeller(topology, positions)
+    to_delete = []
+    for res in modeller.topology.residues():
+        if res.name in solvent_resnames:
+            to_delete.append(res)
+            continue
+        atoms = list(res.atoms())
+        if len(atoms) == 1 and atoms[0].element is not None and atoms[0].element.symbol.upper() in ion_elements:
+            to_delete.append(res)
+    modeller.delete(to_delete)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as handle:
+        app.PDBFile.writeFile(modeller.topology, modeller.positions, handle)
+
+
+def _solute_atom_indices(topology) -> list[int]:
+    """Return sorted indices of all non-water, non-ion atoms (protein + ligand + cofactors)."""
+    ion_elements = {"NA", "CL", "K"}
+    solvent_resnames = {"HOH", "WAT"}
+    indices: list[int] = []
+    for atom in topology.atoms():
+        if atom.residue.name in solvent_resnames:
+            continue
+        if atom.element is not None and atom.element.symbol.upper() in ion_elements:
+            continue
+        indices.append(atom.index)
+    indices.sort()
+    # Solute atoms must be contiguous starting at 0 (addSolvent appends after solute).
+    if indices and (indices[0] != 0 or indices[-1] != len(indices) - 1):
+        raise RuntimeError(
+            f"Solute atom indices are not contiguous [0..{len(indices)-1}]: "
+            f"first={indices[0]}, last={indices[-1]}. "
+            "This breaks the assumption that addSolvent appends after solute."
+        )
+    return indices
 
 
 def _add_ca_restraint_force(system, topology, reference_positions, k_kj_mol_nm2: float) -> int:
@@ -123,6 +223,7 @@ def prepare_md_assets(
     simulation.context.setPositions(modeller.positions)
     simulation.minimizeEnergy(maxIterations=500)
     pos = simulation.context.getState(getPositions=True).getPositions()
+    del simulation  # Release CUDA context before any subsequent simulation.
 
     min_dist = _min_ligand_protein_distance_from_topology_positions(
         modeller.topology,
@@ -145,10 +246,11 @@ def prepare_md_assets(
 def run_prepared_md(
     prepared_topology_pdb: Path,
     prepared_system_xml: Path,
-    trajectory_dcd_path: Path,
     final_pdb_path: Path,
     state_csv_path: Path | None = None,
     config: MDProtocolConfig | None = None,
+    analysis_dcd_path: Path | None = None,
+    analysis_topology_pdb_path: Path | None = None,
 ) -> MDRunResult:
     """Run minimization -> heating -> NPT production MD from prepared assets."""
     app = require_module("openmm.app")
@@ -172,18 +274,23 @@ def run_prepared_md(
     restraint_force = base_system.getForce(restraint_force_idx)
 
     platform, properties = get_platform()
+    logger.info("Selected OpenMM platform: %s (properties: %s)", platform.getName(), properties or "default")
 
     allow_fallback = str(__import__("os").environ.get("OPENMM_ALLOW_FALLBACK", "0")).strip() in {"1", "true", "TRUE", "yes", "YES"}
 
     def _make_simulation(topology, system, integrator):
         try:
-            return app.Simulation(topology, system, integrator, platform, properties)
+            sim = app.Simulation(topology, system, integrator, platform, properties)
+            logger.info("Created simulation on platform: %s", sim.context.getPlatform().getName())
+            return sim
         except Exception as exc:
             if not allow_fallback:
-                raise
-            # Optional fallback mode for diagnostics only.
-            import logging
-            logging.warning(
+                raise RuntimeError(
+                    f"Failed to create simulation on {platform.getName()}: {exc}. "
+                    f"This may indicate GPU memory exhaustion (e.g. MIG partitions) "
+                    f"or no compatible device. Set OPENMM_ALLOW_FALLBACK=1 to try CPU fallback."
+                ) from exc
+            logger.warning(
                 "Failed to initialize platform %s (%s). OPENMM_ALLOW_FALLBACK=1 so falling back to default platform.",
                 platform.getName(),
                 exc,
@@ -220,6 +327,11 @@ def run_prepared_md(
 
     state = sim.context.getState(getPositions=True, getVelocities=True)
 
+    # Release the heating CUDA context before creating the production simulation.
+    # On memory-limited GPUs (MIG partitions, etc.) two contexts cannot coexist.
+    del sim
+    logger.info("Released heating simulation context")
+
     # NPT production simulation.
     prod_system = openmm.XmlSerializer.deserialize(prepared_system_xml.read_text())
     barostat = openmm.MonteCarloBarostat(
@@ -237,8 +349,6 @@ def run_prepared_md(
     prod.context.setPositions(state.getPositions())
     prod.context.setVelocities(state.getVelocities())
 
-    trajectory_dcd_path.parent.mkdir(parents=True, exist_ok=True)
-    prod.reporters.append(app.DCDReporter(str(trajectory_dcd_path), max(1, int(cfg.report_interval_steps))))
     if state_csv_path is not None:
         state_csv_path.parent.mkdir(parents=True, exist_ok=True)
         prod.reporters.append(
@@ -255,8 +365,28 @@ def run_prepared_md(
             )
         )
 
+    # Optional stripped analysis DCD (protein + ligand only, sparse frames).
+    analysis_reporter = None
+    if analysis_dcd_path is not None and analysis_topology_pdb_path is not None and cfg.analysis_report_interval_steps is not None:
+        solute_idx = _solute_atom_indices(pdb.topology)
+        logger.info("Analysis DCD: %d solute atoms, interval=%d steps", len(solute_idx), cfg.analysis_report_interval_steps)
+        _write_stripped_topology_pdb(pdb.topology, pdb.positions, analysis_topology_pdb_path)
+        analysis_dcd_path.parent.mkdir(parents=True, exist_ok=True)
+        timestep_ps = cfg.timestep_fs / 1000.0
+        analysis_reporter = _StrippedDCDReporter(
+            file_path=analysis_dcd_path,
+            topology=pdb.topology,
+            timestep_ps=timestep_ps,
+            interval=max(1, int(cfg.analysis_report_interval_steps)),
+            atom_indices=solute_idx,
+        )
+        prod.reporters.append(analysis_reporter)
+
     production_steps = max(1, int(round((cfg.production_ns * 1_000_000.0) / cfg.timestep_fs)))
     prod.step(production_steps)
+
+    if analysis_reporter is not None:
+        analysis_reporter.close()
 
     final_state = prod.context.getState(getPositions=True)
     final_pdb_path.parent.mkdir(parents=True, exist_ok=True)
