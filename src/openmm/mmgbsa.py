@@ -148,9 +148,30 @@ def _subset_positions(all_positions_nm: np.ndarray, indices: np.ndarray) -> np.n
     return all_positions_nm[indices]
 
 
-def _select_snapshot_indices(n_frames: int, discard_fraction: float, n_snapshots: int) -> np.ndarray:
-    start = int(np.floor(max(0.0, min(0.95, discard_fraction)) * n_frames))
-    start = min(start, max(0, n_frames - 1))
+def _select_snapshot_indices(
+    n_frames: int,
+    discard_fraction: float,
+    n_snapshots: int,
+    dt_ps: float | None = None,
+    sample_window_ns: float | None = 1.0,
+) -> np.ndarray:
+    if (
+        sample_window_ns is not None
+        and sample_window_ns > 0.0
+        and dt_ps is not None
+        and np.isfinite(dt_ps)
+        and dt_ps > 0.0
+        and n_frames > 1
+    ):
+        total_time_ps = float(n_frames - 1) * float(dt_ps)
+        window_ps = float(sample_window_ns) * 1000.0
+        start_time_ps = max(0.0, total_time_ps - window_ps)
+        start = int(np.ceil(start_time_ps / float(dt_ps)))
+        start = min(max(0, start), max(0, n_frames - 1))
+    else:
+        # Backward-compatible fallback when trajectory timing metadata is unavailable.
+        start = int(np.floor(max(0.0, min(0.95, discard_fraction)) * n_frames))
+        start = min(start, max(0, n_frames - 1))
     available = n_frames - start
     n_take = min(max(1, int(n_snapshots)), max(1, available))
     return np.linspace(start, n_frames - 1, num=n_take, dtype=int)
@@ -195,6 +216,7 @@ def compute_mmgbsa_from_trajectory(
     ligand_sdf: Path,
     n_snapshots: int = 100,
     discard_fraction: float = 0.25,
+    sample_window_ns: float | None = 1.0,
     analysis_topology_pdb_path: Path | None = None,
 ) -> MMGBSAResult:
     """Compute MM/GBSA-style decomposition from explicit-MD snapshots."""
@@ -243,7 +265,13 @@ def compute_mmgbsa_from_trajectory(
     if n_frames < 1:
         raise ValueError("Empty trajectory for MM/GBSA evaluation.")
 
-    snap_idx = _select_snapshot_indices(n_frames, discard_fraction, n_snapshots)
+    snap_idx = _select_snapshot_indices(
+        n_frames=n_frames,
+        discard_fraction=discard_fraction,
+        n_snapshots=n_snapshots,
+        dt_ps=getattr(u.trajectory, "dt", None),
+        sample_window_ns=sample_window_ns,
+    )
 
     d_vdw: list[float] = []
     d_elec: list[float] = []

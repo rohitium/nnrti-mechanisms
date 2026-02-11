@@ -12,31 +12,6 @@ from scipy import stats
 from .manifest import load_manifest
 
 
-def _min_ligand_protein_distance_from_pdb(pdb_path: Path, ligand_resname: str) -> float:
-    ligand_xyz: list[np.ndarray] = []
-    protein_xyz: list[np.ndarray] = []
-    for line in pdb_path.read_text().splitlines():
-        if not (line.startswith("ATOM") or line.startswith("HETATM")):
-            continue
-        resname = line[17:20].strip()
-        try:
-            x = float(line[30:38])
-            y = float(line[38:46])
-            z = float(line[46:54])
-        except ValueError:
-            continue
-        xyz = np.array([x, y, z], dtype=float)
-        if resname == ligand_resname:
-            ligand_xyz.append(xyz)
-        elif line.startswith("ATOM"):
-            protein_xyz.append(xyz)
-    if not ligand_xyz or not protein_xyz:
-        return float("nan")
-    lig = np.stack(ligand_xyz)
-    prot = np.stack(protein_xyz)
-    d2 = ((lig[:, None, :] - prot[None, :, :]) ** 2).sum(axis=2)
-    return float(np.sqrt(d2.min()))
-
 
 def _nonempty_path(value: object) -> Path | None:
     text = str(value or "").strip()
@@ -61,9 +36,9 @@ def _infer_rep_dir(row: pd.Series) -> Path:
     return Path(".")
 
 
-def collect_fep_results(manifest_path: Path, fep_results_dir: Path) -> pd.DataFrame:
+def collect_md_results(manifest_path: Path, md_results_dir: Path | None = None) -> pd.DataFrame:
     """Collect per-replicate MD run metadata from JSON files."""
-    del fep_results_dir
+    del md_results_dir
     tasks = load_manifest(manifest_path)
     rows: list[dict] = []
 
@@ -308,37 +283,42 @@ def compute_boundness_qc(
         )
 
         start_min_dist = float("nan")
-        if topo is not None and topo.exists():
-            try:
-                start_min_dist = _min_ligand_protein_distance_from_pdb(topo, ligand_resname)
-            except Exception:
-                pass
-
         traj_min_dist = float("nan")
         n_frames = 0
-        if has_mda and topo is not None and dcd is not None and topo.exists() and dcd.exists():
+
+        if has_mda and topo is not None and topo.exists():
             try:
                 import MDAnalysis
                 from MDAnalysis.lib.distances import capped_distance
 
-                u = MDAnalysis.Universe(str(topo), str(dcd))
-                lig = u.select_atoms(f"resname {ligand_resname} and not name H*")
-                prot = u.select_atoms(f"protein and not resname {ligand_resname} and not name H*")
-                mins: list[float] = []
-                for i, _ in enumerate(u.trajectory[:: max(1, traj_frame_stride)]):
-                    if i >= traj_max_frames:
-                        break
-                    n_frames += 1
-                    _pairs, dists = capped_distance(
-                        lig.positions,
-                        prot.positions,
-                        max_cutoff=30.0,
-                        box=u.dimensions,
-                        return_distances=True,
+                # Compute start-structure min distance from topology PDB
+                u_start = MDAnalysis.Universe(str(topo))
+                lig_s = u_start.select_atoms(f"resname {ligand_resname} and not name H*")
+                prot_s = u_start.select_atoms(f"protein and not resname {ligand_resname} and not name H*")
+                if lig_s.n_atoms > 0 and prot_s.n_atoms > 0:
+                    _pairs_s, dists_s = capped_distance(
+                        lig_s.positions, prot_s.positions,
+                        max_cutoff=30.0, box=u_start.dimensions, return_distances=True,
                     )
-                    mins.append(float(np.min(dists)) if len(dists) else 30.0)
-                if mins:
-                    traj_min_dist = float(np.min(mins))
+                    start_min_dist = float(np.min(dists_s)) if len(dists_s) else float("nan")
+
+                # Compute trajectory min distance if DCD available
+                if dcd is not None and dcd.exists():
+                    u = MDAnalysis.Universe(str(topo), str(dcd))
+                    lig = u.select_atoms(f"resname {ligand_resname} and not name H*")
+                    prot = u.select_atoms(f"protein and not resname {ligand_resname} and not name H*")
+                    mins: list[float] = []
+                    for i, _ in enumerate(u.trajectory[:: max(1, traj_frame_stride)]):
+                        if i >= traj_max_frames:
+                            break
+                        n_frames += 1
+                        _pairs, dists = capped_distance(
+                            lig.positions, prot.positions,
+                            max_cutoff=30.0, box=u.dimensions, return_distances=True,
+                        )
+                        mins.append(float(np.min(dists)) if len(dists) else 30.0)
+                    if mins:
+                        traj_min_dist = float(np.min(mins))
             except Exception:
                 pass
 
@@ -720,8 +700,8 @@ def build_mutation_position_summary(ddg_df: pd.DataFrame) -> pd.DataFrame:
 
 def run_result_collection(
     manifest_path: Path,
-    fep_results_dir: Path,
-    output_dir: Path,
+    md_results_dir: Path | None = None,
+    output_dir: Path | None = None,
     ligand_resname: str = "2KW",
     compute_structural: bool = True,
     metric_frame_stride: int = 5,
@@ -729,10 +709,12 @@ def run_result_collection(
     mmgbsa_snapshots: int = 100,
     mmgbsa_discard_fraction: float = 0.25,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    if output_dir is None:
+        output_dir = manifest_path.parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    logging.info("Collecting MD run metadata from %s", fep_results_dir)
-    run_df = collect_fep_results(manifest_path, fep_results_dir)
+    logging.info("Collecting MD run metadata from %s", md_results_dir or manifest_path.parent)
+    run_df = collect_md_results(manifest_path, md_results_dir)
     if run_df.empty:
         raise ValueError("No completed MD results found")
 

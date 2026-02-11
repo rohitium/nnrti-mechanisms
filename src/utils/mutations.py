@@ -1,6 +1,15 @@
 from __future__ import annotations
 
 import re
+import zlib
+
+
+def deterministic_seed(jitter_seed_base: int | None, safe_label: str, replicate: int) -> int | None:
+    """Derive a per-replicate seed from a base seed, mutation label, and replicate number."""
+    if jitter_seed_base is None:
+        return None
+    token = f"{safe_label}:{replicate}".encode()
+    return int(jitter_seed_base + (zlib.crc32(token) % 100000))
 
 
 def sanitize_label(label: str) -> str:

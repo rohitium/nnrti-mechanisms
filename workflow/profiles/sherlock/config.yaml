@@ -1,0 +1,14 @@
+# Snakemake SLURM profile for Stanford Sherlock
+# Usage: snakemake --profile workflow/profiles/sherlock
+
+executor: slurm
+use-envmodules: true
+jobs: 30
+latency-wait: 60
+restart-times: 1
+rerun-incomplete: true
+
+default-resources:
+  slurm_partition: normal
+  mem_mb: 8000
+  runtime: 60

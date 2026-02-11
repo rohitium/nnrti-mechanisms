@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import shutil
-import zlib
 from pathlib import Path
 
 from .cluster.manifest import MDTask, save_manifest
@@ -13,13 +12,7 @@ from .numbering import detect_numbering_scheme
 from .openmm.md_protocol import MDProtocolConfig, prepare_md_assets
 from .susceptibility_io import load_dor_susceptibilities
 from .utils import ensure_dirs, load_chain_subunits, load_residue_mappings, sanitize_label
-
-
-def _deterministic_seed(jitter_seed_base: int | None, safe_label: str, replicate: int) -> int | None:
-    if jitter_seed_base is None:
-        return None
-    token = f"{safe_label}:{replicate}".encode()
-    return int(jitter_seed_base + (zlib.crc32(token) % 100000))
+from .utils.mutations import deterministic_seed
 
 
 def prepare_local_openmm_only_for_cluster(
@@ -33,20 +26,13 @@ def prepare_local_openmm_only_for_cluster(
     jitter_angstrom: float = 0.1,
     md_config: MDProtocolConfig | None = None,
     selected_mutations: set[str] | None = None,
-    # Backward-compatible aliases (deprecated).
-    fep_manifest_path: Path | None = None,
-    fep_results_dir: Path | None = None,
-    alchemy_config: MDProtocolConfig | None = None,
 ) -> list[MDTask]:
     """Prepare WT/mutant systems for Sherlock explicit MD (no alchemical protocol)."""
     from .openmm.minimizer import minimize_system
     from .openmm.require import require_module
     from .openmm.structure import minimize_with_restraints
 
-    # Support deprecated parameter names.
-    manifest_path = fep_manifest_path or manifest_path
-    results_dir = fep_results_dir or results_dir
-    cfg = alchemy_config or md_config or MDProtocolConfig()
+    cfg = md_config or MDProtocolConfig()
 
     def _norm_mutation(label: str) -> str:
         return "+".join(
@@ -111,7 +97,7 @@ def prepare_local_openmm_only_for_cluster(
             assets_dir = run_dir / "assets"
             ensure_dirs([run_dir, assets_dir])
 
-            seed = _deterministic_seed(jitter_seed_base, safe_label, replicate)
+            seed = deterministic_seed(jitter_seed_base, safe_label, replicate)
 
             min_pdb = run_dir / f"{safe_label}_minimized_rep{replicate:02d}.pdb"
             if not min_pdb.exists():

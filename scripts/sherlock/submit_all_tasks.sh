@@ -18,6 +18,12 @@ export OPENMM_PLATFORM="${OPENMM_PLATFORM:-}"
 mkdir -p logs
 MANIFEST_PATH="${MANIFEST_PATH:-results/md_manifest.csv}"
 
+HEATING_PS="${MD_HEATING_PS:-25}"
+PRODUCTION_NS="${MD_PRODUCTION_NS:-2.0}"
+REPORT_INTERVAL="${MD_REPORT_INTERVAL:-2000}"
+CHECKPOINT_INTERVAL="${MD_CHECKPOINT_INTERVAL:-5000}"
+RESUME_FROM_CHECKPOINT="${MD_RESUME_FROM_CHECKPOINT:-1}"
+
 if [ "${OPENMM_PLATFORM}" = "CUDA" ] || [ -z "${OPENMM_PLATFORM}" ]; then
   if ! command -v nvidia-smi >/dev/null 2>&1; then
     echo "ERROR: nvidia-smi not found; GPU node/runtime not available." >&2
@@ -32,6 +38,8 @@ fi
 python3 -m src.cluster.md_worker \
   --manifest "${MANIFEST_PATH}" \
   --task-id ${SLURM_ARRAY_TASK_ID} \
-  --heating-ps 25 \
-  --production-ns 2.0 \
-  --report-interval 2000
+  --heating-ps "${HEATING_PS}" \
+  --production-ns "${PRODUCTION_NS}" \
+  --report-interval "${REPORT_INTERVAL}" \
+  --checkpoint-interval "${CHECKPOINT_INTERVAL}" \
+  --resume-from-checkpoint "${RESUME_FROM_CHECKPOINT}"

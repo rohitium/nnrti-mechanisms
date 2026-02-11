@@ -77,9 +77,6 @@ class MDTask:
         )
 
 
-# Backward-compatibility alias.
-FEPTask = MDTask
-
 
 def save_manifest(tasks: list[MDTask], output_path: Path) -> None:
     """Save a list of MDTasks to a CSV manifest file."""

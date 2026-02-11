@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -16,6 +17,9 @@ def run_md_task(
     heating_ps: float,
     production_ns: float,
     report_interval: int,
+    checkpoint_interval: int,
+    resume_from_checkpoint: bool,
+    force: bool = False,
 ) -> dict:
     from ..openmm.md_protocol import MDProtocolConfig, run_prepared_md
 
@@ -27,6 +31,21 @@ def run_md_task(
     state_csv = output_dir / f"{task.safe_label}_rep{task.replicate:02d}_md_state.csv"
     analysis_dcd = output_dir / f"{task.safe_label}_rep{task.replicate:02d}_analysis.dcd"
     analysis_topo_pdb = output_dir / f"{task.safe_label}_rep{task.replicate:02d}_analysis_topology.pdb"
+    checkpoint_path = output_dir / f"{task.safe_label}_rep{task.replicate:02d}_md.chk"
+
+    if not force and output_path.exists():
+        try:
+            existing = json.loads(output_path.read_text())
+            if str(existing.get("status", "")).lower() == "ok":
+                logging.info(
+                    "Task %d already completed (%s rep%d); skipping (use --force to rerun).",
+                    task.task_id,
+                    task.mutation,
+                    task.replicate,
+                )
+                return existing
+        except Exception:
+            pass
 
     # ~200 analysis frames (enough for ~100 after 25% discard).
     timestep_fs = 2.0
@@ -51,6 +70,9 @@ def run_md_task(
         config=cfg,
         analysis_dcd_path=analysis_dcd,
         analysis_topology_pdb_path=analysis_topo_pdb,
+        checkpoint_path=checkpoint_path,
+        checkpoint_interval_steps=max(1, int(checkpoint_interval)),
+        resume_from_checkpoint=bool(resume_from_checkpoint),
     )
 
     payload = {
@@ -69,9 +91,12 @@ def run_md_task(
         "analysis_topology_pdb": str(analysis_topo_pdb),
         "state_csv": str(state_csv),
         "final_pdb": str(final_pdb),
+        "checkpoint_path": str(checkpoint_path),
         "md_heating_steps": result.heating_steps,
         "md_production_steps": result.production_steps,
+        "md_production_steps_completed": result.production_steps_completed,
         "md_total_steps": result.total_steps,
+        "resumed_from_checkpoint": result.resumed_from_checkpoint,
         "elapsed_seconds": result.elapsed_seconds,
         "status": "ok",
     }
@@ -88,6 +113,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--heating-ps", type=float, default=25.0)
     parser.add_argument("--production-ns", type=float, default=2.0)
     parser.add_argument("--report-interval", type=int, default=2000)
+    parser.add_argument(
+        "--checkpoint-interval",
+        type=int,
+        default=int(os.environ.get("MD_CHECKPOINT_INTERVAL", "5000")),
+        help="Write an OpenMM checkpoint every N steps.",
+    )
+    parser.add_argument(
+        "--resume-from-checkpoint",
+        type=int,
+        default=int(os.environ.get("MD_RESUME_FROM_CHECKPOINT", "1")),
+        help="If 1, resume from existing checkpoint when present.",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Ignore existing successful output JSON and rerun the task.",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -102,6 +144,9 @@ def main(argv: list[str] | None = None) -> int:
             heating_ps=args.heating_ps,
             production_ns=args.production_ns,
             report_interval=args.report_interval,
+            checkpoint_interval=max(1, int(args.checkpoint_interval)),
+            resume_from_checkpoint=bool(int(args.resume_from_checkpoint)),
+            force=bool(args.force),
         )
         logging.info(
             "Completed task %d (%s rep%d) in %.1fs",

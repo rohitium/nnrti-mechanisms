@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .cluster import generate_slurm_script, run_result_collection
+from .cluster import run_result_collection
 from .config import dor_4ncg_spec
 from .dor_md_pipeline import prepare_local_openmm_only_for_cluster
 from .openmm.md_protocol import MDProtocolConfig
@@ -29,7 +29,6 @@ def main(argv: list[str] | None = None) -> None:
         description="NNRTI explicit-MD workflow: Sherlock MD + local MM/GBSA analysis."
     )
     parser.add_argument("--prepare-local-openmm-only", action="store_true")
-    parser.add_argument("--generate-slurm", action="store_true")
     parser.add_argument("--collect-results", action="store_true")
 
     parser.add_argument("--replicates", type=int, default=1)
@@ -39,21 +38,12 @@ def main(argv: list[str] | None = None) -> None:
 
     parser.add_argument("--susceptibility-xlsx", type=Path, default=None)
     parser.add_argument("--prepared-dir", type=Path, default=None)
-    parser.add_argument("--fep-manifest", type=Path, default=None)
     parser.add_argument("--manifest", type=Path, default=None)
-    parser.add_argument("--slurm-script", type=Path, default=None)
-    parser.add_argument("--fep-results-dir", type=Path, default=None)
     parser.add_argument("--results-dir", type=Path, default=None)
 
     parser.add_argument("--md-heating-ps", type=float, default=25.0)
     parser.add_argument("--md-production-ns", type=float, default=2.0)
     parser.add_argument("--trajectory-interval", type=int, default=2000)
-
-    parser.add_argument("--slurm-partition", type=str, default="gpu")
-    parser.add_argument("--slurm-time", type=str, default="6:00:00")
-    parser.add_argument("--slurm-memory", type=str, default="16G")
-    parser.add_argument("--conda-env", type=str, default=None)
-    parser.add_argument("--use-openmm-module", action="store_true")
 
     parser.add_argument("--skip-structural-metrics", action="store_true")
     parser.add_argument("--metric-frame-stride", type=int, default=5)
@@ -69,9 +59,8 @@ def main(argv: list[str] | None = None) -> None:
 
     susceptibility_xlsx = args.susceptibility_xlsx or (paths.data / "DRM-susceptibilities.csv.xlsx")
     prepared_dir = args.prepared_dir or (paths.data / "prepared" / "dor_4ncg")
-    manifest = args.manifest or args.fep_manifest or (paths.results / "md_manifest.csv")
-    slurm_script = args.slurm_script or (root / "scripts" / "sherlock" / "submit_all_tasks.sh")
-    run_results_dir = args.results_dir or args.fep_results_dir or (paths.results / "md_runs")
+    manifest = args.manifest or (paths.results / "md_manifest.csv")
+    run_results_dir = args.results_dir or (paths.results / "md_runs")
 
     md_cfg = MDProtocolConfig(
         heating_ps=args.md_heating_ps,
@@ -98,25 +87,6 @@ def main(argv: list[str] | None = None) -> None:
         logging.info("Manifest: %s", manifest)
         return
 
-    if args.generate_slurm:
-        if not manifest.exists():
-            logging.error("Manifest not found: %s", manifest)
-            return
-        output = generate_slurm_script(
-            manifest_path=manifest,
-            output_script=slurm_script,
-            partition=args.slurm_partition,
-            time_limit=args.slurm_time,
-            memory=args.slurm_memory,
-            heating_ps=args.md_heating_ps,
-            production_ns=args.md_production_ns,
-            report_interval=args.trajectory_interval,
-            conda_env=args.conda_env,
-            use_openmm_module=args.use_openmm_module,
-        )
-        logging.info("Generated SLURM script: %s", output)
-        return
-
     if args.collect_results:
         if not manifest.exists():
             logging.error("Manifest not found: %s", manifest)
@@ -126,7 +96,7 @@ def main(argv: list[str] | None = None) -> None:
         spec = dor_4ncg_spec(root)
         _, _, ddg_df = run_result_collection(
             manifest_path=manifest,
-            fep_results_dir=run_results_dir,
+            md_results_dir=run_results_dir,
             output_dir=paths.results,
             ligand_resname=spec.structure.ligand_resname,
             compute_structural=not args.skip_structural_metrics,
@@ -164,7 +134,7 @@ def main(argv: list[str] | None = None) -> None:
             logging.warning("Could not generate selected plots: %s", exc)
         return
 
-    parser.error("No action requested. Use one of: --prepare-local-openmm-only, --generate-slurm, --collect-results")
+    parser.error("No action requested. Use one of: --prepare-local-openmm-only, --collect-results")
 
 
 if __name__ == "__main__":

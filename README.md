@@ -19,52 +19,61 @@ Key adopted ideas:
 - decomposition into van der Waals, electrostatic, polar solvation (GB), and nonpolar solvation (SA)
 - mutation-level correlation to measured susceptibility shifts
 
-## What is no longer used
+## Workflow (Snakemake)
 
-The alchemical/FEP lambda protocol is deprecated in this repository and should not be used for new runs.
+The pipeline is managed by [Snakemake](https://snakemake.github.io/) and runs natively on Sherlock. CPU rules (prep, analysis) execute on the login node; GPU rules (MD) are submitted to the `gpu` partition via the SLURM executor.
 
-## Current end-to-end workflow
-
-1. Local preparation:
-- build WT + mutant structures
-- minimize
-- generate Sherlock-ready MD assets and manifest
-
-2. Sherlock execution:
-- run one explicit-MD job per manifest task (replicate)
-- write trajectory (`.dcd`) and final structure
-
-3. Local analysis:
-- compute RMSD convergence profiles
-- compute MM/GBSA-style components from ensemble snapshots
-- compute WT-referenced ΔΔG
-- compute ensemble contacts / H-bonds / pocket-volume proxy
-- compute correlations vs phenotype from `data/DRM-susceptibilities.csv.xlsx`
-
-## Quick start
-
-### 1) Test Sherlock connectivity
+### Prerequisites (on Sherlock)
 
 ```bash
-export SHERLOCK_USER=<sunet_id>
-./scripts/orchestrate.sh --test
+pip install --user snakemake snakemake-executor-plugin-slurm
 ```
 
-### 2) Full run (prepare + sync + submit + wait + collect + analyze)
+### Quick start
 
 ```bash
-export SHERLOCK_USER=<sunet_id>
-./scripts/orchestrate.sh
+# Dry run: see what would execute
+snakemake -n
+
+# Full production run on Sherlock
+snakemake --profile workflow/profiles/sherlock
+
+# Run with custom config overrides
+snakemake --profile workflow/profiles/sherlock --config replicates=1 seed=123
+
+# Visualize the DAG
+snakemake --dag | dot -Tpng > dag.png
 ```
 
-### 3) Collect/analyze only (no job submission)
+### Pipeline stages
 
-```bash
-export SHERLOCK_USER=<sunet_id>
-./scripts/orchestrate.sh --collect-only
-```
+1. **prep_wt_cif / prep_mutant_cif** -- Build WT and mutant structures from 4NCG
+2. **prep_replicate** -- Minimize + solvate for each mutation/replicate (CPU)
+3. **run_md** -- Heating (10-300K NVT) + production (300K NPT) on GPU via SLURM
+4. **collect_and_analyze** -- MM/GBSA, structural metrics, RMSD/COM profiles, DDG
+5. **generate_plots** -- All publication figures
 
-## Direct CLI usage
+### Configuration
+
+All parameters are in `workflow/config.yaml`. Key settings:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `replicates` | 3 | Independent replicates per mutation |
+| `seed` | 42 | Base seed for deterministic coordinate jitter |
+| `md.production_ns` | 2.0 | Production MD length (ns) |
+| `analysis.mmgbsa_snapshots` | 100 | Frames for MM/GBSA decomposition |
+| `slurm.partition` | gpu | SLURM partition for MD jobs |
+
+### Resume behavior
+
+- Snakemake automatically skips rules whose output files already exist
+- OpenMM checkpoint files (`.chk`) enable mid-simulation resume
+- Re-running `snakemake` after a failure picks up where it left off
+
+## Direct CLI usage (without Snakemake)
+
+The `src.main` CLI is still available for development and debugging:
 
 ### Local prep only
 
@@ -76,17 +85,12 @@ python -m src.main \
   --mutation Y188L
 ```
 
-### Generate SLURM script
-
-```bash
-python -m src.main --generate-slurm --use-openmm-module
-```
-
 ### Collect and analyze
 
 ```bash
 python -m src.main \
   --collect-results \
+  --manifest results/md_manifest.csv \
   --mmgbsa-snapshots 100 \
   --mmgbsa-discard-fraction 0.25
 ```
@@ -104,11 +108,12 @@ python -m src.main \
 - `results/correlation_analysis.csv`
 - `results/plots/all_metrics_vs_fold_reduction.png`
 - `results/plots/fig_s1_like_mutation_landscape.png`
-- `results/plots/fig_s2_like_ca_rmsd.png`
+- `results/plots/simulation_convergence.png`
 - `results/plots/boundness_qc_min_distance.png`
 
 ## Notes
 
-- The workflow uses `results/md_manifest.csv` and `results/md_runs/` for task manifests and output. The cluster worker is `src/cluster/md_worker.py`.
-- Local prep is intended to run on CPU (`OPENMM_PLATFORM=CPU`) unless explicitly overridden.
-- Structural metrics require MDAnalysis in the local analysis environment.
+- The workflow uses `results/md_runs/` for per-mutation/replicate outputs.
+- Local prep runs on CPU (`OPENMM_PLATFORM=CPU`) unless overridden.
+- Structural metrics require MDAnalysis in the analysis environment.
+- The legacy `scripts/orchestrate.sh` is deprecated; use Snakemake instead.

@@ -212,7 +212,12 @@ __marimo__/
 .claude
 .mplconfig
 
+# Snakemake
+.snakemake/
+
 # Local outputs
 *.dcd
 *.pdb
 *.xml
+
+manuscript/

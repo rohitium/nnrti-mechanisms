@@ -139,6 +139,7 @@ def compute_ensemble_metrics(
     ligand_resname: str,
     frame_stride: int = 1,
     max_frames: int | None = 200,
+    sample_window_ns: float | None = 1.0,
     contact_cutoff_angstrom: float = 4.0,
     grid_spacing: float = 0.75,
     pocket_radius_angstrom: float = 8.0,
@@ -156,13 +157,37 @@ def compute_ensemble_metrics(
     if protein.n_atoms == 0:
         raise ValueError("Protein selection is empty for ensemble metric calculation.")
 
-    frame_indices: list[int] = []
+    frame_step = max(1, frame_stride)
+    sampled_frames = list(range(0, len(u.trajectory), frame_step))
+    if not sampled_frames:
+        raise ValueError("No frames available for ensemble metric calculation.")
+
+    frame_indices: list[int]
+    if sample_window_ns is not None and sample_window_ns > 0.0 and len(sampled_frames) > 1:
+        dt_ps = getattr(u.trajectory, "dt", None)
+        if dt_ps is not None and np.isfinite(dt_ps) and dt_ps > 0:
+            total_time_ps = (len(u.trajectory) - 1) * float(dt_ps)
+            window_ps = float(sample_window_ns) * 1000.0
+            start_time_ps = max(0.0, total_time_ps - window_ps)
+            sampled_in_window = [
+                frame_id
+                for frame_id in sampled_frames
+                if (frame_id * float(dt_ps)) >= start_time_ps
+            ]
+            frame_indices = sampled_in_window if sampled_in_window else sampled_frames
+        else:
+            frame_indices = sampled_frames
+    else:
+        frame_indices = sampled_frames
+
+    if max_frames is not None and len(frame_indices) > max_frames:
+        select_idx = np.linspace(0, len(frame_indices) - 1, num=max_frames, dtype=int)
+        frame_indices = [frame_indices[i] for i in select_idx.tolist()]
+
     contact_values: list[float] = []
     pocket_values: list[float] = []
-    for frame_idx, _ in enumerate(u.trajectory[:: max(1, frame_stride)]):
-        if max_frames is not None and frame_idx >= max_frames:
-            break
-        frame_indices.append(u.trajectory.frame)
+    for frame_id in frame_indices:
+        u.trajectory[frame_id]
         pairs = capped_distance(
             ligand.positions,
             protein.positions,
@@ -201,7 +226,7 @@ def compute_ensemble_metrics(
     hbond.run(
         start=min(frame_indices),
         stop=max(frame_indices) + 1,
-        step=max(1, frame_stride),
+        step=frame_step,
     )
     frame_to_hbond: dict[int, int] = {idx: 0 for idx in frame_indices}
     hb = hbond.results.hbonds

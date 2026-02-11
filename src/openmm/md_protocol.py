@@ -38,7 +38,9 @@ class MDRunResult:
     total_steps: int
     heating_steps: int
     production_steps: int
+    production_steps_completed: int
     elapsed_seconds: float
+    resumed_from_checkpoint: bool
 
 
 def _min_ligand_protein_distance_from_topology_positions(topology, positions, ligand_resname: str) -> float:
@@ -70,33 +72,41 @@ class _StrippedDCDReporter:
     lacks the ``atomSubset`` parameter on ``DCDReporter``.
     """
 
-    def __init__(self, file_path: Path, topology, timestep_ps: float, interval: int, atom_indices: list[int]):
+    def __init__(
+        self,
+        file_path: Path,
+        stripped_topology,
+        timestep_ps: float,
+        interval: int,
+        atom_indices: list[int],
+        append: bool = False,
+        first_step: int = 0,
+    ):
         app = require_module("openmm.app")
-        openmm = require_module("openmm")
         unit = require_module("openmm.unit")
 
         self._interval = int(interval)
         self._atom_indices = atom_indices
 
-        # Build stripped topology by deleting solvent/ion residues.
-        solvent_resnames = {"HOH", "WAT"}
-        ion_elements = {"NA", "CL", "K"}
-        n_atoms = sum(1 for _ in topology.atoms())
-        dummy_pos = [openmm.Vec3(0, 0, 0) * unit.nanometer] * n_atoms
-        modeller = app.Modeller(topology, dummy_pos)
-        to_delete = []
-        for res in modeller.topology.residues():
-            if res.name in solvent_resnames:
-                to_delete.append(res)
-                continue
-            atoms = list(res.atoms())
-            if len(atoms) == 1 and atoms[0].element is not None and atoms[0].element.symbol.upper() in ion_elements:
-                to_delete.append(res)
-        modeller.delete(to_delete)
-
-        self._handle = open(file_path, "wb")
+        if append and file_path.exists():
+            mode = "r+b"
+        else:
+            mode = "wb"
+        self._handle = open(file_path, mode)
         dt = timestep_ps * interval * unit.picoseconds
-        self._dcd = app.DCDFile(self._handle, modeller.topology, dt)
+        try:
+            self._dcd = app.DCDFile(
+                self._handle,
+                stripped_topology,
+                dt,
+                firstStep=int(first_step),
+                interval=int(interval),
+                append=bool(append),
+            )
+        except TypeError:
+            # Compatibility fallback for OpenMM builds that do not expose
+            # firstStep/interval/append kwargs on DCDFile.
+            self._dcd = app.DCDFile(self._handle, stripped_topology, dt)
 
     def describeNextReport(self, simulation):
         steps_done = simulation.currentStep
@@ -105,8 +115,14 @@ class _StrippedDCDReporter:
 
     def report(self, simulation, state):
         unit = require_module("openmm.unit")
-        positions = state.getPositions()
-        subset = [positions[i] for i in self._atom_indices]
+        openmm = require_module("openmm")
+        # Convert to plain Vec3 values in nm; this avoids nested Quantity objects
+        # that can trigger type errors in OpenMM's DCD writer on some runtimes.
+        pos_nm = state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
+        subset = [
+            openmm.Vec3(float(pos_nm[i, 0]), float(pos_nm[i, 1]), float(pos_nm[i, 2]))
+            for i in self._atom_indices
+        ]
         self._dcd.writeModel(subset)
 
     def close(self):
@@ -142,20 +158,15 @@ def _solute_atom_indices(topology) -> list[int]:
     ion_elements = {"NA", "CL", "K"}
     solvent_resnames = {"HOH", "WAT"}
     indices: list[int] = []
-    for atom in topology.atoms():
-        if atom.residue.name in solvent_resnames:
+    for res in topology.residues():
+        if res.name in solvent_resnames:
             continue
-        if atom.element is not None and atom.element.symbol.upper() in ion_elements:
+        atoms = list(res.atoms())
+        if len(atoms) == 1 and atoms[0].element is not None and atoms[0].element.symbol.upper() in ion_elements:
             continue
-        indices.append(atom.index)
+        for atom in atoms:
+            indices.append(atom.index)
     indices.sort()
-    # Solute atoms must be contiguous starting at 0 (addSolvent appends after solute).
-    if indices and (indices[0] != 0 or indices[-1] != len(indices) - 1):
-        raise RuntimeError(
-            f"Solute atom indices are not contiguous [0..{len(indices)-1}]: "
-            f"first={indices[0]}, last={indices[-1]}. "
-            "This breaks the assumption that addSolvent appends after solute."
-        )
     return indices
 
 
@@ -251,6 +262,9 @@ def run_prepared_md(
     config: MDProtocolConfig | None = None,
     analysis_dcd_path: Path | None = None,
     analysis_topology_pdb_path: Path | None = None,
+    checkpoint_path: Path | None = None,
+    checkpoint_interval_steps: int = 5000,
+    resume_from_checkpoint: bool = True,
 ) -> MDRunResult:
     """Run minimization -> heating -> NPT production MD from prepared assets."""
     app = require_module("openmm.app")
@@ -262,16 +276,6 @@ def run_prepared_md(
     with open(prepared_topology_pdb, "r") as handle:
         pdb = app.PDBFile(handle)
     base_system = openmm.XmlSerializer.deserialize(prepared_system_xml.read_text())
-
-    # Add C-alpha positional restraints for the early minimization stages.
-    k_conv = 418.4  # kcal/mol/Å^2 -> kJ/mol/nm^2
-    restraint_force_idx = _add_ca_restraint_force(
-        base_system,
-        pdb.topology,
-        pdb.positions,
-        cfg.ca_restraint_k1_kcal_mol_a2 * k_conv,
-    )
-    restraint_force = base_system.getForce(restraint_force_idx)
 
     platform, properties = get_platform()
     logger.info("Selected OpenMM platform: %s (properties: %s)", platform.getName(), properties or "default")
@@ -296,58 +300,98 @@ def run_prepared_md(
                 exc,
             )
             return app.Simulation(topology, system, integrator)
-    integrator = openmm.LangevinMiddleIntegrator(
-        cfg.temperature_target_k * unit.kelvin,
-        1.0 / unit.picosecond,
-        cfg.timestep_fs * unit.femtoseconds,
-    )
-    sim = _make_simulation(pdb.topology, base_system, integrator)
-    sim.context.setPositions(pdb.positions)
-
     t0 = time.perf_counter()
+    production_steps_target = max(1, int(round((cfg.production_ns * 1_000_000.0) / cfg.timestep_fs)))
+    heating_steps = 0
+    resumed_from_ckpt = False
 
-    sim.minimizeEnergy(maxIterations=max(1, int(cfg.minimization_stage1_steps)))
-    restraint_force.setGlobalParameterDefaultValue(0, cfg.ca_restraint_k2_kcal_mol_a2 * k_conv)
-    sim.context.setParameter("k", cfg.ca_restraint_k2_kcal_mol_a2 * k_conv)
-    sim.minimizeEnergy(maxIterations=max(1, int(cfg.minimization_stage2_steps)))
-    restraint_force.setGlobalParameterDefaultValue(0, 0.0)
-    sim.context.setParameter("k", 0.0)
-    sim.minimizeEnergy(maxIterations=max(1, int(cfg.minimization_unrestrained_steps)))
+    def _create_production_simulation():
+        prod_system = openmm.XmlSerializer.deserialize(prepared_system_xml.read_text())
+        barostat = openmm.MonteCarloBarostat(
+            cfg.pressure_bar * unit.bar,
+            cfg.temperature_target_k * unit.kelvin,
+            25,
+        )
+        prod_system.addForce(barostat)
+        prod_integrator = openmm.LangevinMiddleIntegrator(
+            cfg.temperature_target_k * unit.kelvin,
+            1.0 / unit.picosecond,
+            cfg.timestep_fs * unit.femtoseconds,
+        )
+        return _make_simulation(pdb.topology, prod_system, prod_integrator)
 
-    # Heating: 10K -> 300K over 25 ps (NVT)
-    heating_steps = max(1, int(round((cfg.heating_ps * 1000.0) / cfg.timestep_fs)))
-    n_chunks = 25
-    chunk_steps = max(1, heating_steps // n_chunks)
-    for i in range(n_chunks):
-        frac = (i + 1) / float(n_chunks)
-        temp = cfg.temperature_start_k + frac * (cfg.temperature_target_k - cfg.temperature_start_k)
-        integrator.setTemperature(temp * unit.kelvin)
-        sim.context.setVelocitiesToTemperature(temp * unit.kelvin)
-        sim.step(chunk_steps)
+    prod = None
+    if checkpoint_path is not None and resume_from_checkpoint and checkpoint_path.exists():
+        try:
+            prod = _create_production_simulation()
+            prod.loadCheckpoint(str(checkpoint_path))
+            resumed_from_ckpt = True
+            logger.info(
+                "Resumed production from checkpoint %s at step %d",
+                checkpoint_path,
+                int(prod.currentStep),
+            )
+        except Exception as exc:
+            logger.warning("Failed to load checkpoint %s (%s). Starting from scratch.", checkpoint_path, exc)
+            resumed_from_ckpt = False
+            if prod is not None:
+                del prod
+                prod = None
 
-    state = sim.context.getState(getPositions=True, getVelocities=True)
+    if not resumed_from_ckpt:
+        # Add C-alpha positional restraints for early minimization stages.
+        base_system = openmm.XmlSerializer.deserialize(prepared_system_xml.read_text())
+        k_conv = 418.4  # kcal/mol/Å^2 -> kJ/mol/nm^2
+        restraint_force_idx = _add_ca_restraint_force(
+            base_system,
+            pdb.topology,
+            pdb.positions,
+            cfg.ca_restraint_k1_kcal_mol_a2 * k_conv,
+        )
+        restraint_force = base_system.getForce(restraint_force_idx)
 
-    # Release the heating CUDA context before creating the production simulation.
-    # On memory-limited GPUs (MIG partitions, etc.) two contexts cannot coexist.
-    del sim
-    logger.info("Released heating simulation context")
+        integrator = openmm.LangevinMiddleIntegrator(
+            cfg.temperature_target_k * unit.kelvin,
+            1.0 / unit.picosecond,
+            cfg.timestep_fs * unit.femtoseconds,
+        )
+        sim = _make_simulation(pdb.topology, base_system, integrator)
+        sim.context.setPositions(pdb.positions)
 
-    # NPT production simulation.
-    prod_system = openmm.XmlSerializer.deserialize(prepared_system_xml.read_text())
-    barostat = openmm.MonteCarloBarostat(
-        cfg.pressure_bar * unit.bar,
-        cfg.temperature_target_k * unit.kelvin,
-        25,
-    )
-    prod_system.addForce(barostat)
-    prod_integrator = openmm.LangevinMiddleIntegrator(
-        cfg.temperature_target_k * unit.kelvin,
-        1.0 / unit.picosecond,
-        cfg.timestep_fs * unit.femtoseconds,
-    )
-    prod = _make_simulation(pdb.topology, prod_system, prod_integrator)
-    prod.context.setPositions(state.getPositions())
-    prod.context.setVelocities(state.getVelocities())
+        sim.minimizeEnergy(maxIterations=max(1, int(cfg.minimization_stage1_steps)))
+        restraint_force.setGlobalParameterDefaultValue(0, cfg.ca_restraint_k2_kcal_mol_a2 * k_conv)
+        sim.context.setParameter("k", cfg.ca_restraint_k2_kcal_mol_a2 * k_conv)
+        sim.minimizeEnergy(maxIterations=max(1, int(cfg.minimization_stage2_steps)))
+        restraint_force.setGlobalParameterDefaultValue(0, 0.0)
+        sim.context.setParameter("k", 0.0)
+        sim.minimizeEnergy(maxIterations=max(1, int(cfg.minimization_unrestrained_steps)))
+
+        # Heating: 10K -> target temperature (NVT)
+        heating_steps = max(1, int(round((cfg.heating_ps * 1000.0) / cfg.timestep_fs)))
+        n_chunks = 25
+        chunk_steps = max(1, heating_steps // n_chunks)
+        for i in range(n_chunks):
+            frac = (i + 1) / float(n_chunks)
+            temp = cfg.temperature_start_k + frac * (cfg.temperature_target_k - cfg.temperature_start_k)
+            integrator.setTemperature(temp * unit.kelvin)
+            sim.context.setVelocitiesToTemperature(temp * unit.kelvin)
+            sim.step(chunk_steps)
+
+        heated_state = sim.context.getState(getPositions=True, getVelocities=True)
+        del sim
+        logger.info("Released heating simulation context")
+        prod = _create_production_simulation()
+        prod.context.setPositions(heated_state.getPositions())
+        prod.context.setVelocities(heated_state.getVelocities())
+
+    if checkpoint_path is not None:
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        prod.reporters.append(
+            app.CheckpointReporter(
+                str(checkpoint_path),
+                max(1, int(checkpoint_interval_steps)),
+            )
+        )
 
     if state_csv_path is not None:
         state_csv_path.parent.mkdir(parents=True, exist_ok=True)
@@ -362,6 +406,7 @@ def run_prepared_md(
                 density=True,
                 speed=True,
                 separator=",",
+                append=bool(resumed_from_ckpt and state_csv_path.exists() and state_csv_path.stat().st_size > 0),
             )
         )
 
@@ -370,20 +415,34 @@ def run_prepared_md(
     if analysis_dcd_path is not None and analysis_topology_pdb_path is not None and cfg.analysis_report_interval_steps is not None:
         solute_idx = _solute_atom_indices(pdb.topology)
         logger.info("Analysis DCD: %d solute atoms, interval=%d steps", len(solute_idx), cfg.analysis_report_interval_steps)
-        _write_stripped_topology_pdb(pdb.topology, pdb.positions, analysis_topology_pdb_path)
+        if not analysis_topology_pdb_path.exists():
+            _write_stripped_topology_pdb(pdb.topology, pdb.positions, analysis_topology_pdb_path)
+        with open(analysis_topology_pdb_path, "r") as handle:
+            analysis_topology = app.PDBFile(handle).topology
         analysis_dcd_path.parent.mkdir(parents=True, exist_ok=True)
         timestep_ps = cfg.timestep_fs / 1000.0
+        append_dcd = bool(resumed_from_ckpt and analysis_dcd_path.exists() and analysis_dcd_path.stat().st_size > 0)
         analysis_reporter = _StrippedDCDReporter(
             file_path=analysis_dcd_path,
-            topology=pdb.topology,
+            stripped_topology=analysis_topology,
             timestep_ps=timestep_ps,
             interval=max(1, int(cfg.analysis_report_interval_steps)),
             atom_indices=solute_idx,
+            append=append_dcd,
+            first_step=int(prod.currentStep),
         )
         prod.reporters.append(analysis_reporter)
 
-    production_steps = max(1, int(round((cfg.production_ns * 1_000_000.0) / cfg.timestep_fs)))
-    prod.step(production_steps)
+    current_step = int(prod.currentStep)
+    remaining_steps = max(0, production_steps_target - current_step)
+    if remaining_steps > 0:
+        prod.step(remaining_steps)
+    else:
+        logger.info(
+            "Checkpoint already at/above target production steps (%d >= %d); skipping integration.",
+            current_step,
+            production_steps_target,
+        )
 
     if analysis_reporter is not None:
         analysis_reporter.close()
@@ -394,9 +453,12 @@ def run_prepared_md(
         app.PDBFile.writeFile(pdb.topology, final_state.getPositions(), handle)
 
     elapsed = time.perf_counter() - t0
+    final_prod_steps = int(prod.currentStep)
     return MDRunResult(
-        total_steps=int(heating_steps + production_steps),
+        total_steps=int(heating_steps + final_prod_steps),
         heating_steps=int(heating_steps),
-        production_steps=int(production_steps),
+        production_steps=int(production_steps_target),
+        production_steps_completed=final_prod_steps,
         elapsed_seconds=float(elapsed),
+        resumed_from_checkpoint=bool(resumed_from_ckpt),
     )

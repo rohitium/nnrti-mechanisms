@@ -1,466 +1,863 @@
 #!/bin/bash
-# End-to-end Sherlock workflow: local prep -> Sherlock run -> collect/analyze
+# ============================================================================
+# DEPRECATED: This script is superseded by the Snakemake workflow.
 #
-# Prerequisites:
-#   - conda activate nnrti-prep  (for local prep and analysis)
-#   - SSH key auth to Sherlock   (ssh-copy-id $SHERLOCK_USER@login.sherlock.stanford.edu)
+# New usage (on Sherlock):
+#   snakemake --profile workflow/profiles/sherlock
+#
+# See README.md for full migration instructions.
+# ============================================================================
+echo "WARNING: orchestrate.sh is deprecated. Use the Snakemake workflow instead." >&2
+echo "  Run:  snakemake --profile workflow/profiles/sherlock" >&2
+echo "" >&2
+
+# Resumable mutation-by-mutation Sherlock workflow for explicit MD.
+#
+# Behavior:
+#  1) For each mutation, verify local prep for all replicates; prep if missing.
+#  2) Sync that mutation's prepared assets + manifest slice to Sherlock.
+#  3) Submit only missing replicate tasks for that mutation.
+#  4) Continue to next mutation without waiting for completion.
+#  5) Poll running jobs, stream progress from md_state.csv, fetch partial results.
+#  6) Run local collection/analysis incrementally as completed JSONs appear.
+#
+# Checkpoint/Resume:
+#  - MD tasks write OpenMM checkpoint files (*.chk) and resume automatically.
+#  - Orchestration state persists under results/orchestrate_state/.
+#  - Re-running this script resumes from where it left off.
 #
 # Usage:
-#   ./scripts/orchestrate.sh --test          # Test SSH/rsync connectivity
-#   ./scripts/orchestrate.sh                 # Full pipeline
-#   ./scripts/orchestrate.sh --skip-prep     # Skip local prep (already done)
-#   ./scripts/orchestrate.sh --collect-only  # Just rsync results back + analyze
-#   ./scripts/orchestrate.sh --quick-test    # Submit only WT + Y188L (replicate 1)
-#
-# Environment variables:
-#   SHERLOCK_USER   (required) Your SUNet ID
-#   REPLICATES      Number of replicates (default: 3)
-#   SEED            Base random seed (default: 42)
-#   POLL_INTERVAL   Seconds between job status checks (default: 300)
+#   ./scripts/orchestrate.sh
+#   ./scripts/orchestrate.sh --test
+#   ./scripts/orchestrate.sh --collect-only
 
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-SHERLOCK_USER="${SHERLOCK_USER:?Set SHERLOCK_USER to your SUNet ID (export SHERLOCK_USER=rsatija)}"
+SHERLOCK_USER="${SHERLOCK_USER:?Set SHERLOCK_USER (e.g., export SHERLOCK_USER=rsatija)}"
 SHERLOCK_HOST="login.sherlock.stanford.edu"
 SHERLOCK_DEST="${SHERLOCK_USER}@${SHERLOCK_HOST}"
 SHERLOCK_DIR="/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+PYTHON_BIN="${PYTHON_BIN:-python}"
 REPLICATES="${REPLICATES:-3}"
 SEED="${SEED:-42}"
-JITTER="0.1"
-POLL_INTERVAL="${POLL_INTERVAL:-300}"
+JITTER="${JITTER:-0.1}"
+POLL_INTERVAL="${POLL_INTERVAL:-180}"
 
-# SSH multiplexing — authenticate once (Duo), reuse for all subsequent calls.
+SHERLOCK_PARTITION="${SHERLOCK_PARTITION:-gpu}"
+SHERLOCK_GRES="${SHERLOCK_GRES:-gpu:1}"
+SHERLOCK_TIME="${SHERLOCK_TIME:-08:00:00}"
+SHERLOCK_MEM="${SHERLOCK_MEM:-16G}"
+SHERLOCK_QOS="${SHERLOCK_QOS:-}"
+ARRAY_CONCURRENCY="${ARRAY_CONCURRENCY:-}"
+
+MD_HEATING_PS="${MD_HEATING_PS:-25}"
+MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-2.0}"
+MD_REPORT_INTERVAL="${MD_REPORT_INTERVAL:-2000}"
+OPENMM_PLATFORM="${OPENMM_PLATFORM:-}"
+
+# New: explicit checkpoint controls for resume/extension
+MD_CHECKPOINT_INTERVAL="${MD_CHECKPOINT_INTERVAL:-5000}"
+MD_RESUME_FROM_CHECKPOINT="${MD_RESUME_FROM_CHECKPOINT:-1}"
+
+# Incremental collection controls
+COLLECT_METRIC_FRAME_STRIDE="${COLLECT_METRIC_FRAME_STRIDE:-5}"
+COLLECT_METRIC_MAX_FRAMES="${COLLECT_METRIC_MAX_FRAMES:-200}"
+COLLECT_MMGBSA_SNAPSHOTS="${COLLECT_MMGBSA_SNAPSHOTS:-100}"
+COLLECT_MMGBSA_DISCARD_FRACTION="${COLLECT_MMGBSA_DISCARD_FRACTION:-0.25}"
+
+STATE_DIR="${PROJECT_DIR}/results/orchestrate_state"
+STATE_MANIFEST_DIR="${STATE_DIR}/manifests"
+STATE_JOB_DIR="${STATE_DIR}/jobs"
+STATE_MUT_DIR="${STATE_DIR}/mutations"
+STATE_LAST_COLLECT_COUNT="${STATE_DIR}/last_collect_count.txt"
+MASTER_MANIFEST="${STATE_DIR}/master_manifest.csv"
+
+LOCAL_SOURCE_MANIFEST="${PROJECT_DIR}/results/md_manifest.csv"
+
 SSH_SOCKET="/tmp/ssh-sherlock-${SHERLOCK_USER}"
 SSH_OPTS="-o ControlMaster=auto -o ControlPath=${SSH_SOCKET} -o ControlPersist=10800 -o ServerAliveInterval=60"
 
-# ---------------------------------------------------------------------------
-# Parse flags
-# ---------------------------------------------------------------------------
-SKIP_PREP=false
-COLLECT_ONLY=false
 TEST_MODE=false
-QUICK_TEST=false
-
+COLLECT_ONLY=false
 for arg in "$@"; do
-    case $arg in
-        --skip-prep)    SKIP_PREP=true ;;
-        --collect-only) COLLECT_ONLY=true; SKIP_PREP=true ;;
-        --test)         TEST_MODE=true; SKIP_PREP=true ;;
-        --quick-test)   QUICK_TEST=true; SKIP_PREP=true ;;
+    case "$arg" in
+        --test) TEST_MODE=true ;;
+        --collect-only) COLLECT_ONLY=true ;;
         --help|-h)
-            head -18 "$0" | tail -16
+            sed -n '1,40p' "$0"
             exit 0
             ;;
-        *) echo "Unknown flag: $arg"; exit 1 ;;
+        *)
+            echo "Unknown flag: $arg" >&2
+            exit 1
+            ;;
     esac
 done
 
+cd "$PROJECT_DIR"
+
 log() { echo "$(date '+%H:%M:%S') [$1] $2"; }
-pass() { echo "$(date '+%H:%M:%S') [PASS] $1"; }
-fail() { echo "$(date '+%H:%M:%S') [FAIL] $1"; }
+fail() { echo "$(date '+%H:%M:%S') [FAIL] $1" >&2; }
+warn() { echo "$(date '+%H:%M:%S') [WARN] $1"; }
 
-LOCAL_MANIFEST="${PROJECT_DIR}/results/md_manifest.csv"
-LOCAL_QUICK_MANIFEST="${PROJECT_DIR}/results/md_manifest.quick.csv"
-REMOTE_MANIFEST="results/md_manifest.csv"
-REMOTE_QUICK_MANIFEST="results/md_manifest.quick.csv"
+mkdir -p "$STATE_DIR" "$STATE_MANIFEST_DIR" "$STATE_JOB_DIR" "$STATE_MUT_DIR"
 
 # ---------------------------------------------------------------------------
-# --test: Verify SSH, rsync, and remote commands work
+# Helpers
 # ---------------------------------------------------------------------------
-if [ "$TEST_MODE" = true ]; then
+list_mutations() {
+    "$PYTHON_BIN" - "$LOCAL_SOURCE_MANIFEST" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+manifest = Path(sys.argv[1])
+ordered = []
+seen = set()
+
+if manifest.exists():
+    with manifest.open(newline="") as h:
+        for row in csv.DictReader(h):
+            m = str(row.get("mutation", "")).strip()
+            if m and m not in seen:
+                seen.add(m)
+                ordered.append(m)
+else:
+    from src.susceptibility_io import load_dor_susceptibilities
+    from pathlib import Path as _Path
+    df = load_dor_susceptibilities(_Path("data/DRM-susceptibilities.csv.xlsx"), default_chain="A")
+    for m in df["mutation"].astype(str).tolist():
+        m = m.strip()
+        if m and m not in seen:
+            seen.add(m)
+            ordered.append(m)
+
+if "WT" not in seen:
+    ordered = ["WT"] + ordered
+else:
+    ordered = ["WT"] + [m for m in ordered if m != "WT"]
+
+for m in ordered:
+    print(m)
+PY
+}
+
+safe_label() {
+    local mutation="$1"
+    "$PYTHON_BIN" - "$mutation" <<'PY'
+import sys
+from src.utils import sanitize_label
+print(sanitize_label(sys.argv[1]))
+PY
+}
+
+mutation_manifest_path() {
+    local safe="$1"
+    echo "${STATE_MANIFEST_DIR}/${safe}.csv"
+}
+
+extract_mutation_manifest() {
+    local source_manifest="$1"
+    local mutation="$2"
+    local out_manifest="$3"
+    local replicates="$4"
+
+    "$PYTHON_BIN" - "$source_manifest" "$mutation" "$out_manifest" "$replicates" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+src = Path(sys.argv[1])
+mutation = sys.argv[2]
+out = Path(sys.argv[3])
+replicates = int(sys.argv[4])
+
+if not src.exists():
+    raise SystemExit(f"Source manifest missing: {src}")
+
+rows = []
+with src.open(newline="") as h:
+    reader = csv.DictReader(h)
+    fieldnames = reader.fieldnames
+    for row in reader:
+        if str(row.get("mutation", "")).strip() != mutation:
+            continue
+        rep = int(row.get("replicate", "0") or 0)
+        if rep < 1 or rep > replicates:
+            continue
+        rows.append(row)
+
+if not rows:
+    raise SystemExit(f"No rows found for mutation '{mutation}' in {src}")
+
+rows.sort(key=lambda r: int(r["replicate"]))
+for i, row in enumerate(rows):
+    row["task_id"] = str(i)
+
+out.parent.mkdir(parents=True, exist_ok=True)
+with out.open("w", newline="") as h:
+    writer = csv.DictWriter(h, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(rows)
+
+print(f"Wrote {out} ({len(rows)} rows)")
+PY
+}
+
+local_prep_complete() {
+    local safe="$1"
+    local rep
+    for rep in $(seq 1 "$REPLICATES"); do
+        local rep_tag
+        rep_tag=$(printf "%02d" "$rep")
+        local run_dir="${PROJECT_DIR}/results/md_runs/${safe}/rep_${rep_tag}"
+        local min_pdb="${run_dir}/${safe}_minimized_rep${rep_tag}.pdb"
+        local start_pdb="${run_dir}/assets/${safe}_md_rep${rep_tag}_start.pdb"
+        local system_xml="${run_dir}/assets/${safe}_md_rep${rep_tag}_system.xml"
+        if [ ! -f "$min_pdb" ] || [ ! -f "$start_pdb" ] || [ ! -f "$system_xml" ]; then
+            return 1
+        fi
+    done
+    return 0
+}
+
+prepare_mutation_if_needed() {
+    local mutation="$1"
+    local safe="$2"
+    local mut_manifest
+    mut_manifest="$(mutation_manifest_path "$safe")"
+
+    if local_prep_complete "$safe"; then
+        if [ -f "$mut_manifest" ]; then
+            log PREP "${mutation}: local prep already complete."
+            touch "${STATE_MUT_DIR}/${safe}.prep.ok"
+            return 0
+        fi
+        if [ -f "$LOCAL_SOURCE_MANIFEST" ]; then
+            log PREP "${mutation}: prep files exist; generating mutation manifest from results/md_manifest.csv."
+            extract_mutation_manifest "$LOCAL_SOURCE_MANIFEST" "$mutation" "$mut_manifest" "$REPLICATES"
+            touch "${STATE_MUT_DIR}/${safe}.prep.ok"
+            return 0
+        fi
+    fi
+
+    local tmp_manifest="${STATE_DIR}/tmp_${safe}_prep_manifest.csv"
+
+    if [ "$mutation" = "WT" ]; then
+        log PREP "WT prep missing. Running full local prep to materialize WT assets."
+        (cd "$PROJECT_DIR" && "$PYTHON_BIN" -m src.main \
+            --prepare-local-openmm-only \
+            --replicates "$REPLICATES" \
+            --seed "$SEED" \
+            --jitter-angstrom "$JITTER" \
+            --manifest "$tmp_manifest")
+    else
+        log PREP "${mutation}: local prep incomplete. Preparing this mutation now..."
+        (cd "$PROJECT_DIR" && "$PYTHON_BIN" -m src.main \
+            --prepare-local-openmm-only \
+            --mutation "$mutation" \
+            --replicates "$REPLICATES" \
+            --seed "$SEED" \
+            --jitter-angstrom "$JITTER" \
+            --manifest "$tmp_manifest")
+    fi
+
+    if ! local_prep_complete "$safe"; then
+        fail "${mutation}: prep command finished but required assets are still missing."
+        return 1
+    fi
+
+    extract_mutation_manifest "$tmp_manifest" "$mutation" "$mut_manifest" "$REPLICATES"
+    touch "${STATE_MUT_DIR}/${safe}.prep.ok"
+    log PREP "${mutation}: prep complete."
+}
+
+refresh_master_manifest() {
+    "$PYTHON_BIN" - "$STATE_MANIFEST_DIR" "$MASTER_MANIFEST" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+manifest_dir = Path(sys.argv[1])
+out = Path(sys.argv[2])
+files = sorted(manifest_dir.glob("*.csv"))
+
+if not files:
+    # Keep an empty marker file so callers can test existence.
+    out.write_text("")
+    raise SystemExit(0)
+
+rows = []
+fieldnames = None
+for mf in files:
+    with mf.open(newline="") as h:
+        reader = csv.DictReader(h)
+        if fieldnames is None:
+            fieldnames = reader.fieldnames
+        for row in reader:
+            rows.append(row)
+
+rows.sort(key=lambda r: (str(r.get("mutation", "")), int(r.get("replicate", "0") or 0)))
+for i, row in enumerate(rows):
+    row["task_id"] = str(i)
+
+out.parent.mkdir(parents=True, exist_ok=True)
+with out.open("w", newline="") as h:
+    writer = csv.DictWriter(h, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(rows)
+PY
+}
+
+pending_task_ids() {
+    local manifest="$1"
+    "$PYTHON_BIN" - "$manifest" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+manifest = Path(sys.argv[1])
+if not manifest.exists() or manifest.stat().st_size == 0:
+    print("")
+    raise SystemExit(0)
+
+pending = []
+with manifest.open(newline="") as h:
+    for row in csv.DictReader(h):
+        task_id = int(row["task_id"])
+        out = Path(str(row.get("output_json", "")).strip())
+        done = False
+        if out.exists():
+            try:
+                payload = json.loads(out.read_text())
+                done = str(payload.get("status", "")).lower() == "ok"
+            except Exception:
+                done = False
+        if not done:
+            pending.append(str(task_id))
+
+print(",".join(pending))
+PY
+}
+
+completed_task_count() {
+    local manifest="$1"
+    "$PYTHON_BIN" - "$manifest" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+manifest = Path(sys.argv[1])
+if not manifest.exists() or manifest.stat().st_size == 0:
+    print(0)
+    raise SystemExit(0)
+
+count = 0
+with manifest.open(newline="") as h:
+    for row in csv.DictReader(h):
+        out = Path(str(row.get("output_json", "")).strip())
+        if not out.exists():
+            continue
+        try:
+            payload = json.loads(out.read_text())
+            if str(payload.get("status", "")).lower() == "ok":
+                count += 1
+        except Exception:
+            continue
+
+print(count)
+PY
+}
+
+mutation_progress_line() {
+    local mut_manifest="$1"
+    local target_steps
+    target_steps=$("$PYTHON_BIN" - "$MD_PRODUCTION_NS" <<'PY'
+import sys
+ns=float(sys.argv[1])
+steps=max(1,int(round((ns*1_000_000.0)/2.0)))
+print(steps)
+PY
+)
+
+    "$PYTHON_BIN" - "$mut_manifest" "$target_steps" <<'PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+manifest = Path(sys.argv[1])
+target_steps = int(sys.argv[2])
+
+if not manifest.exists() or manifest.stat().st_size == 0:
+    raise SystemExit(0)
+
+rows = []
+mutation_name = None
+with manifest.open(newline="") as h:
+    for row in csv.DictReader(h):
+        rows.append(row)
+        if mutation_name is None:
+            mutation_name = str(row.get("mutation", "")).strip()
+
+if not rows:
+    raise SystemExit(0)
+
+parts = []
+for row in sorted(rows, key=lambda r: int(r.get("replicate", "0") or 0)):
+    safe = str(row.get("safe_label", "")).strip()
+    rep = int(row.get("replicate", "0") or 0)
+    out = Path(str(row.get("output_json", "")).strip())
+
+    if out.exists():
+        try:
+            payload = json.loads(out.read_text())
+            if str(payload.get("status", "")).lower() == "ok":
+                parts.append(f"r{rep}:done")
+                continue
+        except Exception:
+            pass
+
+    state_csv = out.parent / f"{safe}_rep{rep:02d}_md_state.csv"
+    if state_csv.exists() and state_csv.stat().st_size > 0:
+        last_step = None
+        try:
+            with state_csv.open() as h:
+                for line in h:
+                    line = line.strip()
+                    if not line or line.startswith("#") or line.startswith('"Step"'):
+                        continue
+                    try:
+                        last_step = int(float(line.split(",", 1)[0]))
+                    except Exception:
+                        continue
+        except Exception:
+            last_step = None
+
+        if last_step is not None and target_steps > 0:
+            pct = min(100.0, 100.0 * float(last_step) / float(target_steps))
+            parts.append(f"r{rep}:{pct:5.1f}%")
+        else:
+            parts.append(f"r{rep}:started")
+    else:
+        parts.append(f"r{rep}:queued")
+
+print(f"{mutation_name}: " + ", ".join(parts))
+PY
+}
+
+job_file_for_safe() {
+    local safe="$1"
+    echo "${STATE_JOB_DIR}/${safe}.jobid"
+}
+
+job_is_active_remote() {
+    local job_id="$1"
+    local out
+    out=$(ssh $SSH_OPTS "${SHERLOCK_DEST}" "squeue -j ${job_id} -h -o '%T' 2>/dev/null" || true)
+    [ -n "${out}" ]
+}
+
+active_job_id_for_safe() {
+    local safe="$1"
+    local jf
+    jf="$(job_file_for_safe "$safe")"
+    if [ ! -f "$jf" ]; then
+        echo ""
+        return 0
+    fi
+    local job_id
+    job_id=$(tr -d '[:space:]' < "$jf")
+    if [ -z "$job_id" ]; then
+        rm -f "$jf"
+        echo ""
+        return 0
+    fi
+    if job_is_active_remote "$job_id"; then
+        echo "$job_id"
+        return 0
+    fi
+    rm -f "$jf"
+    echo ""
+}
+
+sync_codebase_once() {
+    log SYNC "Syncing codebase to Sherlock (excluding bulky trajectories)..."
+    rsync -avz -e "ssh $SSH_OPTS" \
+        --exclude='.git' --exclude='.venv' --exclude='__pycache__' \
+        --exclude='results/md_runs/**' \
+        --exclude='results/orchestrate_state/**' \
+        --exclude='*_md.dcd' --exclude='*_md_final.pdb' \
+        "${PROJECT_DIR}/" "${SHERLOCK_DEST}:${SHERLOCK_DIR}/"
+    ssh $SSH_OPTS "${SHERLOCK_DEST}" "mkdir -p '${SHERLOCK_DIR}/results/md_runs' '${SHERLOCK_DIR}/results/orchestrate_state/manifests' '${SHERLOCK_DIR}/logs'"
+    log SYNC "Code sync complete."
+}
+
+sync_mutation_to_remote() {
+    local safe="$1"
+    local local_mut_dir="${PROJECT_DIR}/results/md_runs/${safe}"
+    local local_manifest
+    local_manifest="$(mutation_manifest_path "$safe")"
+    local remote_manifest_rel="results/orchestrate_state/manifests/${safe}.csv"
+
+    if [ -d "$local_mut_dir" ]; then
+        rsync -avz -e "ssh $SSH_OPTS" \
+            "${local_mut_dir}/" \
+            "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/md_runs/${safe}/"
+    fi
+
+    rsync -avz -e "ssh $SSH_OPTS" \
+        "$local_manifest" \
+        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/${remote_manifest_rel}"
+}
+
+submit_pending_tasks_for_mutation() {
+    local mutation="$1"
+    local safe="$2"
+    local pending_ids="$3"
+
+    if [ -z "$pending_ids" ]; then
+        return 0
+    fi
+
+    local manifest_rel="results/orchestrate_state/manifests/${safe}.csv"
+
+    sync_mutation_to_remote "$safe"
+
+    local array_spec="$pending_ids"
+    if [ -n "$ARRAY_CONCURRENCY" ] && [ "$ARRAY_CONCURRENCY" != "0" ]; then
+        # Concurrency cap is only valid for range specs; keep comma-list unchanged.
+        if [[ "$array_spec" == *"-"* ]] && [[ "$array_spec" != *","* ]]; then
+            array_spec="${array_spec}%${ARRAY_CONCURRENCY}"
+        fi
+    fi
+
+    log SUBMIT "${mutation}: submitting pending task IDs [${pending_ids}]"
+
+    local job_id
+    job_id=$(ssh $SSH_OPTS "${SHERLOCK_DEST}" bash -s -- \
+        "$SHERLOCK_DIR" "$PROJECT_DIR" "$manifest_rel" "$array_spec" \
+        "$SHERLOCK_PARTITION" "$SHERLOCK_GRES" "$SHERLOCK_TIME" "$SHERLOCK_MEM" "$SHERLOCK_QOS" \
+        "$MD_HEATING_PS" "$MD_PRODUCTION_NS" "$MD_REPORT_INTERVAL" "$OPENMM_PLATFORM" \
+        "$MD_CHECKPOINT_INTERVAL" "$MD_RESUME_FROM_CHECKPOINT" <<'REMOTE'
+set -euo pipefail
+WORK_DIR="$1"
+LOCAL_ROOT="$2"
+MANIFEST_REL="$3"
+ARRAY_SPEC="$4"
+PARTITION="$5"
+GRES="$6"
+TIME_LIMIT="$7"
+MEMORY="$8"
+QOS="$9"
+MD_HEATING_PS="${10}"
+MD_PRODUCTION_NS="${11}"
+MD_REPORT_INTERVAL="${12}"
+OPENMM_PLATFORM="${13}"
+MD_CHECKPOINT_INTERVAL="${14}"
+MD_RESUME_FROM_CHECKPOINT="${15}"
+
+cd "$WORK_DIR"
+source /etc/profile.d/modules.sh 2>/dev/null || true
+ml chemistry py-openmm/8.1.1_py312
+
+python3 scripts/sherlock/rewrite_manifest_paths.py \
+  --manifest "$MANIFEST_REL" \
+  --from-root "$LOCAL_ROOT" \
+  --to-root "$WORK_DIR" >/dev/null
+
+mkdir -p logs
+
+sbatch_args=(--parsable --array="$ARRAY_SPEC" --partition="$PARTITION" --time="$TIME_LIMIT" --mem="$MEMORY")
+if [ -n "$GRES" ]; then
+  sbatch_args+=(--gres="$GRES")
+fi
+if [ -n "$QOS" ]; then
+  sbatch_args+=(--qos="$QOS")
+fi
+
+export MD_HEATING_PS MD_PRODUCTION_NS MD_REPORT_INTERVAL OPENMM_PLATFORM
+export MD_CHECKPOINT_INTERVAL MD_RESUME_FROM_CHECKPOINT
+
+sbatch "${sbatch_args[@]}" --export=ALL,MANIFEST_PATH="$MANIFEST_REL" scripts/sherlock/submit_all_tasks.sh
+REMOTE
+)
+
+    job_id="${job_id%%;*}"
+    if [ -z "$job_id" ]; then
+        fail "${mutation}: sbatch did not return a job ID."
+        return 1
+    fi
+
+    echo "$job_id" > "$(job_file_for_safe "$safe")"
+    log SUBMIT "${mutation}: submitted job ${job_id}"
+}
+
+sync_remote_results_for_known_mutations() {
+    local mf
+    for mf in "$STATE_MANIFEST_DIR"/*.csv; do
+        [ -e "$mf" ] || continue
+        local safe
+        safe="$(basename "$mf" .csv)"
+        rsync -az -e "ssh $SSH_OPTS" \
+            "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/md_runs/${safe}/" \
+            "${PROJECT_DIR}/results/md_runs/${safe}/" 2>/dev/null || true
+    done
+}
+
+rewrite_remote_paths_to_local() {
+    if [ ! -f "$MASTER_MANIFEST" ] || [ ! -s "$MASTER_MANIFEST" ]; then
+        return 0
+    fi
+
+    python3 scripts/sherlock/rewrite_manifest_paths.py \
+        --manifest "$MASTER_MANIFEST" \
+        --from-root "$SHERLOCK_DIR" \
+        --to-root "$PROJECT_DIR" \
+        --rewrite-jsons "${PROJECT_DIR}/results/md_runs" >/dev/null 2>&1 || true
+}
+
+run_incremental_collect_if_needed() {
+    if [ ! -f "$MASTER_MANIFEST" ] || [ ! -s "$MASTER_MANIFEST" ]; then
+        return 0
+    fi
+
+    local done_count
+    done_count=$(completed_task_count "$MASTER_MANIFEST")
+
+    local prev_count=0
+    if [ -f "$STATE_LAST_COLLECT_COUNT" ]; then
+        prev_count=$(tr -d '[:space:]' < "$STATE_LAST_COLLECT_COUNT" || echo 0)
+        prev_count=${prev_count:-0}
+    fi
+
+    if [ "$done_count" -le "$prev_count" ]; then
+        return 0
+    fi
+
+    log COLLECT "Detected ${done_count} completed task(s) (previously ${prev_count}); running incremental analysis..."
+    if (cd "$PROJECT_DIR" && "$PYTHON_BIN" -m src.main \
+        --collect-results \
+        --manifest "$MASTER_MANIFEST" \
+        --metric-frame-stride "$COLLECT_METRIC_FRAME_STRIDE" \
+        --metric-max-frames "$COLLECT_METRIC_MAX_FRAMES" \
+        --mmgbsa-snapshots "$COLLECT_MMGBSA_SNAPSHOTS" \
+        --mmgbsa-discard-fraction "$COLLECT_MMGBSA_DISCARD_FRACTION"); then
+        echo "$done_count" > "$STATE_LAST_COLLECT_COUNT"
+        log COLLECT "Incremental analysis complete."
+    else
+        warn "Incremental collect failed; will retry on next poll."
+    fi
+}
+
+log_progress_snapshot() {
+    local mf
+    for mf in "$STATE_MANIFEST_DIR"/*.csv; do
+        [ -e "$mf" ] || continue
+        local line
+        line=$(mutation_progress_line "$mf" || true)
+        if [ -n "$line" ]; then
+            log PROGRESS "$line"
+        fi
+    done
+}
+
+poll_and_collect_once() {
+    refresh_master_manifest
+
+    local jf
+    for jf in "$STATE_JOB_DIR"/*.jobid; do
+        [ -e "$jf" ] || continue
+        local safe job_id
+        safe="$(basename "$jf" .jobid)"
+        job_id=$(tr -d '[:space:]' < "$jf")
+        if [ -z "$job_id" ]; then
+            rm -f "$jf"
+            continue
+        fi
+
+        local sq
+        sq=$(ssh $SSH_OPTS "${SHERLOCK_DEST}" "squeue -j ${job_id} -h -o '%T' 2>/dev/null" || true)
+        if [ -z "$sq" ]; then
+            log WAIT "${safe}: job ${job_id} no longer in queue (finished or failed)."
+            rm -f "$jf"
+        else
+            local summary
+            summary=$(echo "$sq" | sort | uniq -c | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g')
+            log WAIT "${safe}: ${job_id} ${summary}"
+        fi
+    done
+
+    sync_remote_results_for_known_mutations
+    rewrite_remote_paths_to_local
+    run_incremental_collect_if_needed
+    log_progress_snapshot
+}
+
+all_mutations_complete() {
+    local mutations=("$@")
+    local mutation
+    for mutation in "${mutations[@]}"; do
+        local safe
+        safe="$(safe_label "$mutation")"
+        local manifest
+        manifest="$(mutation_manifest_path "$safe")"
+
+        if [ ! -f "$manifest" ] || [ ! -s "$manifest" ]; then
+            return 1
+        fi
+
+        local pending
+        pending=$(pending_task_ids "$manifest")
+        if [ -n "$pending" ]; then
+            return 1
+        fi
+
+        local active
+        active=$(active_job_id_for_safe "$safe")
+        if [ -n "$active" ]; then
+            return 1
+        fi
+    done
+    return 0
+}
+
+submit_if_needed() {
+    local mutation="$1"
+    local safe="$2"
+    local manifest
+    manifest="$(mutation_manifest_path "$safe")"
+
+    local pending
+    pending=$(pending_task_ids "$manifest")
+    if [ -z "$pending" ]; then
+        log SUBMIT "${mutation}: all replicates already complete."
+        return 0
+    fi
+
+    local active
+    active=$(active_job_id_for_safe "$safe")
+    if [ -n "$active" ]; then
+        log SUBMIT "${mutation}: existing active job ${active}; skipping new submission."
+        return 0
+    fi
+
+    submit_pending_tasks_for_mutation "$mutation" "$safe" "$pending"
+}
+
+run_connectivity_test() {
     echo ""
     echo "=============================="
     echo " Sherlock connectivity test"
     echo "=============================="
     echo ""
-    echo "Target: ${SHERLOCK_DEST}:${SHERLOCK_DIR}"
-    echo ""
 
-    echo "--- Test 1: SSH connection ---"
-    echo "  (You may be prompted for Duo 2FA.)"
-    echo ""
-    if ssh $SSH_OPTS "${SHERLOCK_DEST}" "echo 'SSH OK'; hostname" 2>&1; then
-        pass "SSH connection works"
+    if ssh $SSH_OPTS "${SHERLOCK_DEST}" "echo 'SSH OK'; hostname"; then
+        log PASS "SSH connection works"
     else
         fail "SSH connection failed"
-        echo ""
-        echo "Troubleshooting:"
-        echo "  1. Check VPN is connected (if off-campus)"
-        echo "  2. Test manually: ssh ${SHERLOCK_DEST}"
-        echo "  3. Set up SSH keys: ssh-keygen && ssh-copy-id ${SHERLOCK_DEST}"
-        exit 1
+        return 1
     fi
-    echo ""
 
-    echo "--- Test 2: Scratch directory ---"
-    if ssh $SSH_OPTS "${SHERLOCK_DEST}" "ls -d /scratch/users/${SHERLOCK_USER}" 2>&1; then
-        pass "Scratch directory exists"
-    else
-        fail "Scratch directory not found"
-        echo "  Create it on Sherlock: mkdir -p ${SHERLOCK_DIR}"
-        exit 1
-    fi
-    echo ""
-
-    echo "--- Test 3: rsync transfer ---"
-    TESTFILE=$(mktemp "${PROJECT_DIR}/.rsync_test_XXXXXX")
-    echo "orchestrate test $(date)" > "$TESTFILE"
-    TESTBASE=$(basename "$TESTFILE")
-    if rsync -avz -e "ssh $SSH_OPTS" "$TESTFILE" \
-        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/${TESTBASE}" 2>&1; then
-        pass "rsync to Sherlock works"
-        ssh $SSH_OPTS "${SHERLOCK_DEST}" "rm -f ${SHERLOCK_DIR}/${TESTBASE}" 2>/dev/null
+    if rsync -az -e "ssh $SSH_OPTS" "${PROJECT_DIR}/scripts/orchestrate.sh" "${SHERLOCK_DEST}:${SHERLOCK_DIR}/scripts/orchestrate.sh"; then
+        log PASS "rsync works"
     else
         fail "rsync failed"
-        echo "  Make sure ${SHERLOCK_DIR} exists on Sherlock"
+        return 1
     fi
-    rm -f "$TESTFILE"
-    echo ""
 
-    echo "--- Test 4: Remote OpenMM module ---"
-    if ssh $SSH_OPTS "${SHERLOCK_DEST}" bash -c "'
-        source /etc/profile.d/modules.sh 2>/dev/null || true
-        ml chemistry py-openmm/8.1.1_py312 2>/dev/null
-        python3 -c \"import openmm; print(f\\\"OpenMM {openmm.__version__}\\\")\"
-    '" 2>&1; then
-        pass "Remote OpenMM module works"
-    else
-        fail "Could not load OpenMM module on Sherlock"
-    fi
-    echo ""
-
-    echo "--- Test 5: SLURM access ---"
-    if ssh $SSH_OPTS "${SHERLOCK_DEST}" "squeue -u ${SHERLOCK_USER} --noheader | head -5; echo 'squeue OK'" 2>&1; then
-        pass "SLURM squeue works"
+    if ssh $SSH_OPTS "${SHERLOCK_DEST}" "squeue -u ${SHERLOCK_USER} --noheader | head -5; true"; then
+        log PASS "SLURM query works"
     else
         fail "squeue failed"
+        return 1
     fi
-    echo ""
 
-    echo "--- Test 6: Local manifest ---"
-    MANIFEST="${PROJECT_DIR}/results/md_manifest.csv"
-    if [ -f "$MANIFEST" ]; then
-        N_TASKS=$(tail -n +2 "$MANIFEST" | wc -l | tr -d ' ')
-        pass "Manifest found: ${N_TASKS} tasks (${N_TASKS} array jobs)"
-
-        echo "  Mutations in manifest:"
-        tail -n +2 "$MANIFEST" | cut -d',' -f3 | sort -u | while read -r mut; do
-            echo "    - $mut"
-        done
-    else
-        fail "No manifest at ${MANIFEST}"
-        echo "  Run local preparation first"
-    fi
     echo ""
-
-    echo "=============================="
-    echo " All tests passed!"
-    echo "=============================="
+    echo "All connectivity checks passed."
     echo ""
-    echo "Ready to run:"
-    echo "  ./scripts/orchestrate.sh --skip-prep"
-    echo ""
+}
 
+# ---------------------------------------------------------------------------
+# Entry points
+# ---------------------------------------------------------------------------
+if [ "$TEST_MODE" = true ]; then
+    run_connectivity_test
     exit 0
 fi
 
-# ---------------------------------------------------------------------------
-# Phase 1: Local preparation
-# ---------------------------------------------------------------------------
-if [ "$QUICK_TEST" = true ] && [ "$SKIP_PREP" = true ]; then
-    NEED_QUICK_PREP=0
-    if [ ! -f "$LOCAL_MANIFEST" ]; then
-        NEED_QUICK_PREP=1
-    elif python - <<'PY'
-import csv
-from pathlib import Path
-p=Path("results/md_manifest.csv")
-with p.open(newline="") as h:
-    r=csv.DictReader(h)
-    legacy=any(str(row.get("leg","")).strip().lower()=="solvent" for row in r)
-raise SystemExit(0 if legacy else 1)
-PY
-    then
-        NEED_QUICK_PREP=1
-    elif [ ! -f "${PROJECT_DIR}/results/md_runs/wt/rep_01/assets/wt_md_rep01_start.pdb" ] || \
-         [ ! -f "${PROJECT_DIR}/results/md_runs/Y188L/rep_01/assets/Y188L_md_rep01_start.pdb" ]; then
-        NEED_QUICK_PREP=1
-    fi
+# Start control-master session once to avoid repeated Duo prompts.
+ssh $SSH_OPTS "${SHERLOCK_DEST}" "echo 'SSH session ready on $(hostname)'" >/dev/null
 
-    if [ "$NEED_QUICK_PREP" -eq 1 ]; then
-        log PREP "Quick-test requires fresh local prep (WT + Y188L). Running prep now..."
-        cd "$PROJECT_DIR"
-        python -m src.main \
-            --prepare-local-openmm-only \
-            --mutation Y188L \
-            --replicates "$REPLICATES" \
-            --seed "$SEED" \
-            --jitter-angstrom "$JITTER"
-        log PREP "Quick-test local preparation complete."
-        SKIP_PREP=true
-    fi
-fi
+sync_codebase_once
 
-if [ "$SKIP_PREP" = false ]; then
-    log PREP "Preparing OpenMM assets locally (${REPLICATES} replicates, seed ${SEED})..."
-    cd "$PROJECT_DIR"
-    python -m src.main \
-        --prepare-local-openmm-only \
-        --replicates "$REPLICATES" \
-        --seed "$SEED" \
-        --jitter-angstrom "$JITTER"
-    log PREP "Local preparation complete."
-else
-    log PREP "Skipped (--skip-prep)."
-fi
-
-if [ "$COLLECT_ONLY" = true ]; then
-    log COLLECT "Transferring results from Sherlock..."
-    if [ "$QUICK_TEST" = true ]; then
-        rsync -avz -e "ssh $SSH_OPTS" \
-            --include='*/' \
-            --include='wt/***' \
-            --include='Y188L/***' \
-            --exclude='*' \
-            "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/md_runs/" \
-            "${PROJECT_DIR}/results/md_runs/"
-        rsync -avz -e "ssh $SSH_OPTS" \
-            "${SHERLOCK_DEST}:${SHERLOCK_DIR}/${REMOTE_QUICK_MANIFEST}" \
-            "${PROJECT_DIR}/results/" || true
-    else
-        rsync -avz -e "ssh $SSH_OPTS" \
-            "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/md_runs/" \
-            "${PROJECT_DIR}/results/md_runs/"
-    fi
-
-    # Rewrite Sherlock paths back to local paths in manifest + result JSONs.
-    python3 scripts/sherlock/rewrite_manifest_paths.py \
-        --manifest "$LOCAL_MANIFEST" \
-        --from-root "$SHERLOCK_DIR" --to-root "$PROJECT_DIR" \
-        --rewrite-jsons "${PROJECT_DIR}/results/md_runs" 2>/dev/null || true
-    if [ "$QUICK_TEST" = true ]; then
-        python3 scripts/sherlock/rewrite_manifest_paths.py \
-            --manifest "$LOCAL_QUICK_MANIFEST" \
-            --from-root "$SHERLOCK_DIR" --to-root "$PROJECT_DIR" \
-            --rewrite-jsons "${PROJECT_DIR}/results/md_runs" 2>/dev/null || true
-    fi
-
-    log COLLECT "Running result collection..."
-    cd "$PROJECT_DIR"
-    if [ "$QUICK_TEST" = true ]; then
-        python -m src.main --collect-results --manifest "$LOCAL_QUICK_MANIFEST"
-    else
-        python -m src.main --collect-results
-    fi
-
-    log DONE "Results collected. Check results/ for output files."
-    exit 0
-fi
-
-# ---------------------------------------------------------------------------
-# Phase 2: Transfer to Sherlock
-# ---------------------------------------------------------------------------
-log SYNC "Transferring project to Sherlock..."
-rsync -avz -e "ssh $SSH_OPTS" \
-    --exclude='.venv' --exclude='.git' --exclude='__pycache__' \
-    --exclude='*_md.dcd' --exclude='*_md_final.pdb' \
-    "${PROJECT_DIR}/" "${SHERLOCK_DEST}:${SHERLOCK_DIR}/"
-log SYNC "Transfer complete."
-
-# ---------------------------------------------------------------------------
-# Phase 3: Rewrite manifest + submit SLURM jobs
-# ---------------------------------------------------------------------------
-log SUBMIT "Rewriting manifest paths and submitting jobs on Sherlock..."
-
-if [ "$QUICK_TEST" = true ]; then
-    if [ ! -f "$LOCAL_MANIFEST" ]; then
-        log ERROR "Manifest not found: $LOCAL_MANIFEST"
-        exit 1
-    fi
-    if python - <<'PY'
-import csv
-from pathlib import Path
-p=Path("results/md_manifest.csv")
-with p.open(newline="") as h:
-    r=csv.DictReader(h)
-    legacy=any(str(row.get("leg","")).strip().lower()=="solvent" for row in r)
-raise SystemExit(0 if legacy else 1)
-PY
-    then
-        log ERROR "Detected legacy manifest with solvent-leg rows: $LOCAL_MANIFEST"
-        log ERROR "Please regenerate preparation with current MD workflow before --quick-test."
-        log ERROR "Run: python -m src.main --prepare-local-openmm-only --mutation Y188L --replicates 3 --seed 42"
-        exit 1
-    fi
-    python - <<'PY'
-import csv
-from pathlib import Path
-
-src = Path("results/md_manifest.csv")
-dst = Path("results/md_manifest.quick.csv")
-keep_mut = {"WT", "Y188L"}
-rows = []
-with src.open("r", newline="") as h:
-    reader = csv.DictReader(h)
-    fieldnames = reader.fieldnames
-    for row in reader:
-        if str(row.get("mutation", "")).strip() in keep_mut and int(row.get("replicate", "0")) == 1:
-            rows.append(row)
-if not rows:
-    raise SystemExit("Quick-test selection produced zero tasks.")
-for i, row in enumerate(rows):
-    row["task_id"] = str(i)
-    out = Path(row["output_json"])
-    row["output_json"] = str(out.with_name(out.stem + "_quick.json"))
-with dst.open("w", newline="") as h:
-    writer = csv.DictWriter(h, fieldnames=fieldnames)
-    writer.writeheader()
-    writer.writerows(rows)
-print(f"Wrote quick manifest: {dst} ({len(rows)} tasks)")
-PY
-    N_TASKS=$(tail -n +2 "$LOCAL_QUICK_MANIFEST" | wc -l | tr -d ' ')
-    ARRAY_MAX=$((N_TASKS - 1))
-    log SUBMIT "Quick-test manifest has ${N_TASKS} tasks -> array 0-${ARRAY_MAX}"
-    rsync -avz -e "ssh $SSH_OPTS" \
-        "$LOCAL_QUICK_MANIFEST" \
-        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/"
-else
-    if python - <<'PY'
-import csv
-from pathlib import Path
-p=Path("results/md_manifest.csv")
-with p.open(newline="") as h:
-    r=csv.DictReader(h)
-    legacy=any(str(row.get("leg","")).strip().lower()=="solvent" for row in r)
-raise SystemExit(0 if legacy else 1)
-PY
-    then
-        log ERROR "Detected legacy manifest with solvent-leg rows: $LOCAL_MANIFEST"
-        log ERROR "Please regenerate preparation with current MD workflow."
-        log ERROR "Run: python -m src.main --prepare-local-openmm-only --replicates 3 --seed 42"
-        exit 1
-    fi
-    N_TASKS=$(tail -n +2 "$LOCAL_MANIFEST" | wc -l | tr -d ' ')
-    ARRAY_MAX=$((N_TASKS - 1))
-    log SUBMIT "Manifest has ${N_TASKS} tasks -> ${N_TASKS} array jobs (0-${ARRAY_MAX})"
-fi
-
-REMOTE_QUICK_FLAG=0
-if [ "$QUICK_TEST" = true ]; then
-    log SUBMIT "Quick-test mode enabled: submitting WT + Y188L (replicate 1) only."
-    REMOTE_QUICK_FLAG=1
-fi
-
-JOB_ID=$(ssh $SSH_OPTS "${SHERLOCK_DEST}" bash -s "$SHERLOCK_DIR" "$ARRAY_MAX" "$REMOTE_QUICK_FLAG" <<'REMOTE_SCRIPT'
-set -euo pipefail
-WORK_DIR="$1"
-ARRAY_MAX="$2"
-QUICK_FLAG="$3"
-cd "$WORK_DIR"
-
-source /etc/profile.d/modules.sh 2>/dev/null || true
-ml chemistry py-openmm/8.1.1_py312
-python3 scripts/sherlock/rewrite_manifest_paths.py >&2
-
-MANIFEST_PATH="results/md_manifest.csv"
-if [ "$QUICK_FLAG" = "1" ]; then
-    python3 scripts/sherlock/rewrite_manifest_paths.py --manifest results/md_manifest.quick.csv >&2
-    MANIFEST_PATH="results/md_manifest.quick.csv"
-    ARRAY_MAX=$(($(tail -n +2 "$MANIFEST_PATH" | wc -l | tr -d ' ') - 1))
-fi
-
-sed -i "s/^#SBATCH --array=.*/#SBATCH --array=0-${ARRAY_MAX}/" scripts/sherlock/submit_all_tasks.sh
-
-mkdir -p logs
-
-SUBMIT_OUT=$(sbatch --export=ALL,MANIFEST_PATH="${MANIFEST_PATH}" scripts/sherlock/submit_all_tasks.sh 2>&1)
-echo "$SUBMIT_OUT" | grep -oP '\d+$'
-REMOTE_SCRIPT
-)
-
-if [ -z "$JOB_ID" ]; then
-    log ERROR "Failed to submit SLURM job"
+readarray -t MUTATIONS < <(list_mutations)
+if [ "${#MUTATIONS[@]}" -eq 0 ]; then
+    fail "No mutations discovered from manifest/workbook."
     exit 1
 fi
-log SUBMIT "Submitted SLURM array job: ${JOB_ID} (${N_TASKS} tasks)"
 
-# ---------------------------------------------------------------------------
-# Phase 4: Poll for completion
-# ---------------------------------------------------------------------------
-log WAIT "Polling job status every ${POLL_INTERVAL}s..."
+log INFO "Mutations to process (${#MUTATIONS[@]}): ${MUTATIONS[*]}"
 
+if [ "$COLLECT_ONLY" = true ]; then
+    refresh_master_manifest
+    poll_and_collect_once
+    log DONE "Collect-only pass finished."
+    ssh $SSH_OPTS -O exit "${SHERLOCK_DEST}" 2>/dev/null || true
+    exit 0
+fi
+
+# Pass 1: iterate mutations, prep+submit one-by-one without waiting.
+for mutation in "${MUTATIONS[@]}"; do
+    safe="$(safe_label "$mutation")"
+    prepare_mutation_if_needed "$mutation" "$safe"
+    refresh_master_manifest
+    submit_if_needed "$mutation" "$safe"
+    poll_and_collect_once
+    echo
+    sleep 1
+done
+
+# Pass 2: keep polling; resubmit unfinished mutations as needed.
 while true; do
-    ACTIVE=$(ssh $SSH_OPTS "${SHERLOCK_DEST}" \
-        "squeue -j ${JOB_ID} -h 2>/dev/null | wc -l" || echo "0")
-    ACTIVE=$(echo "$ACTIVE" | tr -d '[:space:]')
+    all_done=true
 
-    if [ "$ACTIVE" -eq 0 ]; then
-        log WAIT "All array tasks finished."
+    for mutation in "${MUTATIONS[@]}"; do
+        safe="$(safe_label "$mutation")"
+        manifest="$(mutation_manifest_path "$safe")"
+
+        if [ ! -f "$manifest" ] || [ ! -s "$manifest" ]; then
+            all_done=false
+            continue
+        fi
+
+        pending="$(pending_task_ids "$manifest")"
+        if [ -n "$pending" ]; then
+            all_done=false
+            submit_if_needed "$mutation" "$safe"
+        fi
+    done
+
+    poll_and_collect_once
+
+    if [ "$all_done" = true ] && all_mutations_complete "${MUTATIONS[@]}"; then
+        log DONE "All mutation/replicate tasks completed."
         break
     fi
 
-    log WAIT "${ACTIVE} task(s) still running/pending..."
     sleep "$POLL_INTERVAL"
 done
 
-log WAIT "Checking job exit statuses..."
-FAILED=$(ssh $SSH_OPTS "${SHERLOCK_DEST}" \
-    "sacct -j ${JOB_ID} --format=JobID,State,ExitCode --noheader -P 2>/dev/null | grep -c 'FAILED'" \
-    || echo "0")
-FAILED=$(echo "$FAILED" | tr -d '[:space:]')
-
-if [ "$FAILED" -gt 0 ]; then
-    log WARN "${FAILED} task(s) FAILED. Continuing with available results."
-    ssh $SSH_OPTS "${SHERLOCK_DEST}" \
-        "sacct -j ${JOB_ID} --format=JobID%-20,State,ExitCode,Elapsed --noheader 2>/dev/null | grep FAILED"
-fi
-
-# ---------------------------------------------------------------------------
-# Phase 5: Transfer results back + collect
-# ---------------------------------------------------------------------------
-log COLLECT "Transferring results from Sherlock..."
-if [ "$QUICK_TEST" = true ]; then
-    rsync -avz -e "ssh $SSH_OPTS" \
-        --include='*/' \
-        --include='wt/***' \
-        --include='Y188L/***' \
-        --exclude='*' \
-        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/md_runs/" \
-        "${PROJECT_DIR}/results/md_runs/"
-    rsync -avz -e "ssh $SSH_OPTS" \
-        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/${REMOTE_QUICK_MANIFEST}" \
-        "${PROJECT_DIR}/results/" || true
-else
-    rsync -avz -e "ssh $SSH_OPTS" \
-        "${SHERLOCK_DEST}:${SHERLOCK_DIR}/results/md_runs/" \
-        "${PROJECT_DIR}/results/md_runs/"
-fi
-
-# Rewrite Sherlock paths back to local paths in manifest + result JSONs.
-python3 scripts/sherlock/rewrite_manifest_paths.py \
-    --manifest "$LOCAL_MANIFEST" \
-    --from-root "$SHERLOCK_DIR" --to-root "$PROJECT_DIR" \
-    --rewrite-jsons "${PROJECT_DIR}/results/md_runs" 2>/dev/null || true
-if [ "$QUICK_TEST" = true ]; then
-    python3 scripts/sherlock/rewrite_manifest_paths.py \
-        --manifest "$LOCAL_QUICK_MANIFEST" \
-        --from-root "$SHERLOCK_DIR" --to-root "$PROJECT_DIR" \
-        --rewrite-jsons "${PROJECT_DIR}/results/md_runs" 2>/dev/null || true
-fi
-
-log COLLECT "Running result collection and analysis..."
-cd "$PROJECT_DIR"
-if [ "$QUICK_TEST" = true ]; then
-    python -m src.main --collect-results --manifest "$LOCAL_QUICK_MANIFEST"
-else
-    python -m src.main --collect-results
-fi
+# Final collect to ensure all plots/tables are up-to-date.
+refresh_master_manifest
+run_incremental_collect_if_needed
 
 ssh $SSH_OPTS -O exit "${SHERLOCK_DEST}" 2>/dev/null || true
-
 log DONE "Pipeline complete. Results in ${PROJECT_DIR}/results/"
