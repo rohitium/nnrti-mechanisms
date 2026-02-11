@@ -32,6 +32,7 @@ for SYSTEM_XML in $SYSTEMS; do
     PARENT=$(dirname "$DIR")
     MUTATION=$(basename "$(dirname "$PARENT")")
     REP=$(basename "$PARENT" | sed 's/rep_//')
+    REP_INT=$((10#$REP))
 
     RESULT_JSON="$PARENT/${MUTATION}_rep${REP}.json"
 
@@ -45,7 +46,7 @@ for SYSTEM_XML in $SYSTEMS; do
     echo "→ Submitting $MUTATION rep $REP"
 
     # Submit SLURM job
-    sbatch <<EOF
+    sbatch <<SBATCH_EOF
 #!/bin/bash
 #SBATCH --job-name=md_${MUTATION}_${REP}
 #SBATCH --partition=gpu
@@ -54,17 +55,20 @@ for SYSTEM_XML in $SYSTEMS; do
 #SBATCH --mem=16G
 #SBATCH --output=logs/md_${MUTATION}_rep${REP}_%j.log
 
-module load chemistry
-module load py-openmm/8.1.1_py312
+module load chemistry py-openmm/8.1.1_py312
 
-cd $PROJECT_ROOT
+cd ${PROJECT_ROOT}
 
-python3 -m src.cluster.md_worker \
-  --system-xml "$SYSTEM_XML" \
-  --output-dir "$PARENT" \
-  --mutation "$MUTATION" \
-  --replicate "$REP"
-EOF
+python3 scripts/sherlock/run_md_job.py \
+    --mutation "${MUTATION}" \
+    --replicate ${REP_INT} \
+    --task-id ${SUBMITTED} \
+    --system-xml "${SYSTEM_XML}" \
+    --topology-pdb "${DIR}/${MUTATION}_md_rep${REP}_start.pdb" \
+    --minimized-pdb "${PARENT}/${MUTATION}_minimized_rep${REP}.pdb" \
+    --output-json "${RESULT_JSON}" \
+    --resume
+SBATCH_EOF
 
     SUBMITTED=$((SUBMITTED + 1))
     sleep 1  # Rate limit submissions

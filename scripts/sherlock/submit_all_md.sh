@@ -22,6 +22,7 @@ for SYSTEM_XML in $(find results/md_runs -name "*_system.xml" | sort); do
     PARENT=$(dirname "$DIR")
     MUTATION=$(basename "$(dirname "$PARENT")")
     REP=$(basename "$PARENT" | sed 's/rep_//')
+    REP_INT=$((10#$REP))
 
     RESULT_JSON="$PARENT/${MUTATION}_rep${REP}.json"
 
@@ -35,7 +36,7 @@ for SYSTEM_XML in $(find results/md_runs -name "*_system.xml" | sort); do
     echo "→ Submitting $MUTATION rep $REP"
 
     # Submit SLURM job
-    sbatch --parsable <<EOF
+    sbatch --parsable <<SBATCH_EOF
 #!/bin/bash
 #SBATCH --job-name=md_${MUTATION}_${REP}
 #SBATCH --partition=gpu
@@ -48,42 +49,16 @@ module load chemistry py-openmm/8.1.1_py312
 
 cd ${PROJECT_ROOT}
 
-python3 -c "
-import sys
-from pathlib import Path
-sys.path.insert(0, '${PROJECT_ROOT}')
-
-from src.cluster.manifest import MDTask
-from src.cluster.md_worker import run_md_task
-
-task = MDTask(
-    task_id=${SUBMITTED},
-    structure='${MUTATION}',
-    mutation='${MUTATION//_/+}',
-    safe_label='${MUTATION}',
-    replicate=int('${REP}'),
-    minimized_pdb='${PARENT}/${MUTATION}_minimized_rep${REP}.pdb',
-    ligand_sdf='data/ligands/dor.sdf',
-    ligand_resname='2KW',
-    fold_reduction=None,
-    output_json='${RESULT_JSON}',
-    prepared_system_xml='${SYSTEM_XML}',
-    prepared_topology_pdb='${DIR}/${MUTATION}_md_rep${REP}_start.pdb',
-)
-
-result = run_md_task(
-    task=task,
-    heating_ps=25.0,
-    production_ns=2.0,
-    report_interval=2000,
-    checkpoint_interval=5000,
-    resume_from_checkpoint=True,
-    force=False,
-)
-
-print(f'MD completed with status: {result.get(\"status\")}')
-"
-EOF
+python3 scripts/sherlock/run_md_job.py \
+    --mutation "${MUTATION}" \
+    --replicate ${REP_INT} \
+    --task-id ${SUBMITTED} \
+    --system-xml "${SYSTEM_XML}" \
+    --topology-pdb "${DIR}/${MUTATION}_md_rep${REP}_start.pdb" \
+    --minimized-pdb "${PARENT}/${MUTATION}_minimized_rep${REP}.pdb" \
+    --output-json "${RESULT_JSON}" \
+    --resume
+SBATCH_EOF
 
     SUBMITTED=$((SUBMITTED + 1))
     sleep 0.5  # Rate limit
