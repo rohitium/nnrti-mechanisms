@@ -9,10 +9,12 @@ set -e
 echo "Submitting MD jobs only (skipping prep)..."
 echo ""
 
-# Just target the run_md rule - Snakemake will find all incomplete MD jobs
-snakemake run_md \
+# Target collect_and_analyze - it depends on all MD jobs completing
+# Snakemake will submit only the missing MD jobs
+snakemake collect_and_analyze \
   --profile workflow/profiles/sherlock \
-  --rerun-incomplete
+  --rerun-incomplete \
+  --until run_md
 
 echo ""
 echo "All MD jobs submitted. Monitor with:"
