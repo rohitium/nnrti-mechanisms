@@ -11,19 +11,21 @@ from src.cluster.md_worker import run_md_task
 # Test system: K103N_P225H rep 02
 task = MDTask(
     task_id=1,
+    structure="K103N_P225H",
     mutation="K103N+P225H",
     safe_label="K103N_P225H",
     replicate=2,
-    system_xml=Path("results/md_runs/K103N_P225H/rep_02/assets/K103N_P225H_md_rep02_system.xml"),
-    topology_pdb=Path("results/md_runs/K103N_P225H/rep_02/assets/K103N_P225H_md_rep02_start.pdb"),
-    output_json=Path("results/md_runs/K103N_P225H/rep_02/K103N_P225H_rep02.json"),
-    ligand_sdf=Path("data/ligands/dor.sdf"),
+    minimized_pdb="results/md_runs/K103N_P225H/rep_02/K103N_P225H_minimized_rep02.pdb",
+    ligand_sdf="data/ligands/dor.sdf",
     ligand_resname="2KW",
     fold_reduction=None,
+    output_json="results/md_runs/K103N_P225H/rep_02/K103N_P225H_rep02.json",
+    prepared_system_xml="results/md_runs/K103N_P225H/rep_02/assets/K103N_P225H_md_rep02_system.xml",
+    prepared_topology_pdb="results/md_runs/K103N_P225H/rep_02/assets/K103N_P225H_md_rep02_start.pdb",
 )
 
 print(f"Running MD for {task.mutation} replicate {task.replicate}")
-print(f"System XML: {task.system_xml}")
+print(f"System XML: {task.prepared_system_xml}")
 print(f"Output JSON: {task.output_json}")
 print()
 
