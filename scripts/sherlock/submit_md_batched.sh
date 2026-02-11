@@ -53,7 +53,9 @@ fi
 
 # Function to count current jobs in queue
 count_my_jobs() {
-    squeue -u $USER -h -t PD,R -n md_* 2>/dev/null | wc -l | tr -d ' '
+    # Count jobs with md_* prefix in name
+    local count=$(squeue -u $USER -h -t PD,R 2>/dev/null | grep -c "md_" || echo "0")
+    echo "$count"
 }
 
 # Function to submit a single job
@@ -93,7 +95,7 @@ task = MDTask(
     structure='${MUTATION}',
     mutation='${MUTATION//_/+}',
     safe_label='${MUTATION}',
-    replicate=${REP},
+    replicate=int('${REP}'),
     minimized_pdb='${PARENT}/${MUTATION}_minimized_rep${REP}.pdb',
     ligand_sdf='data/ligands/dor.sdf',
     ligand_resname='2KW',
@@ -121,19 +123,10 @@ EOF
 # Main submission loop
 SUBMITTED=0
 BATCH_NUM=1
+JOBS_IN_BATCH=0
 
 for SYSTEM_INFO in "${SYSTEMS_TO_RUN[@]}"; do
     IFS=':' read -r MUTATION REP PARENT SYSTEM_XML DIR <<< "$SYSTEM_INFO"
-
-    # Wait until we have room in the queue
-    while true; do
-        CURRENT_JOBS=$(count_my_jobs)
-        if [ $CURRENT_JOBS -lt $MAX_CONCURRENT ]; then
-            break
-        fi
-        echo "[$(date '+%H:%M:%S')] Queue full ($CURRENT_JOBS/$MAX_CONCURRENT jobs). Waiting ${POLL_INTERVAL}s..."
-        sleep $POLL_INTERVAL
-    done
 
     # Submit the job
     echo "→ Submitting $MUTATION rep $REP"
@@ -141,18 +134,42 @@ for SYSTEM_INFO in "${SYSTEMS_TO_RUN[@]}"; do
     echo "  Job ID: $JOBID"
 
     SUBMITTED=$((SUBMITTED + 1))
-
-    # Print batch summary when batch is complete
-    if [ $((SUBMITTED % BATCH_SIZE)) -eq 0 ]; then
-        echo ""
-        echo "✓ Batch $BATCH_NUM complete ($SUBMITTED/$TOTAL submitted)"
-        echo "  Current queue: $(count_my_jobs) jobs"
-        echo ""
-        BATCH_NUM=$((BATCH_NUM + 1))
-        sleep 2  # Brief pause between batches
-    fi
+    JOBS_IN_BATCH=$((JOBS_IN_BATCH + 1))
 
     sleep 0.5  # Rate limit submissions
+
+    # When we've submitted a full batch, pause and wait
+    if [ $JOBS_IN_BATCH -ge $BATCH_SIZE ]; then
+        echo ""
+        echo "✓ Batch $BATCH_NUM complete ($SUBMITTED/$TOTAL submitted)"
+
+        # Wait for squeue to catch up
+        sleep 5
+
+        CURRENT_JOBS=$(count_my_jobs)
+        echo "  Current queue: $CURRENT_JOBS jobs"
+
+        # Reset batch counter
+        JOBS_IN_BATCH=0
+        BATCH_NUM=$((BATCH_NUM + 1))
+
+        # If we have more to submit, wait until queue drains below threshold
+        if [ $SUBMITTED -lt $TOTAL ]; then
+            echo ""
+            echo "Waiting for queue to drop below $MAX_CONCURRENT before next batch..."
+
+            while true; do
+                CURRENT_JOBS=$(count_my_jobs)
+                if [ $CURRENT_JOBS -lt $MAX_CONCURRENT ]; then
+                    echo "  Queue at $CURRENT_JOBS jobs - proceeding with next batch"
+                    echo ""
+                    break
+                fi
+                echo "[$(date '+%H:%M:%S')] Queue at $CURRENT_JOBS/$MAX_CONCURRENT jobs. Checking again in ${POLL_INTERVAL}s..."
+                sleep $POLL_INTERVAL
+            done
+        fi
+    fi
 done
 
 echo ""
