@@ -6,17 +6,17 @@ from pathlib import Path
 
 import pandas as pd
 
-from .cluster import run_result_collection
-from .config import dor_4ncg_spec
-from .dor_md_pipeline import prepare_local_openmm_only_for_cluster
-from .openmm.md_protocol import MDProtocolConfig
-from .plotting import (
+from .analysis.result_collector import run_result_collection
+from .analysis.plotting import (
     cleanup_legacy_plots,
     plot_all_metrics_vs_fold_reduction,
     plot_boundness_qc,
     plot_si_figure_s1_like,
     plot_simulation_convergence,
 )
+from .md.openmm.md_protocol import MDProtocolConfig
+from .structure_prep.config import dor_4ncg_spec
+from .structure_prep.preparation import prepare_local_openmm_only_for_cluster
 from .utils import ensure_dirs, project_paths
 
 
@@ -94,7 +94,7 @@ def main(argv: list[str] | None = None) -> None:
 
         cleanup_legacy_plots(paths)
         spec = dor_4ncg_spec(root)
-        _, _, ddg_df = run_result_collection(
+        _, ddg_df = run_result_collection(
             manifest_path=manifest,
             md_results_dir=run_results_dir,
             output_dir=paths.results,
@@ -105,7 +105,6 @@ def main(argv: list[str] | None = None) -> None:
             mmgbsa_snapshots=max(5, args.mmgbsa_snapshots),
             mmgbsa_discard_fraction=max(0.0, min(0.9, args.mmgbsa_discard_fraction)),
         )
-        logging.info("Wrote %s", paths.results / "ddg_summary.csv")
         logging.info("Wrote %s", paths.results / "correlation_analysis.csv")
 
         try:
@@ -129,7 +128,8 @@ def main(argv: list[str] | None = None) -> None:
             com_data = pd.read_csv(com_path) if com_path.exists() else pd.DataFrame()
             if not rmsd_data.empty or not com_data.empty:
                 plot_simulation_convergence(rmsd_data, com_data, paths)
-                logging.info("Wrote %s", paths.plots / "simulation_convergence.png")
+                logging.info("Wrote %s", paths.plots / "rmsd_convergence.png")
+                logging.info("Wrote %s", paths.plots / "com_distance_convergence.png")
         except Exception as exc:
             logging.warning("Could not generate selected plots: %s", exc)
         return

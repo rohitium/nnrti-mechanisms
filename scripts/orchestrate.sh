@@ -128,7 +128,7 @@ if manifest.exists():
                 seen.add(m)
                 ordered.append(m)
 else:
-    from src.susceptibility_io import load_dor_susceptibilities
+    from src.analysis.susceptibility import load_dor_susceptibilities
     from pathlib import Path as _Path
     df = load_dor_susceptibilities(_Path("data/DRM-susceptibilities.csv.xlsx"), default_chain="A")
     for m in df["mutation"].astype(str).tolist():
@@ -568,7 +568,7 @@ cd "$WORK_DIR"
 source /etc/profile.d/modules.sh 2>/dev/null || true
 ml chemistry py-openmm/8.1.1_py312
 
-python3 scripts/sherlock/rewrite_manifest_paths.py \
+python3 -m src.md.sherlock.rewrite_manifest_paths \
   --manifest "$MANIFEST_REL" \
   --from-root "$LOCAL_ROOT" \
   --to-root "$WORK_DIR" >/dev/null
@@ -617,7 +617,7 @@ rewrite_remote_paths_to_local() {
         return 0
     fi
 
-    python3 scripts/sherlock/rewrite_manifest_paths.py \
+    python3 -m src.md.sherlock.rewrite_manifest_paths \
         --manifest "$MASTER_MANIFEST" \
         --from-root "$SHERLOCK_DIR" \
         --to-root "$PROJECT_DIR" \

@@ -5,8 +5,8 @@ from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-from src.cluster.manifest import MDTask
-from src.cluster.md_worker import run_md_task
+from src.md.manifest import MDTask
+from src.md.worker import run_md_task
 
 safe_label = snakemake.wildcards.safe_label  # noqa: F821
 rep = int(snakemake.wildcards.rep)  # noqa: F821

@@ -219,5 +219,7 @@ __marimo__/
 *.dcd
 *.pdb
 *.xml
-
+*.chk
+logs/
 manuscript/
+.checkpoints/

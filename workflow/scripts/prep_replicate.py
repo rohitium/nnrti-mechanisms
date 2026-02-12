@@ -5,11 +5,11 @@ from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-from src.config import dor_4ncg_spec
-from src.openmm.md_protocol import MDProtocolConfig, prepare_md_assets
-from src.openmm.minimizer import minimize_system
-from src.openmm.require import require_module
-from src.openmm.structure import minimize_with_restraints
+from src.structure_prep.config import dor_4ncg_spec
+from src.md.openmm.md_protocol import MDProtocolConfig, prepare_md_assets
+from src.md.openmm.minimizer import minimize_system
+from src.md.openmm.require import require_module
+from src.md.openmm.structure import minimize_with_restraints
 
 app = require_module("openmm.app")
 

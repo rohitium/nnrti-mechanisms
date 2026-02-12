@@ -71,44 +71,33 @@ All parameters are in `workflow/config.yaml`. Key settings:
 - OpenMM checkpoint files (`.chk`) enable mid-simulation resume
 - Re-running `snakemake` after a failure picks up where it left off
 
-## Direct CLI usage (without Snakemake)
+## Direct analysis usage (without Snakemake)
 
-The `src.main` CLI is still available for development and debugging:
-
-### Local prep only
+For analysis from existing trajectories in `results/md_runs/`:
 
 ```bash
-python -m src.main \
-  --prepare-local-openmm-only \
-  --replicates 3 \
-  --seed 42 \
-  --mutation Y188L
-```
+# end-to-end analysis (checkpointed)
+./scripts/run_analysis.sh
 
-### Collect and analyze
-
-```bash
-python -m src.main \
-  --collect-results \
-  --manifest results/md_manifest.csv \
-  --mmgbsa-snapshots 100 \
-  --mmgbsa-discard-fraction 0.25
+# or run individual steps
+python -m src.analysis.cli.analyze_incremental --step collect
+python -m src.analysis.cli.compute_mmgbsa_safe --snapshots 100 --discard-fraction 0.25
+python -m src.analysis.cli.analyze_incremental --step metrics
+python -m src.analysis.cli.analyze_incremental --step plots
 ```
 
 ## Main analysis outputs
 
 - `results/mmgbsa_replicate_metrics.csv`
 - `results/ddg_full.csv`
-- `results/ddg_summary.csv`
-- `results/table1_like_energy_components.csv`
 - `results/structural_metrics.csv`
 - `results/rmsd_ca_profiles.csv`
-- `results/rmsd_convergence_summary.csv`
+- `results/com_distance_profiles.csv`
 - `results/boundness_qc.csv`
 - `results/correlation_analysis.csv`
 - `results/plots/all_metrics_vs_fold_reduction.png`
-- `results/plots/fig_s1_like_mutation_landscape.png`
-- `results/plots/simulation_convergence.png`
+- `results/plots/rmsd_convergence.png`
+- `results/plots/com_distance_convergence.png`
 - `results/plots/boundness_qc_min_distance.png`
 
 ## Notes
@@ -116,4 +105,3 @@ python -m src.main \
 - The workflow uses `results/md_runs/` for per-mutation/replicate outputs.
 - Local prep runs on CPU (`OPENMM_PLATFORM=CPU`) unless overridden.
 - Structural metrics require MDAnalysis in the analysis environment.
-- The legacy `scripts/orchestrate.sh` is deprecated; use Snakemake instead.

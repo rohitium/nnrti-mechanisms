@@ -8,9 +8,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logging.getLogger("MDAnalysis").setLevel(logging.WARNING)
 logging.getLogger("MDAnalysis.analysis").setLevel(logging.WARNING)
 
-from src.cluster.manifest import MDTask, save_manifest
-from src.cluster.result_collector import run_result_collection
-from src.susceptibility_io import load_dor_susceptibilities
+from src.md.manifest import MDTask, save_manifest
+from src.analysis.result_collector import run_result_collection
+from src.analysis.susceptibility import load_dor_susceptibilities
 
 root = Path(".").resolve()
 

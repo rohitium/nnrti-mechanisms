@@ -2,11 +2,11 @@
 
 from pathlib import Path
 
-from src.config import dor_4ncg_spec
-from src.mutation.mutagenesis import apply_mutations
-from src.mutation.steps import build_mutation_steps
-from src.numbering import detect_numbering_scheme
-from src.susceptibility_io import load_dor_susceptibilities
+from src.structure_prep.config import dor_4ncg_spec
+from src.structure_prep.mutation.mutagenesis import apply_mutations
+from src.structure_prep.mutation.numbering import detect_numbering_scheme
+from src.structure_prep.mutation.steps import build_mutation_steps
+from src.analysis.susceptibility import load_dor_susceptibilities
 from src.utils import load_chain_subunits, load_residue_mappings
 
 root = Path(".").resolve()

@@ -82,7 +82,7 @@ module load chemistry py-openmm/8.1.1_py312
 
 cd ${PROJECT_ROOT}
 
-python3 scripts/sherlock/run_md_job.py \
+python3 -m src.md.sherlock.run_md_job \
     --mutation "${MUTATION}" \
     --replicate ${REP_INT} \
     --task-id ${TASK_ID} \

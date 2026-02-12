@@ -35,7 +35,7 @@ if [ "${OPENMM_PLATFORM}" = "CUDA" ] || [ -z "${OPENMM_PLATFORM}" ]; then
   fi
 fi
 
-python3 -m src.cluster.md_worker \
+python3 -m src.md.worker \
   --manifest "${MANIFEST_PATH}" \
   --task-id ${SLURM_ARRAY_TASK_ID} \
   --heating-ps "${HEATING_PS}" \

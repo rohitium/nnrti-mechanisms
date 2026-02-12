@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.susceptibility_io import load_dor_susceptibilities
+from src.analysis.susceptibility import load_dor_susceptibilities
 from src.utils.mutations import deterministic_seed, sanitize_label
 
 # ---------------------------------------------------------------------------
@@ -61,11 +61,11 @@ wildcard_constraints:
 # ---------------------------------------------------------------------------
 rule all:
     input:
-        "results/ddg_summary.csv",
+        "results/ddg_full.csv",
         "results/plots/all_metrics_vs_fold_reduction.png",
         "results/plots/boundness_qc_min_distance.png",
-        "results/plots/fig_s1_like_mutation_landscape.png",
-        "results/plots/simulation_convergence.png",
+        "results/plots/rmsd_convergence.png",
+        "results/plots/com_distance_convergence.png",
 
 
 # ---------------------------------------------------------------------------
@@ -173,7 +173,6 @@ rule collect_and_analyze:
         xlsx=config["susceptibility_xlsx"],
         ligand_sdf=config["ligand_sdf"],
     output:
-        ddg_summary="results/ddg_summary.csv",
         ddg_full="results/ddg_full.csv",
         correlation="results/correlation_analysis.csv",
         mmgbsa="results/mmgbsa_replicate_metrics.csv",
@@ -181,7 +180,6 @@ rule collect_and_analyze:
         boundness="results/boundness_qc.csv",
         rmsd_profiles="results/rmsd_ca_profiles.csv",
         com_profiles="results/com_distance_profiles.csv",
-        table1="results/table1_like_energy_components.csv",
     params:
         mmgbsa_snapshots=config["analysis"]["mmgbsa_snapshots"],
         mmgbsa_discard_fraction=config["analysis"]["mmgbsa_discard_fraction"],
@@ -210,8 +208,8 @@ rule generate_plots:
     output:
         "results/plots/all_metrics_vs_fold_reduction.png",
         "results/plots/boundness_qc_min_distance.png",
-        "results/plots/fig_s1_like_mutation_landscape.png",
-        "results/plots/simulation_convergence.png",
+        "results/plots/rmsd_convergence.png",
+        "results/plots/com_distance_convergence.png",
     resources:
         mem_mb=4000,
         runtime=10,

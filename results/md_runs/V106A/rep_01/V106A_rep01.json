@@ -1,0 +1,22 @@
+{
+  "task_id": 3,
+  "structure": "DOR",
+  "mutation": "V106A",
+  "safe_label": "V106A",
+  "replicate": 1,
+  "fold_reduction": 18.0,
+  "ligand_resname": "2KW",
+  "ligand_sdf": "/scratch/users/rsatija/nnrti-mechanisms/data/ligands/dor.sdf",
+  "minimized_pdb": "/scratch/users/rsatija/nnrti-mechanisms/results/md_runs/V106A/rep_01/V106A_minimized_rep01.pdb",
+  "prepared_topology_pdb": "/scratch/users/rsatija/nnrti-mechanisms/results/md_runs/V106A/rep_01/assets/V106A_md_rep01_start.pdb",
+  "prepared_system_xml": "/scratch/users/rsatija/nnrti-mechanisms/results/md_runs/V106A/rep_01/assets/V106A_md_rep01_system.xml",
+  "analysis_dcd": "/scratch/users/rsatija/nnrti-mechanisms/results/md_runs/V106A/rep_01/V106A_rep01_analysis.dcd",
+  "analysis_topology_pdb": "/scratch/users/rsatija/nnrti-mechanisms/results/md_runs/V106A/rep_01/V106A_rep01_analysis_topology.pdb",
+  "state_csv": "/scratch/users/rsatija/nnrti-mechanisms/results/md_runs/V106A/rep_01/V106A_rep01_md_state.csv",
+  "final_pdb": "/scratch/users/rsatija/nnrti-mechanisms/results/md_runs/V106A/rep_01/V106A_rep01_md_final.pdb",
+  "md_heating_steps": 12500,
+  "md_production_steps": 500000,
+  "md_total_steps": 512500,
+  "elapsed_seconds": 5337.771739847027,
+  "status": "ok"
+}
