@@ -13,9 +13,11 @@
 #   bash scripts/sherlock/test_extension_resume.sh [mutation] [rep]
 #
 # Optional env vars:
-#   TARGET_NS            (optional override; if unset, uses current_ns + 0.01)
-#   KEEP_SMOKE_DIR       (default: 0; set to 1 to keep temp outputs)
-#   OPENMM_PLATFORM      (optional; CUDA/CPU/OpenCL)
+#   TARGET_NS                     (optional override; if unset, uses current_ns + 0.01)
+#   BOOTSTRAP_NS                  (default: 0.02, only used when no source checkpoint exists)
+#   BOOTSTRAP_CHECKPOINT_INTERVAL (default: 1000 steps, only used in bootstrap run)
+#   KEEP_SMOKE_DIR                (default: 0; set to 1 to keep temp outputs)
+#   OPENMM_PLATFORM               (optional; CUDA/CPU/OpenCL)
 #
 
 set -euo pipefail
@@ -25,6 +27,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 TARGET_NS="${TARGET_NS:-}"
+BOOTSTRAP_NS="${BOOTSTRAP_NS:-0.02}"
+BOOTSTRAP_CHECKPOINT_INTERVAL="${BOOTSTRAP_CHECKPOINT_INTERVAL:-1000}"
 KEEP_SMOKE_DIR="${KEEP_SMOKE_DIR:-0}"
 MUTATION="${1:-}"
 REP="${2:-}"
@@ -42,11 +46,10 @@ pick_candidate() {
   local best_score=-1
   local j
   for j in $(find results/md_runs -name '*_rep*.json' | sort); do
-    local d base chk steps status score
+    local d base chk steps status score has_chk
     d=$(dirname "$j")
     base=$(basename "$j" .json)
     chk="$d/${base}_md.chk"
-    [ -f "$chk" ] || continue
 
     # Keep only canonical replicate JSON names (e.g., wt_rep01.json)
     if [[ ! "$base" =~ _rep[0-9][0-9]$ ]]; then
@@ -56,10 +59,15 @@ pick_candidate() {
     steps=$(jq -r '.md_production_steps_completed // .md_production_steps // 0' "$j" 2>/dev/null || echo "0")
     status=$(jq -r '.status // ""' "$j" 2>/dev/null || echo "")
 
-    # Score candidates: prefer status=ok; then prefer larger completed step counts.
+    # Score candidates: prefer status=ok; then existing checkpoint; then larger step counts.
     score=0
     if [ "$status" = "ok" ]; then
       score=$((score + 1000000000))
+    fi
+    has_chk=0
+    if [ -f "$chk" ]; then
+      has_chk=1
+      score=$((score + 100000000))
     fi
     if [ "${steps}" -gt 0 ] 2>/dev/null; then
       score=$((score + steps))
@@ -80,7 +88,7 @@ else
 fi
 
 if [ -z "$CANDIDATE_JSON" ] || [ ! -f "$CANDIDATE_JSON" ]; then
-  echo "ERROR: Could not find a completed JSON + checkpoint candidate." >&2
+  echo "ERROR: Could not find a suitable replicate JSON candidate." >&2
   echo "Debug: json count=$(find results/md_runs -name '*_rep*.json' | wc -l | tr -d ' '), chk count=$(find results/md_runs -name '*_md.chk' | wc -l | tr -d ' ')" >&2
   echo "Tip: pass explicit args: bash $0 <mutation> <rep>" >&2
   exit 1
@@ -98,7 +106,7 @@ TOPOLOGY_PDB="${ASSETS_DIR}/${MUTATION}_md_rep${REP}_start.pdb"
 MINIMIZED_PDB="${REP_DIR}/${MUTATION}_minimized_rep${REP}.pdb"
 SOURCE_CHK="${REP_DIR}/${MUTATION}_rep${REP}_md.chk"
 
-for f in "$SYSTEM_XML" "$TOPOLOGY_PDB" "$MINIMIZED_PDB" "$SOURCE_CHK"; do
+for f in "$SYSTEM_XML" "$TOPOLOGY_PDB" "$MINIMIZED_PDB"; do
   if [ ! -f "$f" ]; then
     echo "ERROR: Missing required file: $f" >&2
     exit 1
@@ -106,11 +114,38 @@ for f in "$SYSTEM_XML" "$TOPOLOGY_PDB" "$MINIMIZED_PDB" "$SOURCE_CHK"; do
 done
 
 SMOKE_DIR="$(mktemp -d "/tmp/nnrti_ext_smoke_${MUTATION}_rep${REP}_XXXXXX")"
+BOOTSTRAP_JSON="${SMOKE_DIR}/${MUTATION}_rep${REP}_bootstrap.json"
 OUTPUT_JSON="${SMOKE_DIR}/${MUTATION}_rep${REP}_smoketest.json"
 TEST_CHK="${SMOKE_DIR}/${MUTATION}_rep${REP}_md.chk"
-cp "$SOURCE_CHK" "$TEST_CHK"
+CURRENT_STEPS=0
+RESUME_SOURCE="bootstrap"
 
-CURRENT_STEPS="$(jq -r '.md_production_steps_completed // .md_production_steps // 0' "$CANDIDATE_JSON" 2>/dev/null || echo "0")"
+if [ -f "$SOURCE_CHK" ]; then
+  cp "$SOURCE_CHK" "$TEST_CHK"
+  CURRENT_STEPS="$(jq -r '.md_production_steps_completed // .md_production_steps // 0' "$CANDIDATE_JSON" 2>/dev/null || echo "0")"
+  RESUME_SOURCE="existing"
+else
+  echo "No source checkpoint found for candidate; bootstrapping a short run to create one..."
+  python3 -m src.md.sherlock.run_md_job \
+    --mutation "$MUTATION" \
+    --replicate "$REP_INT" \
+    --task-id 999998 \
+    --system-xml "$SYSTEM_XML" \
+    --topology-pdb "$TOPOLOGY_PDB" \
+    --minimized-pdb "$MINIMIZED_PDB" \
+    --output-json "$BOOTSTRAP_JSON" \
+    --production-ns "$BOOTSTRAP_NS" \
+    --checkpoint-interval "$BOOTSTRAP_CHECKPOINT_INTERVAL" \
+    --no-resume \
+    --force
+
+  if [ ! -f "$TEST_CHK" ]; then
+    echo "ERROR: Bootstrap run did not create checkpoint: $TEST_CHK" >&2
+    exit 1
+  fi
+  CURRENT_STEPS="$(jq -r '.md_production_steps_completed // .md_production_steps // 0' "$BOOTSTRAP_JSON" 2>/dev/null || echo "0")"
+fi
+
 if ! [[ "$CURRENT_STEPS" =~ ^[0-9]+$ ]]; then
   CURRENT_STEPS=0
 fi
@@ -138,6 +173,7 @@ echo "=========================================="
 echo "Candidate JSON: $CANDIDATE_JSON"
 echo "Mutation:       $MUTATION"
 echo "Replicate:      $REP"
+echo "Resume source:  $RESUME_SOURCE checkpoint"
 echo "Current steps:  $CURRENT_STEPS"
 echo "Target ns:      $TARGET_NS_EFFECTIVE"
 echo "Target steps:   $TARGET_STEPS"

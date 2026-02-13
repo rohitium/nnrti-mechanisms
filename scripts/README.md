@@ -35,8 +35,8 @@ Pipeline steps executed by `run_analysis.sh`:
 
 ## Sync helpers
 
-- `scripts/rsync_results.sh`: rsync full `results/fep_runs/` and `logs/` from Sherlock with retries.
-- `scripts/rsync_json_results.sh`: rsync only JSON files from `results/fep_runs/`.
+- `scripts/rsync_results.sh`: rsync full `results/md_runs/` plus `results/md_manifest.csv` between local and Sherlock. Default is `push`; use `pull` to download.
+- `scripts/rsync_json_results.sh`: rsync only JSON files under `results/md_runs/` (plus `results/md_manifest.csv`). Default is `push`; use `pull` to download.
 
 Both require `SHERLOCK_USER`.
 
