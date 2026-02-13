@@ -12,6 +12,7 @@ chmod +x scripts/sherlock/submit_md_batched.sh
 ```
 
 This submits MD jobs in batches and waits for queue pressure to drop before submitting the next batch.
+Current defaults in `submit_md_batched.sh` are set for extension runs (10 ns target, force rerun enabled, skip tasks already at target, 12h walltime).
 
 For extension reruns (e.g., 2 ns to 10 ns) without Snakemake:
 
@@ -41,7 +42,7 @@ Pipeline steps executed by `run_analysis.sh`:
 
 ## Sync helpers
 
-- `scripts/rsync_results.sh`: rsync full `results/md_runs/` plus `results/md_manifest.csv` between local and Sherlock. Default is `push`; use `pull` to download.
+- `scripts/rsync_results.sh`: rsync full `results/md_runs/` plus `results/md_manifest.csv` between local and Sherlock. Default is `push`; use `pull` to download. With `COMPLETE_ONLY=1` and `pull`, it transfers only replicate directories that reached the target production steps.
 - `scripts/rsync_json_results.sh`: rsync only JSON files under `results/md_runs/` (plus `results/md_manifest.csv`). Default is `push`; use `pull` to download.
 
 Both require `SHERLOCK_USER`.
@@ -53,6 +54,7 @@ Both require `SHERLOCK_USER`.
 - `scripts/sherlock/submit_all_md.sh`: similar direct submit loop for all prepared systems.
 - `scripts/sherlock/submit_all_tasks.sh`: SLURM array script that runs one manifest task via `src.md.worker`.
 - `scripts/sherlock/submit_serial_tasks.sh`: submit selected manifest task IDs one-by-one, waiting for each to finish.
+- `scripts/sherlock/report_md_progress.py`: summarize completion vs target steps, running tasks, and latest-log segfaults.
 - `scripts/sherlock/test_one_job.sh`: short interactive sanity test on one prepared system.
 - `scripts/sherlock/test_extension_resume.sh`: smoke-test checkpoint resume extension (e.g., 2.0 -> 2.01 ns) on one prepared system.
 - `scripts/sherlock/run_md_only.sh`: Snakemake path for submitting only MD rules.

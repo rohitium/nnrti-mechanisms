@@ -38,6 +38,7 @@ MD_CHECKPOINT_INTERVAL="${MD_CHECKPOINT_INTERVAL:-5000}"
 MD_RESUME_FROM_CHECKPOINT="${MD_RESUME_FROM_CHECKPOINT:-1}"
 MD_FORCE_RERUN="${MD_FORCE_RERUN:-1}"
 SKIP_IF_AT_TARGET="${SKIP_IF_AT_TARGET:-1}"
+SKIP_IF_RUNNING="${SKIP_IF_RUNNING:-1}"
 
 if ! command -v jq >/dev/null 2>&1; then
     echo "ERROR: jq is required for JSON status checks." >&2
@@ -71,7 +72,17 @@ SYSTEMS_TO_RUN=()
 SKIPPED_DONE=0
 SKIPPED_AT_TARGET=0
 SKIPPED_MISSING=0
+SKIPPED_RUNNING=0
 TOTAL_PREPARED=0
+
+declare -A ACTIVE_JOB_NAMES=()
+if [ "$SKIP_IF_RUNNING" = "1" ]; then
+    while IFS= read -r job_name; do
+        if [[ "$job_name" == md_* ]]; then
+            ACTIVE_JOB_NAMES["$job_name"]=1
+        fi
+    done < <(squeue -u "$USER" -h -t PD,R -o "%j" 2>/dev/null || true)
+fi
 
 while IFS= read -r -d '' SYSTEM_XML; do
     TOTAL_PREPARED=$((TOTAL_PREPARED + 1))
@@ -84,6 +95,7 @@ while IFS= read -r -d '' SYSTEM_XML; do
     RESULT_JSON="$PARENT/${MUTATION}_rep${REP}.json"
     TOPOLOGY_PDB="${DIR}/${MUTATION}_md_rep${REP}_start.pdb"
     MINIMIZED_PDB="${PARENT}/${MUTATION}_minimized_rep${REP}.pdb"
+    JOB_NAME="md_${MUTATION}_${REP}"
 
     if [ ! -f "$TOPOLOGY_PDB" ] || [ ! -f "$MINIMIZED_PDB" ]; then
         echo "⚠ Skip $MUTATION rep $REP (missing topology/minimized input)"
@@ -113,6 +125,11 @@ while IFS= read -r -d '' SYSTEM_XML; do
         fi
     fi
 
+    if [ "$SKIP_IF_RUNNING" = "1" ] && [ -n "${ACTIVE_JOB_NAMES[$JOB_NAME]+x}" ]; then
+        SKIPPED_RUNNING=$((SKIPPED_RUNNING + 1))
+        continue
+    fi
+
     SYSTEMS_TO_RUN+=("${MUTATION}:${REP}:${PARENT}:${SYSTEM_XML}:${DIR}:${REP_INT}:${RESULT_JSON}")
 done < <(find results/md_runs -name "*_system.xml" -print0 | sort -z)
 
@@ -121,6 +138,7 @@ echo "Prepared systems:      $TOTAL_PREPARED"
 echo "Will submit:           $TOTAL"
 echo "Skipped done:          $SKIPPED_DONE"
 echo "Skipped at target:     $SKIPPED_AT_TARGET"
+echo "Skipped running:       $SKIPPED_RUNNING"
 echo "Skipped missing input: $SKIPPED_MISSING"
 echo "Found $TOTAL systems to run"
 echo ""
