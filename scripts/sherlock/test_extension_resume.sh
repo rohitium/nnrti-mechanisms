@@ -13,7 +13,7 @@
 #   bash scripts/sherlock/test_extension_resume.sh [mutation] [rep]
 #
 # Optional env vars:
-#   TARGET_NS            (default: 2.01)
+#   TARGET_NS            (optional override; if unset, uses current_ns + 0.01)
 #   KEEP_SMOKE_DIR       (default: 0; set to 1 to keep temp outputs)
 #   OPENMM_PLATFORM      (optional; CUDA/CPU/OpenCL)
 #
@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
-TARGET_NS="${TARGET_NS:-2.01}"
+TARGET_NS="${TARGET_NS:-}"
 KEEP_SMOKE_DIR="${KEEP_SMOKE_DIR:-0}"
 MUTATION="${1:-}"
 REP="${2:-}"
@@ -39,20 +39,35 @@ module load chemistry py-openmm/8.1.1_py312
 
 pick_candidate() {
   local chosen=""
+  local best_score=-1
   local j
-  for j in $(find results/md_runs -name '*_rep[0-9][0-9].json' | sort); do
-    local d base chk steps status
+  for j in $(find results/md_runs -name '*_rep*.json' | sort); do
+    local d base chk steps status score
     d=$(dirname "$j")
     base=$(basename "$j" .json)
     chk="$d/${base}_md.chk"
     [ -f "$chk" ] || continue
-    steps=$(jq -r '.md_production_steps // 0' "$j" 2>/dev/null || echo "0")
+
+    # Keep only canonical replicate JSON names (e.g., wt_rep01.json)
+    if [[ ! "$base" =~ _rep[0-9][0-9]$ ]]; then
+      continue
+    fi
+
+    steps=$(jq -r '.md_production_steps_completed // .md_production_steps // 0' "$j" 2>/dev/null || echo "0")
     status=$(jq -r '.status // ""' "$j" 2>/dev/null || echo "")
-    [ "$status" = "ok" ] || continue
-    # Prefer a full 2 ns source checkpoint (1,000,000 steps at 2 fs).
-    if [ "${steps}" -ge 1000000 ]; then
+
+    # Score candidates: prefer status=ok; then prefer larger completed step counts.
+    score=0
+    if [ "$status" = "ok" ]; then
+      score=$((score + 1000000000))
+    fi
+    if [ "${steps}" -gt 0 ] 2>/dev/null; then
+      score=$((score + steps))
+    fi
+
+    if [ "$score" -gt "$best_score" ]; then
+      best_score="$score"
       chosen="$j"
-      break
     fi
   done
   echo "$chosen"
@@ -66,6 +81,7 @@ fi
 
 if [ -z "$CANDIDATE_JSON" ] || [ ! -f "$CANDIDATE_JSON" ]; then
   echo "ERROR: Could not find a completed JSON + checkpoint candidate." >&2
+  echo "Debug: json count=$(find results/md_runs -name '*_rep*.json' | wc -l | tr -d ' '), chk count=$(find results/md_runs -name '*_md.chk' | wc -l | tr -d ' ')" >&2
   echo "Tip: pass explicit args: bash $0 <mutation> <rep>" >&2
   exit 1
 fi
@@ -94,9 +110,25 @@ OUTPUT_JSON="${SMOKE_DIR}/${MUTATION}_rep${REP}_smoketest.json"
 TEST_CHK="${SMOKE_DIR}/${MUTATION}_rep${REP}_md.chk"
 cp "$SOURCE_CHK" "$TEST_CHK"
 
-TARGET_STEPS="$(python3 - <<PY
+CURRENT_STEPS="$(jq -r '.md_production_steps_completed // .md_production_steps // 0' "$CANDIDATE_JSON" 2>/dev/null || echo "0")"
+if ! [[ "$CURRENT_STEPS" =~ ^[0-9]+$ ]]; then
+  CURRENT_STEPS=0
+fi
+
+if [ -n "$TARGET_NS" ]; then
+  TARGET_STEPS="$(python3 - <<PY
 ns = float("${TARGET_NS}")
 print(max(1, int(round((ns * 1_000_000.0) / 2.0))))
+PY
+)"
+else
+  # Default smoke increment = +0.01 ns = +5000 steps at 2 fs.
+  TARGET_STEPS=$((CURRENT_STEPS + 5000))
+fi
+
+TARGET_NS_EFFECTIVE="$(python3 - <<PY
+steps = int("${TARGET_STEPS}")
+print(f"{(steps * 2.0) / 1_000_000.0:.6f}")
 PY
 )"
 
@@ -106,7 +138,8 @@ echo "=========================================="
 echo "Candidate JSON: $CANDIDATE_JSON"
 echo "Mutation:       $MUTATION"
 echo "Replicate:      $REP"
-echo "Target ns:      $TARGET_NS"
+echo "Current steps:  $CURRENT_STEPS"
+echo "Target ns:      $TARGET_NS_EFFECTIVE"
 echo "Target steps:   $TARGET_STEPS"
 echo "Smoke dir:      $SMOKE_DIR"
 echo ""
@@ -119,7 +152,7 @@ python3 -m src.md.sherlock.run_md_job \
   --topology-pdb "$TOPOLOGY_PDB" \
   --minimized-pdb "$MINIMIZED_PDB" \
   --output-json "$OUTPUT_JSON" \
-  --production-ns "$TARGET_NS" \
+  --production-ns "$TARGET_NS_EFFECTIVE" \
   --resume \
   --force
 
