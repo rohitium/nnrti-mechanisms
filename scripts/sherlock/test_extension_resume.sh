@@ -41,6 +41,19 @@ fi
 source /etc/profile.d/modules.sh 2>/dev/null || true
 module load chemistry py-openmm/8.1.1_py312
 
+# This smoke test must run on a GPU node (e.g., inside sh_dev/salloc).
+if ! command -v nvidia-smi >/dev/null 2>&1; then
+  echo "ERROR: nvidia-smi not found. Run this inside a Sherlock GPU allocation (sh_dev/salloc)." >&2
+  exit 1
+fi
+if ! nvidia-smi -L >/dev/null 2>&1; then
+  echo "ERROR: GPU not visible. Run this inside a Sherlock GPU allocation (sh_dev/salloc)." >&2
+  exit 1
+fi
+
+# Checkpoints are platform-specific; default to CUDA for resume validation.
+export OPENMM_PLATFORM="${OPENMM_PLATFORM:-CUDA}"
+
 pick_candidate() {
   local chosen=""
   local best_score=-1
