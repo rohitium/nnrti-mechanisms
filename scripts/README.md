@@ -13,6 +13,12 @@ chmod +x scripts/sherlock/submit_md_batched.sh
 
 This submits MD jobs in batches and waits for queue pressure to drop before submitting the next batch.
 
+For extension reruns (e.g., 2 ns to 10 ns) without Snakemake:
+
+```bash
+MD_PRODUCTION_NS=10.0 MD_FORCE_RERUN=1 SHERLOCK_TIME=12:00:00 ./scripts/sherlock/submit_md_batched.sh 6 12
+```
+
 ## Analysis from existing trajectories
 
 Run the local checkpointed analysis pipeline:
