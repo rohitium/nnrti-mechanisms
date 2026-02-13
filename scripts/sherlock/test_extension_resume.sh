@@ -1,0 +1,164 @@
+#!/bin/bash
+#
+# Smoke test for checkpoint-based trajectory extension on Sherlock.
+#
+# This validates the exact path we need for 2 ns -> 10 ns:
+# - existing run with checkpoint
+# - force rerun with a slightly higher production target
+# - confirm resume happened and target steps were reached
+#
+# Usage:
+#   # Run inside an sh_dev allocation/session
+#   # Optional args: [mutation] [rep]
+#   bash scripts/sherlock/test_extension_resume.sh [mutation] [rep]
+#
+# Optional env vars:
+#   TARGET_NS            (default: 2.01)
+#   KEEP_SMOKE_DIR       (default: 0; set to 1 to keep temp outputs)
+#   OPENMM_PLATFORM      (optional; CUDA/CPU/OpenCL)
+#
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$PROJECT_ROOT"
+
+TARGET_NS="${TARGET_NS:-2.01}"
+KEEP_SMOKE_DIR="${KEEP_SMOKE_DIR:-0}"
+MUTATION="${1:-}"
+REP="${2:-}"
+
+if ! command -v jq >/dev/null 2>&1; then
+  echo "ERROR: jq is required for this smoke test." >&2
+  exit 1
+fi
+
+source /etc/profile.d/modules.sh 2>/dev/null || true
+module load chemistry py-openmm/8.1.1_py312
+
+pick_candidate() {
+  local chosen=""
+  local j
+  for j in $(find results/md_runs -name '*_rep[0-9][0-9].json' | sort); do
+    local d base chk steps status
+    d=$(dirname "$j")
+    base=$(basename "$j" .json)
+    chk="$d/${base}_md.chk"
+    [ -f "$chk" ] || continue
+    steps=$(jq -r '.md_production_steps // 0' "$j" 2>/dev/null || echo "0")
+    status=$(jq -r '.status // ""' "$j" 2>/dev/null || echo "")
+    [ "$status" = "ok" ] || continue
+    # Prefer a full 2 ns source checkpoint (1,000,000 steps at 2 fs).
+    if [ "${steps}" -ge 1000000 ]; then
+      chosen="$j"
+      break
+    fi
+  done
+  echo "$chosen"
+}
+
+if [ -n "$MUTATION" ] && [ -n "$REP" ]; then
+  CANDIDATE_JSON="results/md_runs/${MUTATION}/rep_${REP}/${MUTATION}_rep${REP}.json"
+else
+  CANDIDATE_JSON="$(pick_candidate)"
+fi
+
+if [ -z "$CANDIDATE_JSON" ] || [ ! -f "$CANDIDATE_JSON" ]; then
+  echo "ERROR: Could not find a completed JSON + checkpoint candidate." >&2
+  echo "Tip: pass explicit args: bash $0 <mutation> <rep>" >&2
+  exit 1
+fi
+
+REP_DIR="$(dirname "$CANDIDATE_JSON")"
+MUTATION="$(basename "$(dirname "$REP_DIR")")"
+REP_DIR_BASENAME="$(basename "$REP_DIR")"
+REP="${REP_DIR_BASENAME#rep_}"
+REP_INT=$((10#$REP))
+
+ASSETS_DIR="${REP_DIR}/assets"
+SYSTEM_XML="${ASSETS_DIR}/${MUTATION}_md_rep${REP}_system.xml"
+TOPOLOGY_PDB="${ASSETS_DIR}/${MUTATION}_md_rep${REP}_start.pdb"
+MINIMIZED_PDB="${REP_DIR}/${MUTATION}_minimized_rep${REP}.pdb"
+SOURCE_CHK="${REP_DIR}/${MUTATION}_rep${REP}_md.chk"
+
+for f in "$SYSTEM_XML" "$TOPOLOGY_PDB" "$MINIMIZED_PDB" "$SOURCE_CHK"; do
+  if [ ! -f "$f" ]; then
+    echo "ERROR: Missing required file: $f" >&2
+    exit 1
+  fi
+done
+
+SMOKE_DIR="$(mktemp -d "/tmp/nnrti_ext_smoke_${MUTATION}_rep${REP}_XXXXXX")"
+OUTPUT_JSON="${SMOKE_DIR}/${MUTATION}_rep${REP}_smoketest.json"
+TEST_CHK="${SMOKE_DIR}/${MUTATION}_rep${REP}_md.chk"
+cp "$SOURCE_CHK" "$TEST_CHK"
+
+TARGET_STEPS="$(python3 - <<PY
+ns = float("${TARGET_NS}")
+print(max(1, int(round((ns * 1_000_000.0) / 2.0))))
+PY
+)"
+
+echo "=========================================="
+echo "Checkpoint Extension Smoke Test"
+echo "=========================================="
+echo "Candidate JSON: $CANDIDATE_JSON"
+echo "Mutation:       $MUTATION"
+echo "Replicate:      $REP"
+echo "Target ns:      $TARGET_NS"
+echo "Target steps:   $TARGET_STEPS"
+echo "Smoke dir:      $SMOKE_DIR"
+echo ""
+
+python3 -m src.md.sherlock.run_md_job \
+  --mutation "$MUTATION" \
+  --replicate "$REP_INT" \
+  --task-id 999999 \
+  --system-xml "$SYSTEM_XML" \
+  --topology-pdb "$TOPOLOGY_PDB" \
+  --minimized-pdb "$MINIMIZED_PDB" \
+  --output-json "$OUTPUT_JSON" \
+  --production-ns "$TARGET_NS" \
+  --resume \
+  --force
+
+if [ ! -f "$OUTPUT_JSON" ]; then
+  echo "ERROR: Smoke test output JSON not created." >&2
+  exit 1
+fi
+
+STATUS="$(jq -r '.status // ""' "$OUTPUT_JSON")"
+RESUMED="$(jq -r '.resumed_from_checkpoint // false' "$OUTPUT_JSON")"
+COMPLETED_STEPS="$(jq -r '.md_production_steps_completed // .md_production_steps // 0' "$OUTPUT_JSON")"
+
+echo ""
+echo "Result summary:"
+echo "  status:                  $STATUS"
+echo "  resumed_from_checkpoint: $RESUMED"
+echo "  production_steps_done:   $COMPLETED_STEPS"
+
+if [ "$STATUS" != "ok" ]; then
+  echo "ERROR: Smoke test status is not ok." >&2
+  exit 1
+fi
+
+if [ "$RESUMED" != "true" ]; then
+  echo "ERROR: Run did not resume from checkpoint." >&2
+  exit 1
+fi
+
+if [ "$COMPLETED_STEPS" -lt "$TARGET_STEPS" ]; then
+  echo "ERROR: Completed steps ($COMPLETED_STEPS) < target steps ($TARGET_STEPS)." >&2
+  exit 1
+fi
+
+echo ""
+echo "PASS: checkpoint extension path is working."
+
+if [ "$KEEP_SMOKE_DIR" = "1" ]; then
+  echo "Preserving smoke outputs: $SMOKE_DIR"
+else
+  rm -rf "$SMOKE_DIR"
+  echo "Cleaned smoke outputs."
+fi

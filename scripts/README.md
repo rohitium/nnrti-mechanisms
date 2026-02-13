@@ -48,6 +48,7 @@ Both require `SHERLOCK_USER`.
 - `scripts/sherlock/submit_all_tasks.sh`: SLURM array script that runs one manifest task via `src.md.worker`.
 - `scripts/sherlock/submit_serial_tasks.sh`: submit selected manifest task IDs one-by-one, waiting for each to finish.
 - `scripts/sherlock/test_one_job.sh`: short interactive sanity test on one prepared system.
+- `scripts/sherlock/test_extension_resume.sh`: smoke-test checkpoint resume extension (e.g., 2.0 -> 2.01 ns) on one prepared system.
 - `scripts/sherlock/run_md_only.sh`: Snakemake path for submitting only MD rules.
 
 ## Deprecated orchestration
