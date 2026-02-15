@@ -93,7 +93,10 @@ class _StrippedDCDReporter:
         else:
             mode = "wb"
         self._handle = open(file_path, mode)
-        dt = timestep_ps * interval * unit.picoseconds
+        # DCDFile expects per-integration-step dt when "interval" is provided.
+        # Passing dt*interval here (while also passing interval) inflates stored
+        # frame spacing metadata by another factor of "interval".
+        dt = timestep_ps * unit.picoseconds
         try:
             self._dcd = app.DCDFile(
                 self._handle,
@@ -105,8 +108,10 @@ class _StrippedDCDReporter:
             )
         except TypeError:
             # Compatibility fallback for OpenMM builds that do not expose
-            # firstStep/interval/append kwargs on DCDFile.
-            self._dcd = app.DCDFile(self._handle, stripped_topology, dt)
+            # firstStep/interval/append kwargs on DCDFile. In that case, pass
+            # frame-to-frame dt directly because interval metadata cannot be set.
+            dt_frame = timestep_ps * interval * unit.picoseconds
+            self._dcd = app.DCDFile(self._handle, stripped_topology, dt_frame)
 
     def describeNextReport(self, simulation):
         steps_done = simulation.currentStep

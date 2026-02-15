@@ -49,12 +49,6 @@ def main() -> int:
     rep = rep.sort_values(["_sort_key", "mutation", "replicate"]).reset_index(drop=True)
     rep = rep.drop(columns=["_sort_key"])
     mut_order = sorted(rep["mutation"].unique(), key=_mutation_sort_key)
-    snapshots = rep.get("mmgbsa_snapshots", pd.Series([np.nan] * len(rep))).dropna().unique()
-    snapshots_note = ""
-    if len(snapshots) == 1:
-        snapshots_note = f" (n={int(snapshots[0])} snapshots)"
-    elif len(snapshots) > 1:
-        snapshots_note = f" (n snapshots: {', '.join(str(int(x)) for x in sorted(snapshots))})"
 
     # Aggregate replicate-level component means to mutation-level means ± SEM over replicates.
     agg = {"n_reps": ("replicate", "count")}
@@ -114,7 +108,7 @@ def main() -> int:
 
     axes[-1].set_xticks(x, labels=[str(m) for m in by_mut["mutation"]], rotation=45, ha="right", fontsize=8)
     axes[-1].set_xlabel("Mutation", fontsize=10)
-    fig.suptitle(f"Binding Energy Components{snapshots_note}", fontsize=13, fontweight="bold", y=0.995)
+    fig.suptitle("Binding Energy Components", fontsize=13, fontweight="bold", y=0.995)
     plt.tight_layout()
     fig.savefig(out_dir / "mmgbsa_components_by_mutation.png", dpi=300, bbox_inches="tight")
     plt.close(fig)

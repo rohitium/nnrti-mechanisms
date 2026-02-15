@@ -132,7 +132,13 @@ def _sidechain_atoms(residue):
 
 
 def _interp_mean_trace(df: pd.DataFrame, x_col: str = "time_ns", y_col: str = "distance_angstrom", n_grid: int = 200):
-    grid = np.linspace(0.0, 2.0, n_grid)
+    if df.empty:
+        return None, None
+    xmin = float(pd.to_numeric(df[x_col], errors="coerce").min())
+    xmax = float(pd.to_numeric(df[x_col], errors="coerce").max())
+    if not np.isfinite(xmin) or not np.isfinite(xmax) or xmax <= xmin:
+        return None, None
+    grid = np.linspace(xmin, xmax, n_grid)
     ys = []
     for _rep, grp in df.groupby("replicate"):
         g = grp.sort_values(x_col)
@@ -163,6 +169,32 @@ def _metric_specs(comps: list[dict[str, object]]) -> list[tuple[str, str]]:
         ("c2_to_dor", f"{c2} to DOR"),
         ("c1_to_c2", f"{c1} to {c2}"),
     ]
+
+
+def _infer_total_ns_from_output_json(output_json_path: Path) -> float | None:
+    state_csv = None
+    m = re.match(r"^(.+)_rep(\d{2})\.json$", output_json_path.name)
+    if m:
+        safe = m.group(1)
+        rep = int(m.group(2))
+        state_csv = output_json_path.parent / f"{safe}_rep{rep:02d}_md_state.csv"
+    if state_csv is None or not state_csv.exists():
+        return None
+    try:
+        sdf = pd.read_csv(state_csv)
+    except Exception:
+        return None
+    step_col = None
+    for c in ('#"Step"', "Step"):
+        if c in sdf.columns:
+            step_col = c
+            break
+    if step_col is None or sdf.empty:
+        return None
+    steps = pd.to_numeric(sdf[step_col], errors="coerce").dropna()
+    if steps.empty:
+        return None
+    return float(steps.max()) * 2.0 / 1_000_000.0
 
 
 def _collect_system_rows(
@@ -212,8 +244,11 @@ def _collect_system_rows(
                 continue
 
         max_frame = max(1, len(u.trajectory) - 1)
+        total_ns = _infer_total_ns_from_output_json(Path(str(row["output_json"])))
+        if total_ns is None or not np.isfinite(total_ns) or total_ns <= 0:
+            total_ns = 2.0
         for ts in u.trajectory[:: max(1, frame_stride)]:
-            t_ns = (float(ts.frame) / float(max_frame)) * 2.0
+            t_ns = (float(ts.frame) / float(max_frame)) * float(total_ns)
             d1 = float(distance_array(sc1.positions, dor.positions, box=u.dimensions).min())
             out.append(
                 {
@@ -362,7 +397,9 @@ def main() -> int:
             else:
                 ax.set_title(panel_title.replace("ligand", "DOR"), fontsize=9)
 
-            ax.set_xlim(0.0, 2.0)
+            xmax = float(pd.to_numeric(sub["time_ns"], errors="coerce").max())
+            if np.isfinite(xmax) and xmax > 0:
+                ax.set_xlim(0.0, xmax)
             ax.set_xlabel("Time (ns)")
             ax.set_ylabel("Min distance (Å)")
             ax.grid(alpha=0.25, linestyle=":")

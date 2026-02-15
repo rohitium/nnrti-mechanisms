@@ -370,16 +370,59 @@ def plot_simulation_convergence(
     ncols = min(len(muts), max_cols)
     nrows = int((len(muts) + max_cols - 1) // max_cols)
 
+    def _infer_total_ns_from_state_csv(safe_label: str, replicate: int) -> float | None:
+        import pandas as pd
+
+        state_csv = (
+            paths.results
+            / "md_runs"
+            / str(safe_label)
+            / f"rep_{int(replicate):02d}"
+            / f"{safe_label}_rep{int(replicate):02d}_md_state.csv"
+        )
+        if not state_csv.exists():
+            return None
+        try:
+            sdf = pd.read_csv(state_csv)
+        except Exception:
+            return None
+        step_col = None
+        for c in ('#"Step"', "Step"):
+            if c in sdf.columns:
+                step_col = c
+                break
+        if step_col is None or sdf.empty:
+            return None
+        max_step = pd.to_numeric(sdf[step_col], errors="coerce").dropna()
+        if max_step.empty:
+            return None
+        return float(max_step.max()) * 2.0 / 1_000_000.0
+
     def _prep_x_fixed(df):
         import numpy as np
+        import pandas as pd
 
         df = df.copy()
-        if "mutation" in df.columns and "replicate" in df.columns:
-            max_frames = df.groupby(["mutation", "replicate"])["frame_index"].transform("max")
-            df["x"] = (df["frame_index"] / max_frames) * 2.0
-        else:
-            max_frame = df["frame_index"].max()
-            df["x"] = (df["frame_index"] / max_frame) * 2.0
+        if not {"safe_label", "replicate", "frame_index"}.issubset(df.columns):
+            df["x"] = pd.to_numeric(df.get("time_ps", np.nan), errors="coerce") / 1000.0
+            return df, "Time (ns)"
+
+        parts = []
+        for (safe_label, rep), sub in df.groupby(["safe_label", "replicate"], dropna=False):
+            sub = sub.copy()
+            max_frame = float(pd.to_numeric(sub["frame_index"], errors="coerce").max())
+            total_ns = _infer_total_ns_from_state_csv(str(safe_label), int(rep))
+            if total_ns is not None and np.isfinite(total_ns) and total_ns > 0 and max_frame > 0:
+                sub["x"] = (pd.to_numeric(sub["frame_index"], errors="coerce") / max_frame) * total_ns
+            else:
+                t_ns = pd.to_numeric(sub.get("time_ps", np.nan), errors="coerce") / 1000.0
+                # Legacy DCD metadata bug can inflate times by ~1000x.
+                finite_max = float(np.nanmax(t_ns)) if np.isfinite(np.nanmax(t_ns)) else np.nan
+                if np.isfinite(finite_max) and finite_max > 200.0:
+                    t_ns = t_ns / 1000.0
+                sub["x"] = t_ns
+            parts.append(sub)
+        df = pd.concat(parts, ignore_index=True) if parts else df
         return df, "Time (ns)"
 
     def _interp_mean_trace(sub: pd.DataFrame, y_col: str, n_grid: int = 200):

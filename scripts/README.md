@@ -36,9 +36,36 @@ Force recomputation:
 
 Pipeline steps executed by `run_analysis.sh`:
 1. metadata collection
-2. MM/GBSA (`src.analysis.cli.compute_mmgbsa_safe`)
-3. structural metrics
-4. plot generation
+2. structural metrics
+3. plot generation from available checkpoints
+4. MM/GBSA (`src.analysis.cli.compute_mmgbsa_safe`, expensive step)
+5. final plot regeneration (includes MM/GBSA/ddG outputs)
+
+MM/GBSA tuning variables:
+
+```bash
+MMGBSA_SNAPSHOTS=100
+MMGBSA_DISCARD_FRACTION=0.25
+MMGBSA_WORKERS=8
+```
+
+Notes:
+- `MMGBSA_SNAPSHOTS=100` is the default protocol.
+- `sample_window_ns=1.0` is used internally to select snapshots from the last 1 ns.
+- The discard fraction is only a fallback when timing metadata is unavailable.
+
+## DCD timing metadata note (important)
+
+Older stripped analysis DCDs can report inflated `dt` (for example `~50000 ps/frame`).
+This came from interval double-counting in the DCD writer metadata path.
+
+What is fixed now:
+- `src/md/openmm/md_protocol.py` now writes stripped DCD timing metadata correctly.
+- Analysis readers (`src/md/openmm/mmgbsa.py`, `src/analysis/metrics.py`) now normalize legacy inflated `dt` values and still respect last-window selection logic.
+
+Interpretation guidance:
+- For existing legacy DCDs already on disk, raw `u.trajectory.dt` may still look wrong.
+- Current analysis code corrects this automatically before applying "last 1 ns" filtering.
 
 ## Sync helpers
 

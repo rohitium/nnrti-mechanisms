@@ -16,6 +16,17 @@
 
 set -euo pipefail
 
+SLEEP_PID=""
+cleanup_and_exit() {
+    echo ""
+    echo "Received interrupt/termination signal. Stopping submit loop."
+    if [ -n "${SLEEP_PID}" ]; then
+        kill "${SLEEP_PID}" 2>/dev/null || true
+    fi
+    exit 130
+}
+trap cleanup_and_exit INT TERM
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
@@ -265,7 +276,10 @@ for SYSTEM_INFO in "${SYSTEMS_TO_RUN[@]}"; do
                     break
                 fi
                 echo "[$(date '+%H:%M:%S')] Queue at $CURRENT_JOBS/$MAX_CONCURRENT jobs. Checking again in ${POLL_INTERVAL}s..."
-                sleep $POLL_INTERVAL
+                sleep "$POLL_INTERVAL" &
+                SLEEP_PID=$!
+                wait "$SLEEP_PID" || true
+                SLEEP_PID=""
             done
         fi
     fi

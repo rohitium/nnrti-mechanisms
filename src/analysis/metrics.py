@@ -165,14 +165,18 @@ def compute_ensemble_metrics(
     frame_indices: list[int]
     if sample_window_ns is not None and sample_window_ns > 0.0 and len(sampled_frames) > 1:
         dt_ps = getattr(u.trajectory, "dt", None)
-        if dt_ps is not None and np.isfinite(dt_ps) and dt_ps > 0:
-            total_time_ps = (len(u.trajectory) - 1) * float(dt_ps)
+        corrected_dt_ps = dt_ps
+        if corrected_dt_ps is not None and np.isfinite(corrected_dt_ps) and corrected_dt_ps > 1000.0:
+            candidate = float(corrected_dt_ps) / 1000.0
+            corrected_dt_ps = candidate if candidate <= 1000.0 else None
+        if corrected_dt_ps is not None and np.isfinite(corrected_dt_ps) and corrected_dt_ps > 0:
+            total_time_ps = (len(u.trajectory) - 1) * float(corrected_dt_ps)
             window_ps = float(sample_window_ns) * 1000.0
             start_time_ps = max(0.0, total_time_ps - window_ps)
             sampled_in_window = [
                 frame_id
                 for frame_id in sampled_frames
-                if (frame_id * float(dt_ps)) >= start_time_ps
+                if (frame_id * float(corrected_dt_ps)) >= start_time_ps
             ]
             frame_indices = sampled_in_window if sampled_in_window else sampled_frames
         else:

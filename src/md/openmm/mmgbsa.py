@@ -155,24 +155,30 @@ def _select_snapshot_indices(
     dt_ps: float | None = None,
     sample_window_ns: float | None = 1.0,
 ) -> np.ndarray:
-    # Some DCDs carry unrealistic dt metadata (for example ~50000 ps/frame).
-    # If used directly, "last 1 ns" selection collapses to one frame.
-    # Treat such dt values as invalid and fall back to discard_fraction sampling.
+    # Some legacy DCDs carry inflated dt metadata due to an interval double-count.
+    # Example symptom: ~50000 ps/frame when the actual spacing is ~50 ps/frame.
     max_reasonable_dt_ps = 1_000.0
+    corrected_dt_ps = dt_ps
+    if corrected_dt_ps is not None and np.isfinite(corrected_dt_ps) and corrected_dt_ps > max_reasonable_dt_ps:
+        candidate = float(corrected_dt_ps) / 1000.0
+        if candidate <= max_reasonable_dt_ps:
+            corrected_dt_ps = candidate
+        else:
+            corrected_dt_ps = None
 
     if (
         sample_window_ns is not None
         and sample_window_ns > 0.0
-        and dt_ps is not None
-        and np.isfinite(dt_ps)
-        and dt_ps > 0.0
-        and dt_ps <= max_reasonable_dt_ps
+        and corrected_dt_ps is not None
+        and np.isfinite(corrected_dt_ps)
+        and corrected_dt_ps > 0.0
+        and corrected_dt_ps <= max_reasonable_dt_ps
         and n_frames > 1
     ):
-        total_time_ps = float(n_frames - 1) * float(dt_ps)
+        total_time_ps = float(n_frames - 1) * float(corrected_dt_ps)
         window_ps = float(sample_window_ns) * 1000.0
         start_time_ps = max(0.0, total_time_ps - window_ps)
-        start = int(np.ceil(start_time_ps / float(dt_ps)))
+        start = int(np.ceil(start_time_ps / float(corrected_dt_ps)))
         start = min(max(0, start), max(0, n_frames - 1))
     else:
         # Backward-compatible fallback when trajectory timing metadata is unavailable.

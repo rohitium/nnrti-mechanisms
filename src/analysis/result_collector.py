@@ -135,8 +135,23 @@ def collect_ca_rmsd_profiles(
         try:
             u = mda.Universe(str(topo), str(dcd))
             ref = mda.Universe(str(topo))
-            for i, _ in enumerate(u.trajectory[:: max(1, frame_stride)]):
-                if i >= max_frames:
+            prot_all = u.select_atoms("protein")
+            try:
+                from MDAnalysis import transformations as trans
+
+                u.trajectory.add_transformations(
+                    trans.NoJump(check_continuity=False),
+                    trans.center_in_box(prot_all, center="geometry", wrap=False),
+                )
+            except Exception:
+                pass
+
+            kept = 0
+            stride = max(1, frame_stride)
+            for idx, _ in enumerate(u.trajectory):
+                if idx % stride != 0:
+                    continue
+                if kept >= max_frames:
                     break
                 align.alignto(u, ref, select="protein and name CA", weights="mass")
                 ca = u.select_atoms("protein and name CA")
@@ -156,6 +171,7 @@ def collect_ca_rmsd_profiles(
                         "ca_rmsd_angstrom": rmsd,
                     }
                 )
+                kept += 1
         except Exception as exc:
             logging.warning("RMSD profile failed for %s rep%d: %s", row["mutation"], rep, exc)
 
@@ -171,6 +187,7 @@ def collect_com_distance_profiles(
     """Collect DOR-vs-protein center-of-mass distance profiles."""
     try:
         import MDAnalysis as mda
+        from MDAnalysis.lib.distances import distance_array
     except Exception:
         return pd.DataFrame()
 
@@ -200,10 +217,27 @@ def collect_com_distance_profiles(
             prot = u.select_atoms(f"protein and not resname {ligand_resname}")
             if lig.n_atoms == 0 or prot.n_atoms == 0:
                 continue
-            for i, _ in enumerate(u.trajectory[:: max(1, frame_stride)]):
-                if i >= max_frames:
+            try:
+                from MDAnalysis import transformations as trans
+
+                u.trajectory.add_transformations(
+                    trans.NoJump(check_continuity=False),
+                    trans.center_in_box(prot, center="geometry", wrap=False),
+                )
+            except Exception:
+                pass
+
+            kept = 0
+            stride = max(1, frame_stride)
+            for idx, _ in enumerate(u.trajectory):
+                if idx % stride != 0:
+                    continue
+                if kept >= max_frames:
                     break
-                d = float(np.linalg.norm(lig.center_of_mass() - prot.center_of_mass()))
+                # Use minimum-image distance between COM points to avoid PBC jump spikes.
+                lig_com = np.asarray(lig.center_of_mass(), dtype=float).reshape(1, 3)
+                prot_com = np.asarray(prot.center_of_mass(), dtype=float).reshape(1, 3)
+                d = float(distance_array(lig_com, prot_com, box=u.dimensions).min())
                 rows.append(
                     {
                         "structure": row["structure"],
@@ -215,6 +249,7 @@ def collect_com_distance_profiles(
                         "com_distance_angstrom": d,
                     }
                 )
+                kept += 1
         except Exception as exc:
             logging.warning("COM-distance profile failed for %s rep%d: %s", row["mutation"], rep, exc)
 
