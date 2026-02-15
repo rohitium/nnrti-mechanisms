@@ -1,14 +1,14 @@
 #!/bin/bash
 # ============================================================================
-# DEPRECATED: This script is superseded by the Snakemake workflow.
+# DEPRECATED: This script is superseded by the batched Sherlock submit flow.
 #
 # New usage (on Sherlock):
-#   snakemake --profile workflow/profiles/sherlock
+#   bash scripts/sherlock/submit_md_batched.sh 6 12
 #
 # See README.md for full migration instructions.
 # ============================================================================
-echo "WARNING: orchestrate.sh is deprecated. Use the Snakemake workflow instead." >&2
-echo "  Run:  snakemake --profile workflow/profiles/sherlock" >&2
+echo "WARNING: orchestrate.sh is deprecated. Use submit_md_batched.sh instead." >&2
+echo "  Run:  bash scripts/sherlock/submit_md_batched.sh 6 12" >&2
 echo "" >&2
 
 # Resumable mutation-by-mutation Sherlock workflow for explicit MD.

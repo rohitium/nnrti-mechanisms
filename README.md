@@ -19,57 +19,41 @@ Key adopted ideas:
 - decomposition into van der Waals, electrostatic, polar solvation (GB), and nonpolar solvation (SA)
 - mutation-level correlation to measured susceptibility shifts
 
-## Workflow (Snakemake)
+## Workflow (Script-Based)
 
-The pipeline is managed by [Snakemake](https://snakemake.github.io/) and runs natively on Sherlock. CPU rules (prep, analysis) execute on the login node; GPU rules (MD) are submitted to the `gpu` partition via the SLURM executor.
+The production workflow is script-based:
+- submit/extend MD runs on Sherlock with `scripts/sherlock/submit_md_batched.sh`
+- sync `results/md_runs` + `results/md_manifest.csv` between Sherlock and local
+- run checkpointed analysis locally
 
-### Prerequisites (on Sherlock)
-
-```bash
-pip install --user snakemake snakemake-executor-plugin-slurm
-```
-
-### Quick start
+### Sherlock MD submission
 
 ```bash
-# Dry run: see what would execute
-snakemake -n
+# submit in batches (batch size=6, max queued jobs=12)
+bash scripts/sherlock/submit_md_batched.sh 6 12
 
-# Full production run on Sherlock
-snakemake --profile workflow/profiles/sherlock
-
-# Run with custom config overrides
-snakemake --profile workflow/profiles/sherlock --config replicates=1 seed=123
-
-# Visualize the DAG
-snakemake --dag | dot -Tpng > dag.png
+# extension-style rerun example (target 10 ns, skip tasks already at target)
+MD_PRODUCTION_NS=10.0 MD_FORCE_RERUN=1 SKIP_IF_AT_TARGET=1 SHERLOCK_TIME=12:00:00 \
+bash scripts/sherlock/submit_md_batched.sh 6 12
 ```
 
-### Pipeline stages
+Monitor and completion checks:
 
-1. **prep_wt_cif / prep_mutant_cif** -- Build WT and mutant structures from 4NCG
-2. **prep_replicate** -- Minimize + solvate for each mutation/replicate (CPU)
-3. **run_md** -- Heating (10-300K NVT) + production (300K NPT) on GPU via SLURM
-4. **collect_and_analyze** -- MM/GBSA, structural metrics, RMSD/COM profiles, DDG
-5. **generate_plots** -- All publication figures
+```bash
+squeue -u $USER
+python3 scripts/sherlock/report_md_progress.py --target-ns 10.0 --show-incomplete
+```
 
-### Configuration
+### Sync results
 
-All parameters are in `workflow/config.yaml`. Key settings:
+```bash
+# local -> Sherlock
+SHERLOCK_USER=rsatija bash scripts/rsync_results.sh push
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `replicates` | 3 | Independent replicates per mutation |
-| `seed` | 42 | Base seed for deterministic coordinate jitter |
-| `md.production_ns` | 2.0 | Production MD length (ns) |
-| `analysis.mmgbsa_snapshots` | 100 | Frames for MM/GBSA decomposition |
-| `slurm.partition` | gpu | SLURM partition for MD jobs |
-
-### Resume behavior
-
-- Snakemake automatically skips rules whose output files already exist
-- OpenMM checkpoint files (`.chk`) enable mid-simulation resume
-- Re-running `snakemake` after a failure picks up where it left off
+# Sherlock -> local (completed replicates only)
+SHERLOCK_USER=rsatija COMPLETE_ONLY=1 MD_PRODUCTION_NS=10.0 \
+bash scripts/rsync_results.sh pull
+```
 
 ## Direct analysis usage (without Snakemake)
 
@@ -81,7 +65,7 @@ For analysis from existing trajectories in `results/md_runs/`:
 
 # or run individual steps
 python -m src.analysis.cli.analyze_incremental --step collect
-python -m src.analysis.cli.compute_mmgbsa_safe --snapshots 100 --discard-fraction 0.25
+python -m src.analysis.cli.compute_mmgbsa_safe --force --snapshots 100 --sample-window-ns 1.0 --workers 8
 python -m src.analysis.cli.analyze_incremental --step metrics
 python -m src.analysis.cli.analyze_incremental --step plots
 ```

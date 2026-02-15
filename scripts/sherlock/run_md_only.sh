@@ -1,22 +1,17 @@
 #!/bin/bash
 #
-# Submit ONLY MD jobs on Sherlock using Snakemake
-# Assumes prep was done locally and system XMLs already exist
+# Submit ONLY MD jobs on Sherlock (script-based path).
+# Thin wrapper around submit_md_batched.sh.
 #
 
-set -e
+set -euo pipefail
 
-echo "Submitting MD jobs only (skipping prep)..."
-echo ""
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BATCH_SIZE="${1:-6}"
+MAX_CONCURRENT="${2:-12}"
 
-# Target collect_and_analyze - it depends on all MD jobs completing
-# Snakemake will submit only the missing MD jobs
-snakemake collect_and_analyze \
-  --profile workflow/profiles/sherlock \
-  --rerun-incomplete \
-  --until run_md
+echo "Submitting MD jobs only via submit_md_batched.sh..."
+echo "  batch_size=${BATCH_SIZE} max_concurrent=${MAX_CONCURRENT}"
+echo
 
-echo ""
-echo "All MD jobs submitted. Monitor with:"
-echo "  squeue -u \$USER"
-echo "  tail -f .snakemake/slurm_logs/rule_run_md/*/*/*.log"
+bash "${SCRIPT_DIR}/submit_md_batched.sh" "${BATCH_SIZE}" "${MAX_CONCURRENT}"

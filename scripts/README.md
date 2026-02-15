@@ -84,9 +84,9 @@ Both require `SHERLOCK_USER`.
 - `scripts/sherlock/report_md_progress.py`: summarize completion vs target steps, running tasks, and latest-log segfaults.
 - `scripts/sherlock/test_one_job.sh`: short interactive sanity test on one prepared system.
 - `scripts/sherlock/test_extension_resume.sh`: smoke-test checkpoint resume extension (e.g., 2.0 -> 2.01 ns) on one prepared system.
-- `scripts/sherlock/run_md_only.sh`: Snakemake path for submitting only MD rules.
+- `scripts/sherlock/run_md_only.sh`: thin wrapper around `submit_md_batched.sh`.
 
 ## Deprecated orchestration
 
 - `scripts/orchestrate.sh` is deprecated.
-- Use Snakemake (`workflow/profiles/sherlock`) or the Sherlock submit scripts above.
+- Use the Sherlock submit scripts above.
