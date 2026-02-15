@@ -15,11 +15,11 @@
   "state_csv": "results/md_runs/G190S/rep_03/G190S_rep03_md_state.csv",
   "final_pdb": "results/md_runs/G190S/rep_03/G190S_rep03_md_final.pdb",
   "checkpoint_path": "results/md_runs/G190S/rep_03/G190S_rep03_md.chk",
-  "md_heating_steps": 12500,
-  "md_production_steps": 1000000,
-  "md_production_steps_completed": 1000000,
-  "md_total_steps": 1012500,
-  "resumed_from_checkpoint": false,
-  "elapsed_seconds": 3462.3076288218144,
+  "md_heating_steps": 0,
+  "md_production_steps": 5000000,
+  "md_production_steps_completed": 5000000,
+  "md_total_steps": 5000000,
+  "resumed_from_checkpoint": true,
+  "elapsed_seconds": 19641.45263511408,
   "status": "ok"
 }

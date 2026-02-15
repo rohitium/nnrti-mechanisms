@@ -15,11 +15,11 @@
   "state_csv": "results/md_runs/K103N_P225H/rep_01/K103N_P225H_rep01_md_state.csv",
   "final_pdb": "results/md_runs/K103N_P225H/rep_01/K103N_P225H_rep01_md_final.pdb",
   "checkpoint_path": "results/md_runs/K103N_P225H/rep_01/K103N_P225H_rep01_md.chk",
-  "md_heating_steps": 12500,
-  "md_production_steps": 1000000,
-  "md_production_steps_completed": 1000000,
-  "md_total_steps": 1012500,
-  "resumed_from_checkpoint": false,
-  "elapsed_seconds": 3304.17582290899,
+  "md_heating_steps": 0,
+  "md_production_steps": 5000000,
+  "md_production_steps_completed": 5000000,
+  "md_total_steps": 5000000,
+  "resumed_from_checkpoint": true,
+  "elapsed_seconds": 19781.365387039026,
   "status": "ok"
 }

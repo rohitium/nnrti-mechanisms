@@ -15,11 +15,11 @@
   "state_csv": "results/md_runs/V106A_P225H/rep_01/V106A_P225H_rep01_md_state.csv",
   "final_pdb": "results/md_runs/V106A_P225H/rep_01/V106A_P225H_rep01_md_final.pdb",
   "checkpoint_path": "results/md_runs/V106A_P225H/rep_01/V106A_P225H_rep01_md.chk",
-  "md_heating_steps": 12500,
-  "md_production_steps": 1000000,
-  "md_production_steps_completed": 1000000,
-  "md_total_steps": 1012500,
-  "resumed_from_checkpoint": false,
-  "elapsed_seconds": 5542.837915735086,
+  "md_heating_steps": 0,
+  "md_production_steps": 5000000,
+  "md_production_steps_completed": 5000000,
+  "md_total_steps": 5000000,
+  "resumed_from_checkpoint": true,
+  "elapsed_seconds": 13312.791526034009,
   "status": "ok"
 }
