@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import warnings
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -171,6 +172,195 @@ def _metric_specs(comps: list[dict[str, object]]) -> list[tuple[str, str]]:
     ]
 
 
+def _trace_features(trace_df: pd.DataFrame) -> dict[str, float]:
+    g = trace_df.sort_values("time_ns")
+    x = pd.to_numeric(g["time_ns"], errors="coerce").to_numpy(dtype=float)
+    y = pd.to_numeric(g["distance_angstrom"], errors="coerce").to_numpy(dtype=float)
+    keep = np.isfinite(x) & np.isfinite(y)
+    x = x[keep]
+    y = y[keep]
+
+    if x.size < 4:
+        return {
+            "n_points": int(x.size),
+            "max_step_abs_angstrom": np.nan,
+            "p95_step_abs_angstrom": np.nan,
+            "late_max_step_abs_angstrom": np.nan,
+            "p95_curvature_abs_angstrom": np.nan,
+            "endpoint_shift_abs_angstrom": np.nan,
+            "trace_range_angstrom": np.nan,
+            "trace_std_angstrom": np.nan,
+            "max_step_time_ns": np.nan,
+        }
+
+    dy = np.diff(y)
+    dx = np.diff(x)
+    valid = dx > 0
+    dy = dy[valid]
+    x_step = x[1:][valid]
+    if dy.size == 0:
+        return {
+            "n_points": int(x.size),
+            "max_step_abs_angstrom": np.nan,
+            "p95_step_abs_angstrom": np.nan,
+            "late_max_step_abs_angstrom": np.nan,
+            "p95_curvature_abs_angstrom": np.nan,
+            "endpoint_shift_abs_angstrom": np.nan,
+            "trace_range_angstrom": float(np.nanmax(y) - np.nanmin(y)),
+            "trace_std_angstrom": float(np.nanstd(y)),
+            "max_step_time_ns": np.nan,
+        }
+
+    abs_step = np.abs(dy)
+    max_idx = int(np.nanargmax(abs_step))
+    xmax = float(np.nanmax(x))
+    late_mask = x_step >= (0.7 * xmax)
+    late_max = float(np.nanmax(abs_step[late_mask])) if np.any(late_mask) else float(np.nanmax(abs_step))
+
+    d2 = np.diff(y, n=2)
+    p95_curv = float(np.nanpercentile(np.abs(d2), 95)) if d2.size > 0 else np.nan
+
+    n = len(y)
+    edge_n = max(3, int(round(0.1 * n)))
+    head_mean = float(np.nanmean(y[:edge_n]))
+    tail_mean = float(np.nanmean(y[-edge_n:]))
+
+    return {
+        "n_points": int(x.size),
+        "max_step_abs_angstrom": float(np.nanmax(abs_step)),
+        "p95_step_abs_angstrom": float(np.nanpercentile(abs_step, 95)),
+        "late_max_step_abs_angstrom": late_max,
+        "p95_curvature_abs_angstrom": p95_curv,
+        "endpoint_shift_abs_angstrom": float(abs(tail_mean - head_mean)),
+        "trace_range_angstrom": float(np.nanmax(y) - np.nanmin(y)),
+        "trace_std_angstrom": float(np.nanstd(y)),
+        "max_step_time_ns": float(x_step[max_idx]),
+    }
+
+
+def _positive_robust_z(values: pd.Series) -> pd.Series:
+    s = pd.to_numeric(values, errors="coerce")
+    valid = s.dropna()
+    out = pd.Series(np.zeros(len(s), dtype=float), index=s.index)
+    if valid.empty:
+        return out
+    if valid.nunique() <= 1:
+        return out
+
+    med = float(valid.median())
+    mad = float(np.median(np.abs(valid.to_numpy(dtype=float) - med)))
+    if mad > 1e-12:
+        z = (s - med) / (1.4826 * mad)
+    else:
+        std = float(valid.std(ddof=0))
+        if std <= 1e-12:
+            return out
+        z = (s - float(valid.mean())) / std
+    out = z.clip(lower=0.0, upper=8.0).fillna(0.0)
+    return out
+
+
+def curate_interesting_traces(
+    timeseries_df: pd.DataFrame,
+    output_csv: Path,
+    plots_dir: Path,
+    top_n: int = 100,
+    min_score: float = 5.0,
+) -> pd.DataFrame:
+    group_cols = ["mutation", "system", "metric", "replicate"]
+    rows: list[dict[str, object]] = []
+
+    for keys, grp in timeseries_df.groupby(group_cols, dropna=False):
+        mutation, system, metric, replicate = keys
+        feat = _trace_features(grp)
+        first = grp.iloc[0]
+        rows.append(
+            {
+                "mutation": str(mutation),
+                "system": str(system),
+                "metric": str(metric),
+                "replicate": int(replicate),
+                "safe_label": str(first.get("safe_label", "")),
+                "output_json": str(first.get("output_json", "")),
+                "analysis_dcd": str(first.get("analysis_dcd", "")),
+                "analysis_topology_pdb": str(first.get("analysis_topology_pdb", "")),
+                "drm_plot_path": str(
+                    plots_dir / f"{str(mutation).replace('+', '_')}_drm_distance_timeseries.png"
+                ),
+                **feat,
+            }
+        )
+
+    trace_df = pd.DataFrame(rows)
+    if trace_df.empty:
+        output_csv.parent.mkdir(parents=True, exist_ok=True)
+        trace_df.to_csv(output_csv, index=False)
+        return trace_df
+
+    panel_cols = ["mutation", "system", "metric"]
+    z_specs = [
+        ("max_step_abs_angstrom", "z_max_step"),
+        ("late_max_step_abs_angstrom", "z_late_jump"),
+        ("p95_curvature_abs_angstrom", "z_curvature"),
+        ("endpoint_shift_abs_angstrom", "z_endpoint_shift"),
+    ]
+    for src, dest in z_specs:
+        trace_df[dest] = (
+            trace_df.groupby(panel_cols, dropna=False)[src]
+            .transform(_positive_robust_z)
+            .astype(float)
+        )
+
+    trace_df["interesting_score"] = (
+        2.0 * trace_df["z_max_step"]
+        + 1.6 * trace_df["z_late_jump"]
+        + 1.3 * trace_df["z_curvature"]
+        + 1.0 * trace_df["z_endpoint_shift"]
+    )
+
+    reasons: list[str] = []
+    reason_cols: list[list[str]] = []
+    for _, row in trace_df.iterrows():
+        r: list[str] = []
+        if float(row.get("max_step_abs_angstrom", np.nan)) >= 2.6:
+            r.append("hard_jump>=2.6A")
+        if float(row.get("late_max_step_abs_angstrom", np.nan)) >= 2.4:
+            r.append("late_jump>=2.4A")
+        if float(row.get("p95_curvature_abs_angstrom", np.nan)) >= 2.4:
+            r.append("bumpy_curvature>=2.4A")
+        if float(row.get("endpoint_shift_abs_angstrom", np.nan)) >= 1.0:
+            r.append("endpoint_shift>=1.0A")
+        if float(row.get("z_max_step", 0.0)) >= 2.5:
+            r.append("panel_outlier_step")
+        if float(row.get("z_curvature", 0.0)) >= 2.5:
+            r.append("panel_outlier_bumpy")
+        reason_cols.append(r)
+        reasons.append(";".join(r))
+    trace_df["interesting_reasons"] = reasons
+    trace_df["n_reasons"] = [len(r) for r in reason_cols]
+
+    has_dynamic_signal = (
+        (trace_df["z_max_step"] >= 1.5)
+        | (trace_df["z_late_jump"] >= 1.5)
+        | (trace_df["z_curvature"] >= 1.5)
+        | (trace_df["endpoint_shift_abs_angstrom"] >= 1.0)
+    )
+    trace_df["is_interesting"] = (
+        ((trace_df["interesting_score"] >= float(min_score)) & has_dynamic_signal)
+        | (trace_df["n_reasons"] > 0)
+    )
+    trace_df = trace_df.sort_values(
+        ["is_interesting", "interesting_score", "n_reasons", "max_step_abs_angstrom"],
+        ascending=[False, False, False, False],
+    ).reset_index(drop=True)
+    if top_n is not None and int(top_n) > 0 and len(trace_df) > int(top_n):
+        trace_df = trace_df.iloc[: int(top_n)].copy()
+
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+    trace_df.to_csv(output_csv, index=False)
+    return trace_df
+
+
 def _infer_total_ns_from_output_json(output_json_path: Path) -> float | None:
     state_csv = None
     m = re.match(r"^(.+)_rep(\d{2})\.json$", output_json_path.name)
@@ -252,11 +442,16 @@ def _collect_system_rows(
             d1 = float(distance_array(sc1.positions, dor.positions, box=u.dimensions).min())
             out.append(
                 {
+                    "mutation": str(row["mutation"]),
+                    "safe_label": str(row.get("safe_label", "")),
                     "system": system_label,
                     "replicate": replicate,
                     "time_ns": t_ns,
                     "metric": "c1_to_dor",
                     "distance_angstrom": d1,
+                    "output_json": str(row.get("output_json", "")),
+                    "analysis_dcd": str(dcd),
+                    "analysis_topology_pdb": str(topo),
                 }
             )
             if sc2 is not None:
@@ -264,26 +459,41 @@ def _collect_system_rows(
                 d12 = float(distance_array(sc1.positions, sc2.positions, box=u.dimensions).min())
                 out.append(
                     {
+                        "mutation": str(row["mutation"]),
+                        "safe_label": str(row.get("safe_label", "")),
                         "system": system_label,
                         "replicate": replicate,
                         "time_ns": t_ns,
                         "metric": "c2_to_dor",
                         "distance_angstrom": d2,
+                        "output_json": str(row.get("output_json", "")),
+                        "analysis_dcd": str(dcd),
+                        "analysis_topology_pdb": str(topo),
                     }
                 )
                 out.append(
                     {
+                        "mutation": str(row["mutation"]),
+                        "safe_label": str(row.get("safe_label", "")),
                         "system": system_label,
                         "replicate": replicate,
                         "time_ns": t_ns,
                         "metric": "c1_to_c2",
                         "distance_angstrom": d12,
+                        "output_json": str(row.get("output_json", "")),
+                        "analysis_dcd": str(dcd),
+                        "analysis_topology_pdb": str(topo),
                     }
                 )
     return out
 
 
 def main() -> int:
+    warnings.filterwarnings(
+        "ignore",
+        category=DeprecationWarning,
+        message=r"DCDReader currently makes independent timesteps.*",
+    )
     parser = argparse.ArgumentParser(description="Plot sidechain-DOR distances for all mutations vs WT.")
     parser.add_argument("--manifest", type=Path, default=Path("results/md_manifest.csv"))
     parser.add_argument("--ligand-resname", type=str, default="2KW")
@@ -291,6 +501,13 @@ def main() -> int:
     parser.add_argument("--resid-offset", type=int, default=-3)
     parser.add_argument("--plots-dir", type=Path, default=Path("results/plots/drm_distances"))
     parser.add_argument("--output-csv", type=Path, default=Path("results/drm_sidechain_distance_timeseries_all_mutations.csv"))
+    parser.add_argument(
+        "--interesting-csv",
+        type=Path,
+        default=Path("results/drm_sidechain_distance_interesting_traces.csv"),
+    )
+    parser.add_argument("--interesting-top-n", type=int, default=60)
+    parser.add_argument("--interesting-min-score", type=float, default=5.0)
     args = parser.parse_args()
 
     if not args.manifest.exists():
@@ -416,6 +633,14 @@ def main() -> int:
     args.output_csv.parent.mkdir(parents=True, exist_ok=True)
     out_df.to_csv(args.output_csv, index=False)
     print(f"Wrote {args.output_csv}")
+    interesting_df = curate_interesting_traces(
+        out_df,
+        output_csv=args.interesting_csv,
+        plots_dir=args.plots_dir,
+        top_n=int(args.interesting_top_n),
+        min_score=float(args.interesting_min_score),
+    )
+    print(f"Wrote {args.interesting_csv} (rows={len(interesting_df)})")
     return 0
 
 

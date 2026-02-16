@@ -116,6 +116,21 @@ def _pocket_volume_proxy_universe(
     return float(np.sum(free_mask) * voxel_volume)
 
 
+def pocket_volume_proxy_from_universe(
+    universe,
+    ligand_resname: str,
+    grid_spacing: float = 0.5,
+    radius_angstrom: float = 8.0,
+) -> float:
+    """Compute pocket volume proxy for the current frame of an MDAnalysis Universe."""
+    return _pocket_volume_proxy_universe(
+        universe,
+        ligand_resname=ligand_resname,
+        grid_spacing=grid_spacing,
+        radius_angstrom=radius_angstrom,
+    )
+
+
 def pocket_volume_proxy(
     pdbx_path: Path,
     ligand_resname: str,

@@ -223,3 +223,5 @@ __marimo__/
 logs/
 manuscript/
 .checkpoints/
+# Large generated aggregate (use per-mutation split instead)
+results/dor_key_contacts_timeseries_all_mutations.csv

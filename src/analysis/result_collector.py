@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import logging
+import os
 from pathlib import Path
 import re
+import time
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -12,6 +16,31 @@ from scipy import stats
 from ..md.manifest import load_manifest
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _format_seconds(seconds: float) -> str:
+    seconds = max(0.0, float(seconds))
+    mins, sec = divmod(int(seconds), 60)
+    hrs, mins = divmod(mins, 60)
+    if hrs > 0:
+        return f"{hrs:d}h {mins:02d}m {sec:02d}s"
+    return f"{mins:02d}m {sec:02d}s"
+
+
+def _default_profile_workers() -> int:
+    cpu = os.cpu_count() or 2
+    return max(1, min(8, cpu - 1))
+
+
+def _silence_mdanalysis_noise() -> None:
+    logging.getLogger("MDAnalysis").setLevel(logging.WARNING)
+    logging.getLogger("MDAnalysis.topology.guessers").setLevel(logging.WARNING)
+    logging.getLogger("MDAnalysis.topology.PDBParser").setLevel(logging.WARNING)
+    warnings.filterwarnings(
+        "ignore",
+        message="DCDReader currently makes independent timesteps*",
+        category=DeprecationWarning,
+    )
 
 
 
@@ -57,6 +86,275 @@ def _infer_rep_dir(row: pd.Series) -> Path:
         if val:
             return Path(val).parent
     return Path(".")
+
+
+def _prepare_profile_jobs(run_df: pd.DataFrame) -> list[dict]:
+    jobs: list[dict] = []
+    for _, row in run_df.iterrows():
+        rep_dir = _infer_rep_dir(row)
+        safe = str(row["safe_label"])
+        rep = int(row["replicate"])
+        topo = _resolve_local_path(
+            _nonempty_path(row.get("analysis_topology_pdb")),
+            rep_dir / f"{safe}_rep{rep:02d}_analysis_topology.pdb",
+        )
+        dcd = _resolve_local_path(
+            _nonempty_path(row.get("analysis_dcd")),
+            rep_dir / f"{safe}_rep{rep:02d}_analysis.dcd",
+        )
+        if topo is None or dcd is None or not topo.exists() or not dcd.exists():
+            continue
+        jobs.append(
+            {
+                "structure": str(row["structure"]),
+                "mutation": str(row["mutation"]),
+                "safe_label": safe,
+                "replicate": rep,
+                "topology": str(topo),
+                "trajectory": str(dcd),
+            }
+        )
+    return jobs
+
+
+def _run_profile_jobs(jobs: list[dict], worker_fn, label: str, workers: int | None = None) -> list[dict]:
+    if not jobs:
+        return []
+    n_workers = _default_profile_workers() if workers is None else max(1, int(workers))
+    total = len(jobs)
+    start = time.time()
+    rows: list[dict] = []
+    logging.info("%s: %d trajectory jobs, workers=%d", label, total, n_workers)
+
+    def _log_progress(done: int) -> None:
+        if done == 1 or done == total or done % max(1, total // 10) == 0:
+            elapsed = time.time() - start
+            rate = done / elapsed if elapsed > 0 else 0.0
+            eta = ((total - done) / rate) if rate > 0 else float("inf")
+            eta_txt = _format_seconds(eta) if np.isfinite(eta) else "unknown"
+            logging.info(
+                "%s progress %d/%d (%.1f%%) elapsed=%s eta=%s",
+                label,
+                done,
+                total,
+                100.0 * done / total,
+                _format_seconds(elapsed),
+                eta_txt,
+            )
+
+    if n_workers == 1:
+        done = 0
+        for job in jobs:
+            out_rows, err = worker_fn(job)
+            rows.extend(out_rows)
+            if err is not None:
+                logging.warning(
+                    "%s failed for %s rep%d: %s",
+                    label,
+                    job["mutation"],
+                    int(job["replicate"]),
+                    err,
+                )
+            done += 1
+            _log_progress(done)
+        return rows
+
+    with ThreadPoolExecutor(max_workers=n_workers) as pool:
+        futures = {pool.submit(worker_fn, job): job for job in jobs}
+        done = 0
+        for fut in as_completed(futures):
+            job = futures[fut]
+            try:
+                out_rows, err = fut.result()
+            except Exception as exc:
+                out_rows, err = [], str(exc)
+            rows.extend(out_rows)
+            if err is not None:
+                logging.warning(
+                    "%s failed for %s rep%d: %s",
+                    label,
+                    job["mutation"],
+                    int(job["replicate"]),
+                    err,
+                )
+            done += 1
+            _log_progress(done)
+    return rows
+
+
+def _ca_rmsd_worker(job: dict, frame_stride: int, max_frames: int) -> tuple[list[dict], str | None]:
+    _silence_mdanalysis_noise()
+    try:
+        import MDAnalysis as mda
+        from MDAnalysis.analysis import align
+    except Exception as exc:
+        return [], str(exc)
+
+    try:
+        u = mda.Universe(job["topology"], job["trajectory"])
+        ref = mda.Universe(job["topology"])
+        prot_all = u.select_atoms("protein")
+        try:
+            from MDAnalysis import transformations as trans
+
+            u.trajectory.add_transformations(
+                trans.NoJump(check_continuity=False),
+                trans.center_in_box(prot_all, center="geometry", wrap=False),
+            )
+        except Exception:
+            pass
+
+        out: list[dict] = []
+        kept = 0
+        stride = max(1, int(frame_stride))
+        for idx, _ in enumerate(u.trajectory):
+            if idx % stride != 0:
+                continue
+            if kept >= int(max_frames):
+                break
+            align.alignto(u, ref, select="protein and name CA", weights="mass")
+            ca = u.select_atoms("protein and name CA")
+            ca_ref = ref.select_atoms("protein and name CA")
+            if ca.n_atoms == 0 or ca_ref.n_atoms == 0:
+                break
+            diff = ca.positions - ca_ref.positions
+            rmsd = float(np.sqrt(np.mean(np.sum(diff * diff, axis=1))))
+            out.append(
+                {
+                    "structure": job["structure"],
+                    "mutation": job["mutation"],
+                    "safe_label": job["safe_label"],
+                    "replicate": int(job["replicate"]),
+                    "frame_index": int(u.trajectory.frame),
+                    "time_ps": float(getattr(u.trajectory.ts, "time", np.nan)),
+                    "ca_rmsd_angstrom": rmsd,
+                }
+            )
+            kept += 1
+        return out, None
+    except Exception as exc:
+        return [], str(exc)
+
+
+def _com_distance_worker(
+    job: dict,
+    ligand_resname: str,
+    frame_stride: int,
+    max_frames: int,
+) -> tuple[list[dict], str | None]:
+    _silence_mdanalysis_noise()
+    try:
+        import MDAnalysis as mda
+        from MDAnalysis.lib.distances import distance_array
+    except Exception as exc:
+        return [], str(exc)
+
+    try:
+        u = mda.Universe(job["topology"], job["trajectory"])
+        lig = u.select_atoms(f"resname {ligand_resname}")
+        prot = u.select_atoms(f"protein and not resname {ligand_resname}")
+        if lig.n_atoms == 0 or prot.n_atoms == 0:
+            return [], f"empty selection (lig={lig.n_atoms}, prot={prot.n_atoms})"
+        try:
+            from MDAnalysis import transformations as trans
+
+            u.trajectory.add_transformations(
+                trans.NoJump(check_continuity=False),
+                trans.center_in_box(prot, center="geometry", wrap=False),
+            )
+        except Exception:
+            pass
+
+        out: list[dict] = []
+        kept = 0
+        stride = max(1, int(frame_stride))
+        for idx, _ in enumerate(u.trajectory):
+            if idx % stride != 0:
+                continue
+            if kept >= int(max_frames):
+                break
+            lig_com = np.asarray(lig.center_of_mass(), dtype=float).reshape(1, 3)
+            prot_com = np.asarray(prot.center_of_mass(), dtype=float).reshape(1, 3)
+            d = float(distance_array(lig_com, prot_com, box=u.dimensions).min())
+            out.append(
+                {
+                    "structure": job["structure"],
+                    "mutation": job["mutation"],
+                    "safe_label": job["safe_label"],
+                    "replicate": int(job["replicate"]),
+                    "frame_index": int(u.trajectory.frame),
+                    "time_ps": float(getattr(u.trajectory.ts, "time", np.nan)),
+                    "com_distance_angstrom": d,
+                }
+            )
+            kept += 1
+        return out, None
+    except Exception as exc:
+        return [], str(exc)
+
+
+def _pocket_volume_worker(
+    job: dict,
+    ligand_resname: str,
+    frame_stride: int,
+    max_frames: int,
+    grid_spacing: float,
+    pocket_radius_angstrom: float,
+) -> tuple[list[dict], str | None]:
+    _silence_mdanalysis_noise()
+    try:
+        import MDAnalysis as mda
+        from .metrics import pocket_volume_proxy_from_universe
+    except Exception as exc:
+        return [], str(exc)
+
+    try:
+        u = mda.Universe(job["topology"], job["trajectory"])
+        lig = u.select_atoms(f"resname {ligand_resname}")
+        prot = u.select_atoms("protein")
+        if lig.n_atoms == 0 or prot.n_atoms == 0:
+            return [], f"empty selection (lig={lig.n_atoms}, prot={prot.n_atoms})"
+        try:
+            from MDAnalysis import transformations as trans
+
+            u.trajectory.add_transformations(
+                trans.NoJump(check_continuity=False),
+                trans.center_in_box(prot, center="geometry", wrap=False),
+            )
+        except Exception:
+            pass
+
+        out: list[dict] = []
+        kept = 0
+        stride = max(1, int(frame_stride))
+        for idx, _ in enumerate(u.trajectory):
+            if idx % stride != 0:
+                continue
+            if kept >= int(max_frames):
+                break
+            v = pocket_volume_proxy_from_universe(
+                u,
+                ligand_resname=ligand_resname,
+                grid_spacing=float(grid_spacing),
+                radius_angstrom=float(pocket_radius_angstrom),
+            )
+            out.append(
+                {
+                    "structure": job["structure"],
+                    "mutation": job["mutation"],
+                    "safe_label": job["safe_label"],
+                    "replicate": int(job["replicate"]),
+                    "frame_index": int(u.trajectory.frame),
+                    "time_ps": float(getattr(u.trajectory.ts, "time", np.nan)),
+                    "pocket_volume_proxy_angstrom3": float(v),
+                    "grid_spacing_angstrom": float(grid_spacing),
+                    "pocket_radius_angstrom": float(pocket_radius_angstrom),
+                }
+            )
+            kept += 1
+        return out, None
+    except Exception as exc:
+        return [], str(exc)
 
 
 def collect_md_results(manifest_path: Path, md_results_dir: Path | None = None) -> pd.DataFrame:
@@ -105,76 +403,18 @@ def collect_ca_rmsd_profiles(
     run_df: pd.DataFrame,
     frame_stride: int = 10,
     max_frames: int = 400,
+    workers: int | None = None,
 ) -> pd.DataFrame:
-    try:
-        import MDAnalysis as mda
-        from MDAnalysis.analysis import align
-    except Exception:
-        return pd.DataFrame()
-
     if run_df.empty:
         return pd.DataFrame()
+    jobs = _prepare_profile_jobs(run_df)
+    if not jobs:
+        return pd.DataFrame()
 
-    rows: list[dict] = []
-    for _, row in run_df.iterrows():
-        rep_dir = _infer_rep_dir(row)
-        safe = str(row["safe_label"])
-        rep = int(row["replicate"])
+    def _runner(job: dict) -> tuple[list[dict], str | None]:
+        return _ca_rmsd_worker(job, frame_stride=frame_stride, max_frames=max_frames)
 
-        topo = _resolve_local_path(
-            _nonempty_path(row.get("analysis_topology_pdb")),
-            rep_dir / f"{safe}_rep{rep:02d}_analysis_topology.pdb",
-        )
-        dcd = _resolve_local_path(
-            _nonempty_path(row.get("analysis_dcd")),
-            rep_dir / f"{safe}_rep{rep:02d}_analysis.dcd",
-        )
-        if topo is None or dcd is None or not topo.exists() or not dcd.exists():
-            continue
-
-        try:
-            u = mda.Universe(str(topo), str(dcd))
-            ref = mda.Universe(str(topo))
-            prot_all = u.select_atoms("protein")
-            try:
-                from MDAnalysis import transformations as trans
-
-                u.trajectory.add_transformations(
-                    trans.NoJump(check_continuity=False),
-                    trans.center_in_box(prot_all, center="geometry", wrap=False),
-                )
-            except Exception:
-                pass
-
-            kept = 0
-            stride = max(1, frame_stride)
-            for idx, _ in enumerate(u.trajectory):
-                if idx % stride != 0:
-                    continue
-                if kept >= max_frames:
-                    break
-                align.alignto(u, ref, select="protein and name CA", weights="mass")
-                ca = u.select_atoms("protein and name CA")
-                ca_ref = ref.select_atoms("protein and name CA")
-                if ca.n_atoms == 0 or ca_ref.n_atoms == 0:
-                    break
-                diff = ca.positions - ca_ref.positions
-                rmsd = float(np.sqrt(np.mean(np.sum(diff * diff, axis=1))))
-                rows.append(
-                    {
-                        "structure": row["structure"],
-                        "mutation": row["mutation"],
-                        "safe_label": safe,
-                        "replicate": rep,
-                        "frame_index": int(u.trajectory.frame),
-                        "time_ps": float(getattr(u.trajectory.ts, "time", np.nan)),
-                        "ca_rmsd_angstrom": rmsd,
-                    }
-                )
-                kept += 1
-        except Exception as exc:
-            logging.warning("RMSD profile failed for %s rep%d: %s", row["mutation"], rep, exc)
-
+    rows = _run_profile_jobs(jobs, _runner, label="RMSD profiles", workers=workers)
     return pd.DataFrame(rows)
 
 
@@ -183,76 +423,54 @@ def collect_com_distance_profiles(
     ligand_resname: str,
     frame_stride: int = 10,
     max_frames: int = 400,
+    workers: int | None = None,
 ) -> pd.DataFrame:
     """Collect DOR-vs-protein center-of-mass distance profiles."""
-    try:
-        import MDAnalysis as mda
-        from MDAnalysis.lib.distances import distance_array
-    except Exception:
-        return pd.DataFrame()
-
     if run_df.empty:
         return pd.DataFrame()
+    jobs = _prepare_profile_jobs(run_df)
+    if not jobs:
+        return pd.DataFrame()
 
-    rows: list[dict] = []
-    for _, row in run_df.iterrows():
-        rep_dir = _infer_rep_dir(row)
-        safe = str(row["safe_label"])
-        rep = int(row["replicate"])
-
-        topo = _resolve_local_path(
-            _nonempty_path(row.get("analysis_topology_pdb")),
-            rep_dir / f"{safe}_rep{rep:02d}_analysis_topology.pdb",
+    def _runner(job: dict) -> tuple[list[dict], str | None]:
+        return _com_distance_worker(
+            job,
+            ligand_resname=ligand_resname,
+            frame_stride=frame_stride,
+            max_frames=max_frames,
         )
-        dcd = _resolve_local_path(
-            _nonempty_path(row.get("analysis_dcd")),
-            rep_dir / f"{safe}_rep{rep:02d}_analysis.dcd",
+
+    rows = _run_profile_jobs(jobs, _runner, label="COM-distance profiles", workers=workers)
+    return pd.DataFrame(rows)
+
+
+def collect_pocket_volume_profiles(
+    run_df: pd.DataFrame,
+    ligand_resname: str,
+    frame_stride: int = 5,
+    max_frames: int = 400,
+    grid_spacing: float = 0.75,
+    pocket_radius_angstrom: float = 8.0,
+    workers: int | None = None,
+) -> pd.DataFrame:
+    """Collect per-frame pocket-volume proxy traces."""
+    if run_df.empty:
+        return pd.DataFrame()
+    jobs = _prepare_profile_jobs(run_df)
+    if not jobs:
+        return pd.DataFrame()
+
+    def _runner(job: dict) -> tuple[list[dict], str | None]:
+        return _pocket_volume_worker(
+            job,
+            ligand_resname=ligand_resname,
+            frame_stride=frame_stride,
+            max_frames=max_frames,
+            grid_spacing=grid_spacing,
+            pocket_radius_angstrom=pocket_radius_angstrom,
         )
-        if topo is None or dcd is None or not topo.exists() or not dcd.exists():
-            continue
 
-        try:
-            u = mda.Universe(str(topo), str(dcd))
-            lig = u.select_atoms(f"resname {ligand_resname}")
-            prot = u.select_atoms(f"protein and not resname {ligand_resname}")
-            if lig.n_atoms == 0 or prot.n_atoms == 0:
-                continue
-            try:
-                from MDAnalysis import transformations as trans
-
-                u.trajectory.add_transformations(
-                    trans.NoJump(check_continuity=False),
-                    trans.center_in_box(prot, center="geometry", wrap=False),
-                )
-            except Exception:
-                pass
-
-            kept = 0
-            stride = max(1, frame_stride)
-            for idx, _ in enumerate(u.trajectory):
-                if idx % stride != 0:
-                    continue
-                if kept >= max_frames:
-                    break
-                # Use minimum-image distance between COM points to avoid PBC jump spikes.
-                lig_com = np.asarray(lig.center_of_mass(), dtype=float).reshape(1, 3)
-                prot_com = np.asarray(prot.center_of_mass(), dtype=float).reshape(1, 3)
-                d = float(distance_array(lig_com, prot_com, box=u.dimensions).min())
-                rows.append(
-                    {
-                        "structure": row["structure"],
-                        "mutation": row["mutation"],
-                        "safe_label": safe,
-                        "replicate": rep,
-                        "frame_index": int(u.trajectory.frame),
-                        "time_ps": float(getattr(u.trajectory.ts, "time", np.nan)),
-                        "com_distance_angstrom": d,
-                    }
-                )
-                kept += 1
-        except Exception as exc:
-            logging.warning("COM-distance profile failed for %s rep%d: %s", row["mutation"], rep, exc)
-
+    rows = _run_profile_jobs(jobs, _runner, label="Pocket-volume profiles", workers=workers)
     return pd.DataFrame(rows)
 
 

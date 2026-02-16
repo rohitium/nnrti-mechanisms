@@ -58,6 +58,16 @@ def _load_best_dataset(
     return best_df, best_path
 
 
+def _with_fold_change_alias(df: pd.DataFrame) -> pd.DataFrame:
+    """Add a fold_change output alias for backward-compatible FR->FC transition."""
+    if "fold_reduction" in df.columns and "fold_change" not in df.columns:
+        out = df.copy()
+        insert_at = list(out.columns).index("fold_reduction") + 1
+        out.insert(insert_at, "fold_change", out["fold_reduction"])
+        return out
+    return df
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -70,6 +80,12 @@ def main() -> int:
     parser.add_argument("--mmgbsa-discard-fraction", type=float, default=0.25)
     parser.add_argument("--metric-frame-stride", type=int, default=5)
     parser.add_argument("--metric-max-frames", type=int, default=200)
+    parser.add_argument(
+        "--profile-workers",
+        type=int,
+        default=4,
+        help="Worker threads for trajectory profile collection (RMSD/COM/pocket volume)",
+    )
     args = parser.parse_args()
 
     results_dir = args.results_dir
@@ -84,6 +100,7 @@ def main() -> int:
     ckpt_mmgbsa = ckpt_dir / ".checkpoint_mmgbsa_replicate_metrics.csv"
     ckpt_rmsd = ckpt_dir / ".checkpoint_rmsd_ca_profiles.csv"
     ckpt_com = ckpt_dir / ".checkpoint_com_distance_profiles.csv"
+    ckpt_pocket = ckpt_dir / ".checkpoint_pocket_volume_profiles.csv"
     ckpt_boundness = ckpt_dir / ".checkpoint_boundness_qc.csv"
     ckpt_structural = ckpt_dir / ".checkpoint_structural_metrics.csv"
 
@@ -130,6 +147,7 @@ def main() -> int:
             return 1
 
         md_df = pd.read_csv(ckpt_md_metadata)
+        logging.info(f"STEP 3: profile workers={max(1, args.profile_workers)}")
 
         # RMSD
         if args.force or not checkpoint_exists(ckpt_rmsd):
@@ -140,6 +158,7 @@ def main() -> int:
                 md_df,
                 frame_stride=args.metric_frame_stride,
                 max_frames=args.metric_max_frames,
+                workers=args.profile_workers,
             )
             rmsd_df.to_csv(ckpt_rmsd, index=False)
             logging.info(f"  Saved checkpoint: {ckpt_rmsd}")
@@ -156,26 +175,44 @@ def main() -> int:
                 ligand_resname="2KW",
                 frame_stride=args.metric_frame_stride,
                 max_frames=args.metric_max_frames,
+                workers=args.profile_workers,
             )
             com_df.to_csv(ckpt_com, index=False)
             logging.info(f"  Saved checkpoint: {ckpt_com}")
         else:
             logging.info(f"STEP 3b: Using cached COM distance from {ckpt_com}")
 
+        # Pocket volume time series
+        if args.force or not checkpoint_exists(ckpt_pocket):
+            logging.info("STEP 3c: Computing pocket-volume profiles")
+            from src.analysis.result_collector import collect_pocket_volume_profiles
+
+            pocket_df = collect_pocket_volume_profiles(
+                md_df,
+                ligand_resname="2KW",
+                frame_stride=args.metric_frame_stride,
+                max_frames=args.metric_max_frames,
+                workers=args.profile_workers,
+            )
+            pocket_df.to_csv(ckpt_pocket, index=False)
+            logging.info(f"  Saved checkpoint: {ckpt_pocket}")
+        else:
+            logging.info(f"STEP 3c: Using cached pocket-volume profiles from {ckpt_pocket}")
+
         # Boundness QC
         if args.force or not checkpoint_exists(ckpt_boundness):
-            logging.info("STEP 3c: Computing boundness QC")
+            logging.info("STEP 3d: Computing boundness QC")
             from src.analysis.result_collector import compute_boundness_qc
 
             boundness_df = compute_boundness_qc(md_df, ligand_resname="2KW")
             boundness_df.to_csv(ckpt_boundness, index=False)
             logging.info(f"  Saved checkpoint: {ckpt_boundness}")
         else:
-            logging.info(f"STEP 3c: Using cached boundness QC from {ckpt_boundness}")
+            logging.info(f"STEP 3d: Using cached boundness QC from {ckpt_boundness}")
 
         # Structural metrics (use parallel script for speed)
         if args.force or not checkpoint_exists(ckpt_structural):
-            logging.info("STEP 3d: Computing structural metrics (parallel)")
+            logging.info("STEP 3e: Computing structural metrics (parallel)")
             import subprocess
             force_flag = ["--force"] if args.force else []
             result = subprocess.run(
@@ -197,7 +234,7 @@ def main() -> int:
                 return 1
             logging.info(f"  Saved checkpoint: {ckpt_structural}")
         else:
-            logging.info(f"STEP 3d: Using cached structural metrics from {ckpt_structural}")
+            logging.info(f"STEP 3e: Using cached structural metrics from {ckpt_structural}")
 
     # === STEP 4: Generate plots (individual, independent) ===
     if args.step in ("plots", "all"):
@@ -220,6 +257,7 @@ def main() -> int:
                 logging.warning("  No usable MM/GBSA source found.")
             rmsd_df = pd.read_csv(ckpt_rmsd) if ckpt_rmsd.exists() else pd.DataFrame()
             com_df = pd.read_csv(ckpt_com) if ckpt_com.exists() else pd.DataFrame()
+            pocket_df = pd.read_csv(ckpt_pocket) if ckpt_pocket.exists() else pd.DataFrame()
             boundness_df = pd.read_csv(ckpt_boundness) if ckpt_boundness.exists() else pd.DataFrame()
             structural_df, structural_source = _load_best_dataset(
                 [
@@ -245,6 +283,7 @@ def main() -> int:
 
             ddg_df = compute_binding_ddg(mmgbsa_df)
             ddg_df = merge_with_structural_metrics(ddg_df, structural_df)
+            ddg_df = _with_fold_change_alias(ddg_df)
             ddg_df.to_csv(results_dir / "ddg_full.csv", index=False)
             logging.info(f"  Saved: {results_dir / 'ddg_full.csv'}")
         else:
@@ -256,18 +295,21 @@ def main() -> int:
             rmsd_df.to_csv(results_dir / "rmsd_ca_profiles.csv", index=False)
         if not com_df.empty:
             com_df.to_csv(results_dir / "com_distance_profiles.csv", index=False)
+        if not pocket_df.empty:
+            pocket_df.to_csv(results_dir / "pocket_volume_profiles.csv", index=False)
         if not boundness_df.empty:
             boundness_df.to_csv(results_dir / "boundness_qc.csv", index=False)
         if not structural_df.empty:
-            structural_df.to_csv(results_dir / "structural_metrics.csv", index=False)
+            _with_fold_change_alias(structural_df).to_csv(results_dir / "structural_metrics.csv", index=False)
         if not mmgbsa_df.empty:
-            mmgbsa_df.to_csv(results_dir / "mmgbsa_replicate_metrics.csv", index=False)
+            _with_fold_change_alias(mmgbsa_df).to_csv(results_dir / "mmgbsa_replicate_metrics.csv", index=False)
 
         # Generate individual plots
         from src.analysis.plotting import (
-            plot_simulation_convergence,
-            plot_boundness_qc,
             plot_all_metrics_vs_fold_reduction,
+            plot_all_mutation_pocket_volume_timeseries,
+            plot_boundness_qc,
+            plot_simulation_convergence,
         )
         from src.utils import project_paths
 
@@ -283,7 +325,7 @@ def main() -> int:
             logging.error(f"    Failed: {exc}")
 
         try:
-            logging.info("  Plot 2/5: Boundness QC")
+            logging.info("  Plot 2/6: Boundness QC")
             if not boundness_df.empty:
                 plot_boundness_qc(boundness_df, paths)
                 logging.info(f"    Saved: {plots_dir / 'boundness_qc_min_distance.png'}")
@@ -291,16 +333,24 @@ def main() -> int:
             logging.error(f"    Failed: {exc}")
 
         try:
-            logging.info("  Plot 3/5: All metrics vs fold reduction")
+            logging.info("  Plot 3/6: All metrics vs fold change")
             if not ddg_df.empty:
                 plot_all_metrics_vs_fold_reduction(ddg_df, paths)
                 logging.info(f"    Saved: {plots_dir / 'all_metrics_vs_fold_reduction.png'}")
         except Exception as exc:
             logging.error(f"    Failed: {exc}")
 
+        try:
+            logging.info("  Plot 4/6: Pocket volume time series (WT vs mutant)")
+            if not pocket_df.empty:
+                plot_all_mutation_pocket_volume_timeseries(pocket_df, paths)
+                logging.info(f"    Saved: {plots_dir / 'pocket_volume_timeseries'}")
+        except Exception as exc:
+            logging.error(f"    Failed: {exc}")
+
         # Resistance heatmap
         try:
-            logging.info("  Plot 4/5: Resistance heatmap")
+            logging.info("  Plot 5/6: Resistance heatmap")
             import subprocess
             result = subprocess.run(
                 ["python", "-m", "src.analysis.cli.plot_resistance_heatmap"],
@@ -316,7 +366,7 @@ def main() -> int:
 
         # MM/GBSA plots
         try:
-            logging.info("  Plot 5/5: MM/GBSA component plots")
+            logging.info("  Plot 6/6: MM/GBSA component plots")
             if not mmgbsa_df.empty:
                 import subprocess
                 result = subprocess.run(
@@ -333,7 +383,7 @@ def main() -> int:
 
         # Combined all-metrics panel
         try:
-            logging.info("  Plot 6/7: All-mutation ensemble metrics panel")
+            logging.info("  Plot 6/8: All-mutation ensemble metrics panel")
             import subprocess
             result = subprocess.run(
                 ["python", "-m", "src.analysis.cli.plot_all_mutation_ensemble_metrics"],
@@ -349,7 +399,7 @@ def main() -> int:
 
         # DRM distance traces
         try:
-            logging.info("  Plot 7/7: DRM sidechain distance traces")
+            logging.info("  Plot 7/8: DRM sidechain distance traces")
             import subprocess
             result = subprocess.run(
                 ["python", "-m", "src.analysis.cli.plot_all_mutation_drm_distances"],
@@ -358,6 +408,22 @@ def main() -> int:
             )
             if result.returncode == 0:
                 logging.info(f"    Saved: {plots_dir / 'drm_distances'}")
+            else:
+                logging.error(f"    Failed: {result.stderr}")
+        except Exception as exc:
+            logging.error(f"    Failed: {exc}")
+
+        # Crystal-derived DOR contact distance traces
+        try:
+            logging.info("  Plot 8/8: Crystal-derived DOR contact distance traces")
+            import subprocess
+            result = subprocess.run(
+                ["python", "-m", "src.analysis.cli.plot_all_mutation_dor_key_contacts"],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0:
+                logging.info(f"    Saved: {plots_dir / 'dor_key_contacts'}")
             else:
                 logging.error(f"    Failed: {result.stderr}")
         except Exception as exc:

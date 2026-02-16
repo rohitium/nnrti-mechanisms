@@ -32,7 +32,7 @@ def build_resistance_matrix(df: pd.DataFrame) -> tuple[np.ndarray, list[str], di
     """Build resistance matrix for heatmap.
 
     Returns:
-        matrix: NxN array of log10(fold reduction), NaN for missing combinations
+        matrix: NxN array of log10(fold change), NaN for missing combinations
         drm_order: List of ordered DRM names (for axis labels)
         metadata: Dict with additional info (fold values, mutation counts, etc.)
     """
@@ -136,7 +136,7 @@ def plot_resistance_heatmap(
 
     # Add colorbar
     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.set_label("log₁₀(Fold Reduction)", fontsize=12, fontweight="bold")
+    cbar.set_label(r"$\log_{10}(\mathrm{FC})$", fontsize=12, fontweight="bold")
     cbar.ax.tick_params(labelsize=10)
 
     # Set ticks and labels

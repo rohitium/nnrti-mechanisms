@@ -209,7 +209,7 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
 
         fit = _safe_linear_fit(sub["fold_reduction_log10"].values, sub[col].values)
         title_label = title_label_map.get(col, label)
-        base_title = f"{title_label} (mut - WT) vs log_10(Fold Reduction)"
+        base_title = f"{title_label} (mut - WT) vs " + r"$\log_{10}(\mathrm{FC})$"
         if fit is None:
             ax.set_title(base_title, fontsize=11, fontweight="bold")
         else:
@@ -236,7 +236,7 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
             else:
                 ax.set_title(base_title, fontsize=11, fontweight="bold")
 
-        ax.set_xlabel("log10(Fold Reduction)", fontsize=10)
+        ax.set_xlabel(r"$\log_{10}(\mathrm{FC})$", fontsize=10)
         ax.set_ylabel(label, fontsize=10)
         ax.margins(x=0.08, y=0.16)
         ax.grid(alpha=0.3, linestyle=":", linewidth=0.8)
@@ -577,6 +577,140 @@ def plot_simulation_convergence(
         plt.close(fig_com)
 
 
+def plot_all_mutation_pocket_volume_timeseries(pocket_df: pd.DataFrame, paths) -> None:
+    """Plot WT-vs-mutant pocket-volume traces for each mutation."""
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    if pocket_df.empty:
+        return
+    required = {"mutation", "replicate", "pocket_volume_proxy_angstrom3"}
+    if not required.issubset(set(pocket_df.columns)):
+        return
+
+    def _infer_total_ns_from_state_csv(safe_label: str, replicate: int) -> float | None:
+        state_csv = (
+            paths.results
+            / "md_runs"
+            / str(safe_label)
+            / f"rep_{int(replicate):02d}"
+            / f"{safe_label}_rep{int(replicate):02d}_md_state.csv"
+        )
+        if not state_csv.exists():
+            return None
+        try:
+            sdf = pd.read_csv(state_csv)
+        except Exception:
+            return None
+        step_col = None
+        for c in ('#"Step"', "Step"):
+            if c in sdf.columns:
+                step_col = c
+                break
+        if step_col is None or sdf.empty:
+            return None
+        max_step = pd.to_numeric(sdf[step_col], errors="coerce").dropna()
+        if max_step.empty:
+            return None
+        return float(max_step.max()) * 2.0 / 1_000_000.0
+
+    def _build_time_axis(df_in: pd.DataFrame) -> pd.DataFrame:
+        out = df_in.copy()
+        out["time_ns"] = pd.to_numeric(out.get("time_ps", np.nan), errors="coerce") / 1000.0
+        if not {"safe_label", "replicate", "frame_index"}.issubset(out.columns):
+            return out
+
+        parts = []
+        for (safe_label, rep), sub in out.groupby(["safe_label", "replicate"], dropna=False):
+            sub = sub.copy()
+            frame = pd.to_numeric(sub["frame_index"], errors="coerce")
+            max_frame = float(frame.max()) if len(frame) else np.nan
+            total_ns = _infer_total_ns_from_state_csv(str(safe_label), int(rep))
+            if np.isfinite(max_frame) and max_frame > 0 and total_ns is not None and np.isfinite(total_ns) and total_ns > 0:
+                sub["time_ns"] = (frame / max_frame) * total_ns
+            else:
+                t_ns = pd.to_numeric(sub.get("time_ps", np.nan), errors="coerce") / 1000.0
+                finite_max = float(np.nanmax(t_ns)) if np.isfinite(np.nanmax(t_ns)) else np.nan
+                if np.isfinite(finite_max) and finite_max > 200.0:
+                    t_ns = t_ns / 1000.0
+                sub["time_ns"] = t_ns.where(t_ns.notna(), frame * 0.01)
+            parts.append(sub)
+        return pd.concat(parts, ignore_index=True) if parts else out
+
+    df = _build_time_axis(pocket_df)
+
+    df["pocket_volume_nm3"] = pd.to_numeric(df["pocket_volume_proxy_angstrom3"], errors="coerce") * 1e-3
+    df = df.dropna(subset=["mutation", "replicate", "time_ns", "pocket_volume_nm3"]).copy()
+    if df.empty:
+        return
+
+    wt = df[df["mutation"] == "WT"].copy()
+    muts = sorted([m for m in df["mutation"].unique() if m != "WT"], key=lambda m: (2, m) if "+" in str(m) else (1, m))
+    if wt.empty or not muts:
+        return
+
+    out_dir = paths.plots / "pocket_volume_timeseries"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    def _interp_mean_trace(sub: pd.DataFrame, n_grid: int = 220):
+        reps = []
+        for rep in sorted(sub["replicate"].dropna().unique()):
+            rep_df = sub[sub["replicate"] == rep].sort_values("time_ns")
+            x = rep_df["time_ns"].to_numpy(dtype=float)
+            y = rep_df["pocket_volume_nm3"].to_numpy(dtype=float)
+            if len(x) < 2:
+                continue
+            keep = np.r_[True, np.diff(x) > 0]
+            x = x[keep]
+            y = y[keep]
+            if len(x) < 2:
+                continue
+            reps.append((x, y))
+        if not reps:
+            return None, None
+        xmin = min(float(x.min()) for x, _ in reps)
+        xmax = max(float(x.max()) for x, _ in reps)
+        if not np.isfinite(xmin) or not np.isfinite(xmax) or xmax <= xmin:
+            return None, None
+        grid = np.linspace(xmin, xmax, n_grid)
+        ys = []
+        for x, y in reps:
+            yi = np.interp(grid, x, y)
+            yi[(grid < x.min()) | (grid > x.max())] = np.nan
+            ys.append(yi)
+        return grid, np.nanmean(np.vstack(ys), axis=0)
+
+    for mut in muts:
+        mdf = df[df["mutation"] == mut].copy()
+        if mdf.empty:
+            continue
+
+        fig, ax = plt.subplots(figsize=(8.2, 5.0))
+
+        for rep in sorted(wt["replicate"].dropna().unique()):
+            rep_df = wt[wt["replicate"] == rep].sort_values("time_ns")
+            ax.plot(rep_df["time_ns"], rep_df["pocket_volume_nm3"], color="#9a9a9a", alpha=0.35, linewidth=1.0)
+        x_wt, y_wt = _interp_mean_trace(wt)
+        if x_wt is not None:
+            ax.plot(x_wt, y_wt, color="#4d4d4d", linewidth=2.2, label="WT mean")
+
+        for rep in sorted(mdf["replicate"].dropna().unique()):
+            rep_df = mdf[mdf["replicate"] == rep].sort_values("time_ns")
+            ax.plot(rep_df["time_ns"], rep_df["pocket_volume_nm3"], color="#1f77b4", alpha=0.35, linewidth=1.0)
+        x_mut, y_mut = _interp_mean_trace(mdf)
+        if x_mut is not None:
+            ax.plot(x_mut, y_mut, color="#1f77b4", linewidth=2.2, label=f"{mut} mean")
+
+        ax.set_title(f"{mut} vs WT: Pocket Volume", fontsize=12, fontweight="bold")
+        ax.set_xlabel("Time (ns)", fontsize=10)
+        ax.set_ylabel("Pocket Volume Proxy (nm^3)", fontsize=10)
+        ax.grid(alpha=0.25, linestyle=":")
+        ax.legend(frameon=False, fontsize=9)
+        fig.tight_layout()
+        fig.savefig(out_dir / f"{str(mut).replace('+', '_')}_pocket_volume_timeseries.png", dpi=220, bbox_inches="tight")
+        plt.close(fig)
+
+
 def plot_si_figure_s1_like(pos_df: pd.DataFrame, paths) -> None:
     """Compatibility SI-style mutation landscape plot from position summary table."""
     import matplotlib.pyplot as plt
@@ -626,7 +760,7 @@ def plot_si_figure_s1_like(pos_df: pd.DataFrame, paths) -> None:
     fig, ax = plt.subplots(figsize=(10, 4.8))
     ax.scatter(x, y, s=size, color="#1f77b4", alpha=0.85)
     ax.set_xlabel("RT residue position")
-    ax.set_ylabel("log10(Fold Reduction)")
+    ax.set_ylabel(r"$\log_{10}(\mathrm{FC})$")
     ax.set_title("Mutation Landscape by RT Position")
     ax.grid(alpha=0.25, linestyle=":")
     fig.tight_layout()

@@ -41,6 +41,15 @@ Pipeline steps executed by `run_analysis.sh`:
 4. plot generation from available checkpoints
 5. MM/GBSA (`src.analysis.cli.compute_mmgbsa_safe`, expensive step)
 6. final plot regeneration (includes MM/GBSA/ddG outputs)
+7. curate ranked "interesting" DRM traces for PyMOL follow-up
+
+New DRM triage output:
+- `results/drm_sidechain_distance_interesting_traces.csv`
+
+Additional pocket-coordinate outputs:
+- `results/dor_key_contact_definitions_4ncg.csv`
+- `results/dor_key_contacts_timeseries_all_mutations.csv`
+- `results/plots/dor_key_contacts/*_dor_key_contacts_timeseries.png`
 
 MM/GBSA tuning variables:
 
