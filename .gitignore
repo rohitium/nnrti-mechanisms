@@ -216,7 +216,7 @@ __marimo__/
 .snakemake/
 
 # Local outputs
-*.dcd
+*.dcd*
 *.pdb
 *.xml
 *.chk*

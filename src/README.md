@@ -7,7 +7,6 @@ Structure and mutation preparation logic.
 - `config.py`: structure/run specs (e.g., DOR 4NCG)
 - `preparation.py`: WT/mutant prep + manifest creation
 - `mutation/`: mutation parsing/application/numbering helpers
-- `cli/trim_for_pymol.py`: topology/trajectory trimming helper
 
 ## 2) `src/md/`
 MD execution runtime and cluster-facing utilities.
@@ -24,6 +23,8 @@ Post-MD analysis and plotting.
 - `result_collector.py`: MM/GBSA + merge + correlation pipeline
 - `plotting.py`: figure builders
 - `cli/`: analysis/plot command entrypoints
+- `cli/trim_for_pymol.py`: topology/trajectory trimming helper for visualization
+- `cli/fix_pbc_trajectories.py`: batch PBC correction for `*_analysis.dcd`
 
 ## 4) `src/utils/`
 Shared cross-cutting helpers (paths, CIF parsing, mutation token utils).

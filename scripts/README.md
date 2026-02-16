@@ -35,11 +35,12 @@ Force recomputation:
 ```
 
 Pipeline steps executed by `run_analysis.sh`:
-1. metadata collection
-2. structural metrics
-3. plot generation from available checkpoints
-4. MM/GBSA (`src.analysis.cli.compute_mmgbsa_safe`, expensive step)
-5. final plot regeneration (includes MM/GBSA/ddG outputs)
+1. PBC correction for all `results/md_runs/*/*_analysis.dcd` trajectories
+2. metadata collection
+3. structural metrics
+4. plot generation from available checkpoints
+5. MM/GBSA (`src.analysis.cli.compute_mmgbsa_safe`, expensive step)
+6. final plot regeneration (includes MM/GBSA/ddG outputs)
 
 MM/GBSA tuning variables:
 
