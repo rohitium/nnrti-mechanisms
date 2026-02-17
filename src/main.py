@@ -42,7 +42,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--results-dir", type=Path, default=None)
 
     parser.add_argument("--md-heating-ps", type=float, default=25.0)
-    parser.add_argument("--md-production-ns", type=float, default=2.0)
+    parser.add_argument("--md-production-ns", type=float, default=10.0)
     parser.add_argument("--trajectory-interval", type=int, default=2000)
 
     parser.add_argument("--skip-structural-metrics", action="store_true")

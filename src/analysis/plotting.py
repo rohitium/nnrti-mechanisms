@@ -93,7 +93,7 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
     if ddg_df.empty:
         df = _load_structural_fallback()
     else:
-        df = _add_metric_delta_columns(ddg_df)
+        df = ddg_df.copy()
 
     if df.empty:
         return
@@ -108,12 +108,10 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
         if not fallback_df.empty:
             mut_df = fallback_df[fallback_df["mutation"] != "WT"].copy()
 
-    energy_metric = "ddg" if "ddg" in mut_df.columns and mut_df["ddg"].notna().sum() >= 2 else "binding_dg"
+    energy_metric = "binding_dg" if "binding_dg" in mut_df.columns and mut_df["binding_dg"].notna().sum() >= 2 else "ddg"
     metric_specs = [
-        (energy_metric, "∆ Binding Energy (kcal/mol)"),
-        ("contact_count_delta", "∆ Contacts (count)"),
-        ("hbond_count_delta", "∆ H-bonds (count)"),
-        ("pocket_volume_proxy_delta", "∆ Pocket Volume (A^3)"),
+        (energy_metric, "Binding Energy (kcal/mol)"),
+        ("pocket_volume_proxy", "Pocket Volume (A^3)"),
     ]
 
     available = []
@@ -147,6 +145,20 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
             if f"{energy_col}_std" in by_mut.columns:
                 by_mut[f"{energy_col}_std"] = by_mut[f"{energy_col}_std"] * _KJ_TO_KCAL
 
+    wt_df = df[df["mutation"] == "WT"].copy()
+    wt_summary: dict[str, tuple[float, float]] = {}
+    for col, _ in available:
+        if col not in wt_df.columns:
+            continue
+        wt_vals = pd.to_numeric(wt_df[col], errors="coerce").dropna().to_numpy(dtype=float)
+        if wt_vals.size == 0:
+            continue
+        if col in {"ddg", "binding_dg"}:
+            wt_vals = wt_vals * _KJ_TO_KCAL
+        wt_mean = float(np.nanmean(wt_vals))
+        wt_sem = float(np.nanstd(wt_vals, ddof=1) / np.sqrt(wt_vals.size)) if wt_vals.size > 1 else 0.0
+        wt_summary[col] = (wt_mean, wt_sem)
+
     for col, _ in available:
         std_col = f"{col}_std"
         n_col = f"{col}_n"
@@ -160,19 +172,53 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(8 * ncols, 5.5 * nrows))
     axes_arr = np.atleast_1d(axes).flatten()
 
-    colors = {
-        "ddg": "#d62728",
-        "contact_count_delta": "#1f77b4",
-        "hbond_count_delta": "#2ca02c",
-        "pocket_volume_proxy_delta": "#ff7f0e",
+    point_colors = {
+        "single": "#1f77b4",
+        "combo": "#d62728",
     }
     title_label_map = {
-        "ddg": "∆ Binding Energy",
-        "binding_dg": "∆ Binding Energy",
-        "contact_count_delta": "∆ Contacts",
-        "hbond_count_delta": "∆ H-bonds",
-        "pocket_volume_proxy_delta": "∆ Pocket Volume",
+        "ddg": "Binding Energy",
+        "binding_dg": "Binding Energy",
+        "pocket_volume_proxy": "Pocket Volume",
     }
+
+    def _annotate_non_overlapping(ax, sub_df: pd.DataFrame, x_col: str, y_col: str) -> None:
+        fig = ax.figure
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+        placed_boxes = []
+        offsets = [
+            (6, 6),
+            (6, -8),
+            (-8, 6),
+            (-8, -8),
+            (12, 0),
+            (-12, 0),
+            (0, 12),
+            (0, -12),
+            (14, 8),
+            (-14, 8),
+            (14, -8),
+            (-14, -8),
+        ]
+        for _, row in sub_df.iterrows():
+            for dx, dy in offsets:
+                txt = ax.annotate(
+                    row["mutation"],
+                    (row[x_col], row[y_col]),
+                    textcoords="offset points",
+                    xytext=(dx, dy),
+                    fontsize=8,
+                    alpha=0.9,
+                    bbox=dict(boxstyle="round,pad=0.25", facecolor="white", alpha=0.7, edgecolor="none"),
+                )
+                fig.canvas.draw()
+                box = txt.get_window_extent(renderer=renderer).expanded(1.04, 1.12)
+                if any(box.overlaps(prev) for prev in placed_boxes):
+                    txt.remove()
+                    continue
+                placed_boxes.append(box)
+                break
 
     for i, (col, label) in enumerate(available):
         ax = axes_arr[i]
@@ -182,39 +228,61 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
             continue
 
         sem_col = f"{col}_sem"
-        color = colors.get(col, "#2a6f97")
-        ax.errorbar(
-            sub["fold_reduction_log10"],
-            sub[col],
-            yerr=sub[sem_col] if sem_col in sub.columns else None,
-            fmt="o",
-            color=color,
-            markersize=8,
-            capsize=4,
-            capthick=1.5,
-            elinewidth=1.5,
-            alpha=0.9,
-        )
+        singles = sub[~sub["mutation"].astype(str).str.contains(r"\+")].copy()
+        combos = sub[sub["mutation"].astype(str).str.contains(r"\+")].copy()
 
-        for _, row in sub.iterrows():
-            ax.annotate(
-                row["mutation"],
-                (row["fold_reduction_log10"], row[col]),
-                textcoords="offset points",
-                xytext=(6, 6),
-                fontsize=8,
+        single_plot = None
+        combo_plot = None
+        if not singles.empty:
+            single_err = singles[sem_col] if sem_col in singles.columns else None
+            single_plot = ax.errorbar(
+                singles["fold_reduction_log10"],
+                singles[col],
+                yerr=single_err,
+                fmt="o",
+                color=point_colors["single"],
+                markersize=8,
+                capsize=4,
+                capthick=1.5,
+                elinewidth=1.5,
                 alpha=0.9,
-                bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.7, edgecolor="none"),
+                label="Single DRM",
             )
+        if not combos.empty:
+            combo_err = combos[sem_col] if sem_col in combos.columns else None
+            combo_plot = ax.errorbar(
+                combos["fold_reduction_log10"],
+                combos[col],
+                yerr=combo_err,
+                fmt="s",
+                color=point_colors["combo"],
+                markersize=7,
+                capsize=4,
+                capthick=1.5,
+                elinewidth=1.5,
+                alpha=0.9,
+                label="DRM Combination",
+            )
+
+        _annotate_non_overlapping(ax, sub, "fold_reduction_log10", col)
+
+        wt_line = None
+        if col in wt_summary:
+            wt_mean, wt_sem = wt_summary[col]
+            wt_line = ax.axhline(wt_mean, color="#000000", linestyle="-", linewidth=1.2, alpha=0.9, label="WT")
+            if wt_sem > 0:
+                ax.axhspan(wt_mean - wt_sem, wt_mean + wt_sem, color="#999999", alpha=0.15, linewidth=0)
 
         fit = _safe_linear_fit(sub["fold_reduction_log10"].values, sub[col].values)
         title_label = title_label_map.get(col, label)
-        base_title = f"{title_label} (mut - WT) vs " + r"$\log_{10}(\mathrm{FC})$"
+        base_title = f"{title_label} vs " + r"$\log_{10}(\mathrm{Fold\ Change})$"
+        trend_line = None
+        trend_label = "Trend line"
         if fit is None:
-            ax.set_title(base_title, fontsize=11, fontweight="bold")
+            ax.set_title(base_title, fontsize=11, fontweight="normal")
         else:
             x_line, y_line, r = fit
-            ax.plot(x_line, y_line, "--", color="#555555", alpha=0.7, linewidth=1.8)
+            trend_line = ax.plot(x_line, y_line, "--", color="#777777", alpha=0.9, linewidth=1.8)[0]
             if pd.notna(r):
                 try:
                     from scipy import stats
@@ -226,20 +294,29 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
                     pvalue = float("nan")
                 r2 = float(r * r)
                 if np.isfinite(pvalue):
-                    ax.set_title(
-                        f"{base_title}\n(R²={r2:.3f}, p={pvalue:.3g})",
-                        fontsize=11,
-                        fontweight="bold",
-                    )
+                    trend_label = f"Trend line (R^2={r2:.3f}, p={pvalue:.3g})"
                 else:
-                    ax.set_title(f"{base_title}\n(R²={r2:.3f})", fontsize=11, fontweight="bold")
-            else:
-                ax.set_title(base_title, fontsize=11, fontweight="bold")
+                    trend_label = f"Trend line (R^2={r2:.3f})"
+        ax.set_title(base_title, fontsize=11, fontweight="normal")
+        if trend_line is not None:
+            trend_line.set_label(trend_label)
 
-        ax.set_xlabel(r"$\log_{10}(\mathrm{FC})$", fontsize=10)
+        ax.set_xlabel(r"$\log_{10}(\mathrm{Fold\ Change})$", fontsize=10)
         ax.set_ylabel(label, fontsize=10)
         ax.margins(x=0.08, y=0.16)
         ax.grid(alpha=0.3, linestyle=":", linewidth=0.8)
+
+        legend_handles = []
+        if single_plot is not None:
+            legend_handles.append(single_plot)
+        if combo_plot is not None:
+            legend_handles.append(combo_plot)
+        if wt_line is not None:
+            legend_handles.append(wt_line)
+        if trend_line is not None:
+            legend_handles.append(trend_line)
+        if legend_handles:
+            ax.legend(handles=legend_handles, frameon=True, fontsize=8, loc="upper left")
 
         if i == 0 or col in {"ddg", "binding_dg"}:
             y = sub[col].to_numpy(dtype=float)
@@ -257,7 +334,6 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
     for j in range(len(available), len(axes_arr)):
         axes_arr[j].set_visible(False)
 
-    fig.suptitle("Biophysical Metrics vs DOR Resistance", fontsize=13, fontweight="bold", y=0.995)
     fig.tight_layout()
     fig.savefig(
         paths.plots / "all_metrics_vs_fold_reduction.png",
@@ -703,7 +779,7 @@ def plot_all_mutation_pocket_volume_timeseries(pocket_df: pd.DataFrame, paths) -
 
         ax.set_title(f"{mut} vs WT: Pocket Volume", fontsize=12, fontweight="bold")
         ax.set_xlabel("Time (ns)", fontsize=10)
-        ax.set_ylabel("Pocket Volume Proxy (nm^3)", fontsize=10)
+        ax.set_ylabel("Pocket Volume (nm^3)", fontsize=10)
         ax.grid(alpha=0.25, linestyle=":")
         ax.legend(frameon=False, fontsize=9)
         fig.tight_layout()

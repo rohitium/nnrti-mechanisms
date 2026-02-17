@@ -155,6 +155,7 @@ def compute_ensemble_metrics(
     frame_stride: int = 1,
     max_frames: int | None = 200,
     sample_window_ns: float | None = 1.0,
+    total_time_ns: float | None = None,
     contact_cutoff_angstrom: float = 4.0,
     grid_spacing: float = 0.75,
     pocket_radius_angstrom: float = 8.0,
@@ -179,23 +180,38 @@ def compute_ensemble_metrics(
 
     frame_indices: list[int]
     if sample_window_ns is not None and sample_window_ns > 0.0 and len(sampled_frames) > 1:
-        dt_ps = getattr(u.trajectory, "dt", None)
-        corrected_dt_ps = dt_ps
-        if corrected_dt_ps is not None and np.isfinite(corrected_dt_ps) and corrected_dt_ps > 1000.0:
-            candidate = float(corrected_dt_ps) / 1000.0
-            corrected_dt_ps = candidate if candidate <= 1000.0 else None
-        if corrected_dt_ps is not None and np.isfinite(corrected_dt_ps) and corrected_dt_ps > 0:
-            total_time_ps = (len(u.trajectory) - 1) * float(corrected_dt_ps)
-            window_ps = float(sample_window_ns) * 1000.0
-            start_time_ps = max(0.0, total_time_ps - window_ps)
-            sampled_in_window = [
-                frame_id
-                for frame_id in sampled_frames
-                if (frame_id * float(corrected_dt_ps)) >= start_time_ps
-            ]
-            frame_indices = sampled_in_window if sampled_in_window else sampled_frames
+        # Prefer a frame-fraction mapping when the total simulated time is known, because
+        # DCD dt metadata is not always present or reliable across all trajectories.
+        if total_time_ns is not None and np.isfinite(total_time_ns) and float(total_time_ns) > 0.0:
+            total_ns = float(total_time_ns)
+            window_ns = float(sample_window_ns)
+            if window_ns >= total_ns:
+                start_frame = 0
+            else:
+                # Map time->frame assuming frames are uniformly spaced over production.
+                frac_start = max(0.0, (total_ns - window_ns) / total_ns)
+                start_frame = int(np.ceil(frac_start * float(len(u.trajectory) - 1)))
+            frame_indices = [frame_id for frame_id in sampled_frames if frame_id >= start_frame]
+            if not frame_indices:
+                frame_indices = sampled_frames
         else:
-            frame_indices = sampled_frames
+            dt_ps = getattr(u.trajectory, "dt", None)
+            corrected_dt_ps = dt_ps
+            if corrected_dt_ps is not None and np.isfinite(corrected_dt_ps) and corrected_dt_ps > 1000.0:
+                candidate = float(corrected_dt_ps) / 1000.0
+                corrected_dt_ps = candidate if candidate <= 1000.0 else None
+            if corrected_dt_ps is not None and np.isfinite(corrected_dt_ps) and corrected_dt_ps > 0:
+                total_time_ps = (len(u.trajectory) - 1) * float(corrected_dt_ps)
+                window_ps = float(sample_window_ns) * 1000.0
+                start_time_ps = max(0.0, total_time_ps - window_ps)
+                sampled_in_window = [
+                    frame_id
+                    for frame_id in sampled_frames
+                    if (frame_id * float(corrected_dt_ps)) >= start_time_ps
+                ]
+                frame_indices = sampled_in_window if sampled_in_window else sampled_frames
+            else:
+                frame_indices = sampled_frames
     else:
         frame_indices = sampled_frames
 

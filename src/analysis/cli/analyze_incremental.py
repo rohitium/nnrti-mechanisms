@@ -381,25 +381,9 @@ def main() -> int:
         except Exception as exc:
             logging.error(f"    Failed: {exc}")
 
-        # Combined all-metrics panel
-        try:
-            logging.info("  Plot 6/8: All-mutation ensemble metrics panel")
-            import subprocess
-            result = subprocess.run(
-                ["python", "-m", "src.analysis.cli.plot_all_mutation_ensemble_metrics"],
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode == 0:
-                logging.info(f"    Saved: {plots_dir / 'all_metrics.png'}")
-            else:
-                logging.error(f"    Failed: {result.stderr}")
-        except Exception as exc:
-            logging.error(f"    Failed: {exc}")
-
         # DRM distance traces
         try:
-            logging.info("  Plot 7/8: DRM sidechain distance traces")
+            logging.info("  Plot 6/7: DRM sidechain distance traces")
             import subprocess
             result = subprocess.run(
                 ["python", "-m", "src.analysis.cli.plot_all_mutation_drm_distances"],
@@ -415,7 +399,7 @@ def main() -> int:
 
         # Crystal-derived DOR contact distance traces
         try:
-            logging.info("  Plot 8/8: Crystal-derived DOR contact distance traces")
+            logging.info("  Plot 7/7: Crystal-derived DOR contact distance traces")
             import subprocess
             result = subprocess.run(
                 ["python", "-m", "src.analysis.cli.plot_all_mutation_dor_key_contacts"],

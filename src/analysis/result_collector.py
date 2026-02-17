@@ -590,6 +590,28 @@ def compute_structural_metrics(
     if run_df.empty:
         return pd.DataFrame()
 
+    def _infer_total_ns_from_state_csv(rep_dir: Path, safe_label: str, replicate: int) -> float | None:
+        # Use the OpenMM StateDataReporter output to infer the true production length.
+        state_csv = rep_dir / f"{safe_label}_rep{int(replicate):02d}_md_state.csv"
+        if not state_csv.exists():
+            return None
+        try:
+            sdf = pd.read_csv(state_csv)
+        except Exception:
+            return None
+        step_col = None
+        for c in ('#"Step"', "Step"):
+            if c in sdf.columns:
+                step_col = c
+                break
+        if step_col is None or sdf.empty:
+            return None
+        max_step = pd.to_numeric(sdf[step_col], errors="coerce").dropna()
+        if max_step.empty:
+            return None
+        # 2 fs timestep => ns = steps * 2 fs / 1e6 fs/ns
+        return float(max_step.max()) * 2.0 / 1_000_000.0
+
     rows: list[dict] = []
     for _, row in run_df.iterrows():
         rep_dir = _infer_rep_dir(row)
@@ -608,6 +630,9 @@ def compute_structural_metrics(
             logging.warning("Missing trajectory inputs for %s rep%d", row["mutation"], rep)
             continue
 
+        total_ns = _infer_total_ns_from_state_csv(rep_dir, safe, rep)
+        time_source = "md_state_csv" if total_ns is not None and np.isfinite(total_ns) else "trajectory_dt"
+
         try:
             ens = compute_ensemble_metrics(
                 topology_pdb_path=topo,
@@ -615,6 +640,7 @@ def compute_structural_metrics(
                 ligand_resname=ligand_resname,
                 frame_stride=frame_stride,
                 max_frames=max_frames,
+                total_time_ns=total_ns,
             )
             rows.append(
                 {
@@ -630,6 +656,8 @@ def compute_structural_metrics(
                     "pocket_volume_proxy_std": ens.pocket_volume_proxy_std,
                     "metric_n_frames": ens.n_frames,
                     "metric_source": "trajectory",
+                    "metric_sample_window_ns": 1.0,
+                    "metric_time_source": time_source,
                     "fold_reduction": row["fold_reduction"],
                 }
             )
@@ -832,51 +860,177 @@ def run_result_collection(
     if run_df.empty:
         raise ValueError("No completed MD results found")
 
-    logging.info("Running MM/GBSA snapshot analysis")
-    mmgbsa_df = compute_mmgbsa_metrics(
-        run_df,
-        ligand_resname=ligand_resname,
-        n_snapshots=mmgbsa_snapshots,
-        discard_fraction=mmgbsa_discard_fraction,
-    )
+    force_recompute = str(os.environ.get("NNRTI_FORCE_RECOMPUTE", "0")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "y",
+    }
+    expected_keys = run_df[["structure", "mutation", "safe_label", "replicate"]].drop_duplicates().copy()
+
+    mmgbsa_cache = output_dir / "mmgbsa_replicate_metrics.csv"
+    mmgbsa_df = pd.DataFrame()
+    if not force_recompute and mmgbsa_cache.exists():
+        try:
+            cached = pd.read_csv(mmgbsa_cache)
+            required = {"structure", "mutation", "safe_label", "replicate", "binding_dg", "fold_reduction"}
+            if required.issubset(set(cached.columns)):
+                cached["replicate"] = pd.to_numeric(cached["replicate"], errors="coerce").astype("Int64")
+                cached = cached.dropna(subset=["replicate"]).copy()
+                cached["replicate"] = cached["replicate"].astype(int)
+                cached = cached.merge(
+                    expected_keys,
+                    on=["structure", "mutation", "safe_label", "replicate"],
+                    how="inner",
+                )
+                if len(cached) == len(expected_keys):
+                    mmgbsa_df = cached
+                    logging.info("Reusing cached MM/GBSA metrics from %s", mmgbsa_cache)
+                else:
+                    logging.info(
+                        "Cached MM/GBSA metrics incomplete (%d/%d rows); recomputing.",
+                        len(cached),
+                        len(expected_keys),
+                    )
+        except Exception as exc:
+            logging.info("Could not read cached MM/GBSA metrics (%s); recomputing.", exc)
+
     if mmgbsa_df.empty:
-        raise ValueError("No MM/GBSA metrics could be computed")
-    mmgbsa_df.to_csv(output_dir / "mmgbsa_replicate_metrics.csv", index=False)
+        logging.info("Running MM/GBSA snapshot analysis")
+        mmgbsa_df = compute_mmgbsa_metrics(
+            run_df,
+            ligand_resname=ligand_resname,
+            n_snapshots=mmgbsa_snapshots,
+            discard_fraction=mmgbsa_discard_fraction,
+        )
+        if mmgbsa_df.empty:
+            raise ValueError("No MM/GBSA metrics could be computed")
+        mmgbsa_df.to_csv(mmgbsa_cache, index=False)
 
     ddg_df = compute_binding_ddg(mmgbsa_df)
 
     struct_df = pd.DataFrame()
     if compute_structural:
-        logging.info("Computing ensemble structural metrics")
-        struct_df = compute_structural_metrics(
-            run_df,
-            ligand_resname=ligand_resname,
-            frame_stride=metric_frame_stride,
-            max_frames=metric_max_frames,
-        )
+        struct_cache = output_dir / "structural_metrics.csv"
+        if not force_recompute and struct_cache.exists():
+            try:
+                cached = pd.read_csv(struct_cache)
+                required = {
+                    "structure",
+                    "mutation",
+                    "safe_label",
+                    "replicate",
+                    "contact_count",
+                    "hbond_count",
+                    "pocket_volume_proxy",
+                    "metric_sample_window_ns",
+                }
+                if required.issubset(set(cached.columns)):
+                    cached["replicate"] = pd.to_numeric(cached["replicate"], errors="coerce").astype("Int64")
+                    cached = cached.dropna(subset=["replicate"]).copy()
+                    cached["replicate"] = cached["replicate"].astype(int)
+                    cached = cached.merge(
+                        expected_keys,
+                        on=["structure", "mutation", "safe_label", "replicate"],
+                        how="inner",
+                    )
+                    # Defensive: drop duplicated keys if any (see NOTE below).
+                    cached = (
+                        cached.drop_duplicates(
+                            subset=["structure", "mutation", "safe_label", "replicate"],
+                            keep="first",
+                        )
+                        .reset_index(drop=True)
+                    )
+                    if len(cached) == len(expected_keys):
+                        struct_df = cached
+                        logging.info("Reusing cached structural metrics from %s", struct_cache)
+                    else:
+                        logging.info(
+                            "Cached structural metrics incomplete (%d/%d rows); recomputing.",
+                            len(cached),
+                            len(expected_keys),
+                        )
+            except Exception as exc:
+                logging.info("Could not read cached structural metrics (%s); recomputing.", exc)
+
+        if struct_df.empty:
+            logging.info("Computing ensemble structural metrics")
+            struct_df = compute_structural_metrics(
+                run_df,
+                ligand_resname=ligand_resname,
+                frame_stride=metric_frame_stride,
+                max_frames=metric_max_frames,
+            )
         if not struct_df.empty:
-            struct_df.to_csv(output_dir / "structural_metrics.csv", index=False)
+            # Defensive: a duplicated (mutation, replicate) row can silently propagate
+            # into ddg_full.csv via merge multiplication. Keep the first occurrence.
+            before = len(struct_df)
+            struct_df = (
+                struct_df.drop_duplicates(
+                    subset=["structure", "mutation", "safe_label", "replicate"],
+                    keep="first",
+                )
+                .reset_index(drop=True)
+            )
+            dropped = before - len(struct_df)
+            if dropped:
+                logging.warning(
+                    "Dropped %d duplicate structural-metric rows based on (structure, mutation, safe_label, replicate).",
+                    dropped,
+                )
+            struct_df.to_csv(struct_cache, index=False)
             ddg_df = merge_with_structural_metrics(ddg_df, struct_df)
 
     logging.info("Computing boundness QC")
-    qc_df = compute_boundness_qc(run_df, ligand_resname)
-    if not qc_df.empty:
-        qc_df.to_csv(output_dir / "boundness_qc.csv", index=False)
+    qc_cache = output_dir / "boundness_qc.csv"
+    qc_df = pd.DataFrame()
+    if not force_recompute and qc_cache.exists():
+        try:
+            qc_df = pd.read_csv(qc_cache)
+            if not qc_df.empty:
+                logging.info("Reusing cached boundness QC from %s", qc_cache)
+        except Exception:
+            qc_df = pd.DataFrame()
+    if qc_df.empty:
+        qc_df = compute_boundness_qc(run_df, ligand_resname)
+        if not qc_df.empty:
+            qc_df.to_csv(qc_cache, index=False)
 
     logging.info("Computing RMSD convergence profiles")
-    rmsd_df = collect_ca_rmsd_profiles(run_df)
-    if not rmsd_df.empty:
-        rmsd_df.to_csv(output_dir / "rmsd_ca_profiles.csv", index=False)
+    rmsd_cache = output_dir / "rmsd_ca_profiles.csv"
+    rmsd_df = pd.DataFrame()
+    if not force_recompute and rmsd_cache.exists():
+        try:
+            rmsd_df = pd.read_csv(rmsd_cache)
+            if not rmsd_df.empty:
+                logging.info("Reusing cached RMSD profiles from %s", rmsd_cache)
+        except Exception:
+            rmsd_df = pd.DataFrame()
+    if rmsd_df.empty:
+        rmsd_df = collect_ca_rmsd_profiles(run_df)
+        if not rmsd_df.empty:
+            rmsd_df.to_csv(rmsd_cache, index=False)
 
     logging.info("Computing DOR-RT COM distance convergence profiles")
-    com_df = collect_com_distance_profiles(
-        run_df,
-        ligand_resname=ligand_resname,
-        frame_stride=metric_frame_stride,
-        max_frames=max(400, metric_max_frames),
-    )
-    if not com_df.empty:
-        com_df.to_csv(output_dir / "com_distance_profiles.csv", index=False)
+    com_cache = output_dir / "com_distance_profiles.csv"
+    com_df = pd.DataFrame()
+    if not force_recompute and com_cache.exists():
+        try:
+            com_df = pd.read_csv(com_cache)
+            if not com_df.empty:
+                logging.info("Reusing cached COM distance profiles from %s", com_cache)
+        except Exception:
+            com_df = pd.DataFrame()
+    if com_df.empty:
+        com_df = collect_com_distance_profiles(
+            run_df,
+            ligand_resname=ligand_resname,
+            frame_stride=metric_frame_stride,
+            max_frames=max(400, metric_max_frames),
+        )
+        if not com_df.empty:
+            com_df.to_csv(com_cache, index=False)
 
     ddg_df.to_csv(output_dir / "ddg_full.csv", index=False)
 
