@@ -50,6 +50,7 @@ MD_RESUME_FROM_CHECKPOINT="${MD_RESUME_FROM_CHECKPOINT:-1}"
 MD_FORCE_RERUN="${MD_FORCE_RERUN:-1}"
 SKIP_IF_AT_TARGET="${SKIP_IF_AT_TARGET:-1}"
 SKIP_IF_RUNNING="${SKIP_IF_RUNNING:-1}"
+MUTATION_ALLOWLIST="${MUTATION_ALLOWLIST:-}"
 
 if ! command -v jq >/dev/null 2>&1; then
     echo "ERROR: jq is required for JSON status checks." >&2
@@ -76,6 +77,9 @@ echo "Production ns:   $MD_PRODUCTION_NS"
 echo "Target steps:    $TARGET_STEPS"
 echo "Force rerun:     $MD_FORCE_RERUN"
 echo "Skip at target:  $SKIP_IF_AT_TARGET"
+if [ -n "${MUTATION_ALLOWLIST}" ]; then
+    echo "Mutation allowlist: ${MUTATION_ALLOWLIST}"
+fi
 echo ""
 
 # Build submission list
@@ -84,7 +88,19 @@ SKIPPED_DONE=0
 SKIPPED_AT_TARGET=0
 SKIPPED_MISSING=0
 SKIPPED_RUNNING=0
+SKIPPED_FILTERED=0
 TOTAL_PREPARED=0
+
+declare -A ALLOWED_MUTATIONS=()
+if [ -n "${MUTATION_ALLOWLIST}" ]; then
+    IFS=',' read -r -a _allow_tokens <<< "${MUTATION_ALLOWLIST}"
+    for tok in "${_allow_tokens[@]}"; do
+        t="$(echo "$tok" | tr -d '[:space:]')"
+        if [ -n "$t" ]; then
+            ALLOWED_MUTATIONS["$t"]=1
+        fi
+    done
+fi
 
 declare -A ACTIVE_JOB_NAMES=()
 if [ "$SKIP_IF_RUNNING" = "1" ]; then
@@ -150,6 +166,7 @@ echo "Will submit:           $TOTAL"
 echo "Skipped done:          $SKIPPED_DONE"
 echo "Skipped at target:     $SKIPPED_AT_TARGET"
 echo "Skipped running:       $SKIPPED_RUNNING"
+echo "Skipped by filter:     $SKIPPED_FILTERED"
 echo "Skipped missing input: $SKIPPED_MISSING"
 echo "Found $TOTAL systems to run"
 echo ""
@@ -301,3 +318,7 @@ echo "Check completion:"
 echo "  ls results/md_runs/*/rep_*/*.json | wc -l"
 echo "  jq -r '[.safe_label,.replicate,.status,(.md_production_steps_completed // .md_production_steps // 0)] | @tsv' results/md_runs/*/rep_*/*_rep[0-9][0-9].json | awk '\$3!=\"ok\" || \$4<${TARGET_STEPS} {print}'"
 echo ""
+    if [ -n "${MUTATION_ALLOWLIST}" ] && [ -z "${ALLOWED_MUTATIONS[$MUTATION]+x}" ]; then
+        SKIPPED_FILTERED=$((SKIPPED_FILTERED + 1))
+        continue
+    fi

@@ -206,6 +206,7 @@ def prepare_md_assets(
     app = require_module("openmm.app")
     openmm = require_module("openmm")
     unit = require_module("openmm.unit")
+    platform, properties = get_platform()
 
     cfg = config or MDProtocolConfig()
 
@@ -236,7 +237,7 @@ def prepare_md_assets(
         1.0 / unit.picosecond,
         cfg.timestep_fs * unit.femtoseconds,
     )
-    simulation = app.Simulation(modeller.topology, system, integrator)
+    simulation = app.Simulation(modeller.topology, system, integrator, platform, properties)
     simulation.context.setPositions(modeller.positions)
     simulation.minimizeEnergy(maxIterations=500)
     pos = simulation.context.getState(getPositions=True).getPositions()
