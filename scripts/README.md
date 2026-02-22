@@ -1,102 +1,124 @@
-# scripts/ README
+# scripts/
 
-This directory contains shell entrypoints around the `src/` Python modules.
+Shell entrypoints for the two main workflows: **holo MD** and **apo MD**.
 
-## Recommended Sherlock MD submission
+## Workflow overview
 
-The currently preferred launcher is:
-
-```bash
-chmod +x scripts/sherlock/submit_md_batched.sh
-./scripts/sherlock/submit_md_batched.sh 6 12
+```
+1. Prep structures locally
+        ↓
+2. Sync to Sherlock + submit MD jobs
+        ↓
+3. Sync results back
+        ↓
+4. Run analysis
 ```
 
-This submits MD jobs in batches and waits for queue pressure to drop before submitting the next batch.
-Current defaults in `submit_md_batched.sh` are set for extension runs (10 ns target, force rerun enabled, skip tasks already at target, 12h walltime).
+---
 
-For extension reruns (e.g., 2 ns to 10 ns) without Snakemake:
+## Holo workflow (DOR-bound, 19 mutations)
 
-```bash
-MD_PRODUCTION_NS=10.0 MD_FORCE_RERUN=1 SHERLOCK_TIME=12:00:00 ./scripts/sherlock/submit_md_batched.sh 6 12
-```
-
-## Analysis from existing trajectories
-
-Run the local checkpointed analysis pipeline:
+### Step 1 — prep (already done; only needed for new mutations)
 
 ```bash
-./scripts/run_analysis.sh
+OPENMM_PLATFORM=CPU python -m src.structure_prep.preparation
 ```
 
-Force recomputation:
+### Step 2 — submit to Sherlock
 
 ```bash
-./scripts/run_analysis.sh --force
+bash scripts/sherlock/submit_md_batched.sh 6 12
 ```
 
-Pipeline steps executed by `run_analysis.sh`:
-1. PBC correction for all `results/md_runs/*/*_analysis.dcd` trajectories
-2. metadata collection
-3. structural metrics
-4. plot generation from available checkpoints
-5. MM/GBSA (`src.analysis.cli.compute_mmgbsa_safe`, expensive step)
-6. final plot regeneration (includes MM/GBSA/ddG outputs)
-7. curate ranked "interesting" DRM traces for PyMOL follow-up
-
-New DRM triage output:
-- `results/drm_sidechain_distance_interesting_traces.csv`
-
-Additional pocket-coordinate outputs:
-- `results/dor_key_contact_definitions_4ncg.csv`
-- `results/dor_key_contacts_timeseries_all_mutations.csv`
-- `results/plots/dor_key_contacts/*_dor_key_contacts_timeseries.png`
-
-MM/GBSA tuning variables:
+Extension reruns (e.g. after syncing back partial results):
 
 ```bash
-MMGBSA_SNAPSHOTS=100
-MMGBSA_DISCARD_FRACTION=0.25
-MMGBSA_WORKERS=8
+MD_PRODUCTION_NS=10.0 MD_FORCE_RERUN=1 SKIP_IF_AT_TARGET=1 SHERLOCK_TIME=12:00:00 \
+bash scripts/sherlock/submit_md_batched.sh 6 12
 ```
 
-Notes:
-- `MMGBSA_SNAPSHOTS=100` is the default protocol.
-- `sample_window_ns=1.0` is used internally to select snapshots from the last 1 ns.
-- The discard fraction is only a fallback when timing metadata is unavailable.
+Monitor:
 
-## DCD timing metadata note (important)
+```bash
+squeue -u $USER
+python3 scripts/sherlock/report_md_progress.py --target-ns 10.0 --show-incomplete
+```
 
-Older stripped analysis DCDs can report inflated `dt` (for example `~50000 ps/frame`).
-This came from interval double-counting in the DCD writer metadata path.
+### Step 3 — sync results back
 
-What is fixed now:
-- `src/md/openmm/md_protocol.py` now writes stripped DCD timing metadata correctly.
-- Analysis readers (`src/md/openmm/mmgbsa.py`, `src/analysis/metrics.py`) now normalize legacy inflated `dt` values and still respect last-window selection logic.
+```bash
+SHERLOCK_USER=rsatija COMPLETE_ONLY=1 MD_PRODUCTION_NS=10.0 \
+bash scripts/rsync_results.sh pull
+```
 
-Interpretation guidance:
-- For existing legacy DCDs already on disk, raw `u.trajectory.dt` may still look wrong.
-- Current analysis code corrects this automatically before applying "last 1 ns" filtering.
+### Step 4 — analysis
 
-## Sync helpers
+```bash
+bash scripts/run_analysis.sh
+```
 
-- `scripts/rsync_results.sh`: rsync full `results/md_runs/` plus `results/md_manifest.csv` between local and Sherlock. Default is `push`; use `pull` to download. With `COMPLETE_ONLY=1` and `pull`, it transfers only replicate directories that reached the target production steps.
-- `scripts/rsync_json_results.sh`: rsync only JSON files under `results/md_runs/` (plus `results/md_manifest.csv`). Default is `push`; use `pull` to download.
+---
 
-Both require `SHERLOCK_USER`.
+## Apo workflow (ligand-free, 7 priority mutations)
 
-## Sherlock submission scripts
+### Step 1 — prep locally
 
-- `scripts/sherlock/submit_md_batched.sh`: submit missing MD jobs in batches (preferred).
-- `scripts/sherlock/submit_md_only.sh`: submit one job per prepared system immediately.
-- `scripts/sherlock/submit_all_md.sh`: similar direct submit loop for all prepared systems.
-- `scripts/sherlock/submit_all_tasks.sh`: SLURM array script that runs one manifest task via `src.md.worker`.
-- `scripts/sherlock/submit_serial_tasks.sh`: submit selected manifest task IDs one-by-one, waiting for each to finish.
-- `scripts/sherlock/report_md_progress.py`: summarize completion vs target steps, running tasks, and latest-log segfaults.
-- `scripts/sherlock/test_one_job.sh`: short interactive sanity test on one prepared system.
-- `scripts/sherlock/test_extension_resume.sh`: smoke-test checkpoint resume extension (e.g., 2.0 -> 2.01 ns) on one prepared system.
-- `scripts/sherlock/run_md_only.sh`: thin wrapper around `submit_md_batched.sh`.
+```bash
+OPENMM_PLATFORM=CPU python -m src.dor_md_pipeline_apo
+```
 
-## Deprecated orchestration
+This strips DOR from each holo minimized PDB and writes `results/apo_md_manifest.csv`.
 
-- `scripts/orchestrate.sh` is deprecated.
-- Use the Sherlock submit scripts above.
+### Step 2 — submit to Sherlock
+
+```bash
+bash scripts/sherlock/submit_apo_md_batched.sh 6 12
+```
+
+### Step 3 — sync results back
+
+```bash
+SHERLOCK_USER=rsatija rsync -avz --progress \
+    rsatija@login.sherlock.stanford.edu:$SCRATCH/nnrti-mechanisms/results/apo_md_runs/ \
+    results/apo_md_runs/
+```
+
+### Step 4 — analysis
+
+```bash
+bash scripts/run_apo_analysis.sh
+```
+
+---
+
+## File inventory
+
+| File | Purpose |
+|---|---|
+| `run_analysis.sh` | Full holo analysis pipeline (PBC fix → metrics → MM/GBSA → all plots) |
+| `run_apo_analysis.sh` | Apo analysis (PBC fix → tunnel dynamics → DCCM, apo vs holo comparison) |
+| `rsync_results.sh` | Push/pull `results/md_runs/` to/from Sherlock |
+| `sherlock/submit_md_batched.sh` | Submit holo MD jobs in batches with queue monitoring |
+| `sherlock/submit_apo_md_batched.sh` | Submit apo MD jobs (same logic, targets `results/apo_md_runs/`) |
+| `sherlock/report_md_progress.py` | Summarize job completion vs target steps, flag errors |
+| `sherlock/test_one_job.sh` | Single-job smoke test for debugging on Sherlock |
+| `validate_manuscript_citations.py` | Check that manuscript figure files exist |
+
+---
+
+## Environment note
+
+Analysis scripts (`run_analysis.sh`, `run_apo_analysis.sh`) use the `nnrti-prep`
+conda environment which contains MDAnalysis. Never use bare `python -m` for analysis.
+
+## DCD timestamp note
+
+Never trust `ts.time` from trajectories produced by this pipeline — the DCD
+header DELTA field was historically corrupt. Always derive frame timestamps as:
+
+```python
+time_ps = (frame_idx + 1) * production_ps / n_total_frames
+# where production_ps = md_production_steps_completed * 2.0 / 1000.0
+```
+
+See `README.md` → "DCD trajectory time metadata" for the full explanation.

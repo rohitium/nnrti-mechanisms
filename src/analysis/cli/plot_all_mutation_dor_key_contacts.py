@@ -257,6 +257,10 @@ def _collect_system_rows(
         return n[:1] if n else ""
 
     def _resolve_ligand_atom_group(u, ligand_resname: str, lig_atom_name: str, prot_atom_group):
+        # Guard: if the protein selection is empty we cannot compute distances.
+        if prot_atom_group.n_atoms == 0:
+            return u.atoms[[]]
+
         # 1) Exact name
         ag = u.select_atoms(f"resname {ligand_resname} and name {lig_atom_name}")
         if ag.n_atoms == 1:
@@ -269,6 +273,8 @@ def _collect_system_rows(
         if ag.n_atoms > 1:
             # Pick nearest candidate to the protein atom at frame 0.
             d = distance_array(prot_atom_group.positions, ag.positions, box=u.dimensions).reshape(-1)
+            if d.size == 0:
+                return u.atoms[[]]
             return ag[[int(np.argmin(d))]]
 
         # 3) Element-based fallback for renamed atoms (e.g., 4NCG atom "F" -> trajectory "F1x")
@@ -285,6 +291,8 @@ def _collect_system_rows(
             return u.atoms[[]]
         cand = lig_all[cand_idx]
         d = distance_array(prot_atom_group.positions, cand.positions, box=u.dimensions).reshape(-1)
+        if d.size == 0:
+            return u.atoms[[]]
         return cand[[int(np.argmin(d))]]
 
     for _, row in rows_df.sort_values("replicate").iterrows():
@@ -307,8 +315,10 @@ def _collect_system_rows(
             ref_d = float(c["distance_ref_angstrom"])
 
             p_sel = u.select_atoms(f"protein and resid {resid} and name {p_atom}")
+            if p_sel.n_atoms == 0:
+                continue
             l_sel = _resolve_ligand_atom_group(u, ligand_resname, l_atom, p_sel)
-            if p_sel.n_atoms == 0 or l_sel.n_atoms == 0:
+            if l_sel.n_atoms == 0:
                 continue
             resolved.append((contact_id, contact_label, category, resid, p_atom, l_atom, ref_d, p_sel, l_sel))
 

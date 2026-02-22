@@ -134,6 +134,76 @@ def _make_context(system):
     return openmm.Context(system, integrator)
 
 
+def _build_h_relax_context(topology, forcefield, k_kj_per_nm2: float = 10_000.0):
+    """Build a reusable OpenMM context for H-atom relaxation.
+
+    Returns (context, restraint_force, heavy_particle_list) where
+    heavy_particle_list is a list of (atom_index, restraint_particle_index)
+    pairs.  Call _apply_h_relax to minimise a specific snapshot without
+    rebuilding the context.
+    """
+    app = require_module("openmm.app")
+    openmm = require_module("openmm")
+    unit = require_module("openmm.unit")
+
+    system = forcefield.createSystem(
+        topology,
+        nonbondedMethod=app.NoCutoff,
+        constraints=None,
+    )
+
+    restraint = openmm.CustomExternalForce("k*((x-x0)^2+(y-y0)^2+(z-z0)^2)")
+    restraint.addGlobalParameter("k", k_kj_per_nm2)
+    restraint.addPerParticleParameter("x0")
+    restraint.addPerParticleParameter("y0")
+    restraint.addPerParticleParameter("z0")
+    heavy_particles: list[tuple[int, int]] = []
+    for atom in topology.atoms():
+        if atom.element is None or atom.element.symbol.upper() != "H":
+            rp_idx = restraint.addParticle(atom.index, [0.0, 0.0, 0.0])
+            heavy_particles.append((atom.index, rp_idx))
+    system.addForce(restraint)
+
+    integrator = openmm.VerletIntegrator(0.001 * unit.picoseconds)
+    context = openmm.Context(system, integrator)
+    return context, restraint, heavy_particles
+
+
+def _apply_h_relax(
+    context,
+    restraint,
+    heavy_particles: list[tuple[int, int]],
+    positions_nm: np.ndarray,
+    max_iters: int = 200,
+    tolerance_kj_per_nm: float = 100.0,
+) -> np.ndarray:
+    """Apply H-atom relaxation using a pre-built context (fast, reusable).
+
+    Updates the restraint reference positions for this snapshot, minimises,
+    and returns the corrected coordinates.  Only H atoms move; all non-H
+    atoms are harmonically restrained to their MD positions.
+    """
+    openmm = require_module("openmm")
+    unit = require_module("openmm.unit")
+
+    # Update per-particle restraint reference positions for this snapshot.
+    for atom_idx, rp_idx in heavy_particles:
+        x, y, z = positions_nm[atom_idx]
+        restraint.setParticleParameters(rp_idx, atom_idx, [float(x), float(y), float(z)])
+    restraint.updateParametersInContext(context)
+
+    pos = [
+        openmm.Vec3(float(x), float(y), float(z)) * unit.nanometer
+        for x, y, z in positions_nm
+    ]
+    context.setPositions(pos)
+    openmm.LocalEnergyMinimizer.minimize(
+        context, tolerance=tolerance_kj_per_nm, maxIterations=max_iters
+    )
+    state = context.getState(getPositions=True)
+    return np.array(state.getPositions().value_in_unit(unit.nanometer))
+
+
 def _energy_of(context, positions_nm: np.ndarray, force_group: int) -> float:
     unit = require_module("openmm.unit")
     openmm = require_module("openmm")
@@ -276,6 +346,9 @@ def compute_mmgbsa_from_trajectory(
     }
     contexts = {k: _make_context(v) for k, v in systems.items()}
 
+    # Build a single reusable H-relax context (avoids rebuilding per snapshot).
+    h_relax_ctx, h_relax_force, h_relax_heavy = _build_h_relax_context(complex_top, forcefield)
+
     # Load trajectory with the same topology used for force field setup
     u = mda.Universe(str(topology_pdb_path), str(trajectory_dcd_path))
     n_frames = len(u.trajectory)
@@ -306,6 +379,10 @@ def compute_mmgbsa_from_trajectory(
                 f"Trajectory has {pos_a.shape[0]} atoms but expected {complex_n}."
             )
         solute_nm = pos_a / 10.0
+        # Relax H-atom positions to remove finite-timestep Langevin artifacts
+        # (e.g., sub-Å inter-molecular H–H overlaps from SHAKE-constrained MD).
+        # Only H atoms move; heavy atoms are restrained to their MD coordinates.
+        solute_nm = _apply_h_relax(h_relax_ctx, h_relax_force, h_relax_heavy, solute_nm)
         rec_nm = _subset_positions(solute_nm, receptor_idx)
         lig_nm = _subset_positions(solute_nm, ligand_idx)
 
@@ -351,6 +428,7 @@ def compute_mmgbsa_from_trajectory(
     t_m, t_s, t_se = _stats(d_tot)
 
     # Explicitly clean up OpenMM contexts to prevent memory leaks and segfaults
+    del h_relax_ctx
     for ctx in contexts.values():
         del ctx
     contexts.clear()

@@ -89,6 +89,8 @@ def _infer_rep_dir(row: pd.Series) -> Path:
 
 
 def _prepare_profile_jobs(run_df: pd.DataFrame) -> list[dict]:
+    import json as _json
+
     jobs: list[dict] = []
     for _, row in run_df.iterrows():
         rep_dir = _infer_rep_dir(row)
@@ -104,6 +106,31 @@ def _prepare_profile_jobs(run_df: pd.DataFrame) -> list[dict]:
         )
         if topo is None or dcd is None or not topo.exists() or not dcd.exists():
             continue
+
+        # Determine actual production time from the MD output JSON.
+        # The DCD dt metadata is unreliable (OpenMM writes a corrupted DELTA
+        # field when the `interval` kwarg is used, causing MDAnalysis to report
+        # dt=1.0 ps regardless of the true frame spacing).  The ground truth is:
+        #   timestep = 2 fs  (hardcoded in src/md/worker.py)
+        #   production_ps = md_production_steps_completed × 2 fs / 1000
+        production_ps: float = 10_000.0  # default: 10 ns
+        out_json = _resolve_local_path(
+            _nonempty_path(row.get("output_json")),
+            rep_dir / f"{safe}_rep{rep:02d}.json",
+        )
+        if out_json and out_json.exists():
+            try:
+                j = _json.loads(out_json.read_text())
+                steps = int(
+                    j.get("md_production_steps_completed")
+                    or j.get("md_production_steps")
+                    or 0
+                )
+                if steps > 0:
+                    production_ps = steps * 2.0 / 1000.0  # timestep_fs=2.0
+            except Exception:
+                pass
+
         jobs.append(
             {
                 "structure": str(row["structure"]),
@@ -112,6 +139,7 @@ def _prepare_profile_jobs(run_df: pd.DataFrame) -> list[dict]:
                 "replicate": rep,
                 "topology": str(topo),
                 "trajectory": str(dcd),
+                "production_ps": production_ps,
             }
         )
     return jobs
@@ -207,6 +235,8 @@ def _ca_rmsd_worker(job: dict, frame_stride: int, max_frames: int) -> tuple[list
         out: list[dict] = []
         kept = 0
         stride = max(1, int(frame_stride))
+        n_total_frames = max(1, len(u.trajectory))
+        production_ps = float(job.get("production_ps") or 10_000.0)
         for idx, _ in enumerate(u.trajectory):
             if idx % stride != 0:
                 continue
@@ -219,6 +249,12 @@ def _ca_rmsd_worker(job: dict, frame_stride: int, max_frames: int) -> tuple[list
                 break
             diff = ca.positions - ca_ref.positions
             rmsd = float(np.sqrt(np.mean(np.sum(diff * diff, axis=1))))
+            # DCD dt metadata is corrupted (OpenMM writes garbage DELTA when
+            # the `interval` kwarg is used).  Compute correct simulation time
+            # from the production step count recorded in the MD output JSON.
+            # Frame i+1 corresponds to step (i+1)*analysis_interval, so:
+            #   time_ps = (idx+1) * production_ps / n_total_frames
+            time_ps = (idx + 1) * production_ps / n_total_frames
             out.append(
                 {
                     "structure": job["structure"],
@@ -226,7 +262,7 @@ def _ca_rmsd_worker(job: dict, frame_stride: int, max_frames: int) -> tuple[list
                     "safe_label": job["safe_label"],
                     "replicate": int(job["replicate"]),
                     "frame_index": int(u.trajectory.frame),
-                    "time_ps": float(getattr(u.trajectory.ts, "time", np.nan)),
+                    "time_ps": time_ps,
                     "ca_rmsd_angstrom": rmsd,
                 }
             )
@@ -268,6 +304,8 @@ def _com_distance_worker(
         out: list[dict] = []
         kept = 0
         stride = max(1, int(frame_stride))
+        n_total_frames = max(1, len(u.trajectory))
+        production_ps = float(job.get("production_ps") or 10_000.0)
         for idx, _ in enumerate(u.trajectory):
             if idx % stride != 0:
                 continue
@@ -276,6 +314,7 @@ def _com_distance_worker(
             lig_com = np.asarray(lig.center_of_mass(), dtype=float).reshape(1, 3)
             prot_com = np.asarray(prot.center_of_mass(), dtype=float).reshape(1, 3)
             d = float(distance_array(lig_com, prot_com, box=u.dimensions).min())
+            time_ps = (idx + 1) * production_ps / n_total_frames
             out.append(
                 {
                     "structure": job["structure"],
@@ -283,7 +322,7 @@ def _com_distance_worker(
                     "safe_label": job["safe_label"],
                     "replicate": int(job["replicate"]),
                     "frame_index": int(u.trajectory.frame),
-                    "time_ps": float(getattr(u.trajectory.ts, "time", np.nan)),
+                    "time_ps": time_ps,
                     "com_distance_angstrom": d,
                 }
             )
@@ -327,6 +366,8 @@ def _pocket_volume_worker(
         out: list[dict] = []
         kept = 0
         stride = max(1, int(frame_stride))
+        n_total_frames = max(1, len(u.trajectory))
+        production_ps = float(job.get("production_ps") or 10_000.0)
         for idx, _ in enumerate(u.trajectory):
             if idx % stride != 0:
                 continue
@@ -338,6 +379,7 @@ def _pocket_volume_worker(
                 grid_spacing=float(grid_spacing),
                 radius_angstrom=float(pocket_radius_angstrom),
             )
+            time_ps = (idx + 1) * production_ps / n_total_frames
             out.append(
                 {
                     "structure": job["structure"],
@@ -345,7 +387,7 @@ def _pocket_volume_worker(
                     "safe_label": job["safe_label"],
                     "replicate": int(job["replicate"]),
                     "frame_index": int(u.trajectory.frame),
-                    "time_ps": float(getattr(u.trajectory.ts, "time", np.nan)),
+                    "time_ps": time_ps,
                     "pocket_volume_proxy_angstrom3": float(v),
                     "grid_spacing_angstrom": float(grid_spacing),
                     "pocket_radius_angstrom": float(pocket_radius_angstrom),

@@ -94,24 +94,23 @@ class _StrippedDCDReporter:
         else:
             mode = "wb"
         self._handle = open(file_path, mode)
-        # DCDFile expects per-integration-step dt when "interval" is provided.
-        # Passing dt*interval here (while also passing interval) inflates stored
-        # frame spacing metadata by another factor of "interval".
-        dt = timestep_ps * unit.picoseconds
+        # Always pass the per-frame (not per-integration-step) time step and do
+        # NOT pass `interval` to DCDFile.  When `interval` is passed, OpenMM's
+        # DCDFile writes nsavc=1 and a garbage DELTA field, which causes
+        # downstream readers (MDAnalysis, VMD) to report dt=1.0 ps regardless of
+        # the true frame spacing.  Passing dt_frame directly writes the correct
+        # DELTA into the DCD header.
+        dt_frame = timestep_ps * interval * unit.picoseconds
         try:
             self._dcd = app.DCDFile(
                 self._handle,
                 stripped_topology,
-                dt,
+                dt_frame,
                 firstStep=int(first_step),
-                interval=int(interval),
                 append=bool(append),
             )
         except TypeError:
-            # Compatibility fallback for OpenMM builds that do not expose
-            # firstStep/interval/append kwargs on DCDFile. In that case, pass
-            # frame-to-frame dt directly because interval metadata cannot be set.
-            dt_frame = timestep_ps * interval * unit.picoseconds
+            # Older OpenMM builds lacking firstStep/append kwargs.
             self._dcd = app.DCDFile(self._handle, stripped_topology, dt_frame)
 
     def describeNextReport(self, simulation):
@@ -252,6 +251,75 @@ def prepare_md_assets(
         raise ValueError(
             f"Prepared complex appears unbound (min ligand-protein distance {min_dist:.2f} Å > 15 Å)."
         )
+
+    topology_pdb_path.parent.mkdir(parents=True, exist_ok=True)
+    system_xml_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(topology_pdb_path, "w") as handle:
+        app.PDBFile.writeFile(modeller.topology, pos, handle)
+    system_xml_path.write_text(openmm.XmlSerializer.serialize(system))
+
+
+def prepare_apo_md_assets(
+    minimized_pdb_path: Path,
+    ligand_resname: str,
+    topology_pdb_path: Path,
+    system_xml_path: Path,
+    config: MDProtocolConfig | None = None,
+) -> None:
+    """Prepare solvated explicit-MD assets for an apo (ligand-free) system.
+
+    Strips the ligand from the minimized PDB, builds an amber-only forcefield,
+    solvates, and writes topology PDB + serialized XML.  The resulting assets
+    are drop-in replacements for the holo ones and are executed by the same
+    ``run_prepared_md`` / ``src.md.worker`` pathway.
+    """
+    app = require_module("openmm.app")
+    openmm = require_module("openmm")
+    unit = require_module("openmm.unit")
+    platform, properties = get_platform()
+
+    cfg = config or MDProtocolConfig()
+
+    with open(minimized_pdb_path, "r") as handle:
+        pdb = app.PDBFile(handle)
+
+    # Strip ligand from topology/positions before solvation.
+    modeller = app.Modeller(pdb.topology, pdb.positions)
+    ligand_residues = [res for res in modeller.topology.residues() if res.name == ligand_resname]
+    if ligand_residues:
+        modeller.delete(ligand_residues)
+
+    forcefield = app.ForceField(
+        "amber14/protein.ff14SB.xml",
+        "amber14/DNA.bsc1.xml",
+        "amber14/tip3p.xml",
+    )
+
+    modeller.addSolvent(
+        forcefield,
+        model="tip3p",
+        padding=cfg.solvent_padding_nm * unit.nanometer,
+        ionicStrength=cfg.ionic_strength_molar * unit.molar,
+    )
+
+    system = forcefield.createSystem(
+        modeller.topology,
+        nonbondedMethod=app.PME,
+        nonbondedCutoff=1.0 * unit.nanometer,
+        constraints=app.HBonds,
+    )
+
+    integrator = openmm.LangevinMiddleIntegrator(
+        cfg.temperature_target_k * unit.kelvin,
+        1.0 / unit.picosecond,
+        cfg.timestep_fs * unit.femtoseconds,
+    )
+    simulation = app.Simulation(modeller.topology, system, integrator, platform, properties)
+    simulation.context.setPositions(modeller.positions)
+    simulation.minimizeEnergy(maxIterations=500)
+    pos = simulation.context.getState(getPositions=True).getPositions()
+    del simulation
 
     topology_pdb_path.parent.mkdir(parents=True, exist_ok=True)
     system_xml_path.parent.mkdir(parents=True, exist_ok=True)

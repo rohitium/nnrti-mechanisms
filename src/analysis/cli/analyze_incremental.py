@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -217,7 +218,7 @@ def main() -> int:
             force_flag = ["--force"] if args.force else []
             result = subprocess.run(
                 [
-                    "python",
+                    sys.executable,
                     "-m",
                     "src.analysis.cli.compute_structural_metrics_parallel",
                     "--manifest", str(args.manifest),
@@ -353,7 +354,7 @@ def main() -> int:
             logging.info("  Plot 5/6: Resistance heatmap")
             import subprocess
             result = subprocess.run(
-                ["python", "-m", "src.analysis.cli.plot_resistance_heatmap"],
+                [sys.executable, "-m", "src.analysis.cli.plot_resistance_heatmap"],
                 capture_output=True,
                 text=True,
             )
@@ -370,7 +371,7 @@ def main() -> int:
             if not mmgbsa_df.empty:
                 import subprocess
                 result = subprocess.run(
-                    ["python", "-m", "src.analysis.cli.plot_mmgbsa_tables"],
+                    [sys.executable, "-m", "src.analysis.cli.plot_mmgbsa_tables"],
                     capture_output=True,
                     text=True,
                 )
@@ -386,7 +387,7 @@ def main() -> int:
             logging.info("  Plot 6/7: DRM sidechain distance traces")
             import subprocess
             result = subprocess.run(
-                ["python", "-m", "src.analysis.cli.plot_all_mutation_drm_distances"],
+                [sys.executable, "-m", "src.analysis.cli.plot_all_mutation_drm_distances"],
                 capture_output=True,
                 text=True,
             )
@@ -402,7 +403,7 @@ def main() -> int:
             logging.info("  Plot 7/7: Crystal-derived DOR contact distance traces")
             import subprocess
             result = subprocess.run(
-                ["python", "-m", "src.analysis.cli.plot_all_mutation_dor_key_contacts"],
+                [sys.executable, "-m", "src.analysis.cli.plot_all_mutation_dor_key_contacts"],
                 capture_output=True,
                 text=True,
             )
