@@ -26,7 +26,7 @@ import matplotlib.cm as cm
 
 warnings.filterwarnings("ignore")
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[3]
 OUT_CSV   = REPO / "results" / "nnbp_pocket_volume_dynamics.csv"
 PLOTS_DIR = REPO / "results" / "plots"
 

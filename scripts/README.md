@@ -69,7 +69,7 @@ bash scripts/run_analysis.sh
 ### Step 1 — prep locally
 
 ```bash
-OPENMM_PLATFORM=CPU python -m src.dor_md_pipeline_apo
+OPENMM_PLATFORM=CPU python -m src.md.dor_md_pipeline_apo
 ```
 
 This strips DOR from each holo minimized PDB and writes `results/apo_md_manifest.csv`.
@@ -112,7 +112,7 @@ bash scripts/run_apo_analysis.sh
 | `sherlock/submit_apo_md_batched.sh` | Submit apo MD jobs (same logic, targets `results/apo_md_runs/`) |
 | `sherlock/report_md_progress.py` | Summarize job completion vs target steps, flag errors |
 | `sherlock/test_one_job.sh` | Single-job smoke test for debugging on Sherlock |
-| `validate_manuscript_citations.py` | Check that manuscript figure files exist |
+| `src/analysis/cli/validate_manuscript_citations.py` | Check that manuscript figure files exist |
 
 ---
 

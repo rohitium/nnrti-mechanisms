@@ -2,7 +2,7 @@
 # Run the apo trajectory analysis pipeline.
 #
 # Prerequisites:
-#   1. Apo systems prepared:  python -m src.dor_md_pipeline_apo
+#   1. Apo systems prepared:  python -m src.md.dor_md_pipeline_apo
 #   2. Apo MD completed on Sherlock and synced locally.
 #
 # This script:

@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 from Bio.PDB import MMCIFParser
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[3]
 RESULTS = REPO / "results"
 PLOTS = RESULTS / "plots"
 

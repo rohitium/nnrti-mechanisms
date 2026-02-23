@@ -8,7 +8,7 @@ pathway as the holo simulations.
 
 Usage
 -----
-    python -m src.dor_md_pipeline_apo \\
+    python -m src.md.dor_md_pipeline_apo \\
         --mutations WT F227C V106A "V106A+P225H" "K103N+M230L" "A98G+F227C" "V106I+F227C" \\
         --holo-runs results/md_runs \\
         --apo-runs results/apo_md_runs \\
@@ -54,8 +54,8 @@ def prep_apo_systems(
     apo_runs_root: Path,
     manifest_path: Path,
 ) -> None:
-    from .md.manifest import MDTask, load_manifest, save_manifest
-    from .md.openmm.md_protocol import MDProtocolConfig, prepare_apo_md_assets
+    from .manifest import MDTask, load_manifest, save_manifest
+    from .openmm.md_protocol import MDProtocolConfig, prepare_apo_md_assets
 
     cfg = MDProtocolConfig()
 

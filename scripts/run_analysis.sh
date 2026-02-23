@@ -43,8 +43,8 @@ run "$PYTHON" -m src.analysis.cli.plot_pocket_volume_distributions
 # Apo/holo comparative analyses (run only when apo manifest is available).
 if [[ -f "results/apo_md_manifest.csv" ]]; then
   run bash scripts/run_apo_analysis.sh
-  run "$PYTHON" scripts/compute_nnbp_pocket_volume.py
-  run "$PYTHON" scripts/compute_t290_i63_distance.py
+  run "$PYTHON" -m src.analysis.cli.compute_nnbp_pocket_volume
+  run "$PYTHON" -m src.analysis.cli.compute_t290_i63_distance
 
   # Remove obsolete Y181 chi2 outputs to avoid conflicting interpretations.
   rm -f results/apo_y181_chi2.csv \
