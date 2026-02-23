@@ -349,10 +349,9 @@ def _pocket_volume_worker(
 
     try:
         u = mda.Universe(job["topology"], job["trajectory"])
-        lig = u.select_atoms(f"resname {ligand_resname}")
         prot = u.select_atoms("protein")
-        if lig.n_atoms == 0 or prot.n_atoms == 0:
-            return [], f"empty selection (lig={lig.n_atoms}, prot={prot.n_atoms})"
+        if prot.n_atoms == 0:
+            return [], "empty protein selection"
         try:
             from MDAnalysis import transformations as trans
 
@@ -375,7 +374,6 @@ def _pocket_volume_worker(
                 break
             v = pocket_volume_proxy_from_universe(
                 u,
-                ligand_resname=ligand_resname,
                 grid_spacing=float(grid_spacing),
                 radius_angstrom=float(pocket_radius_angstrom),
             )
@@ -488,11 +486,11 @@ def collect_com_distance_profiles(
 
 def collect_pocket_volume_profiles(
     run_df: pd.DataFrame,
-    ligand_resname: str,
+    ligand_resname: str = "",  # kept for API compat, no longer used for pocket center
     frame_stride: int = 5,
     max_frames: int = 400,
     grid_spacing: float = 0.75,
-    pocket_radius_angstrom: float = 8.0,
+    pocket_radius_angstrom: float = 10.0,
     workers: int | None = None,
 ) -> pd.DataFrame:
     """Collect per-frame pocket-volume proxy traces."""

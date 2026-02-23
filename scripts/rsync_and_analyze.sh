@@ -24,10 +24,7 @@ COMPLETE_ONLY=1 bash scripts/rsync_results.sh pull
 echo "=== Pulling apo results ==="
 COMPLETE_ONLY=1 bash scripts/rsync_apo.sh pull
 
-echo "=== Running holo analysis ==="
+echo "=== Running full analysis (holo + apo when available) ==="
 bash scripts/run_analysis.sh
-
-echo "=== Running apo analysis ==="
-bash scripts/run_apo_analysis.sh
 
 echo "Done."

@@ -72,60 +72,86 @@ def compute_contacts(
     return ContactMetrics(contact_count=contact_count, hbond_count=hbond_count)
 
 
+# NNBP-lining residue topology resids (canonical HIV-1 RT numbering - 3).
+# These define the pocket center independent of whether a ligand is present.
+_NNBP_CA_RESIDS: tuple[int, ...] = (97, 98, 100, 103, 178, 185, 222, 224, 226, 231, 232)
+_VDW = {"C": 1.7, "N": 1.55, "O": 1.52, "S": 1.8, "P": 1.8}
+_PROBE_RADIUS = 1.4  # Å — solvent probe
+
+
+def _p66_segid(universe) -> str:
+    """Return the segid of the p66 subunit (largest protein segment = p66 in HIV-1 RT)."""
+    from collections import Counter
+    prot_ca = universe.select_atoms("protein and name CA")
+    if prot_ca.n_atoms == 0:
+        return ""
+    cnt = Counter(prot_ca.segids.tolist())
+    return max(cnt, key=cnt.get)
+
+
 def _pocket_volume_proxy_universe(
     universe,
-    ligand_resname: str,
-    grid_spacing: float = 0.5,
-    radius_angstrom: float = 8.0,
+    ligand_resname: str = "",  # kept for API compat, no longer used
+    grid_spacing: float = 0.75,
+    radius_angstrom: float = 10.0,
 ) -> float:
-    ligand = universe.select_atoms(f"resname {ligand_resname}")
-    receptor = universe.select_atoms(f"not resname {ligand_resname} and not name H*")
-    if ligand.n_atoms == 0:
-        raise ValueError("Ligand not found for pocket-volume calculation.")
+    """Compute NNBP pocket volume using NNBP residue Cα centroid as center.
 
-    center = ligand.positions.mean(axis=0)
-    spacing = grid_spacing
-    radius = radius_angstrom
+    Works for both apo and holo trajectories (does not require a drug).
+    Center = per-frame centroid of Cα atoms from 11 NNBP-lining residues in p66
+    (the larger subunit of HIV-1 RT, identified as the segment with the most Cα atoms).
+    """
+    from scipy.spatial import cKDTree
 
-    mins = center - radius
-    maxs = center + radius
-    xs = np.arange(mins[0], maxs[0] + spacing, spacing)
-    ys = np.arange(mins[1], maxs[1] + spacing, spacing)
-    zs = np.arange(mins[2], maxs[2] + spacing, spacing)
+    seg = _p66_segid(universe)
+    seg_filter = f" and segid {seg}" if seg else ""
+    ca_sel_str = ("protein and name CA" + seg_filter + " and (" +
+                  " or ".join(f"resid {r}" for r in _NNBP_CA_RESIDS) + ")")
+    ca_sel = universe.select_atoms(ca_sel_str)
+    receptor = universe.select_atoms("protein and not name H*")
+    if ca_sel.n_atoms < 3:
+        raise ValueError(f"Too few NNBP Cα found ({ca_sel.n_atoms}); check resid offset.")
 
-    grid = np.array(np.meshgrid(xs, ys, zs, indexing="ij")).reshape(3, -1).T
-    d_center = np.linalg.norm(grid - center, axis=1)
-    grid = grid[d_center <= radius]
+    center = ca_sel.positions.mean(axis=0)
+    s = grid_spacing
+    r = radius_angstrom
+    axes = [np.arange(center[i] - r, center[i] + r + s, s) for i in range(3)]
+    grid = np.array(np.meshgrid(*axes, indexing="ij")).reshape(3, -1).T
+    grid = grid[np.linalg.norm(grid - center, axis=1) <= r]
+    if len(grid) == 0:
+        return 0.0
 
-    vdw = {"C": 1.7, "N": 1.55, "O": 1.52, "S": 1.8, "P": 1.8}
     receptor_pos = receptor.positions
-    receptor_elements: list[str] = []
-    for atom in receptor.atoms:
-        elem = atom.element
-        if elem is None:
-            elem = atom.name[0].upper()
-        receptor_elements.append(elem)
+    rec_vdw = np.array([
+        _VDW.get((a.element or a.name[0]).upper()[:1], 1.7)
+        for a in receptor.atoms
+    ], dtype=float)
+
+    tree = cKDTree(receptor_pos)
+    max_excl = float(rec_vdw.max()) + _PROBE_RADIUS
+    candidate_idx = tree.query_ball_point(grid, r=max_excl)
 
     free_mask = np.ones(len(grid), dtype=bool)
-    for pos, elem in zip(receptor_pos, receptor_elements):
-        rad = vdw.get(elem, 1.7)
-        d = np.linalg.norm(grid - pos, axis=1)
-        free_mask &= d > rad
+    for i, neighbours in enumerate(candidate_idx):
+        if not neighbours:
+            continue
+        nb = np.array(neighbours)
+        d = np.linalg.norm(grid[i] - receptor_pos[nb], axis=1)
+        if np.any(d < rec_vdw[nb] + _PROBE_RADIUS):
+            free_mask[i] = False
 
-    voxel_volume = spacing**3
-    return float(np.sum(free_mask) * voxel_volume)
+    return float(np.sum(free_mask) * s**3)
 
 
 def pocket_volume_proxy_from_universe(
     universe,
-    ligand_resname: str,
-    grid_spacing: float = 0.5,
-    radius_angstrom: float = 8.0,
+    ligand_resname: str = "",
+    grid_spacing: float = 0.75,
+    radius_angstrom: float = 10.0,
 ) -> float:
-    """Compute pocket volume proxy for the current frame of an MDAnalysis Universe."""
+    """Compute NNBP pocket volume for the current frame of an MDAnalysis Universe."""
     return _pocket_volume_proxy_universe(
         universe,
-        ligand_resname=ligand_resname,
         grid_spacing=grid_spacing,
         radius_angstrom=radius_angstrom,
     )
@@ -133,16 +159,15 @@ def pocket_volume_proxy_from_universe(
 
 def pocket_volume_proxy(
     pdbx_path: Path,
-    ligand_resname: str,
-    grid_spacing: float = 0.5,
-    radius_angstrom: float = 8.0,
+    ligand_resname: str = "",
+    grid_spacing: float = 0.75,
+    radius_angstrom: float = 10.0,
 ) -> float:
     import MDAnalysis
 
     u = MDAnalysis.Universe(str(pdbx_path))
     return _pocket_volume_proxy_universe(
         u,
-        ligand_resname=ligand_resname,
         grid_spacing=grid_spacing,
         radius_angstrom=radius_angstrom,
     )
@@ -158,7 +183,7 @@ def compute_ensemble_metrics(
     total_time_ns: float | None = None,
     contact_cutoff_angstrom: float = 4.0,
     grid_spacing: float = 0.75,
-    pocket_radius_angstrom: float = 8.0,
+    pocket_radius_angstrom: float = 10.0,
 ) -> EnsembleMetrics:
     """Compute ensemble-averaged ligand/protein metrics from a trajectory."""
     import MDAnalysis
@@ -239,7 +264,6 @@ def compute_ensemble_metrics(
         pocket_values.append(
             _pocket_volume_proxy_universe(
                 u,
-                ligand_resname=ligand_resname,
                 grid_spacing=grid_spacing,
                 radius_angstrom=pocket_radius_angstrom,
             )

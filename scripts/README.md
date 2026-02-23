@@ -103,8 +103,8 @@ bash scripts/run_apo_analysis.sh
 
 | File | Purpose |
 |---|---|
-| `rsync_and_analyze.sh` | **One-command**: pull completed results + run holo + apo analysis |
-| `run_analysis.sh` | Full holo analysis pipeline (PBC fix → metrics → MM/GBSA → all plots) |
+| `rsync_and_analyze.sh` | **One-command**: pull completed results + run full analysis (holo + apo when available) |
+| `run_analysis.sh` | Full analysis pipeline (holo core + apo/holo comparative analyses when `results/apo_md_manifest.csv` exists) |
 | `run_apo_analysis.sh` | Apo analysis (PBC fix → tunnel dynamics → DCCM, apo vs holo comparison) |
 | `rsync_results.sh` | Push/pull `results/md_runs/` to/from Sherlock (parallel push, one Duo auth) |
 | `rsync_apo.sh` | Push/pull `results/apo_md_runs/` to/from Sherlock (same parallel logic) |
