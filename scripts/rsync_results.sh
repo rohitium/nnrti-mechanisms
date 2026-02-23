@@ -8,9 +8,13 @@ set -euo pipefail
 # Optional:
 #   DIRECTION=push|pull
 #   RETRIES=8 SLEEP_SECONDS=15
-#   SYNC_LOGS=1      # also sync logs/
-#   COMPLETE_ONLY=1  # when pulling, transfer only replicate dirs that reached target steps
-#   MD_PRODUCTION_NS=10.0  # target used with COMPLETE_ONLY=1
+#   SYNC_LOGS=1        # also sync logs/
+#   COMPLETE_ONLY=1    # when pulling, transfer only replicate dirs that reached target steps
+#   MD_PRODUCTION_NS=10.0   # target used with COMPLETE_ONLY=1
+#   PARALLEL_JOBS=6    # concurrent rsync workers for push (default 6)
+#
+# Push uses parallel per-mutation-dir workers sharing one SSH ControlMaster
+# connection (single Duo auth).  Pull uses a single rsync stream.
 #
 # Default direction is "push" so local artifacts can be restored to Sherlock
 # in one command (results/md_runs + results/md_manifest.csv).
@@ -31,6 +35,7 @@ RETRIES="${RETRIES:-5}"
 SLEEP_SECONDS="${SLEEP_SECONDS:-10}"
 SYNC_LOGS="${SYNC_LOGS:-0}"
 COMPLETE_ONLY="${COMPLETE_ONLY:-0}"
+PARALLEL_JOBS="${PARALLEL_JOBS:-6}"
 MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-10.0}"
 REMOTE_BASE="/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms"
 REMOTE_HOST="${SHERLOCK_USER}@login.sherlock.stanford.edu"
@@ -41,9 +46,23 @@ REMOTE_MD_RUNS="${REMOTE_HOST}:${REMOTE_BASE}/results/md_runs/"
 REMOTE_MANIFEST="${REMOTE_HOST}:${REMOTE_BASE}/results/md_manifest.csv"
 REMOTE_LOGS="${REMOTE_HOST}:${REMOTE_BASE}/logs/"
 
+# SSH ControlMaster socket — one Duo auth shared across all parallel rsync workers.
+SSH_CTL="${TMPDIR:-/tmp}/nnrti_sherlock_ctl_${SHERLOCK_USER}.sock"
+
 mkdir -p "${LOCAL_MD_RUNS}" "${LOCAL_LOGS}"
 
-RSYNC_FLAGS=(-avzP --partial --inplace)
+# Open a persistent master connection if one isn't already running.
+if ! ssh -S "${SSH_CTL}" -O check "${REMOTE_HOST}" 2>/dev/null; then
+  echo "[ssh] Opening ControlMaster connection to ${REMOTE_HOST} (Duo auth required)…"
+  ssh -M -S "${SSH_CTL}" -fN \
+    -o ControlPersist=4h \
+    -o ServerAliveInterval=60 \
+    "${REMOTE_HOST}"
+fi
+
+RSYNC_SSH="ssh -S ${SSH_CTL}"
+RSYNC_FLAGS=(-avzP --partial --inplace -e "${RSYNC_SSH}"
+  --exclude='*.bak' --exclude='.DS_Store' --exclude='__pycache__')
 if rsync --help 2>/dev/null | grep -q -- "--append-verify"; then
   RSYNC_FLAGS+=(--append-verify)
 elif rsync --help 2>/dev/null | grep -q -- "--append"; then
@@ -75,6 +94,55 @@ sync_with_retries() {
 
   echo "[${label}] failed after ${RETRIES} attempts"
   return 1
+}
+
+# Parallel per-subdirectory sync: spawns up to PARALLEL_JOBS rsync workers at once.
+# Faster than a single rsync stream when the tree has many large files (e.g. DCDs).
+sync_parallel_subdirs() {
+  local src_root="$1"   # local dir (trailing slash optional)
+  local dst_root="$2"   # remote host:path base (no trailing slash)
+  local label="$3"
+  src_root="${src_root%/}"
+
+  local subdirs=()
+  while IFS= read -r d; do subdirs+=("$d"); done \
+    < <(find "${src_root}" -mindepth 1 -maxdepth 1 -type d | sort)
+
+  if [[ ${#subdirs[@]} -eq 0 ]]; then
+    sync_with_retries "${src_root}/" "${dst_root}/" "${label}"
+    return
+  fi
+
+  echo "[${label}] parallel sync: ${#subdirs[@]} subdirs, ${PARALLEL_JOBS} workers"
+
+  local pids=() failed=0 active=0
+
+  for subdir in "${subdirs[@]}"; do
+    local name
+    name="$(basename "${subdir}")"
+    rsync "${RSYNC_FLAGS[@]}" "${subdir}/" "${dst_root}/${name}/" \
+      >"${TMPDIR:-/tmp}/nnrti_rsync_${name}.log" 2>&1 &
+    pids+=("$!")
+    (( active++ ))
+
+    # Throttle: wait for a slot when we hit the concurrency limit.
+    if [[ "${active}" -ge "${PARALLEL_JOBS}" ]]; then
+      wait "${pids[0]}" || { echo "[${label}] worker failed: ${pids[0]}"; (( failed++ )); }
+      pids=("${pids[@]:1}")
+      (( active-- ))
+    fi
+  done
+
+  # Wait for remaining workers.
+  for pid in "${pids[@]}"; do
+    wait "${pid}" || { echo "[${label}] worker failed: ${pid}"; (( failed++ )); }
+  done
+
+  if [[ "${failed}" -gt 0 ]]; then
+    echo "[${label}] ${failed} worker(s) failed — check /tmp/nnrti_rsync_*.log"
+    return 1
+  fi
+  echo "[${label}] parallel sync complete"
 }
 
 sync_optional_with_retries() {
@@ -163,7 +231,7 @@ if [[ "${DIRECTION}" = "push" ]]; then
     exit 1
   fi
 
-  sync_with_retries "${LOCAL_MD_RUNS}" "${REMOTE_MD_RUNS}" "push md_runs"
+  sync_parallel_subdirs "${LOCAL_MD_RUNS}" "${REMOTE_HOST}:${REMOTE_BASE}/results/md_runs" "push md_runs"
 
   if [[ -f "${LOCAL_MANIFEST}" ]]; then
     sync_with_retries "${LOCAL_MANIFEST}" "${REMOTE_MANIFEST}" "push md_manifest.csv"

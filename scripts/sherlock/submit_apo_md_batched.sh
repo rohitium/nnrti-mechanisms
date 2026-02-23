@@ -183,8 +183,7 @@ if [ "$TOTAL" -eq 0 ]; then
 fi
 
 count_my_jobs() {
-    local count=$(squeue -u $USER -h -t PD,R 2>/dev/null | grep -c "apo_" || echo "0")
-    echo "$count"
+    squeue -u "$USER" -h -t PD,R 2>/dev/null | grep -c "apo_" || true
 }
 
 submit_job() {

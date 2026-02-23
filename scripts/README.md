@@ -21,7 +21,12 @@ Shell entrypoints for the two main workflows: **holo MD** and **apo MD**.
 ### Step 1 — prep (already done; only needed for new mutations)
 
 ```bash
-OPENMM_PLATFORM=CPU python -m src.structure_prep.preparation
+# All mutations in susceptibility xlsx:
+OPENMM_PLATFORM=CPU ~/miniconda3/envs/nnrti-prep/bin/python -m src.structure_prep.preparation
+
+# One specific mutation (e.g. F227C):
+OPENMM_PLATFORM=CPU ~/miniconda3/envs/nnrti-prep/bin/python -m src.structure_prep.preparation \
+    --mutations F227C
 ```
 
 ### Step 2 — submit to Sherlock
@@ -69,18 +74,21 @@ OPENMM_PLATFORM=CPU python -m src.dor_md_pipeline_apo
 
 This strips DOR from each holo minimized PDB and writes `results/apo_md_manifest.csv`.
 
-### Step 2 — submit to Sherlock
+### Step 2 — push apo assets to Sherlock + submit
 
 ```bash
+# Push apo assets (parallel, one Duo auth)
+SHERLOCK_USER=rsatija bash scripts/rsync_apo.sh push
+
+# Then on Sherlock:
 bash scripts/sherlock/submit_apo_md_batched.sh 6 12
 ```
 
 ### Step 3 — sync results back
 
 ```bash
-SHERLOCK_USER=rsatija rsync -avz --progress \
-    rsatija@login.sherlock.stanford.edu:$SCRATCH/nnrti-mechanisms/results/apo_md_runs/ \
-    results/apo_md_runs/
+SHERLOCK_USER=rsatija COMPLETE_ONLY=1 MD_PRODUCTION_NS=10.0 \
+bash scripts/rsync_apo.sh pull
 ```
 
 ### Step 4 — analysis
@@ -97,7 +105,8 @@ bash scripts/run_apo_analysis.sh
 |---|---|
 | `run_analysis.sh` | Full holo analysis pipeline (PBC fix → metrics → MM/GBSA → all plots) |
 | `run_apo_analysis.sh` | Apo analysis (PBC fix → tunnel dynamics → DCCM, apo vs holo comparison) |
-| `rsync_results.sh` | Push/pull `results/md_runs/` to/from Sherlock |
+| `rsync_results.sh` | Push/pull `results/md_runs/` to/from Sherlock (parallel push, one Duo auth) |
+| `rsync_apo.sh` | Push/pull `results/apo_md_runs/` to/from Sherlock (same parallel logic) |
 | `sherlock/submit_md_batched.sh` | Submit holo MD jobs in batches with queue monitoring |
 | `sherlock/submit_apo_md_batched.sh` | Submit apo MD jobs (same logic, targets `results/apo_md_runs/`) |
 | `sherlock/report_md_progress.py` | Summarize job completion vs target steps, flag errors |

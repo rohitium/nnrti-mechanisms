@@ -161,3 +161,45 @@ def prepare_local_openmm_only_for_cluster(
     save_manifest(tasks, manifest_path)
     logging.info("Wrote MD manifest with %d tasks to %s", len(tasks), manifest_path)
     return tasks
+
+
+def main(argv=None):
+    import argparse
+    import sys
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    parser = argparse.ArgumentParser(
+        description="Prepare holo MD assets (minimized PDB + system XML) for Sherlock."
+    )
+    parser.add_argument(
+        "--mutations",
+        nargs="+",
+        default=None,
+        metavar="MUT",
+        help="Subset of mutations to prep (default: all in susceptibility xlsx).",
+    )
+    parser.add_argument("--replicates", type=int, default=3)
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=Path("results/md_manifest.csv"),
+    )
+    args = parser.parse_args(argv)
+
+    root = Path(__file__).resolve().parents[2]
+    tasks = prepare_local_openmm_only_for_cluster(
+        root=root,
+        susceptibility_xlsx=root / "data" / "DRM-susceptibilities.csv.xlsx",
+        prepared_dir=root / "data" / "prepared" / "dor_4ncg",
+        manifest_path=args.manifest,
+        results_dir=root / "results" / "md_runs",
+        replicates=args.replicates,
+        selected_mutations=set(args.mutations) if args.mutations else None,
+    )
+    logging.info("Done. %d tasks written to %s", len(tasks), args.manifest)
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main())

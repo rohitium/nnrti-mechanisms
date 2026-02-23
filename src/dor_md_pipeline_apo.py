@@ -54,10 +54,17 @@ def prep_apo_systems(
     apo_runs_root: Path,
     manifest_path: Path,
 ) -> None:
-    from .md.manifest import MDTask, save_manifest
+    from .md.manifest import MDTask, load_manifest, save_manifest
     from .md.openmm.md_protocol import MDProtocolConfig, prepare_apo_md_assets
 
     cfg = MDProtocolConfig()
+
+    # Load existing tasks so partial runs don't truncate the manifest.
+    existing: dict[tuple[str, int], MDTask] = {}
+    if manifest_path.exists():
+        for t in load_manifest(manifest_path):
+            existing[(t.mutation, t.replicate)] = t
+
     tasks: list[MDTask] = []
     task_id = 0
 
@@ -130,8 +137,16 @@ def prep_apo_systems(
         logger.error("No apo tasks were prepared — check mutation names and holo-runs path.")
         sys.exit(1)
 
-    save_manifest(tasks, manifest_path)
-    logger.info("Wrote apo manifest with %d tasks to %s", len(tasks), manifest_path)
+    # Merge with any previously-prepared mutations not in the current run.
+    import dataclasses
+    new_keys = {(t.mutation, t.replicate) for t in tasks}
+    carried = [t for k, t in existing.items() if k not in new_keys]
+    all_tasks = [
+        dataclasses.replace(t, task_id=i)
+        for i, t in enumerate(carried + tasks)
+    ]
+    save_manifest(all_tasks, manifest_path)
+    logger.info("Wrote apo manifest with %d tasks to %s", len(all_tasks), manifest_path)
 
 
 def main(argv: list[str] | None = None) -> int:

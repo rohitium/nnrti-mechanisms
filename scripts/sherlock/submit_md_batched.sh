@@ -178,9 +178,7 @@ fi
 
 # Function to count current jobs in queue
 count_my_jobs() {
-    # Count jobs with md_* prefix in name
-    local count=$(squeue -u $USER -h -t PD,R 2>/dev/null | grep -c "md_" || echo "0")
-    echo "$count"
+    squeue -u "$USER" -h -t PD,R 2>/dev/null | grep -c "md_" || true
 }
 
 # Function to submit a single job
