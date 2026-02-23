@@ -53,7 +53,7 @@ class MDTask:
         fold = float(fold_txt) if fold_txt is not None else None
 
         jitter_txt = _norm(data.get("jitter_seed"))
-        jitter_seed = int(jitter_txt) if jitter_txt is not None else None
+        jitter_seed = int(float(jitter_txt)) if jitter_txt is not None else None
 
         return cls(
             task_id=int(data["task_id"]),

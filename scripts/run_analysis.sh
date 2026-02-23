@@ -9,7 +9,7 @@ set -euo pipefail
 $PYTHON -m src.analysis.cli.fix_pbc_trajectories --root results/md_runs --in-place
 $PYTHON -m src.analysis.cli.analyze_incremental --step collect --force
 $PYTHON -m src.analysis.cli.analyze_incremental --step metrics --force
-$PYTHON -m src.analysis.cli.compute_mmgbsa_safe --force --snapshots 100 --sample-window-ns 1.0 --timestep-fs 2.0 --workers 8
+$PYTHON -m src.analysis.cli.compute_mmgbsa_safe --snapshots 100 --sample-window-ns 1.0 --timestep-fs 2.0 --workers 2
 $PYTHON -m src.analysis.cli.analyze_incremental --step plots --force
 $PYTHON -m src.analysis.cli.plot_all_mutation_drm_distances
 $PYTHON -m src.analysis.cli.plot_all_mutation_dor_key_contacts

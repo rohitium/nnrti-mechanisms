@@ -402,7 +402,10 @@ def _collect_system_rows(
     out: list[dict] = []
     for _, row in rows_df.sort_values("replicate").iterrows():
         replicate = int(row["replicate"])
-        topo, dcd = _replicate_inputs(row, repo_root)
+        try:
+            topo, dcd = _replicate_inputs(row, repo_root)
+        except FileNotFoundError:
+            continue  # replicate not yet complete; skip silently
         u = mda.Universe(str(topo), str(dcd))
         dor = u.select_atoms(f"resname {ligand_resname} and not name H*")
         if dor.n_atoms == 0:
