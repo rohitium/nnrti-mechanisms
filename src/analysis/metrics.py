@@ -72,9 +72,17 @@ def compute_contacts(
     return ContactMetrics(contact_count=contact_count, hbond_count=hbond_count)
 
 
-# NNBP-lining residue topology resids (canonical HIV-1 RT numbering - 3).
-# These define the pocket center independent of whether a ligand is present.
-_NNBP_CA_RESIDS: tuple[int, ...] = (97, 98, 100, 103, 178, 185, 222, 224, 226, 231, 232)
+# NNBP-lining residue topology resids (canonical HIV-1 RT numbering − 3, resid_offset=−3).
+# p66 subunit (15 residues): L100, K101, K103, V106, T107, V108, V179, Y181, Y188,
+#                             V189, G190, F227, W229, L234, Y318
+# p51 subunit (1 residue):   E138
+# Source: Cilento, Kirby & Sarafianos, "Avoiding Drug Resistance in HIV Reverse Transcriptase"
+_NNBP_CA_RESIDS_P66: tuple[int, ...] = (
+    97, 98, 100, 103, 104, 105,   # L100, K101, K103, V106, T107, V108
+    176, 178, 185, 186, 187,      # V179, Y181, Y188, V189, G190
+    224, 226, 231, 315,           # F227, W229, L234, Y318
+)
+_NNBP_CA_RESID_P51: int = 135   # E138, topology resid = 138 − 3
 _VDW = {"C": 1.7, "N": 1.55, "O": 1.52, "S": 1.8, "P": 1.8}
 _PROBE_RADIUS = 1.4  # Å — solvent probe
 
@@ -89,6 +97,17 @@ def _p66_segid(universe) -> str:
     return max(cnt, key=cnt.get)
 
 
+def _p51_segid(universe) -> str:
+    """Return the segid of the p51 subunit (second largest protein segment in HIV-1 RT)."""
+    from collections import Counter
+    prot_ca = universe.select_atoms("protein and name CA")
+    if prot_ca.n_atoms == 0:
+        return ""
+    cnt = Counter(prot_ca.segids.tolist())
+    sorted_segs = sorted(cnt, key=cnt.get, reverse=True)
+    return sorted_segs[1] if len(sorted_segs) > 1 else ""
+
+
 def _pocket_volume_proxy_universe(
     universe,
     ligand_resname: str = "",  # kept for API compat, no longer used
@@ -98,21 +117,40 @@ def _pocket_volume_proxy_universe(
     """Compute NNBP pocket volume using NNBP residue Cα centroid as center.
 
     Works for both apo and holo trajectories (does not require a drug).
-    Center = per-frame centroid of Cα atoms from 11 NNBP-lining residues in p66
-    (the larger subunit of HIV-1 RT, identified as the segment with the most Cα atoms).
+    Center = per-frame centroid of Cα atoms from NNBP-lining residues:
+      p66 (15 residues): L100, K101, K103, V106, T107, V108, V179, Y181, Y188,
+                         V189, G190, F227, W229, L234, Y318
+      p51 (1 residue):   E138
+    Source: Cilento, Kirby & Sarafianos, "Avoiding Drug Resistance in HIV RT"
     """
     from scipy.spatial import cKDTree
 
+    # p66 Cα selection
     seg = _p66_segid(universe)
     seg_filter = f" and segid {seg}" if seg else ""
     ca_sel_str = ("protein and name CA" + seg_filter + " and (" +
-                  " or ".join(f"resid {r}" for r in _NNBP_CA_RESIDS) + ")")
+                  " or ".join(f"resid {r}" for r in _NNBP_CA_RESIDS_P66) + ")")
     ca_sel = universe.select_atoms(ca_sel_str)
-    receptor = universe.select_atoms("protein and not name H*")
-    if ca_sel.n_atoms < 3:
-        raise ValueError(f"Too few NNBP Cα found ({ca_sel.n_atoms}); check resid offset.")
 
-    center = ca_sel.positions.mean(axis=0)
+    # p51 Cα selection (E138)
+    p51_seg = _p51_segid(universe)
+    ca_p51_pos = np.empty((0, 3), dtype=float)
+    if p51_seg:
+        p51_ca = universe.select_atoms(
+            f"protein and name CA and segid {p51_seg} and resid {_NNBP_CA_RESID_P51}"
+        )
+        if p51_ca.n_atoms > 0:
+            ca_p51_pos = p51_ca.positions
+
+    total_ca = ca_sel.n_atoms + ca_p51_pos.shape[0]
+    if total_ca < 3:
+        raise ValueError(f"Too few NNBP Cα found ({total_ca}); check resid offset.")
+
+    ca_positions = (np.vstack([ca_sel.positions, ca_p51_pos])
+                    if ca_p51_pos.shape[0] > 0 else ca_sel.positions)
+    receptor = universe.select_atoms("protein and not name H*")
+
+    center = ca_positions.mean(axis=0)
     s = grid_spacing
     r = radius_angstrom
     axes = [np.arange(center[i] - r, center[i] + r + s, s) for i in range(3)]

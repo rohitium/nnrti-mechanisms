@@ -3,7 +3,10 @@
 
 Pocket center is defined each frame as the centroid of Cα atoms from key
 NNBP-lining residues (canonical HIV-1 RT numbering, resid_offset=-3 applied):
-  L100, K101, K103, V106, Y181, Y188, F227, P225, W229, L234, H235
+  p66 (15 residues): L100, K101, K103, V106, T107, V108, V179, Y181, Y188,
+                     V189, G190, F227, W229, L234, Y318
+  p51 (1 residue):   E138
+Source: Cilento, Kirby & Sarafianos, "Avoiding Drug Resistance in HIV RT"
 
 This requires no drug to be present and works identically for apo and holo.
 Pocket volume = number of grid voxels within POCKET_RADIUS of that centroid
@@ -35,13 +38,14 @@ RESID_OFFSET  = -3
 POCKET_RADIUS = 10.0   # Å — generous to capture full NNBP
 GRID_SPACING  = 0.75   # Å
 
-# NNBP-lining residues (canonical RT numbering → add RESID_OFFSET for topology)
-NNBP_RESIDUES = {
-    "L100": 100, "K101": 101, "K103": 103, "V106": 106,
-    "Y181": 181, "Y188": 188,
-    "F227": 227, "P225": 225, "W229": 229,
-    "L234": 234, "H235": 235,
+# NNBP-lining residues (canonical HIV-1 RT numbering → add RESID_OFFSET for topology resid).
+# Source: Cilento, Kirby & Sarafianos, "Avoiding Drug Resistance in HIV Reverse Transcriptase"
+NNBP_RESIDUES_P66 = {
+    "L100": 100, "K101": 101, "K103": 103, "V106": 106, "T107": 107, "V108": 108,
+    "V179": 179, "Y181": 181, "Y188": 188, "V189": 189, "G190": 190,
+    "F227": 227, "W229": 229, "L234": 234, "Y318": 318,
 }
+NNBP_RESIDUES_P51 = {"E138": 138}  # p51 subunit contribution
 # VdW radii for protein heavy atoms
 VDW = {"C": 1.7, "N": 1.55, "O": 1.52, "S": 1.8, "P": 1.8}
 PROBE_RADIUS  = 1.4   # Å — solvent probe (water)
@@ -168,20 +172,32 @@ def process_replicate(row, leg: str) -> list[dict]:
     u = mda.Universe(str(topo), str(dcd))
     n_frames = len(u.trajectory)
 
-    # Identify p66 (larger subunit) by the segment with the most Cα atoms
+    # Identify p66 (largest segment) and p51 (second largest) by Cα count
     from collections import Counter
     prot_ca_all = u.select_atoms("protein and name CA")
     seg_cnt = Counter(prot_ca_all.segids.tolist())
-    p66_seg = max(seg_cnt, key=seg_cnt.get) if seg_cnt else None
+    sorted_segs = sorted(seg_cnt, key=seg_cnt.get, reverse=True)
+    p66_seg = sorted_segs[0] if sorted_segs else None
+    p51_seg = sorted_segs[1] if len(sorted_segs) > 1 else None
     seg_filter = f" and segid {p66_seg}" if p66_seg else ""
 
-    # Select NNBP Cα atoms for pocket center (p66 only)
-    resids = [pos + RESID_OFFSET for pos in NNBP_RESIDUES.values()]
+    # Select NNBP Cα atoms for pocket center: p66 residues
+    resids_p66 = [r + RESID_OFFSET for r in NNBP_RESIDUES_P66.values()]
     sel_str = ("protein and name CA" + seg_filter +
-               " and (" + " or ".join(f"resid {r}" for r in resids) + ")")
+               " and (" + " or ".join(f"resid {r}" for r in resids_p66) + ")")
     ca_sel = u.select_atoms(sel_str)
-    if ca_sel.n_atoms < 5:
-        print(f"  WARNING: only {ca_sel.n_atoms} NNBP Cα found for {mutation} rep{replicate} (seg={p66_seg})")
+
+    # p51 E138 Cα
+    ca_p51_sel = None
+    if p51_seg:
+        p51_resid = list(NNBP_RESIDUES_P51.values())[0] + RESID_OFFSET
+        ca_p51_sel = u.select_atoms(
+            f"protein and name CA and segid {p51_seg} and resid {p51_resid}"
+        )
+
+    total_ca = ca_sel.n_atoms + (ca_p51_sel.n_atoms if ca_p51_sel else 0)
+    if total_ca < 5:
+        print(f"  WARNING: only {total_ca} NNBP Cα found for {mutation} rep{replicate} (p66={p66_seg}, p51={p51_seg})")
 
     # Pre-build receptor (all protein heavy atoms, no H)
     receptor = u.select_atoms("protein and not name H*")
@@ -195,7 +211,10 @@ def process_replicate(row, leg: str) -> list[dict]:
     rows_out = []
     for ts in u.trajectory:
         time_ns = (float(ts.frame) / max(1, n_frames - 1)) * total_ns
-        vol = pocket_volume_frame(ca_sel.positions.copy(),
+        ca_pos = ca_sel.positions.copy()
+        if ca_p51_sel is not None and ca_p51_sel.n_atoms > 0:
+            ca_pos = np.vstack([ca_pos, ca_p51_sel.positions.copy()])
+        vol = pocket_volume_frame(ca_pos,
                                   receptor.positions.copy(),
                                   rec_vdw)
         rows_out.append({

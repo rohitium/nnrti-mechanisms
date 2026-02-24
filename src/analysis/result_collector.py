@@ -104,6 +104,15 @@ def _prepare_profile_jobs(run_df: pd.DataFrame) -> list[dict]:
             _nonempty_path(row.get("analysis_dcd")),
             rep_dir / f"{safe}_rep{rep:02d}_analysis.dcd",
         )
+        # Fall back to .10ns.bak (original 10 ns DCD backed up when extension job started)
+        # when the primary analysis DCD doesn't exist yet (extension still pending/running).
+        if dcd is None or not dcd.exists():
+            for bak_suffix in (f"{safe}_rep{rep:02d}_analysis.10ns.bak",
+                               f"{safe}_rep{rep:02d}_analysis.dcd.bak"):
+                bak = _remap_to_local_workspace(rep_dir / bak_suffix)
+                if bak is not None and bak.exists():
+                    dcd = bak
+                    break
         if topo is None or dcd is None or not topo.exists() or not dcd.exists():
             continue
 
@@ -139,6 +148,7 @@ def _prepare_profile_jobs(run_df: pd.DataFrame) -> list[dict]:
                 "replicate": rep,
                 "topology": str(topo),
                 "trajectory": str(dcd),
+                "trajectory_format": "DCD" if str(dcd).endswith(".bak") else None,
                 "production_ps": production_ps,
             }
         )
@@ -219,7 +229,8 @@ def _ca_rmsd_worker(job: dict, frame_stride: int, max_frames: int) -> tuple[list
         return [], str(exc)
 
     try:
-        u = mda.Universe(job["topology"], job["trajectory"])
+        traj_fmt = job.get("trajectory_format")
+        u = mda.Universe(job["topology"], job["trajectory"], **({"format": traj_fmt} if traj_fmt else {}))
         ref = mda.Universe(job["topology"])
         prot_all = u.select_atoms("protein")
         try:
@@ -286,7 +297,8 @@ def _com_distance_worker(
         return [], str(exc)
 
     try:
-        u = mda.Universe(job["topology"], job["trajectory"])
+        traj_fmt = job.get("trajectory_format")
+        u = mda.Universe(job["topology"], job["trajectory"], **({"format": traj_fmt} if traj_fmt else {}))
         lig = u.select_atoms(f"resname {ligand_resname}")
         prot = u.select_atoms(f"protein and not resname {ligand_resname}")
         if lig.n_atoms == 0 or prot.n_atoms == 0:
@@ -348,7 +360,8 @@ def _pocket_volume_worker(
         return [], str(exc)
 
     try:
-        u = mda.Universe(job["topology"], job["trajectory"])
+        traj_fmt = job.get("trajectory_format")
+        u = mda.Universe(job["topology"], job["trajectory"], **({"format": traj_fmt} if traj_fmt else {}))
         prot = u.select_atoms("protein")
         if prot.n_atoms == 0:
             return [], "empty protein selection"
