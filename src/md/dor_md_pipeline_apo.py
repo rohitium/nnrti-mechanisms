@@ -9,13 +9,12 @@ pathway as the holo simulations.
 Usage
 -----
     python -m src.md.dor_md_pipeline_apo \\
-        --mutations WT F227C V106A "V106A+P225H" "K103N+M230L" "A98G+F227C" "V106I+F227C" \\
         --holo-runs results/md_runs \\
         --apo-runs results/apo_md_runs \\
         --manifest results/apo_md_manifest.csv
 
-All three arguments have the above defaults; the mutation list defaults to the
-seven priority apo systems identified in the hypothesis analysis.
+All three arguments have the above defaults. If --mutations is omitted, apo
+prep defaults to WT + all mutations listed in data/DRM-susceptibilities.csv.xlsx.
 """
 from __future__ import annotations
 
@@ -26,19 +25,6 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# -----------------------------------------------------------------------
-# Priority apo mutations (hypothesis-driven)
-# -----------------------------------------------------------------------
-_DEFAULT_MUTATIONS = [
-    "WT",
-    "F227C",
-    "V106A",
-    "V106A+P225H",
-    "K103N+M230L",
-    "A98G+F227C",
-    "V106I+F227C",
-]
-
 # Ligand residue name in the 4NCG crystal / holo PDBs.
 _LIGAND_RESNAME = "2KW"
 
@@ -46,6 +32,23 @@ _LIGAND_RESNAME = "2KW"
 def _safe_label(mutation: str) -> str:
     """Convert a mutation string to a filesystem-safe label (matching holo convention)."""
     return mutation.lower().replace("+", "_").replace(" ", "")
+
+
+def _default_mutations(root: Path) -> list[str]:
+    """Return WT + all mutations from the susceptibility spreadsheet."""
+    from ..analysis.susceptibility import load_dor_susceptibilities
+
+    dor_df = load_dor_susceptibilities(
+        root / "data" / "DRM-susceptibilities.csv.xlsx",
+        default_chain="A",
+    )
+    mutations = ["WT"]
+    seen = set(mutations)
+    for mutation in dor_df["mutation"].tolist():
+        if mutation not in seen:
+            mutations.append(mutation)
+            seen.add(mutation)
+    return mutations
 
 
 def prep_apo_systems(
@@ -158,9 +161,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--mutations",
         nargs="+",
-        default=_DEFAULT_MUTATIONS,
+        default=None,
         metavar="MUT",
-        help="Mutation labels to prepare (default: 7 priority systems).",
+        help="Mutation labels to prepare (default: WT + all mutations in susceptibility xlsx).",
     )
     parser.add_argument(
         "--holo-runs",
@@ -182,8 +185,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    root = Path(__file__).resolve().parents[2]
+    mutations = args.mutations if args.mutations else _default_mutations(root)
+    if args.mutations is None:
+        logger.info(
+            "No --mutations provided; defaulting to WT + all susceptibility mutations (%d total).",
+            len(mutations),
+        )
+
     prep_apo_systems(
-        mutations=args.mutations,
+        mutations=mutations,
         holo_runs_root=args.holo_runs,
         apo_runs_root=args.apo_runs,
         manifest_path=args.manifest,

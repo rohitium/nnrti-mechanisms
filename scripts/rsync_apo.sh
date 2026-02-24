@@ -6,7 +6,7 @@ set -euo pipefail
 #   SHERLOCK_USER=rsatija bash scripts/rsync_apo.sh pull
 # Optional:
 #   COMPLETE_ONLY=1    # pull only replicates that reached target steps
-#   MD_PRODUCTION_NS=10.0
+#   MD_PRODUCTION_NS=100.0
 #   PARALLEL_JOBS=6    # concurrent rsync workers for push (default 6)
 
 SHERLOCK_USER="${SHERLOCK_USER:-}"
@@ -25,7 +25,7 @@ RETRIES="${RETRIES:-5}"
 SLEEP_SECONDS="${SLEEP_SECONDS:-10}"
 COMPLETE_ONLY="${COMPLETE_ONLY:-0}"
 PARALLEL_JOBS="${PARALLEL_JOBS:-6}"
-MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-10.0}"
+MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-100.0}"
 REMOTE_BASE="/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms"
 REMOTE_HOST="${SHERLOCK_USER}@login.sherlock.stanford.edu"
 LOCAL_APO_RUNS="results/apo_md_runs/"

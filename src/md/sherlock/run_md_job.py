@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ligand-sdf", default="data/ligands/dor.sdf")
     parser.add_argument("--ligand-resname", default="2KW")
     parser.add_argument("--heating-ps", type=float, default=25.0)
-    parser.add_argument("--production-ns", type=float, default=10.0)
+    parser.add_argument("--production-ns", type=float, default=100.0)
     parser.add_argument("--report-interval", type=int, default=2000)
     parser.add_argument("--checkpoint-interval", type=int, default=5000)
     parser.add_argument("--resume", action="store_true", default=True,

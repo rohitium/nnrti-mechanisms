@@ -38,7 +38,7 @@ bash scripts/sherlock/submit_md_batched.sh 6 12
 Extension reruns (e.g. after syncing back partial results):
 
 ```bash
-MD_PRODUCTION_NS=10.0 MD_FORCE_RERUN=1 SKIP_IF_AT_TARGET=1 SHERLOCK_TIME=12:00:00 \
+MD_PRODUCTION_NS=100.0 MD_FORCE_RERUN=1 SKIP_IF_AT_TARGET=1 SHERLOCK_TIME=12:00:00 \
 bash scripts/sherlock/submit_md_batched.sh 6 12
 ```
 
@@ -46,13 +46,13 @@ Monitor:
 
 ```bash
 squeue -u $USER
-python3 scripts/sherlock/report_md_progress.py --target-ns 10.0 --show-incomplete
+python3 scripts/sherlock/report_md_progress.py --target-ns 100.0 --show-incomplete
 ```
 
 ### Step 3 — sync results back
 
 ```bash
-SHERLOCK_USER=rsatija COMPLETE_ONLY=1 MD_PRODUCTION_NS=10.0 \
+SHERLOCK_USER=rsatija COMPLETE_ONLY=1 MD_PRODUCTION_NS=100.0 \
 bash scripts/rsync_results.sh pull
 ```
 
@@ -64,7 +64,7 @@ bash scripts/run_analysis.sh
 
 ---
 
-## Apo workflow (ligand-free, 7 priority mutations)
+## Apo workflow (ligand-free, defaults to all mutations)
 
 ### Step 1 — prep locally
 
@@ -87,7 +87,7 @@ bash scripts/sherlock/submit_apo_md_batched.sh 6 12
 ### Step 3 — sync results back
 
 ```bash
-SHERLOCK_USER=rsatija COMPLETE_ONLY=1 MD_PRODUCTION_NS=10.0 \
+SHERLOCK_USER=rsatija COMPLETE_ONLY=1 MD_PRODUCTION_NS=100.0 \
 bash scripts/rsync_apo.sh pull
 ```
 

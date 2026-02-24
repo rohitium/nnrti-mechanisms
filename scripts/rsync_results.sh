@@ -10,7 +10,7 @@ set -euo pipefail
 #   RETRIES=8 SLEEP_SECONDS=15
 #   SYNC_LOGS=1        # also sync logs/
 #   COMPLETE_ONLY=1    # when pulling, transfer only replicate dirs that reached target steps
-#   MD_PRODUCTION_NS=10.0   # target used with COMPLETE_ONLY=1
+#   MD_PRODUCTION_NS=100.0  # target used with COMPLETE_ONLY=1
 #   PARALLEL_JOBS=6    # concurrent rsync workers for push (default 6)
 #
 # Push uses parallel per-mutation-dir workers sharing one SSH ControlMaster
@@ -36,7 +36,7 @@ SLEEP_SECONDS="${SLEEP_SECONDS:-10}"
 SYNC_LOGS="${SYNC_LOGS:-0}"
 COMPLETE_ONLY="${COMPLETE_ONLY:-0}"
 PARALLEL_JOBS="${PARALLEL_JOBS:-6}"
-MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-10.0}"
+MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-100.0}"
 REMOTE_BASE="/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms"
 REMOTE_HOST="${SHERLOCK_USER}@login.sherlock.stanford.edu"
 LOCAL_MD_RUNS="results/md_runs/"

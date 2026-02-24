@@ -15,7 +15,7 @@ This repository studies HIV-1 NNRTI resistance for doravirine (DOR) using:
 | Run full analysis | `bash scripts/run_analysis.sh` |
 | Submit apo MD jobs | `bash scripts/sherlock/submit_apo_md_batched.sh 6 12` |
 | Run apo analysis | `bash scripts/run_apo_analysis.sh` |
-| Monitor queue | `python3 scripts/sherlock/report_md_progress.py --target-ns 10.0 --show-incomplete` |
+| Monitor queue | `python3 scripts/sherlock/report_md_progress.py --target-ns 100.0 --show-incomplete` |
 
 ---
 
@@ -49,22 +49,22 @@ Workflow aligned to Shao et al., PNAS (2009) DOI: `10.1073/pnas.0907304107`:
 # submit in batches (batch size=6, max queued jobs=12)
 bash scripts/sherlock/submit_md_batched.sh 6 12
 
-# extension reruns (target 10 ns, skip already-complete)
-MD_PRODUCTION_NS=10.0 MD_FORCE_RERUN=1 SKIP_IF_AT_TARGET=1 SHERLOCK_TIME=12:00:00 \
+# extension reruns (target 100 ns, skip already-complete)
+MD_PRODUCTION_NS=100.0 MD_FORCE_RERUN=1 SKIP_IF_AT_TARGET=1 SHERLOCK_TIME=12:00:00 \
 bash scripts/sherlock/submit_md_batched.sh 6 12
 ```
 
 Monitor completion:
 ```bash
 squeue -u $USER
-python3 scripts/sherlock/report_md_progress.py --target-ns 10.0 --show-incomplete
+python3 scripts/sherlock/report_md_progress.py --target-ns 100.0 --show-incomplete
 ```
 
 ### 2. Sync results
 
 ```bash
 # Sherlock → local (completed replicates only)
-SHERLOCK_USER=rsatija COMPLETE_ONLY=1 MD_PRODUCTION_NS=10.0 \
+SHERLOCK_USER=rsatija COMPLETE_ONLY=1 MD_PRODUCTION_NS=100.0 \
 bash scripts/rsync_results.sh pull
 ```
 
@@ -145,13 +145,13 @@ Apo (ligand-free) simulations test two mechanistic hypotheses:
 - **Hypothesis 2** (tunnel dynamics): V106A+P225H and K103N+M230L use a
   kinetic tunnel-opening mechanism visible in the gate distances without DOR.
 
-Priority apo systems: WT, F227C, V106A, V106A+P225H, K103N+M230L, A98G+F227C, V106I+F227C.
+By default, apo prep now uses WT + all mutations in `data/DRM-susceptibilities.csv.xlsx`.
+Use `--mutations ...` to run only a subset (for example the prior 7-priority panel).
 
 ### 1. Apo system prep (local)
 
 ```bash
 OPENMM_PLATFORM=CPU python -m src.md.dor_md_pipeline_apo \
-    --mutations WT F227C V106A "V106A+P225H" "K103N+M230L" "A98G+F227C" "V106I+F227C" \
     --holo-runs results/md_runs \
     --apo-runs  results/apo_md_runs \
     --manifest  results/apo_md_manifest.csv
@@ -171,15 +171,13 @@ bash scripts/sherlock/submit_apo_md_batched.sh 6 12
 
 # Monitor
 squeue -u $USER
-python3 scripts/sherlock/report_md_progress.py \
-    --manifest results/apo_md_manifest.csv --target-ns 10.0 --show-incomplete
 ```
 
 ### 3. Apo analysis
 
 ```bash
 # Sync completed apo trajectories back
-SHERLOCK_USER=rsatija COMPLETE_ONLY=1 MD_PRODUCTION_NS=10.0 \
+SHERLOCK_USER=rsatija COMPLETE_ONLY=1 MD_PRODUCTION_NS=100.0 \
 bash scripts/rsync_results.sh pull  # sync apo_md_runs as well
 
 # Run full apo analysis (PBC fix + tunnel dynamics + DCCM, apo and holo comparison)

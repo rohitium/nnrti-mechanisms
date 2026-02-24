@@ -155,7 +155,7 @@ def _infer_total_ns(output_json_path: Path) -> float:
                             return float(steps.max()) * 2.0 / 1_000_000.0
             except Exception:
                 pass
-    return 10.0
+    return 100.0
 
 
 def _p66_chain_for_cif(cif_path: Path) -> str:
@@ -201,7 +201,7 @@ def _process_replicate(row: pd.Series, leg: str, frame_stride: int = 1) -> list[
     safe_label = str(row.get("safe_label", mutation))
     replicate = int(row["replicate"])
     output_json = Path(str(row["output_json"]))
-    total_ns = _infer_total_ns(output_json) if output_json.exists() else 10.0
+    total_ns = _infer_total_ns(output_json) if output_json.exists() else 100.0
 
     u = mda.Universe(str(topo), str(dcd))
     seg = _p66_segid(u)

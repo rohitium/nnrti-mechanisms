@@ -113,7 +113,7 @@ def _prepare_profile_jobs(run_df: pd.DataFrame) -> list[dict]:
         # dt=1.0 ps regardless of the true frame spacing).  The ground truth is:
         #   timestep = 2 fs  (hardcoded in src/md/worker.py)
         #   production_ps = md_production_steps_completed × 2 fs / 1000
-        production_ps: float = 10_000.0  # default: 10 ns
+        production_ps: float = 100_000.0  # default: 100 ns
         out_json = _resolve_local_path(
             _nonempty_path(row.get("output_json")),
             rep_dir / f"{safe}_rep{rep:02d}.json",
@@ -236,7 +236,7 @@ def _ca_rmsd_worker(job: dict, frame_stride: int, max_frames: int) -> tuple[list
         kept = 0
         stride = max(1, int(frame_stride))
         n_total_frames = max(1, len(u.trajectory))
-        production_ps = float(job.get("production_ps") or 10_000.0)
+        production_ps = float(job.get("production_ps") or 100_000.0)
         for idx, _ in enumerate(u.trajectory):
             if idx % stride != 0:
                 continue
@@ -305,7 +305,7 @@ def _com_distance_worker(
         kept = 0
         stride = max(1, int(frame_stride))
         n_total_frames = max(1, len(u.trajectory))
-        production_ps = float(job.get("production_ps") or 10_000.0)
+        production_ps = float(job.get("production_ps") or 100_000.0)
         for idx, _ in enumerate(u.trajectory):
             if idx % stride != 0:
                 continue
@@ -366,7 +366,7 @@ def _pocket_volume_worker(
         kept = 0
         stride = max(1, int(frame_stride))
         n_total_frames = max(1, len(u.trajectory))
-        production_ps = float(job.get("production_ps") or 10_000.0)
+        production_ps = float(job.get("production_ps") or 100_000.0)
         for idx, _ in enumerate(u.trajectory):
             if idx % stride != 0:
                 continue

@@ -153,7 +153,7 @@ def main():
     parser.add_argument(
         "--target-ns",
         type=float,
-        default=float(os.environ.get("MD_PRODUCTION_NS", "10.0")),
+        default=float(os.environ.get("MD_PRODUCTION_NS", "100.0")),
     )
     parser.add_argument(
         "--show-incomplete",

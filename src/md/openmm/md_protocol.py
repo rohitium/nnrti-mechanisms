@@ -25,7 +25,7 @@ class MDProtocolConfig:
     minimization_unrestrained_steps: int = 5000
     heating_ps: float = 25.0
     # Canonical panel production length used in this repo's doravirine resistance panel.
-    production_ns: float = 10.0
+    production_ns: float = 100.0
     report_interval_steps: int = 2000
     solvent_padding_nm: float = 1.0
     ionic_strength_molar: float = 0.15

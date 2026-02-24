@@ -110,7 +110,7 @@ def infer_total_ns(json_path: Path) -> float:
                             return float(steps.max()) * 2.0 / 1_000_000.0
             except Exception:
                 pass
-    return 10.0
+    return 100.0
 
 
 def _build_grid(center: np.ndarray) -> np.ndarray:

@@ -111,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--task-id", type=int, required=True)
     parser.add_argument("--heating-ps", type=float, default=25.0)
-    parser.add_argument("--production-ns", type=float, default=10.0)
+    parser.add_argument("--production-ns", type=float, default=100.0)
     parser.add_argument("--report-interval", type=int, default=2000)
     parser.add_argument(
         "--checkpoint-interval",

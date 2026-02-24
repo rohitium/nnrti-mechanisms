@@ -78,7 +78,7 @@ def _replicate_inputs(row: pd.Series, repo_root: Path) -> tuple[Path, Path]:
 
 
 def _infer_total_ns(output_json_path: Path) -> float:
-    """Read production length from JSON or state CSV; default 10 ns."""
+    """Read production length from JSON or state CSV; default 100 ns."""
     # Try JSON key directly
     try:
         j = json.loads(output_json_path.read_text())
@@ -101,7 +101,7 @@ def _infer_total_ns(output_json_path: Path) -> float:
                             return float(steps.max()) * 2.0 / 1_000_000.0
             except Exception:
                 pass
-    return 10.0
+    return 100.0
 
 
 def _select_atom(universe, position: int, resid_offset: int, atom_name: str):
