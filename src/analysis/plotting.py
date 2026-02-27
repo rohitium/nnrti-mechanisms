@@ -475,30 +475,16 @@ def plot_simulation_convergence(
         return float(max_step.max()) * 2.0 / 1_000_000.0
 
     def _prep_x_fixed(df):
-        import numpy as np
         import pandas as pd
 
+        # time_ps is computed directly from the JSON's md_production_steps_completed
+        # in each worker (result_collector._prepare_profile_jobs), so it is the
+        # authoritative source.  The old approach of inferring total_ns from the
+        # state CSV was unreliable for extended runs where the state CSV was not
+        # fully synced (e.g. G190E/rep_01 state CSV stops at ~22.8 M steps even
+        # though the JSON records 50 M steps completed → 100 ns).
         df = df.copy()
-        if not {"safe_label", "replicate", "frame_index"}.issubset(df.columns):
-            df["x"] = pd.to_numeric(df.get("time_ps", np.nan), errors="coerce") / 1000.0
-            return df, "Time (ns)"
-
-        parts = []
-        for (safe_label, rep), sub in df.groupby(["safe_label", "replicate"], dropna=False):
-            sub = sub.copy()
-            max_frame = float(pd.to_numeric(sub["frame_index"], errors="coerce").max())
-            total_ns = _infer_total_ns_from_state_csv(str(safe_label), int(rep))
-            if total_ns is not None and np.isfinite(total_ns) and total_ns > 0 and max_frame > 0:
-                sub["x"] = (pd.to_numeric(sub["frame_index"], errors="coerce") / max_frame) * total_ns
-            else:
-                t_ns = pd.to_numeric(sub.get("time_ps", np.nan), errors="coerce") / 1000.0
-                # Legacy DCD metadata bug can inflate times by ~1000x.
-                finite_max = float(np.nanmax(t_ns)) if np.isfinite(np.nanmax(t_ns)) else np.nan
-                if np.isfinite(finite_max) and finite_max > 200.0:
-                    t_ns = t_ns / 1000.0
-                sub["x"] = t_ns
-            parts.append(sub)
-        df = pd.concat(parts, ignore_index=True) if parts else df
+        df["x"] = pd.to_numeric(df.get("time_ps"), errors="coerce") / 1000.0
         return df, "Time (ns)"
 
     def _interp_mean_trace(sub: pd.DataFrame, y_col: str, n_grid: int = 200):

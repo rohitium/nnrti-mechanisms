@@ -9,8 +9,8 @@ crystal structure (element-aware nearest-neighbour matching):
 
     τ1  C12x – C2x  – O1x  – C9x   (pyridinone–O ether bond)
     τ2  C2x  – O1x  – C9x  – C10x  (O–chlorocyanobenzene bond)
-    τ3  C4x  – N2x  – C15x – C13x  (pyridinone-N – CH₂ linker)
-    τ4  N2x  – C15x – C13x – N5x   (CH₂ linker – triazolone bond)
+    τ3  C4x  – N2x  – C15x – C14x  (pyridinone-N – CH₂ linker)
+    τ4  N2x  – C15x – C14x – N5x   (CH₂ linker – triazolone bond)
 
 Outputs:
     results/dor_torsions.csv
@@ -41,8 +41,8 @@ LIGAND_RESNAME = "2KW"
 TORSIONS: list[tuple[str, list[str]]] = [
     ("tau1", ["C12x", "C2x",  "O1x",  "C9x" ]),  # pyridinone-O ether bond
     ("tau2", ["C2x",  "O1x",  "C9x",  "C10x"]),  # O-chlorocyanobenzene bond
-    ("tau3", ["C4x",  "N2x",  "C15x", "C13x"]),  # pyridinone-N to CH2 linker
-    ("tau4", ["N2x",  "C15x", "C13x", "N5x" ]),  # CH2 linker to triazolone
+    ("tau3", ["C4x",  "N2x",  "C15x", "C14x"]),  # pyridinone-N to CH2 linker
+    ("tau4", ["N2x",  "C15x", "C14x", "N5x" ]),  # CH2 linker to triazolone
 ]
 
 
@@ -73,19 +73,78 @@ def _remap(path: Path) -> Path:
     return path
 
 
-def _infer_total_ns(json_path: Path) -> float:
-    try:
-        j = json.loads(json_path.read_text())
-        steps = int(j.get("md_production_steps_completed") or
-                    j.get("md_production_steps") or 0)
-        if steps > 0:
-            return steps * 2.0 / 1_000_000.0
-    except Exception:
-        pass
-    return 100.0
+def _infer_total_ns(
+    json_path: Path | None,
+    *,
+    fallback_state_csv: Path | None = None,
+) -> float | None:
+    if json_path is not None and json_path.is_file():
+        try:
+            j = json.loads(json_path.read_text())
+            steps = int(j.get("md_production_steps_completed") or j.get("md_production_steps") or 0)
+            if steps > 0:
+                return steps * 2.0 / 1_000_000.0
+        except Exception:
+            pass
+
+        # Fall back to matching md_state.csv beside output JSON.
+        m = re.match(r"^(.+)_rep(\d{2}).*\.json$", json_path.name)
+        if m:
+            state_csv = json_path.parent / f"{m.group(1)}_rep{m.group(2)}_md_state.csv"
+            if state_csv.exists():
+                try:
+                    sdf = pd.read_csv(state_csv)
+                    for col in ('#"Step"', "Step"):
+                        if col in sdf.columns:
+                            steps = pd.to_numeric(sdf[col], errors="coerce").dropna()
+                            if not steps.empty:
+                                return float(steps.max()) * 2.0 / 1_000_000.0
+                except Exception:
+                    pass
+
+    if fallback_state_csv is not None and fallback_state_csv.exists():
+        try:
+            sdf = pd.read_csv(fallback_state_csv)
+            for col in ('#"Step"', "Step"):
+                if col in sdf.columns:
+                    steps = pd.to_numeric(sdf[col], errors="coerce").dropna()
+                    if not steps.empty:
+                        return float(steps.max()) * 2.0 / 1_000_000.0
+        except Exception:
+            pass
+
+    return None
 
 
 def _load_fold_map() -> dict:
+    """Load DOR fold-resistance values from the authoritative xlsx source.
+
+    Falls back to md_manifest.csv if the xlsx is unavailable.
+    """
+    xl_path = REPO / "data" / "DRM-susceptibilities.csv.xlsx"
+    if xl_path.exists():
+        try:
+            xl = pd.read_excel(
+                xl_path, header=None,
+                names=["mutation_raw", "rpv_fold", "dor_fold"],
+            )
+            # Row 0 is a text header ("Mutations", "RPV...", "DOR...") — drop it.
+            xl = xl[xl["mutation_raw"].notna()]
+            xl = xl[xl["mutation_raw"].astype(str).str.strip() != "Mutations"]
+            fold: dict = {"WT": 1.0}
+            for _, row in xl.iterrows():
+                mut_raw = str(row["mutation_raw"]).strip()
+                # Normalize: "K103N, M230L" → "K103N+M230L"
+                mut_norm = re.sub(r",\s*", "+", mut_raw)
+                v = row["dor_fold"]
+                try:
+                    fold[mut_norm] = float(v) if pd.notna(v) else None
+                except (TypeError, ValueError):
+                    pass
+            return fold
+        except Exception as exc:
+            print(f"  WARNING: could not load xlsx ({exc}), falling back to manifest")
+    # Fallback: manifest
     mf = pd.read_csv(REPO / "results" / "md_manifest.csv")
     fold = {}
     for _, row in mf.drop_duplicates("mutation").iterrows():
@@ -105,7 +164,8 @@ def process_replicate(row: pd.Series) -> list[dict]:
     mutation  = str(row["mutation"])
     replicate = int(row["replicate"])
 
-    out_json = _remap(Path(str(row.get("output_json", "")).strip()))
+    out_json_raw = str(row.get("output_json", "")).strip()
+    out_json = _remap(Path(out_json_raw)) if out_json_raw else None
     topo     = _remap(Path(str(row.get("analysis_topology_pdb", "")).strip()))
     dcd_raw  = str(row.get("analysis_dcd", "")).strip()
     dcd      = _remap(Path(dcd_raw)) if dcd_raw else Path("")
@@ -124,7 +184,13 @@ def process_replicate(row: pd.Series) -> list[dict]:
         print(f"  MISSING: {mutation} rep{replicate}")
         return []
 
-    total_ns = _infer_total_ns(out_json) if out_json.exists() else 100.0
+    rep_dir = topo.parent if topo.exists() else Path(".")
+    state_csv = rep_dir / f"{mut_key}_rep{replicate:02d}_md_state.csv"
+    total_ns = _infer_total_ns(out_json, fallback_state_csv=state_csv)
+    if total_ns is None or not np.isfinite(total_ns) or total_ns <= 0:
+        print(f"  WARNING ({mutation} rep{replicate}): could not infer production duration; skipping")
+        return []
+
     fmt_kw   = {"format": "DCD"} if str(dcd).endswith(".bak") else {}
     u = mda.Universe(str(topo), str(dcd), **fmt_kw)
     n_frames = len(u.trajectory)
@@ -145,7 +211,9 @@ def process_replicate(row: pd.Series) -> list[dict]:
 
     rows_out: list[dict] = []
     for ts in u.trajectory:
-        time_ns = (float(ts.frame) / max(1, n_frames - 1)) * total_ns
+        # Canonical mapping for this project: derive time from production length
+        # and frame index; never trust DCD timestamp metadata.
+        time_ns = ((float(ts.frame) + 1.0) * float(total_ns)) / max(1, n_frames)
         base = {
             "mutation":  mutation,
             "safe_label": mut_key,
@@ -247,53 +315,125 @@ def plot(df: pd.DataFrame, FOLD: dict | None = None) -> None:
     plt.close(fig)
     print(f"Wrote {out}")
 
-    # ── Plot 2: timeseries for each mutation (τ1 + τ2 only) ──
+    # ── Plots 2a-d: one timeseries figure per torsion angle ──
+    # X-axis is per-panel and adapts to however much data each mutation has,
+    # so partial runs (< 100 ns) are shown as-is without empty trailing space.
     ncols = 5
     nrows = int(np.ceil(n_mut / ncols))
-    for tau_pair, suffix in [(["tau1", "tau2"], "ether"), (["tau3", "tau4"], "linker")]:
-        fig2, axes2 = plt.subplots(nrows * len(tau_pair), ncols,
-                                   figsize=(3.5 * ncols, 2.5 * nrows * len(tau_pair)),
-                                   sharey="row")
-        axes2 = np.array(axes2).reshape(nrows * len(tau_pair), ncols)
-        cmap_ts = cm.get_cmap("tab10")
+    REP_COLORS = ["#66C2A5", "#FC8D62", "#8DA0CB"]  # ColorBrewer Set2
+
+    TAU_META = [
+        ("tau1", "τ₁", "pyridinone–O ether"),
+        ("tau2", "τ₂", "O–chlorocyanobenzene ether"),
+        ("tau3", "τ₃", "pyridinone-N–CH₂ linker"),
+        ("tau4", "τ₄", "CH₂–triazolone linker"),
+    ]
+
+    from matplotlib.lines import Line2D
+    legend_handles = [
+        Line2D([0], [0], color=REP_COLORS[0], lw=2, label="Replicate 1"),
+        Line2D([0], [0], color=REP_COLORS[1], lw=2, label="Replicate 2"),
+        Line2D([0], [0], color=REP_COLORS[2], lw=2, label="Replicate 3"),
+    ]
+
+    for tau_col, tau_label, tau_desc in TAU_META:
+        fig, axes = plt.subplots(
+            nrows, ncols,
+            figsize=(ncols * 3.6, nrows * 3.0),
+            squeeze=False,
+            sharey=True,
+            sharex=False,  # per-panel x so partial runs show their actual range
+        )
 
         for mi, mut in enumerate(mutations):
-            col = mi % ncols
-            base_row = (mi // ncols) * len(tau_pair)
+            row_i = mi // ncols
+            col_i = mi % ncols
+            ax = axes[row_i, col_i]
+
             sub = df[df["mutation"] == mut]
-            fold = FOLD.get(mut, "?")
-            title = (f"{mut} ({fold:.0f}×)" if isinstance(fold, float) else mut)
+            fold = FOLD.get(mut)
 
-            for ti, tau in enumerate(tau_pair):
-                ax = axes2[base_row + ti, col]
-                for rep_idx, (_, grp) in enumerate(sub.groupby("replicate")):
-                    ax.plot(grp["time_ns"], grp[tau],
-                            lw=0.5, alpha=0.7, color=cmap_ts(rep_idx % 10))
-                ax.set_ylim(-185, 185)
-                ax.axhline(0, color="gray", lw=0.3, ls=":")
-                ax.tick_params(labelsize=6)
-                ax.grid(axis="y", alpha=0.2)
-                if col == 0:
-                    ax.set_ylabel(f"{tau} (°)", fontsize=7)
-                if ti == len(tau_pair) - 1:
-                    ax.set_xlabel("Time (ns)", fontsize=6)
-                if ti == 0:
-                    ax.set_title(title, fontsize=7, fontweight="bold")
+            # Per-panel x range based on actual data
+            mut_max_t = float(sub["time_ns"].max()) if not sub.empty else 100.0
 
-        # hide unused panels
+            # Replicate traces
+            for rep_idx, (_, grp) in enumerate(sorted(sub.groupby("replicate"))):
+                grp_s = grp.sort_values("time_ns")
+                ax.plot(
+                    grp_s["time_ns"], grp_s[tau_col],
+                    lw=0.9, alpha=0.65,
+                    color=REP_COLORS[rep_idx % len(REP_COLORS)],
+                    rasterized=True,
+                )
+
+            # Reference lines
+            ax.axhline(0,   color="#bbbbbb", lw=0.8, zorder=0)
+            ax.axhline( 90, color="#e5e5e5", lw=0.5, ls=":", zorder=0)
+            ax.axhline(-90, color="#e5e5e5", lw=0.5, ls=":", zorder=0)
+
+            # Title: mutation name + fold change
+            if fold is not None and np.isfinite(float(fold)):
+                fold_str = "1× (ref)" if mut == "WT" else f"{fold:.0f}× DOR"
+            else:
+                fold_str = "—"
+            ax.set_title(f"{mut}\n{fold_str}", fontsize=8, fontweight="bold",
+                         pad=3, linespacing=1.35)
+
+            # Axes decoration
+            ax.set_ylim(-185, 185)
+            ax.set_xlim(0, mut_max_t)
+            ax.set_yticks([-90, 0, 90])
+            # Adaptive x ticks: 3 evenly spaced, rounded to nearest 10 ns
+            step = max(10, round(mut_max_t / 2 / 10) * 10)
+            ax.set_xticks([0, step, min(2 * step, mut_max_t)])
+            ax.tick_params(labelsize=7)
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+            if col_i != 0:
+                ax.spines["left"].set_alpha(0.25)
+                ax.tick_params(left=False)
+
+            if col_i == 0:
+                ax.set_ylabel(f"{tau_label} (°)", fontsize=8)
+            if row_i == nrows - 1:
+                ax.set_xlabel("Time (ns)", fontsize=8)
+
+        # Hide unused panels
         for mi in range(len(mutations), nrows * ncols):
-            col = mi % ncols
-            base_row = (mi // ncols) * len(tau_pair)
-            for ti in range(len(tau_pair)):
-                axes2[base_row + ti, col].set_visible(False)
+            axes[mi // ncols][mi % ncols].set_visible(False)
 
-        fig2.suptitle(f"Doravirine {suffix} torsion timeseries ({', '.join(tau_pair)})",
-                      fontsize=10, fontweight="bold")
-        fig2.tight_layout()
-        out2 = PLOTS_DIR / f"dor_torsions_{suffix}_timeseries.png"
-        fig2.savefig(out2, dpi=150, bbox_inches="tight")
-        plt.close(fig2)
-        print(f"Wrote {out2}")
+        fig.legend(handles=legend_handles, loc="upper center", ncol=3,
+                   fontsize=8.5, frameon=False, bbox_to_anchor=(0.5, 1.02))
+
+        fig.suptitle(
+            f"Doravirine {tau_label} torsion ({tau_desc}) — sorted by DOR fold resistance",
+            fontsize=10, fontweight="bold", y=1.055,
+        )
+        fig.tight_layout(h_pad=0.6, w_pad=0.4)
+
+        tau_num = tau_col[-1]  # "1", "2", "3", "4"
+        out_tau = PLOTS_DIR / f"dor_torsions_tau{tau_num}_timeseries.png"
+        fig.savefig(out_tau, dpi=180, bbox_inches="tight")
+        plt.close(fig)
+        print(f"Wrote {out_tau}")
+
+    # Keep dor_torsions_linker_timeseries.png as a symlink alias for tau4
+    import shutil
+    tau4_src = PLOTS_DIR / "dor_torsions_tau4_timeseries.png"
+    tau4_alias = PLOTS_DIR / "dor_torsions_linker_timeseries.png"
+    if tau4_src.exists():
+        shutil.copy2(tau4_src, tau4_alias)
+
+    # Remove deprecated legacy panel names to avoid stale, inconsistent outputs.
+    legacy_plots = [
+        PLOTS_DIR / "dor_torsions_ether_timeseries.png",
+    ]
+    for legacy in legacy_plots:
+        try:
+            if legacy.exists():
+                legacy.unlink()
+        except Exception:
+            pass
 
     # Summary: mean ± std per mutation per torsion
     print("\n─── Torsion angle summary (mean ± std, °) ───")

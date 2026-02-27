@@ -28,7 +28,21 @@ def _correct_one(
 
     protein = u.select_atoms("protein")
     anchor = protein if protein.n_atoms > 0 else u.atoms
+
+    def _make_whole(ag):
+        def _apply(ts):
+            try:
+                ag.unwrap(compound="segments", inplace=True)
+            except Exception:
+                try:
+                    ag.unwrap(compound="residues", inplace=True)
+                except Exception:
+                    pass
+            return ts
+        return _apply
+
     u.trajectory.add_transformations(
+        _make_whole(anchor),
         trans.NoJump(check_continuity=False),
         trans.center_in_box(anchor, center="geometry", wrap=False),
     )

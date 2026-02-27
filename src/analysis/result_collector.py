@@ -18,6 +18,26 @@ from ..md.manifest import load_manifest
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _make_whole_transform(ag):
+    """MDAnalysis-compatible transformation that makes protein chains whole across PBC.
+
+    Uses compound='segments' (then 'residues' as fallback) so that entire protein
+    chains are reassembled without requiring CONECT bond records in the topology.
+    trans.unwrap() uses compound='fragments' which silently fails when bonds are
+    absent, leaving frame-0 PBC splits intact for NoJump to lock in.
+    """
+    def _apply(ts):
+        try:
+            ag.unwrap(compound="segments", inplace=True)
+        except Exception:
+            try:
+                ag.unwrap(compound="residues", inplace=True)
+            except Exception:
+                pass
+        return ts
+    return _apply
+
+
 def _format_seconds(seconds: float) -> str:
     seconds = max(0.0, float(seconds))
     mins, sec = divmod(int(seconds), 60)
@@ -223,61 +243,67 @@ def _run_profile_jobs(jobs: list[dict], worker_fn, label: str, workers: int | No
 def _ca_rmsd_worker(job: dict, frame_stride: int, max_frames: int) -> tuple[list[dict], str | None]:
     _silence_mdanalysis_noise()
     try:
-        import MDAnalysis as mda
-        from MDAnalysis.analysis import align
+        import mdtraj as md
+        import mdtraj.formats
     except Exception as exc:
         return [], str(exc)
 
     try:
-        traj_fmt = job.get("trajectory_format")
-        u = mda.Universe(job["topology"], job["trajectory"], **({"format": traj_fmt} if traj_fmt else {}))
-        ref = mda.Universe(job["topology"])
-        prot_all = u.select_atoms("protein")
-        try:
-            from MDAnalysis import transformations as trans
+        ref = md.load(job["topology"])
 
-            u.trajectory.add_transformations(
-                trans.NoJump(check_continuity=False),
-                trans.center_in_box(prot_all, center="geometry", wrap=False),
+        # MDTraj infers format from the file extension; .bak files are DCDs
+        # and must be loaded explicitly via DCDTrajectoryFile.
+        traj_path = job["trajectory"]
+        if traj_path.endswith(".bak"):
+            with mdtraj.formats.DCDTrajectoryFile(traj_path, "r") as f:
+                xyz, lengths, angles = f.read()
+            traj = md.Trajectory(
+                xyz / 10.0,                    # Å → nm
+                ref.topology,
+                unitcell_lengths=lengths / 10.0,  # Å → nm
+                unitcell_angles=angles,
             )
-        except Exception:
-            pass
+        else:
+            traj = md.load(traj_path, top=job["topology"])
+
+        # MDTraj's bond-graph traversal makes each molecule whole across PBC.
+        # This is more robust than MDAnalysis compound="segments", which fails
+        # when the protein COM sits near a box boundary (the centroid-relative
+        # minimal-image convention then picks the wrong image for ~half the atoms,
+        # leaving the protein split and producing RMSD artefacts of 30-50 Å).
+        traj.make_molecules_whole(inplace=True)
+
+        n_total_frames = len(traj)
+        production_ps  = float(job.get("production_ps") or 100_000.0)
+
+        ca_idx = traj.topology.select("protein and name CA")
+        if len(ca_idx) == 0:
+            return [], "no CA atoms selected"
+
+        stride        = max(1, int(frame_stride))
+        frame_indices = list(range(0, n_total_frames, stride))[:int(max_frames)]
+        traj_sub      = traj[frame_indices]
+
+        # md.rmsd returns per-frame RMSD in nm after mass-weighted superposition.
+        rmsd_nm = md.rmsd(traj_sub, ref, atom_indices=ca_idx)
 
         out: list[dict] = []
-        kept = 0
-        stride = max(1, int(frame_stride))
-        n_total_frames = max(1, len(u.trajectory))
-        production_ps = float(job.get("production_ps") or 100_000.0)
-        for idx, _ in enumerate(u.trajectory):
-            if idx % stride != 0:
-                continue
-            if kept >= int(max_frames):
-                break
-            align.alignto(u, ref, select="protein and name CA", weights="mass")
-            ca = u.select_atoms("protein and name CA")
-            ca_ref = ref.select_atoms("protein and name CA")
-            if ca.n_atoms == 0 or ca_ref.n_atoms == 0:
-                break
-            diff = ca.positions - ca_ref.positions
-            rmsd = float(np.sqrt(np.mean(np.sum(diff * diff, axis=1))))
+        for frame_idx, rmsd in zip(frame_indices, rmsd_nm):
             # DCD dt metadata is corrupted (OpenMM writes garbage DELTA when
-            # the `interval` kwarg is used).  Compute correct simulation time
-            # from the production step count recorded in the MD output JSON.
-            # Frame i+1 corresponds to step (i+1)*analysis_interval, so:
-            #   time_ps = (idx+1) * production_ps / n_total_frames
-            time_ps = (idx + 1) * production_ps / n_total_frames
+            # the `interval` kwarg is used).  Derive simulation time from the
+            # step count stored in the MD output JSON instead.
+            time_ps = (frame_idx + 1) * production_ps / n_total_frames
             out.append(
                 {
-                    "structure": job["structure"],
-                    "mutation": job["mutation"],
-                    "safe_label": job["safe_label"],
-                    "replicate": int(job["replicate"]),
-                    "frame_index": int(u.trajectory.frame),
-                    "time_ps": time_ps,
-                    "ca_rmsd_angstrom": rmsd,
+                    "structure":        job["structure"],
+                    "mutation":         job["mutation"],
+                    "safe_label":       job["safe_label"],
+                    "replicate":        int(job["replicate"]),
+                    "frame_index":      frame_idx,
+                    "time_ps":          time_ps,
+                    "ca_rmsd_angstrom": float(rmsd) * 10.0,  # nm → Å
                 }
             )
-            kept += 1
         return out, None
     except Exception as exc:
         return [], str(exc)
@@ -291,54 +317,63 @@ def _com_distance_worker(
 ) -> tuple[list[dict], str | None]:
     _silence_mdanalysis_noise()
     try:
-        import MDAnalysis as mda
-        from MDAnalysis.lib.distances import distance_array
+        import mdtraj as md
+        import mdtraj.formats
     except Exception as exc:
         return [], str(exc)
 
     try:
-        traj_fmt = job.get("trajectory_format")
-        u = mda.Universe(job["topology"], job["trajectory"], **({"format": traj_fmt} if traj_fmt else {}))
-        lig = u.select_atoms(f"resname {ligand_resname}")
-        prot = u.select_atoms(f"protein and not resname {ligand_resname}")
-        if lig.n_atoms == 0 or prot.n_atoms == 0:
-            return [], f"empty selection (lig={lig.n_atoms}, prot={prot.n_atoms})"
-        try:
-            from MDAnalysis import transformations as trans
+        ref = md.load(job["topology"])
 
-            u.trajectory.add_transformations(
-                trans.NoJump(check_continuity=False),
-                trans.center_in_box(prot, center="geometry", wrap=False),
+        traj_path = job["trajectory"]
+        if traj_path.endswith(".bak"):
+            with mdtraj.formats.DCDTrajectoryFile(traj_path, "r") as f:
+                xyz, lengths, angles = f.read()
+            traj = md.Trajectory(
+                xyz / 10.0,
+                ref.topology,
+                unitcell_lengths=lengths / 10.0,
+                unitcell_angles=angles,
             )
-        except Exception:
-            pass
+        else:
+            traj = md.load(traj_path, top=job["topology"])
+
+        # Bond-graph traversal makes molecules whole — robust regardless of
+        # where the protein COM sits relative to the box boundary.
+        traj.make_molecules_whole(inplace=True)
+
+        n_total_frames = len(traj)
+        production_ps = float(job.get("production_ps") or 100_000.0)
+
+        # Quote the residue name so MDTraj handles names starting with a digit
+        # (e.g. '2KW') correctly.
+        lig_idx  = traj.topology.select(f"resname '{ligand_resname}'")
+        prot_idx = traj.topology.select("protein")
+        if len(lig_idx) == 0 or len(prot_idx) == 0:
+            return [], f"empty selection (lig={len(lig_idx)}, prot={len(prot_idx)})"
+
+        stride        = max(1, int(frame_stride))
+        frame_indices = list(range(0, n_total_frames, stride))[:int(max_frames)]
+        traj_sub      = traj[frame_indices]
 
         out: list[dict] = []
-        kept = 0
-        stride = max(1, int(frame_stride))
-        n_total_frames = max(1, len(u.trajectory))
-        production_ps = float(job.get("production_ps") or 100_000.0)
-        for idx, _ in enumerate(u.trajectory):
-            if idx % stride != 0:
-                continue
-            if kept >= int(max_frames):
-                break
-            lig_com = np.asarray(lig.center_of_mass(), dtype=float).reshape(1, 3)
-            prot_com = np.asarray(prot.center_of_mass(), dtype=float).reshape(1, 3)
-            d = float(distance_array(lig_com, prot_com, box=u.dimensions).min())
-            time_ps = (idx + 1) * production_ps / n_total_frames
+        for i, frame_idx in enumerate(frame_indices):
+            # xyz is in nm; convert to Å after computing distance
+            lig_com  = traj_sub.xyz[i, lig_idx,  :].mean(axis=0)
+            prot_com = traj_sub.xyz[i, prot_idx, :].mean(axis=0)
+            d        = float(np.linalg.norm(lig_com - prot_com)) * 10.0  # nm → Å
+            time_ps  = (frame_idx + 1) * production_ps / n_total_frames
             out.append(
                 {
-                    "structure": job["structure"],
-                    "mutation": job["mutation"],
-                    "safe_label": job["safe_label"],
-                    "replicate": int(job["replicate"]),
-                    "frame_index": int(u.trajectory.frame),
-                    "time_ps": time_ps,
+                    "structure":            job["structure"],
+                    "mutation":             job["mutation"],
+                    "safe_label":           job["safe_label"],
+                    "replicate":            int(job["replicate"]),
+                    "frame_index":          frame_idx,
+                    "time_ps":              time_ps,
                     "com_distance_angstrom": d,
                 }
             )
-            kept += 1
         return out, None
     except Exception as exc:
         return [], str(exc)
@@ -354,57 +389,71 @@ def _pocket_volume_worker(
 ) -> tuple[list[dict], str | None]:
     _silence_mdanalysis_noise()
     try:
+        import mdtraj as md
+        import mdtraj.formats
         import MDAnalysis as mda
         from .metrics import pocket_volume_proxy_from_universe
     except Exception as exc:
         return [], str(exc)
 
     try:
-        traj_fmt = job.get("trajectory_format")
-        u = mda.Universe(job["topology"], job["trajectory"], **({"format": traj_fmt} if traj_fmt else {}))
-        prot = u.select_atoms("protein")
-        if prot.n_atoms == 0:
-            return [], "empty protein selection"
-        try:
-            from MDAnalysis import transformations as trans
+        ref = md.load(job["topology"])
 
-            u.trajectory.add_transformations(
-                trans.NoJump(check_continuity=False),
-                trans.center_in_box(prot, center="geometry", wrap=False),
+        traj_path = job["trajectory"]
+        if traj_path.endswith(".bak"):
+            with mdtraj.formats.DCDTrajectoryFile(traj_path, "r") as f:
+                xyz, lengths, angles = f.read()
+            traj = md.Trajectory(
+                xyz / 10.0,
+                ref.topology,
+                unitcell_lengths=lengths / 10.0,
+                unitcell_angles=angles,
             )
-        except Exception:
-            pass
+        else:
+            traj = md.load(traj_path, top=job["topology"])
+
+        # Bond-graph traversal makes molecules whole — robust regardless of
+        # where the protein COM sits relative to the box boundary.
+        traj.make_molecules_whole(inplace=True)
+
+        n_total_frames = len(traj)
+        production_ps  = float(job.get("production_ps") or 100_000.0)
+
+        stride        = max(1, int(frame_stride))
+        frame_indices = list(range(0, n_total_frames, stride))[:int(max_frames)]
+        traj_sub      = traj[frame_indices]
+
+        # MDAnalysis Universe for pocket-volume grid calculation.
+        # We load topology only, then overwrite positions per frame with the
+        # PBC-corrected coordinates from MDTraj (nm → Å).
+        u = mda.Universe(job["topology"])
+        if u.atoms.n_atoms != traj.n_atoms:
+            return [], (
+                f"atom count mismatch: topology {u.atoms.n_atoms} vs trajectory {traj.n_atoms}"
+            )
 
         out: list[dict] = []
-        kept = 0
-        stride = max(1, int(frame_stride))
-        n_total_frames = max(1, len(u.trajectory))
-        production_ps = float(job.get("production_ps") or 100_000.0)
-        for idx, _ in enumerate(u.trajectory):
-            if idx % stride != 0:
-                continue
-            if kept >= int(max_frames):
-                break
+        for i, frame_idx in enumerate(frame_indices):
+            u.atoms.positions = traj_sub.xyz[i] * 10.0  # nm → Å
             v = pocket_volume_proxy_from_universe(
                 u,
                 grid_spacing=float(grid_spacing),
                 radius_angstrom=float(pocket_radius_angstrom),
             )
-            time_ps = (idx + 1) * production_ps / n_total_frames
+            time_ps = (frame_idx + 1) * production_ps / n_total_frames
             out.append(
                 {
-                    "structure": job["structure"],
-                    "mutation": job["mutation"],
-                    "safe_label": job["safe_label"],
-                    "replicate": int(job["replicate"]),
-                    "frame_index": int(u.trajectory.frame),
-                    "time_ps": time_ps,
+                    "structure":                    job["structure"],
+                    "mutation":                     job["mutation"],
+                    "safe_label":                   job["safe_label"],
+                    "replicate":                    int(job["replicate"]),
+                    "frame_index":                  frame_idx,
+                    "time_ps":                      time_ps,
                     "pocket_volume_proxy_angstrom3": float(v),
-                    "grid_spacing_angstrom": float(grid_spacing),
-                    "pocket_radius_angstrom": float(pocket_radius_angstrom),
+                    "grid_spacing_angstrom":        float(grid_spacing),
+                    "pocket_radius_angstrom":       float(pocket_radius_angstrom),
                 }
             )
-            kept += 1
         return out, None
     except Exception as exc:
         return [], str(exc)
@@ -436,6 +485,7 @@ def collect_md_results(manifest_path: Path, md_results_dir: Path | None = None) 
                 "safe_label": task.safe_label,
                 "replicate": int(task.replicate),
                 "fold_reduction": task.fold_reduction,
+                "output_json": str(json_path),
                 "minimized_pdb": data.get("minimized_pdb") or task.minimized_pdb,
                 "prepared_topology_pdb": data.get("prepared_topology_pdb") or task.prepared_topology_pdb,
                 "prepared_system_xml": data.get("prepared_system_xml") or task.prepared_system_xml,

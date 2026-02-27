@@ -163,7 +163,11 @@ def process_replicate(row, leg: str) -> list[dict]:
     mutation  = MUTATION_LABELS.get(mut_key, mut_key.upper())
     replicate = int(row["replicate"])
 
-    topo, dcd = get_traj_paths(row)
+    try:
+        topo, dcd = get_traj_paths(row)
+    except (FileNotFoundError, OSError):
+        print(f"  MISSING: {mutation} rep{replicate} ({leg}) — JSON not synced yet")
+        return []
     if not topo.exists() or not dcd.exists():
         print(f"  MISSING: {mutation} rep{replicate} ({leg})")
         return []

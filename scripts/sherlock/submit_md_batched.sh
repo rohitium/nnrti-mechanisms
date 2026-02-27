@@ -51,6 +51,7 @@ MD_FORCE_RERUN="${MD_FORCE_RERUN:-1}"
 SKIP_IF_AT_TARGET="${SKIP_IF_AT_TARGET:-1}"
 SKIP_IF_RUNNING="${SKIP_IF_RUNNING:-1}"
 MUTATION_ALLOWLIST="${MUTATION_ALLOWLIST:-}"
+MUTATION_SUBMIT_ORDER="${MUTATION_SUBMIT_ORDER:-}"
 
 if ! command -v jq >/dev/null 2>&1; then
     echo "ERROR: jq is required for JSON status checks." >&2
@@ -80,6 +81,9 @@ echo "Skip at target:  $SKIP_IF_AT_TARGET"
 if [ -n "${MUTATION_ALLOWLIST}" ]; then
     echo "Mutation allowlist: ${MUTATION_ALLOWLIST}"
 fi
+if [ -n "${MUTATION_SUBMIT_ORDER}" ]; then
+    echo "Mutation submit order: ${MUTATION_SUBMIT_ORDER}"
+fi
 echo ""
 
 # Build submission list
@@ -97,10 +101,37 @@ if [ -n "${MUTATION_ALLOWLIST}" ]; then
     for tok in "${_allow_tokens[@]}"; do
         t="$(echo "$tok" | tr -d '[:space:]')"
         if [ -n "$t" ]; then
-            ALLOWED_MUTATIONS["$t"]=1
+            ALLOWED_MUTATIONS["$(echo "$t" | tr '[:upper:]' '[:lower:]')"]=1
         fi
     done
 fi
+
+declare -A MUTATION_ORDER_RANK=()
+if [ -n "${MUTATION_SUBMIT_ORDER}" ]; then
+    IFS=',' read -r -a _order_tokens <<< "${MUTATION_SUBMIT_ORDER}"
+    _rank=0
+    for tok in "${_order_tokens[@]}"; do
+        t="$(echo "$tok" | tr -d '[:space:]')"
+        if [ -n "$t" ]; then
+            tl="$(echo "$t" | tr '[:upper:]' '[:lower:]')"
+            if [ -z "${MUTATION_ORDER_RANK[$tl]+x}" ]; then
+                MUTATION_ORDER_RANK["$tl"]=$_rank
+                _rank=$((_rank + 1))
+            fi
+        fi
+    done
+fi
+
+mutation_rank() {
+    local mut="$1"
+    local ml
+    ml="$(echo "$mut" | tr '[:upper:]' '[:lower:]')"
+    if [ -n "${MUTATION_ORDER_RANK[$ml]+x}" ]; then
+        printf "%04d" "${MUTATION_ORDER_RANK[$ml]}"
+    else
+        printf "9999"
+    fi
+}
 
 declare -A ACTIVE_JOB_NAMES=()
 if [ "$SKIP_IF_RUNNING" = "1" ]; then
@@ -123,6 +154,12 @@ while IFS= read -r -d '' SYSTEM_XML; do
     TOPOLOGY_PDB="${DIR}/${MUTATION}_md_rep${REP}_start.pdb"
     MINIMIZED_PDB="${PARENT}/${MUTATION}_minimized_rep${REP}.pdb"
     JOB_NAME="md_${MUTATION}_${REP}"
+
+    MUTATION_KEY="$(echo "$MUTATION" | tr '[:upper:]' '[:lower:]')"
+    if [ -n "${MUTATION_ALLOWLIST}" ] && [ -z "${ALLOWED_MUTATIONS[$MUTATION_KEY]+x}" ]; then
+        SKIPPED_FILTERED=$((SKIPPED_FILTERED + 1))
+        continue
+    fi
 
     if [ ! -f "$TOPOLOGY_PDB" ] || [ ! -f "$MINIMIZED_PDB" ]; then
         echo "⚠ Skip $MUTATION rep $REP (missing topology/minimized input)"
@@ -159,6 +196,24 @@ while IFS= read -r -d '' SYSTEM_XML; do
 
     SYSTEMS_TO_RUN+=("${MUTATION}:${REP}:${PARENT}:${SYSTEM_XML}:${DIR}:${REP_INT}:${RESULT_JSON}")
 done < <(find results/md_runs -name "*_system.xml" -print0 | sort -z)
+
+# Optional ordering by mutation priority then mutation name then replicate.
+if [ "${#SYSTEMS_TO_RUN[@]}" -gt 0 ] && [ -n "${MUTATION_SUBMIT_ORDER}" ]; then
+    SORTED_SYSTEMS=()
+    while IFS= read -r line; do
+        SORTED_SYSTEMS+=("${line#*|*|*|}")
+    done < <(
+        for SYSTEM_INFO in "${SYSTEMS_TO_RUN[@]}"; do
+            IFS=':' read -r MUTATION REP PARENT SYSTEM_XML DIR REP_INT RESULT_JSON <<< "$SYSTEM_INFO"
+            printf "%s|%s|%04d|%s\n" \
+                "$(mutation_rank "$MUTATION")" \
+                "$MUTATION" \
+                "$REP_INT" \
+                "$SYSTEM_INFO"
+        done | sort -t'|' -k1,1n -k2,2 -k3,3n
+    )
+    SYSTEMS_TO_RUN=("${SORTED_SYSTEMS[@]}")
+fi
 
 TOTAL=${#SYSTEMS_TO_RUN[@]}
 echo "Prepared systems:      $TOTAL_PREPARED"
@@ -316,7 +371,3 @@ echo "Check completion:"
 echo "  ls results/md_runs/*/rep_*/*.json | wc -l"
 echo "  jq -r '[.safe_label,.replicate,.status,(.md_production_steps_completed // .md_production_steps // 0)] | @tsv' results/md_runs/*/rep_*/*_rep[0-9][0-9].json | awk '\$3!=\"ok\" || \$4<${TARGET_STEPS} {print}'"
 echo ""
-    if [ -n "${MUTATION_ALLOWLIST}" ] && [ -z "${ALLOWED_MUTATIONS[$MUTATION]+x}" ]; then
-        SKIPPED_FILTERED=$((SKIPPED_FILTERED + 1))
-        continue
-    fi
