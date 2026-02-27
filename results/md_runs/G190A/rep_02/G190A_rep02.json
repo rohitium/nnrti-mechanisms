@@ -1,5 +1,5 @@
 {
-  "task_id": 1,
+  "task_id": 5,
   "structure": "G190A",
   "mutation": "G190A",
   "safe_label": "G190A",
@@ -15,11 +15,11 @@
   "state_csv": "results/md_runs/G190A/rep_02/G190A_rep02_md_state.csv",
   "final_pdb": "results/md_runs/G190A/rep_02/G190A_rep02_md_final.pdb",
   "checkpoint_path": "results/md_runs/G190A/rep_02/G190A_rep02_md.chk",
-  "md_heating_steps": 12500,
-  "md_production_steps": 5000000,
-  "md_production_steps_completed": 5000000,
-  "md_total_steps": 5012500,
-  "resumed_from_checkpoint": false,
-  "elapsed_seconds": 25427.344995520078,
+  "md_heating_steps": 0,
+  "md_production_steps": 50000000,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50000000,
+  "resumed_from_checkpoint": true,
+  "elapsed_seconds": 128988.73120070901,
   "status": "ok"
 }

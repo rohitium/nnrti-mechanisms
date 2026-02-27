@@ -1,5 +1,5 @@
 {
-  "task_id": 0,
+  "task_id": 7,
   "structure": "G190E",
   "mutation": "G190E",
   "safe_label": "G190E",
@@ -16,10 +16,10 @@
   "final_pdb": "results/md_runs/G190E/rep_01/G190E_rep01_md_final.pdb",
   "checkpoint_path": "results/md_runs/G190E/rep_01/G190E_rep01_md.chk",
   "md_heating_steps": 0,
-  "md_production_steps": 5000000,
-  "md_production_steps_completed": 5000000,
-  "md_total_steps": 5000000,
+  "md_production_steps": 50000000,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50000000,
   "resumed_from_checkpoint": true,
-  "elapsed_seconds": 19621.903695102083,
+  "elapsed_seconds": 148144.98451325716,
   "status": "ok"
 }
