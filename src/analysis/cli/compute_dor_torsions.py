@@ -18,6 +18,7 @@ Outputs:
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import warnings
@@ -114,6 +115,49 @@ def _infer_total_ns(
             pass
 
     return None
+
+
+def _infer_completed_steps(
+    json_path: Path | None,
+    *,
+    fallback_state_csv: Path | None = None,
+    source: str = "max",
+) -> int:
+    """Infer completed production steps from JSON/state CSV.
+
+    source:
+      - json: use JSON only
+      - state: use md_state.csv only
+      - max: max(json, state) for robustness to stale single-source metadata
+    """
+    j_steps = 0
+    s_steps = 0
+
+    if json_path is not None and json_path.is_file():
+        try:
+            j = json.loads(json_path.read_text())
+            j_steps = int(j.get("md_production_steps_completed") or j.get("md_production_steps") or 0)
+        except Exception:
+            j_steps = 0
+
+    if fallback_state_csv is not None and fallback_state_csv.exists():
+        try:
+            sdf = pd.read_csv(fallback_state_csv)
+            for col in ('#"Step"', "Step"):
+                if col in sdf.columns:
+                    steps = pd.to_numeric(sdf[col], errors="coerce").dropna()
+                    if not steps.empty:
+                        s_steps = int(steps.max())
+                        break
+        except Exception:
+            s_steps = 0
+
+    src = str(source).strip().lower()
+    if src == "json":
+        return j_steps
+    if src == "state":
+        return s_steps
+    return max(j_steps, s_steps)
 
 
 def _load_fold_map() -> dict:
@@ -232,8 +276,53 @@ def process_replicate(row: pd.Series) -> list[dict]:
 # ── main ──────────────────────────────────────────────────────────────────────
 def main() -> None:
     from ..result_collector import collect_md_results
+
+    parser = argparse.ArgumentParser(description="Compute DOR torsion-angle traces from MD trajectories.")
+    parser.add_argument(
+        "--min-production-steps",
+        type=int,
+        default=0,
+        help="Keep only replicates with at least this many completed production steps.",
+    )
+    parser.add_argument(
+        "--step-source",
+        choices=["json", "state", "max"],
+        default="max",
+        help="Metadata source used for min-step filtering (default: max).",
+    )
+    parser.add_argument(
+        "--tag",
+        type=str,
+        default="",
+        help="Optional output tag suffix (e.g. '100ns' -> dor_torsions_100ns.csv / *_100ns.png).",
+    )
+    args = parser.parse_args()
+
     run_df = collect_md_results(REPO / "results" / "md_manifest.csv")
     FOLD = _load_fold_map()
+
+    if args.min_production_steps > 0:
+        keep_idx: list[int] = []
+        for i, row in run_df.iterrows():
+            mut_key = str(row["safe_label"])
+            replicate = int(row["replicate"])
+            out_json_raw = str(row.get("output_json", "")).strip()
+            out_json = _remap(Path(out_json_raw)) if out_json_raw else None
+            topo = _remap(Path(str(row.get("analysis_topology_pdb", "")).strip()))
+            rep_dir = topo.parent if topo.exists() else Path(".")
+            state_csv = rep_dir / f"{mut_key}_rep{replicate:02d}_md_state.csv"
+            done_steps = _infer_completed_steps(
+                out_json,
+                fallback_state_csv=state_csv,
+                source=args.step_source,
+            )
+            if done_steps >= int(args.min_production_steps):
+                keep_idx.append(i)
+        run_df = run_df.loc[keep_idx].copy()
+        print(
+            f"Filtering by completed steps >= {args.min_production_steps} "
+            f"(source={args.step_source}): kept {len(run_df)} replicates"
+        )
 
     all_rows: list[dict] = []
     for _, row in run_df.iterrows():
@@ -252,14 +341,18 @@ def main() -> None:
         return
 
     df = pd.DataFrame(all_rows)
-    df.to_csv(OUT_CSV, index=False)
-    print(f"\nWrote {OUT_CSV} ({len(df)} rows)")
+    out_csv = OUT_CSV
+    tag = args.tag.strip()
+    if tag:
+        out_csv = REPO / "results" / f"dor_torsions_{tag}.csv"
+    df.to_csv(out_csv, index=False)
+    print(f"\nWrote {out_csv} ({len(df)} rows)")
 
-    plot(df, FOLD)
+    plot(df, FOLD, tag=tag)
 
 
 # ── plotting ──────────────────────────────────────────────────────────────────
-def plot(df: pd.DataFrame, FOLD: dict | None = None) -> None:
+def plot(df: pd.DataFrame, FOLD: dict | None = None, *, tag: str = "") -> None:
     if FOLD is None:
         FOLD = _load_fold_map()
     PLOTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -310,7 +403,8 @@ def plot(df: pd.DataFrame, FOLD: dict | None = None) -> None:
     fig.suptitle(f"Doravirine torsion angle distributions across resistance panel\n{tau_desc}",
                  fontsize=10, fontweight="bold")
     fig.tight_layout()
-    out = PLOTS_DIR / "dor_torsions_by_mutation.png"
+    suffix = f"_{tag}" if tag else ""
+    out = PLOTS_DIR / f"dor_torsions_by_mutation{suffix}.png"
     fig.savefig(out, dpi=180, bbox_inches="tight")
     plt.close(fig)
     print(f"Wrote {out}")
@@ -412,15 +506,15 @@ def plot(df: pd.DataFrame, FOLD: dict | None = None) -> None:
         fig.tight_layout(h_pad=0.6, w_pad=0.4)
 
         tau_num = tau_col[-1]  # "1", "2", "3", "4"
-        out_tau = PLOTS_DIR / f"dor_torsions_tau{tau_num}_timeseries.png"
+        out_tau = PLOTS_DIR / f"dor_torsions_tau{tau_num}_timeseries{suffix}.png"
         fig.savefig(out_tau, dpi=180, bbox_inches="tight")
         plt.close(fig)
         print(f"Wrote {out_tau}")
 
     # Keep dor_torsions_linker_timeseries.png as a symlink alias for tau4
     import shutil
-    tau4_src = PLOTS_DIR / "dor_torsions_tau4_timeseries.png"
-    tau4_alias = PLOTS_DIR / "dor_torsions_linker_timeseries.png"
+    tau4_src = PLOTS_DIR / f"dor_torsions_tau4_timeseries{suffix}.png"
+    tau4_alias = PLOTS_DIR / f"dor_torsions_linker_timeseries{suffix}.png"
     if tau4_src.exists():
         shutil.copy2(tau4_src, tau4_alias)
 

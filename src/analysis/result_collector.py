@@ -266,12 +266,12 @@ def _ca_rmsd_worker(job: dict, frame_stride: int, max_frames: int) -> tuple[list
         else:
             traj = md.load(traj_path, top=job["topology"])
 
-        # MDTraj's bond-graph traversal makes each molecule whole across PBC.
-        # This is more robust than MDAnalysis compound="segments", which fails
-        # when the protein COM sits near a box boundary (the centroid-relative
-        # minimal-image convention then picks the wrong image for ~half the atoms,
-        # leaving the protein split and producing RMSD artefacts of 30-50 Å).
-        traj.make_molecules_whole(inplace=True)
+        # Prefer full molecule imaging so all molecules are placed consistently
+        # in one periodic image; fall back to whole-molecule reconstruction.
+        try:
+            traj.image_molecules(inplace=True)
+        except Exception:
+            traj.make_molecules_whole(inplace=True)
 
         n_total_frames = len(traj)
         production_ps  = float(job.get("production_ps") or 100_000.0)
@@ -338,9 +338,11 @@ def _com_distance_worker(
         else:
             traj = md.load(traj_path, top=job["topology"])
 
-        # Bond-graph traversal makes molecules whole — robust regardless of
-        # where the protein COM sits relative to the box boundary.
-        traj.make_molecules_whole(inplace=True)
+        # Keep protein + ligand in a consistent periodic image before COM calc.
+        try:
+            traj.image_molecules(inplace=True)
+        except Exception:
+            traj.make_molecules_whole(inplace=True)
 
         n_total_frames = len(traj)
         production_ps = float(job.get("production_ps") or 100_000.0)
@@ -361,7 +363,15 @@ def _com_distance_worker(
             # xyz is in nm; convert to Å after computing distance
             lig_com  = traj_sub.xyz[i, lig_idx,  :].mean(axis=0)
             prot_com = traj_sub.xyz[i, prot_idx, :].mean(axis=0)
-            d        = float(np.linalg.norm(lig_com - prot_com)) * 10.0  # nm → Å
+            delta_nm = lig_com - prot_com
+            # Apply minimum-image convention when box vectors are present to
+            # avoid artificial 80-120 Å spikes from cross-boundary separation.
+            box_nm = None
+            if traj_sub.unitcell_lengths is not None:
+                box_nm = traj_sub.unitcell_lengths[i]
+            if box_nm is not None and np.all(np.isfinite(box_nm)) and np.all(box_nm > 0):
+                delta_nm = delta_nm - box_nm * np.round(delta_nm / box_nm)
+            d = float(np.linalg.norm(delta_nm)) * 10.0  # nm → Å
             time_ps  = (frame_idx + 1) * production_ps / n_total_frames
             out.append(
                 {
@@ -412,9 +422,11 @@ def _pocket_volume_worker(
         else:
             traj = md.load(traj_path, top=job["topology"])
 
-        # Bond-graph traversal makes molecules whole — robust regardless of
-        # where the protein COM sits relative to the box boundary.
-        traj.make_molecules_whole(inplace=True)
+        # Keep molecules in a consistent periodic image for grid-based metrics.
+        try:
+            traj.image_molecules(inplace=True)
+        except Exception:
+            traj.make_molecules_whole(inplace=True)
 
         n_total_frames = len(traj)
         production_ps  = float(job.get("production_ps") or 100_000.0)

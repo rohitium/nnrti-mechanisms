@@ -14,7 +14,44 @@ def _topology_for_dcd(dcd_path: Path) -> Path:
     return dcd_path.with_name(topo_name)
 
 
-def _correct_one(
+def _load_mdtraj_trajectory(dcd_path: Path, topo_path: Path):
+    import mdtraj as md
+    import mdtraj.formats
+
+    if str(dcd_path).endswith(".bak"):
+        ref = md.load(str(topo_path))
+        with mdtraj.formats.DCDTrajectoryFile(str(dcd_path), "r") as handle:
+            xyz, lengths, angles = handle.read()
+        return md.Trajectory(
+            xyz / 10.0,  # A -> nm
+            ref.topology,
+            unitcell_lengths=(lengths / 10.0) if lengths is not None else None,
+            unitcell_angles=angles,
+        )
+    return md.load(str(dcd_path), top=str(topo_path))
+
+
+def _correct_one_mdtraj(
+    dcd_path: Path,
+    topo_path: Path,
+    out_path: Path,
+) -> tuple[int, int]:
+    traj = _load_mdtraj_trajectory(dcd_path=dcd_path, topo_path=topo_path)
+    if traj.n_atoms < 1:
+        raise ValueError(f"No atoms in topology for {dcd_path}")
+
+    # Prefer MDTraj's high-level molecule imaging; fallback to whole-molecule
+    # reconstruction if imaging fails (e.g., missing/invalid unit cell data).
+    try:
+        traj.image_molecules(inplace=True)
+    except Exception:
+        traj.make_molecules_whole(inplace=True)
+
+    traj.save_dcd(str(out_path))
+    return int(traj.n_frames), int(traj.n_atoms)
+
+
+def _correct_one_mdanalysis(
     dcd_path: Path,
     topo_path: Path,
     out_path: Path,
@@ -55,6 +92,20 @@ def _correct_one(
     return n_frames, u.atoms.n_atoms
 
 
+def _correct_one(
+    dcd_path: Path,
+    topo_path: Path,
+    out_path: Path,
+    *,
+    backend: str,
+) -> tuple[int, int]:
+    if backend == "mdtraj":
+        return _correct_one_mdtraj(dcd_path=dcd_path, topo_path=topo_path, out_path=out_path)
+    if backend == "mdanalysis":
+        return _correct_one_mdanalysis(dcd_path=dcd_path, topo_path=topo_path, out_path=out_path)
+    raise ValueError(f"Unsupported backend: {backend}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Apply PBC correction (NoJump + center_in_box) to analysis trajectories."
@@ -88,6 +139,12 @@ def main() -> int:
         default=".bak",
         help="Backup extension used only with --in-place",
     )
+    parser.add_argument(
+        "--backend",
+        choices=["mdtraj", "mdanalysis"],
+        default="mdtraj",
+        help="PBC correction backend (default: mdtraj).",
+    )
     args = parser.parse_args()
 
     root = args.root
@@ -115,16 +172,19 @@ def main() -> int:
                     delete=False,
                 ) as tmp:
                     tmp_path = Path(tmp.name)
-                n_frames, n_atoms = _correct_one(dcd_path, topo_path, tmp_path)
+                n_frames, n_atoms = _correct_one(dcd_path, topo_path, tmp_path, backend=args.backend)
                 if backup_path.exists():
                     backup_path.unlink()
                 dcd_path.replace(backup_path)
                 tmp_path.replace(dcd_path)
-                print(f"[ok] {dcd_path} frames={n_frames} atoms={n_atoms} backup={backup_path.name}")
+                print(
+                    f"[ok] {dcd_path} frames={n_frames} atoms={n_atoms} "
+                    f"backup={backup_path.name} backend={args.backend}"
+                )
             else:
                 out_path = dcd_path.with_name(f"{dcd_path.stem}{args.suffix}.dcd")
-                n_frames, n_atoms = _correct_one(dcd_path, topo_path, out_path)
-                print(f"[ok] {out_path} frames={n_frames} atoms={n_atoms}")
+                n_frames, n_atoms = _correct_one(dcd_path, topo_path, out_path, backend=args.backend)
+                print(f"[ok] {out_path} frames={n_frames} atoms={n_atoms} backend={args.backend}")
             ok += 1
         except Exception as exc:
             print(f"[fail] {dcd_path}: {exc}")
