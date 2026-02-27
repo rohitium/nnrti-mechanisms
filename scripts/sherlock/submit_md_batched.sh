@@ -124,6 +124,11 @@ while IFS= read -r -d '' SYSTEM_XML; do
     MINIMIZED_PDB="${PARENT}/${MUTATION}_minimized_rep${REP}.pdb"
     JOB_NAME="md_${MUTATION}_${REP}"
 
+    if [ -n "${MUTATION_ALLOWLIST}" ] && [ -z "${ALLOWED_MUTATIONS[$MUTATION]+x}" ]; then
+        SKIPPED_FILTERED=$((SKIPPED_FILTERED + 1))
+        continue
+    fi
+
     if [ ! -f "$TOPOLOGY_PDB" ] || [ ! -f "$MINIMIZED_PDB" ]; then
         echo "⚠ Skip $MUTATION rep $REP (missing topology/minimized input)"
         SKIPPED_MISSING=$((SKIPPED_MISSING + 1))
@@ -316,7 +321,3 @@ echo "Check completion:"
 echo "  ls results/md_runs/*/rep_*/*.json | wc -l"
 echo "  jq -r '[.safe_label,.replicate,.status,(.md_production_steps_completed // .md_production_steps // 0)] | @tsv' results/md_runs/*/rep_*/*_rep[0-9][0-9].json | awk '\$3!=\"ok\" || \$4<${TARGET_STEPS} {print}'"
 echo ""
-    if [ -n "${MUTATION_ALLOWLIST}" ] && [ -z "${ALLOWED_MUTATIONS[$MUTATION]+x}" ]; then
-        SKIPPED_FILTERED=$((SKIPPED_FILTERED + 1))
-        continue
-    fi
