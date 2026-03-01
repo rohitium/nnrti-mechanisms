@@ -9,7 +9,9 @@
 #        bash scripts/sherlock/run_boltz_wt_affinity.sh
 #
 # Optional env vars:
-#   BOLTZ_ENV_NAME=boltz2
+#   SHERLOCK_MODULES="python/3.11 cuda/12.4"
+#   BOLTZ_PYTHON=python3
+#   BOLTZ_BIN=boltz
 #   BOLTZ_INPUT_YAML=inputs/boltz/wt_rt_dor_affinity.yaml
 #   BOLTZ_OUT_DIR=/scratch/users/$USER/nnrti-mechanisms/results/boltz/wt_affinity
 #   BOLTZ_CACHE_DIR=/scratch/users/$USER/.boltz
@@ -23,8 +25,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
 
-BOLTZ_ENV_NAME="${BOLTZ_ENV_NAME:-boltz2}"
-CONDA_HOME="${CONDA_HOME:-$HOME/miniconda3}"
+SHERLOCK_MODULES="${SHERLOCK_MODULES:-}"
+BOLTZ_PYTHON="${BOLTZ_PYTHON:-python3}"
+BOLTZ_BIN="${BOLTZ_BIN:-boltz}"
 BOLTZ_INPUT_YAML="${BOLTZ_INPUT_YAML:-inputs/boltz/wt_rt_dor_affinity.yaml}"
 BOLTZ_ACCELERATOR="${BOLTZ_ACCELERATOR:-gpu}"
 BOLTZ_EXTRA_ARGS="${BOLTZ_EXTRA_ARGS:-}"
@@ -42,21 +45,17 @@ BOLTZ_CACHE_DIR="${BOLTZ_CACHE_DIR:-${DEFAULT_CACHE}}"
 
 mkdir -p "${BOLTZ_OUT_DIR}" "${BOLTZ_CACHE_DIR}" logs
 
-if [ -f "${CONDA_HOME}/etc/profile.d/conda.sh" ]; then
-    # shellcheck source=/dev/null
-    source "${CONDA_HOME}/etc/profile.d/conda.sh"
-elif command -v conda >/dev/null 2>&1; then
-    eval "$(conda shell.bash hook)"
-else
-    echo "ERROR: conda was not found. Set CONDA_HOME or load your conda module first." >&2
-    exit 1
+# Some Sherlock setups require explicit module loads for Python/CUDA.
+if [ -n "${SHERLOCK_MODULES}" ] && command -v module >/dev/null 2>&1; then
+    # shellcheck disable=SC2086
+    module load ${SHERLOCK_MODULES}
 fi
 
-conda activate "${BOLTZ_ENV_NAME}"
+export PATH="$HOME/.local/bin:$PATH"
 
 if [ ! -f "${BOLTZ_INPUT_YAML}" ]; then
     echo "Boltz input YAML not found; generating it from WT CIF..."
-    python scripts/sherlock/make_boltz_wt_input.py --output-yaml "${BOLTZ_INPUT_YAML}"
+    "${BOLTZ_PYTHON}" scripts/sherlock/make_boltz_wt_input.py --output-yaml "${BOLTZ_INPUT_YAML}"
 fi
 
 export BOLTZ_CACHE="${BOLTZ_CACHE_DIR}"
@@ -69,15 +68,25 @@ echo "Project root:   ${PROJECT_ROOT}"
 echo "Input YAML:     ${BOLTZ_INPUT_YAML}"
 echo "Output dir:     ${BOLTZ_OUT_DIR}"
 echo "Cache dir:      ${BOLTZ_CACHE_DIR}"
-echo "Conda env:      ${BOLTZ_ENV_NAME}"
+echo "Python:         ${BOLTZ_PYTHON}"
+echo "Boltz bin:      ${BOLTZ_BIN}"
 echo "Accelerator:    ${BOLTZ_ACCELERATOR}"
 if [ -n "${BOLTZ_EXTRA_ARGS}" ]; then
     echo "Extra args:     ${BOLTZ_EXTRA_ARGS}"
 fi
 echo ""
 
+if command -v "${BOLTZ_BIN}" >/dev/null 2>&1; then
+    BOLTZ_CMD=("${BOLTZ_BIN}")
+elif [ "${BOLTZ_BIN}" = "boltz" ]; then
+    BOLTZ_CMD=("${BOLTZ_PYTHON}" -m boltz)
+else
+    echo "ERROR: Boltz binary not found: ${BOLTZ_BIN}" >&2
+    exit 1
+fi
+
 CMD=(
-    boltz
+    "${BOLTZ_CMD[@]}"
     predict
     "${BOLTZ_INPUT_YAML}"
     --out_dir
