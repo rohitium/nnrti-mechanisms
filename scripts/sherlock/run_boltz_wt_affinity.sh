@@ -64,7 +64,7 @@ export BOLTZ_CACHE="${BOLTZ_CACHE_DIR}"
 export HF_HOME="${HF_HOME:-${BOLTZ_CACHE_DIR}/hf}"
 
 echo "=========================================="
-echo "Boltz WT Affinity Run"
+echo "Boltz Affinity Run"
 echo "=========================================="
 echo "Project root:   ${PROJECT_ROOT}"
 echo "Input YAML:     ${BOLTZ_INPUT_YAML}"

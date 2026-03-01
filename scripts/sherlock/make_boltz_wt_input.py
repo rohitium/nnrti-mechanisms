@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a Boltz affinity YAML for the WT RT + doravirine system."""
+"""Generate a Boltz affinity YAML for an RT + doravirine system."""
 
 from __future__ import annotations
 
@@ -156,7 +156,7 @@ def main() -> int:
 
     args.output_yaml.parent.mkdir(parents=True, exist_ok=True)
     args.output_yaml.write_text(yaml_text)
-    print(f"Wrote Boltz WT affinity input: {args.output_yaml}")
+    print(f"Wrote Boltz affinity input: {args.output_yaml}")
     return 0
 
 
