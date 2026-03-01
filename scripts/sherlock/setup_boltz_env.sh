@@ -6,7 +6,7 @@
 #   bash scripts/sherlock/setup_boltz_env.sh
 #
 # Optional env vars:
-#   SHERLOCK_MODULES="python/3.11 cuda/12.4"
+#   SHERLOCK_MODULES="python/3.12.1"
 #   BOLTZ_PYTHON=python3
 #   BOLTZ_PIP_SPEC="boltz[cuda]"
 #   BOLTZ_USER_INSTALL=1
@@ -32,13 +32,33 @@ fi
 # Ensure user-site scripts (e.g. ~/.local/bin/boltz) are reachable.
 export PATH="$HOME/.local/bin:$PATH"
 
+# Boltz/PyTorch require a modern but supported Python.
+PY_VER="$("${BOLTZ_PYTHON}" - <<'PY'
+import sys
+print(f"{sys.version_info.major}.{sys.version_info.minor}")
+PY
+)"
+PY_MAJOR="${PY_VER%%.*}"
+PY_MINOR="${PY_VER##*.}"
+if [ "${PY_MAJOR}" -ne 3 ] || [ "${PY_MINOR}" -lt 10 ] || [ "${PY_MINOR}" -gt 13 ]; then
+    echo "ERROR: ${BOLTZ_PYTHON} is Python ${PY_VER}; expected Python 3.10-3.13." >&2
+    echo "Load a supported Python module first, for example:" >&2
+    echo "  module avail python" >&2
+    echo "  module load python/3.12.1" >&2
+    echo "Then rerun this script (optionally set SHERLOCK_MODULES)." >&2
+    exit 1
+fi
+
 PIP_ARGS=()
 if [ "${BOLTZ_USER_INSTALL}" = "1" ]; then
     PIP_ARGS+=(--user)
 fi
 
 "${BOLTZ_PYTHON}" -m pip install -U "${PIP_ARGS[@]}" pip setuptools wheel
-"${BOLTZ_PYTHON}" -m pip install -U "${PIP_ARGS[@]}" "${BOLTZ_PIP_SPEC}"
+if ! "${BOLTZ_PYTHON}" -m pip install -U "${PIP_ARGS[@]}" "${BOLTZ_PIP_SPEC}"; then
+    echo "Primary install failed for '${BOLTZ_PIP_SPEC}'. Retrying without extras..." >&2
+    "${BOLTZ_PYTHON}" -m pip install -U "${PIP_ARGS[@]}" boltz
+fi
 
 echo ""
 echo "Installed versions:"

@@ -9,7 +9,7 @@
 #        bash scripts/sherlock/run_boltz_wt_affinity.sh
 #
 # Optional env vars:
-#   SHERLOCK_MODULES="python/3.11 cuda/12.4"
+#   SHERLOCK_MODULES="python/3.12.1"
 #   BOLTZ_PYTHON=python3
 #   BOLTZ_BIN=boltz
 #   BOLTZ_INPUT_YAML=inputs/boltz/wt_rt_dor_affinity.yaml
