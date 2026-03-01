@@ -95,8 +95,15 @@ CMD=(
     "${BOLTZ_CACHE_DIR}"
     --override
     --use_msa_server
-    --affinity_predictor
 )
+
+# Compatibility shim:
+# - Older Boltz CLIs required --affinity_predictor.
+# - Newer CLIs infer affinity from YAML properties and do not expose this flag.
+HELP_TEXT="$("${BOLTZ_CMD[@]}" predict --help 2>&1 || true)"
+if echo "${HELP_TEXT}" | grep -q -- "--affinity_predictor"; then
+    CMD+=(--affinity_predictor)
+fi
 
 if [ -n "${BOLTZ_ACCELERATOR}" ]; then
     CMD+=(--accelerator "${BOLTZ_ACCELERATOR}")
