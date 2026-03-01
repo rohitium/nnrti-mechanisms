@@ -16,6 +16,7 @@
 #   BOLTZ_OUT_DIR=/scratch/users/$USER/nnrti-mechanisms/results/boltz/wt_affinity
 #   BOLTZ_CACHE_DIR=/scratch/users/$USER/.boltz
 #   BOLTZ_ACCELERATOR=gpu
+#   BOLTZ_LOW_MEM=0
 #   BOLTZ_EXTRA_ARGS="--sampling_steps 50 --diffusion_samples 1"
 #
 
@@ -30,6 +31,7 @@ BOLTZ_PYTHON="${BOLTZ_PYTHON:-python3}"
 BOLTZ_BIN="${BOLTZ_BIN:-boltz}"
 BOLTZ_INPUT_YAML="${BOLTZ_INPUT_YAML:-inputs/boltz/wt_rt_dor_affinity.yaml}"
 BOLTZ_ACCELERATOR="${BOLTZ_ACCELERATOR:-gpu}"
+BOLTZ_LOW_MEM="${BOLTZ_LOW_MEM:-0}"
 BOLTZ_EXTRA_ARGS="${BOLTZ_EXTRA_ARGS:-}"
 
 if [ -d "/scratch/users/${USER}" ]; then
@@ -109,6 +111,24 @@ if [ -n "${BOLTZ_ACCELERATOR}" ]; then
     CMD+=(--accelerator "${BOLTZ_ACCELERATOR}")
 fi
 
+if [ "${BOLTZ_LOW_MEM}" = "1" ]; then
+    # Lower-memory configuration for older/smaller GPUs (e.g., 12 GB cards).
+    CMD+=(
+        --recycling_steps 1
+        --sampling_steps 50
+        --diffusion_samples 1
+        --max_parallel_samples 1
+        --max_msa_seqs 512
+        --subsample_msa
+        --num_subsampled_msa 256
+        --sampling_steps_affinity 50
+        --diffusion_samples_affinity 1
+        --num_workers 0
+        --preprocessing-threads 4
+    )
+    export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
+fi
+
 if [ -n "${BOLTZ_EXTRA_ARGS}" ]; then
     # Intentionally split user-provided flags into argv tokens.
     # shellcheck disable=SC2206
@@ -120,7 +140,18 @@ echo "Running:"
 echo "  ${CMD[*]}"
 echo ""
 
+set +e
 time "${CMD[@]}"
+RC=$?
+set -e
+
+if [ "${RC}" -ne 0 ]; then
+    echo ""
+    echo "Boltz exited with code ${RC}."
+    echo "If you saw 'WARNING: ran out of memory, skipping batch', the GPU likely OOM'd during structure prediction."
+    echo "In that case, retry with BOLTZ_LOW_MEM=1 or request a larger-memory GPU."
+    exit "${RC}"
+fi
 
 echo ""
 echo "Run complete. Affinity outputs (if present):"
