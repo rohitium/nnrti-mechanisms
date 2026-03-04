@@ -130,10 +130,21 @@ def _load_replicate_meta(manifest_csv: Path, needed_mutations: set[str]) -> list
         state_csv = _resolve_local_path(data.get("state_csv"), repo_root=repo_root)
         ns_state = _infer_total_ns_from_state_csv(state_csv)
 
-        if np.isfinite(ns_state) and ns_state > 0:
+        has_state = bool(np.isfinite(ns_state) and ns_state > 0)
+        has_json = bool(np.isfinite(ns_json) and ns_json > 0)
+        if has_state and has_json:
+            # Prefer the longer duration when sources disagree (for example,
+            # stale state CSV after resumed production that completed in JSON).
+            if float(ns_state) >= float(ns_json):
+                total_ns = float(ns_state)
+                timing_source = "state_csv"
+            else:
+                total_ns = float(ns_json)
+                timing_source = "json_steps_gt_state_csv"
+        elif has_state:
             total_ns = float(ns_state)
             timing_source = "state_csv"
-        elif np.isfinite(ns_json) and ns_json > 0:
+        elif has_json:
             total_ns = float(ns_json)
             timing_source = "json_steps"
         else:
