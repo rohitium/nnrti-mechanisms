@@ -1,5 +1,5 @@
 {
-  "task_id": 3,
+  "task_id": 6,
   "structure": "K103N",
   "mutation": "K103N",
   "safe_label": "K103N",
@@ -15,11 +15,11 @@
   "state_csv": "results/md_runs/K103N/rep_01/K103N_rep01_md_state.csv",
   "final_pdb": "results/md_runs/K103N/rep_01/K103N_rep01_md_final.pdb",
   "checkpoint_path": "results/md_runs/K103N/rep_01/K103N_rep01_md.chk",
-  "md_heating_steps": 12500,
-  "md_production_steps": 5000000,
-  "md_production_steps_completed": 5000000,
-  "md_total_steps": 5012500,
-  "resumed_from_checkpoint": false,
-  "elapsed_seconds": 24061.61419605394,
+  "md_heating_steps": 0,
+  "md_production_steps": 50000000,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50000000,
+  "resumed_from_checkpoint": true,
+  "elapsed_seconds": 29815.42217330262,
   "status": "ok"
 }

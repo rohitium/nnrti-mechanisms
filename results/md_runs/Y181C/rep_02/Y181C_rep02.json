@@ -1,5 +1,5 @@
 {
-  "task_id": 7,
+  "task_id": 1,
   "structure": "Y181C",
   "mutation": "Y181C",
   "safe_label": "Y181C",
@@ -15,11 +15,11 @@
   "state_csv": "results/md_runs/Y181C/rep_02/Y181C_rep02_md_state.csv",
   "final_pdb": "results/md_runs/Y181C/rep_02/Y181C_rep02_md_final.pdb",
   "checkpoint_path": "results/md_runs/Y181C/rep_02/Y181C_rep02_md.chk",
-  "md_heating_steps": 12500,
-  "md_production_steps": 5000000,
-  "md_production_steps_completed": 5000000,
-  "md_total_steps": 5012500,
-  "resumed_from_checkpoint": false,
-  "elapsed_seconds": 14399.304095026804,
+  "md_heating_steps": 0,
+  "md_production_steps": 50000000,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50000000,
+  "resumed_from_checkpoint": true,
+  "elapsed_seconds": 60974.252199811,
   "status": "ok"
 }
