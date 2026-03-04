@@ -13,7 +13,7 @@ coupling to fingers-palm domain movements) and Hypothesis 2 (epistatic partners
 V106A/A98G restore NNBP–fingers coupling).
 
 Usage:
-    python -m src.analysis.cli.compute_dccm --manifest results/md_manifest.csv
+    python -m src.analysis.cli.compute_dccm --manifest manifests/md_manifest.csv
 
 Output:
     results/dccm/<mutation>_rep<N>_dccm.npy
@@ -251,7 +251,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Compute DCCM and NNBP–domain allosteric coupling scores."
     )
-    parser.add_argument("--manifest", type=Path, default=Path("results/md_manifest.csv"))
+    parser.add_argument("--manifest", type=Path, default=Path("manifests/md_manifest.csv"))
     parser.add_argument("--resid-offset", type=int, default=-3)
     parser.add_argument("--frame-stride", type=int, default=2,
                         help="Frame stride (default 2 = every other frame for speed)")

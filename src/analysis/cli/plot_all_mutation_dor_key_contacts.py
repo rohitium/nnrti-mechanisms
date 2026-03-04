@@ -37,12 +37,34 @@ def _remap_to_local_workspace(candidate: Path | None, repo_root: Path) -> Path |
     return candidate
 
 
+def _resolve_dcd_with_fallback(dcd_path: Path | None) -> Path | None:
+    if dcd_path is None:
+        return None
+    if dcd_path.exists():
+        return dcd_path
+
+    # Prefer explicit 10 ns analysis backup when present.
+    stem = str(dcd_path.name)
+    candidates: list[Path] = []
+    if stem.endswith("_analysis.dcd"):
+        candidates.append(dcd_path.with_name(stem.replace("_analysis.dcd", "_analysis.10ns.bak")))
+    # Generic backup variants.
+    candidates.append(dcd_path.with_suffix(dcd_path.suffix + ".bak"))
+    candidates.append(dcd_path.with_name(stem + ".bak"))
+
+    for c in candidates:
+        if c.exists():
+            return c
+    return dcd_path
+
+
 def _replicate_inputs(row: pd.Series, repo_root: Path) -> tuple[Path, Path]:
     data = json.loads(Path(row["output_json"]).read_text())
     topo = Path(str(data.get("analysis_topology_pdb") or "").strip())
     dcd = Path(str(data.get("analysis_dcd") or "").strip())
     topo = _remap_to_local_workspace(topo, repo_root)
     dcd = _remap_to_local_workspace(dcd, repo_root)
+    dcd = _resolve_dcd_with_fallback(dcd)
     if topo is None or dcd is None or not topo.exists() or not dcd.exists():
         raise FileNotFoundError(f"Missing analysis files for {row['mutation']} rep{int(row['replicate'])}")
     return topo, dcd
@@ -299,7 +321,8 @@ def _collect_system_rows(
         replicate = int(row["replicate"])
         try:
             topo, dcd = _replicate_inputs(row, repo_root)
-            u = mda.Universe(str(topo), str(dcd))
+            # Some retained trajectories are kept as *.bak; force DCD reader.
+            u = mda.Universe(str(topo), str(dcd), format="DCD")
         except Exception:
             continue
 
@@ -406,7 +429,7 @@ def main() -> int:
     warnings.simplefilter("ignore", category=DeprecationWarning)
 
     parser = argparse.ArgumentParser(description="Plot crystal-derived DOR contact distances for all mutations vs WT.")
-    parser.add_argument("--manifest", type=Path, default=Path("results/md_manifest.csv"))
+    parser.add_argument("--manifest", type=Path, default=Path("manifests/md_manifest.csv"))
     parser.add_argument("--cif", type=Path, default=Path("data/structures/4NCG.cif"))
     parser.add_argument("--ligand-resname", type=str, default="2KW")
     parser.add_argument("--ligand-auth-seq-id", type=int, default=601)

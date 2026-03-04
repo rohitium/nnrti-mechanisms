@@ -96,7 +96,7 @@ def main() -> int:
     parser.add_argument(
         "--manifest",
         type=Path,
-        default=Path("results/md_manifest.csv"),
+        default=Path("manifests/md_manifest.csv"),
         help="Optional manifest used to backfill output_json and analysis file paths.",
     )
     parser.add_argument("--top-n", type=int, default=60)

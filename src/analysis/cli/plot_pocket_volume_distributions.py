@@ -3,7 +3,7 @@
 
 Inputs:
   - results/pocket_volume_profiles.csv (frame-level pocket volume metric)
-  - results/md_manifest.csv (fold reductions, mutation ordering)
+  - manifests/md_manifest.csv (fold reductions, mutation ordering)
 
 Outputs:
   - results/plots/pocket_volume_distribution_by_mutation.png (default)
@@ -160,7 +160,7 @@ def plot_pocket_volume_distributions(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Plot pocket volume distributions by mutation.")
     parser.add_argument("--profiles", type=Path, default=Path("results/pocket_volume_profiles.csv"))
-    parser.add_argument("--manifest", type=Path, default=Path("results/md_manifest.csv"))
+    parser.add_argument("--manifest", type=Path, default=Path("manifests/md_manifest.csv"))
     parser.add_argument("--md-runs-dir", type=Path, default=Path("results/md_runs"))
     parser.add_argument("--output", type=Path, default=Path("results/plots/pocket_volume_distribution_by_mutation.png"))
     parser.add_argument("--max-points", type=int, default=1200, help="Downsample scatter overlay per mutation.")

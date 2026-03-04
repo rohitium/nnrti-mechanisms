@@ -14,8 +14,8 @@ Pocket volume = number of grid voxels within POCKET_RADIUS of that centroid
 Uses scipy cKDTree for fast per-frame computation.
 
 Outputs:
-  results/nnbp_pocket_volume_dynamics.csv  (per-frame, apo + holo)
-  results/plots/nnbp_pocket_volume_apo_vs_holo.png
+  results/tables/holo/nnbp_pocket_volume_dynamics.csv  (per-frame, apo + holo)
+  results/plots/png/apo/nnbp_pocket_volume_apo_vs_holo.png
 """
 import json
 import re
@@ -30,8 +30,8 @@ import matplotlib.cm as cm
 warnings.filterwarnings("ignore")
 
 REPO = Path(__file__).resolve().parents[3]
-OUT_CSV   = REPO / "results" / "nnbp_pocket_volume_dynamics.csv"
-PLOTS_DIR = REPO / "results" / "plots"
+OUT_CSV   = REPO / "results" / "tables" / "holo" / "nnbp_pocket_volume_dynamics.csv"
+PLOTS_DIR = REPO / "results" / "plots" / "png" / "apo"
 
 # ── pocket geometry ──────────────────────────────────────────────────────────
 RESID_OFFSET  = -3
@@ -63,7 +63,7 @@ MUTATION_LABELS = {
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 def _load_fold_map() -> dict:
-    mf = pd.read_csv(REPO / "results" / "md_manifest.csv")
+    mf = pd.read_csv(REPO / "manifests" / "md_manifest.csv")
     fold = {}
     for _, row in mf.drop_duplicates("mutation").iterrows():
         v = row.get("fold_reduction")
@@ -241,8 +241,8 @@ def process_replicate(row, leg: str) -> list[dict]:
 # ── main ─────────────────────────────────────────────────────────────────────
 def main():
     # Mutations that have both apo and holo
-    apo_mf  = pd.read_csv(REPO / "results" / "apo_md_manifest.csv")
-    holo_mf = pd.read_csv(REPO / "results" / "md_manifest.csv")
+    apo_mf  = pd.read_csv(REPO / "manifests" / "apo_md_manifest.csv")
+    holo_mf = pd.read_csv(REPO / "manifests" / "md_manifest.csv")
 
     apo_labels  = set(apo_mf["safe_label"].str.lower().unique())
     holo_subset = holo_mf[holo_mf["safe_label"].str.lower().isin(apo_labels)].copy()
@@ -266,6 +266,7 @@ def main():
         return
 
     df = pd.DataFrame(all_rows)
+    OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(OUT_CSV, index=False)
     print(f"\nWrote {OUT_CSV} ({len(df)} rows)")
 

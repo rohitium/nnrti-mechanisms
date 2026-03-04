@@ -182,7 +182,7 @@ def main(argv=None):
     parser.add_argument(
         "--manifest",
         type=Path,
-        default=Path("results/md_manifest.csv"),
+        default=Path("manifests/md_manifest.csv"),
     )
     args = parser.parse_args(argv)
 

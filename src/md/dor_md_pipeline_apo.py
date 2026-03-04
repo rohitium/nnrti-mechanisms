@@ -10,8 +10,8 @@ Usage
 -----
     python -m src.md.dor_md_pipeline_apo \\
         --holo-runs results/md_runs \\
-        --apo-runs results/apo_md_runs \\
-        --manifest results/apo_md_manifest.csv
+        --apo-runs results/md_runs/apo \\
+        --manifest manifests/apo_md_manifest.csv
 
 All three arguments have the above defaults. If --mutations is omitted, apo
 prep defaults to WT + all mutations listed in data/DRM-susceptibilities.csv.xlsx.
@@ -174,13 +174,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--apo-runs",
         type=Path,
-        default=Path("results/apo_md_runs"),
-        help="Root directory for apo MD run results (default: results/apo_md_runs).",
+        default=Path("results/md_runs/apo"),
+        help="Root directory for apo MD run results (default: results/md_runs/apo).",
     )
     parser.add_argument(
         "--manifest",
         type=Path,
-        default=Path("results/apo_md_manifest.csv"),
+        default=Path("manifests/apo_md_manifest.csv"),
         help="Output apo manifest CSV path.",
     )
     args = parser.parse_args(argv)

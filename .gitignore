@@ -224,5 +224,7 @@ logs/
 .checkpoints/
 # Large generated aggregate (use per-mutation split instead)
 results/dor_key_contacts_timeseries_all_mutations.csv
+results/tables/holo/dor_key_contacts_timeseries_all_mutations.csv
+results/tables/holo/dor_key_contacts_timeseries_by_mutation/*.csv
 *.npy
 *.bak

@@ -146,7 +146,7 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     parser = argparse.ArgumentParser(description="Safe incremental MM/GBSA computation")
-    parser.add_argument("--manifest", type=Path, default=Path("results/md_manifest.csv"))
+    parser.add_argument("--manifest", type=Path, default=Path("manifests/md_manifest.csv"))
     parser.add_argument("--results-dir", type=Path, default=Path("results"))
     parser.add_argument("--output", type=Path, help="Output CSV path")
     parser.add_argument("--snapshots", type=int, default=100)

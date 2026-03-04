@@ -2,7 +2,7 @@
 #
 # Submit apo (ligand-free) MD jobs in batches with automatic queue monitoring.
 #
-# Runs identically to submit_md_batched.sh but targets results/apo_md_runs/
+# Runs identically to submit_md_batched.sh but targets results/md_runs/apo/
 # and uses the _apo_ file naming convention for topology/system assets.
 #
 # Usage:
@@ -50,7 +50,7 @@ SKIP_IF_AT_TARGET="${SKIP_IF_AT_TARGET:-1}"
 SKIP_IF_RUNNING="${SKIP_IF_RUNNING:-1}"
 MUTATION_ALLOWLIST="${MUTATION_ALLOWLIST:-}"
 
-APO_RUNS_ROOT="${APO_RUNS_ROOT:-results/apo_md_runs}"
+APO_RUNS_ROOT="${APO_RUNS_ROOT:-results/md_runs/apo}"
 
 if ! command -v jq >/dev/null 2>&1; then
     echo "ERROR: jq is required for JSON status checks." >&2

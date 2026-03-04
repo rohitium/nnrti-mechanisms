@@ -74,7 +74,7 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(description="Incremental analysis with checkpointing")
     parser.add_argument("--step", choices=["collect", "mmgbsa", "metrics", "plots", "all"], default="all")
-    parser.add_argument("--manifest", type=Path, default=Path("results/md_manifest.csv"))
+    parser.add_argument("--manifest", type=Path, default=Path("manifests/md_manifest.csv"))
     parser.add_argument("--results-dir", type=Path, default=Path("results"))
     parser.add_argument("--force", action="store_true", help="Force recomputation even if checkpoint exists")
     parser.add_argument("--mmgbsa-snapshots", type=int, default=100)

@@ -17,7 +17,7 @@ set -euo pipefail
 # connection (single Duo auth).  Pull uses a single rsync stream.
 #
 # Default direction is "push" so local artifacts can be restored to Sherlock
-# in one command (results/md_runs + results/md_manifest.csv).
+# in one command (results/md_runs + manifests/md_manifest.csv).
 
 SHERLOCK_USER="${SHERLOCK_USER:-}"
 if [[ -z "${SHERLOCK_USER}" ]]; then
@@ -40,16 +40,17 @@ MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-100.0}"
 REMOTE_BASE="/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms"
 REMOTE_HOST="${SHERLOCK_USER}@login.sherlock.stanford.edu"
 LOCAL_MD_RUNS="results/md_runs/"
-LOCAL_MANIFEST="results/md_manifest.csv"
+LOCAL_MANIFEST="manifests/md_manifest.csv"
 LOCAL_LOGS="logs/"
 REMOTE_MD_RUNS="${REMOTE_HOST}:${REMOTE_BASE}/results/md_runs/"
-REMOTE_MANIFEST="${REMOTE_HOST}:${REMOTE_BASE}/results/md_manifest.csv"
+REMOTE_MANIFEST="${REMOTE_HOST}:${REMOTE_BASE}/manifests/md_manifest.csv"
 REMOTE_LOGS="${REMOTE_HOST}:${REMOTE_BASE}/logs/"
 
 # SSH ControlMaster socket — one Duo auth shared across all parallel rsync workers.
 SSH_CTL="${TMPDIR:-/tmp}/nnrti_sherlock_ctl_${SHERLOCK_USER}.sock"
 
 mkdir -p "${LOCAL_MD_RUNS}" "${LOCAL_LOGS}"
+mkdir -p "$(dirname "${LOCAL_MANIFEST}")"
 
 # Open a persistent master connection if one isn't already running.
 if ! ssh -S "${SSH_CTL}" -O check "${REMOTE_HOST}" 2>/dev/null; then
@@ -192,8 +193,8 @@ for jp in glob.glob('results/md_runs/*/rep_*/*.json'):
         for fn in files:
             paths.add(os.path.join(root, fn))
 
-if os.path.exists('results/md_manifest.csv'):
-    paths.add('results/md_manifest.csv')
+if os.path.exists('manifests/md_manifest.csv'):
+    paths.add('manifests/md_manifest.csv')
 
 for p in sorted(paths):
     print(p)

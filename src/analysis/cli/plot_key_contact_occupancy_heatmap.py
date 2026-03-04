@@ -7,7 +7,7 @@ Occupancy definition (default):
 Inputs:
   - results/dor_key_contacts_timeseries_by_mutation/*.csv
   - results/dor_key_contact_definitions_4ncg.csv
-  - results/md_manifest.csv (for fold-reduction ordering)
+  - manifests/md_manifest.csv (for fold-reduction ordering)
 
 Outputs:
   - results/plots/dor_key_contact_occupancy_heatmap.png (default)
@@ -475,7 +475,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Plot doravirine key-contact occupancy heatmap.")
     parser.add_argument("--timeseries-dir", type=Path, default=Path("results/dor_key_contacts_timeseries_by_mutation"))
     parser.add_argument("--contact-defs", type=Path, default=Path("results/dor_key_contact_definitions_4ncg.csv"))
-    parser.add_argument("--manifest", type=Path, default=Path("results/md_manifest.csv"))
+    parser.add_argument("--manifest", type=Path, default=Path("manifests/md_manifest.csv"))
     parser.add_argument("--output", type=Path, default=Path("results/plots/dor_key_contact_occupancy_heatmap.png"))
     parser.add_argument("--margin-angstrom", type=float, default=1.0)
     parser.add_argument("--mode", choices=["absolute", "delta"], default="delta")

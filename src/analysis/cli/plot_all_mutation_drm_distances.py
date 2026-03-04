@@ -498,7 +498,7 @@ def main() -> int:
         message=r"DCDReader currently makes independent timesteps.*",
     )
     parser = argparse.ArgumentParser(description="Plot sidechain-DOR distances for all mutations vs WT.")
-    parser.add_argument("--manifest", type=Path, default=Path("results/md_manifest.csv"))
+    parser.add_argument("--manifest", type=Path, default=Path("manifests/md_manifest.csv"))
     parser.add_argument("--ligand-resname", type=str, default="2KW")
     parser.add_argument("--frame-stride", type=int, default=1)
     parser.add_argument("--resid-offset", type=int, default=-3)

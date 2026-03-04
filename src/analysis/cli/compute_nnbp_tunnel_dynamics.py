@@ -178,7 +178,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Compute NNBP tunnel gate distances over trajectories."
     )
-    parser.add_argument("--manifest", type=Path, default=Path("results/md_manifest.csv"))
+    parser.add_argument("--manifest", type=Path, default=Path("manifests/md_manifest.csv"))
     parser.add_argument("--resid-offset", type=int, default=-3)
     parser.add_argument("--frame-stride", type=int, default=1)
     parser.add_argument(

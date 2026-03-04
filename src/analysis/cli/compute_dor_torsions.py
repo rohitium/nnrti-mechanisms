@@ -163,7 +163,7 @@ def _infer_completed_steps(
 def _load_fold_map() -> dict:
     """Load DOR fold-resistance values from the authoritative xlsx source.
 
-    Falls back to md_manifest.csv if the xlsx is unavailable.
+    Falls back to manifests/md_manifest.csv if the xlsx is unavailable.
     """
     xl_path = REPO / "data" / "DRM-susceptibilities.csv.xlsx"
     if xl_path.exists():
@@ -189,7 +189,7 @@ def _load_fold_map() -> dict:
         except Exception as exc:
             print(f"  WARNING: could not load xlsx ({exc}), falling back to manifest")
     # Fallback: manifest
-    mf = pd.read_csv(REPO / "results" / "md_manifest.csv")
+    mf = pd.read_csv(REPO / "manifests" / "md_manifest.csv")
     fold = {}
     for _, row in mf.drop_duplicates("mutation").iterrows():
         v = row.get("fold_reduction")
@@ -298,7 +298,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    run_df = collect_md_results(REPO / "results" / "md_manifest.csv")
+    run_df = collect_md_results(REPO / "manifests" / "md_manifest.csv")
     FOLD = _load_fold_map()
 
     if args.min_production_steps > 0:

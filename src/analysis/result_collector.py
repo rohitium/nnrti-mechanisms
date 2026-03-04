@@ -136,13 +136,13 @@ def _prepare_profile_jobs(run_df: pd.DataFrame) -> list[dict]:
         if topo is None or dcd is None or not topo.exists() or not dcd.exists():
             continue
 
-        # Determine actual production time from the MD output JSON.
-        # The DCD dt metadata is unreliable (OpenMM writes a corrupted DELTA
-        # field when the `interval` kwarg is used, causing MDAnalysis to report
-        # dt=1.0 ps regardless of the true frame spacing).  The ground truth is:
-        #   timestep = 2 fs  (hardcoded in src/md/worker.py)
-        #   production_ps = md_production_steps_completed × 2 fs / 1000
+        # Determine actual production time from run artifacts.
+        # Prefer whichever step-count source is larger between JSON and
+        # StateDataReporter CSV because either one can be stale depending on
+        # how a run was resumed/synced.
         production_ps: float = 100_000.0  # default: 100 ns
+        step_candidates: list[int] = []
+
         out_json = _resolve_local_path(
             _nonempty_path(row.get("output_json")),
             rep_dir / f"{safe}_rep{rep:02d}.json",
@@ -156,9 +156,33 @@ def _prepare_profile_jobs(run_df: pd.DataFrame) -> list[dict]:
                     or 0
                 )
                 if steps > 0:
-                    production_ps = steps * 2.0 / 1000.0  # timestep_fs=2.0
+                    step_candidates.append(steps)
             except Exception:
                 pass
+
+        state_csv = _resolve_local_path(
+            _nonempty_path(row.get("md_state_csv")),
+            rep_dir / f"{safe}_rep{rep:02d}_md_state.csv",
+        )
+        if state_csv and state_csv.exists():
+            try:
+                sdf = pd.read_csv(state_csv)
+                step_col = None
+                for c in ('#"Step"', "Step"):
+                    if c in sdf.columns:
+                        step_col = c
+                        break
+                if step_col is not None and not sdf.empty:
+                    max_step = pd.to_numeric(sdf[step_col], errors="coerce").dropna()
+                    if not max_step.empty:
+                        steps = int(max_step.max())
+                        if steps > 0:
+                            step_candidates.append(steps)
+            except Exception:
+                pass
+
+        if step_candidates:
+            production_ps = max(step_candidates) * 2.0 / 1000.0  # timestep_fs=2.0
 
         jobs.append(
             {
@@ -266,12 +290,11 @@ def _ca_rmsd_worker(job: dict, frame_stride: int, max_frames: int) -> tuple[list
         else:
             traj = md.load(traj_path, top=job["topology"])
 
-        # Prefer full molecule imaging so all molecules are placed consistently
-        # in one periodic image; fall back to whole-molecule reconstruction.
-        try:
-            traj.image_molecules(inplace=True)
-        except Exception:
-            traj.make_molecules_whole(inplace=True)
+        # Reconstruct whole molecules (bond-graph traversal, no image_molecules).
+        # image_molecules without anchor_molecules can place protein and ligand
+        # in independent periodic images, causing spurious 50-60 Å separations
+        # that look like ligand unbinding but are purely a PBC artifact.
+        traj.make_molecules_whole(inplace=True)
 
         n_total_frames = len(traj)
         production_ps  = float(job.get("production_ps") or 100_000.0)
@@ -292,7 +315,10 @@ def _ca_rmsd_worker(job: dict, frame_stride: int, max_frames: int) -> tuple[list
             # DCD dt metadata is corrupted (OpenMM writes garbage DELTA when
             # the `interval` kwarg is used).  Derive simulation time from the
             # step count stored in the MD output JSON instead.
-            time_ps = (frame_idx + 1) * production_ps / n_total_frames
+            if n_total_frames > 1:
+                time_ps = frame_idx * production_ps / (n_total_frames - 1)
+            else:
+                time_ps = 0.0
             out.append(
                 {
                     "structure":        job["structure"],
@@ -338,19 +364,32 @@ def _com_distance_worker(
         else:
             traj = md.load(traj_path, top=job["topology"])
 
-        # Keep protein + ligand in a consistent periodic image before COM calc.
-        try:
-            traj.image_molecules(inplace=True)
-        except Exception:
-            traj.make_molecules_whole(inplace=True)
-
-        n_total_frames = len(traj)
-        production_ps = float(job.get("production_ps") or 100_000.0)
+        # Make each molecule whole via bond-graph traversal, then explicitly
+        # wrap the ligand COM to the nearest image of the protein COM.
+        # image_molecules() without anchor_molecules places molecules
+        # independently, so protein and ligand can end up ~55 Å apart (both
+        # inside the ~12 nm box) while the min-image threshold (~60 Å) fails
+        # to correct it — causing false "drift" in the convergence plot.
+        traj.make_molecules_whole(inplace=True)
 
         # Quote the residue name so MDTraj handles names starting with a digit
         # (e.g. '2KW') correctly.
         lig_idx  = traj.topology.select(f"resname '{ligand_resname}'")
         prot_idx = traj.topology.select("protein")
+
+        # Wrap ligand atoms to the nearest periodic image of the protein COM
+        # so the subsequent per-frame COM distance is physically meaningful.
+        if len(lig_idx) > 0 and len(prot_idx) > 0 and traj.unitcell_lengths is not None:
+            for fi in range(traj.n_frames):
+                box = traj.unitcell_lengths[fi]
+                if box is not None and np.all(np.isfinite(box)) and np.all(box > 0):
+                    prot_c = traj.xyz[fi, prot_idx].mean(axis=0)
+                    lig_c  = traj.xyz[fi, lig_idx].mean(axis=0)
+                    delta  = lig_c - prot_c
+                    traj.xyz[fi, lig_idx] += -box * np.round(delta / box)
+
+        n_total_frames = len(traj)
+        production_ps = float(job.get("production_ps") or 100_000.0)
         if len(lig_idx) == 0 or len(prot_idx) == 0:
             return [], f"empty selection (lig={len(lig_idx)}, prot={len(prot_idx)})"
 
@@ -372,7 +411,10 @@ def _com_distance_worker(
             if box_nm is not None and np.all(np.isfinite(box_nm)) and np.all(box_nm > 0):
                 delta_nm = delta_nm - box_nm * np.round(delta_nm / box_nm)
             d = float(np.linalg.norm(delta_nm)) * 10.0  # nm → Å
-            time_ps  = (frame_idx + 1) * production_ps / n_total_frames
+            if n_total_frames > 1:
+                time_ps = frame_idx * production_ps / (n_total_frames - 1)
+            else:
+                time_ps = 0.0
             out.append(
                 {
                     "structure":            job["structure"],
@@ -422,11 +464,9 @@ def _pocket_volume_worker(
         else:
             traj = md.load(traj_path, top=job["topology"])
 
-        # Keep molecules in a consistent periodic image for grid-based metrics.
-        try:
-            traj.image_molecules(inplace=True)
-        except Exception:
-            traj.make_molecules_whole(inplace=True)
+        # Reconstruct whole molecules; avoid image_molecules which can scatter
+        # protein and ligand to independent images (PBC artifact).
+        traj.make_molecules_whole(inplace=True)
 
         n_total_frames = len(traj)
         production_ps  = float(job.get("production_ps") or 100_000.0)
@@ -452,7 +492,10 @@ def _pocket_volume_worker(
                 grid_spacing=float(grid_spacing),
                 radius_angstrom=float(pocket_radius_angstrom),
             )
-            time_ps = (frame_idx + 1) * production_ps / n_total_frames
+            if n_total_frames > 1:
+                time_ps = frame_idx * production_ps / (n_total_frames - 1)
+            else:
+                time_ps = 0.0
             out.append(
                 {
                     "structure":                    job["structure"],

@@ -16,8 +16,43 @@ This repository studies HIV-1 NNRTI resistance for doravirine (DOR) using:
 | Submit apo MD jobs | `bash scripts/sherlock/submit_apo_md_batched.sh 6 12` |
 | Run apo analysis | `bash scripts/run_apo_analysis.sh` |
 | Monitor queue | `python3 scripts/sherlock/report_md_progress.py --target-ns 100.0 --show-incomplete` |
+| Interactive GPU for Boltz | `bash scripts/sherlock/boltz/salloc_boltz_gpu.sh` |
+| Install Boltz (no conda env) | `bash scripts/sherlock/boltz/setup_boltz_env.sh` |
+| Run WT RT+DOR Boltz affinity | `bash scripts/sherlock/boltz/run_boltz_wt_affinity.sh` |
+| Run one mutant RT+DOR Boltz affinity | `bash scripts/sherlock/boltz/run_boltz_mutation_affinity.sh K103N` |
+| Run control panel (10x seeds each) | `bash scripts/sherlock/boltz/run_boltz_control_panel.sh` |
 
 ---
+
+## Repository structure
+
+Top-level layout:
+
+| Path | Purpose |
+|---|---|
+| `data/` | Input data (including susceptibility sheet `DRM-susceptibilities.csv.xlsx`) |
+| `src/` | Analysis and MD pipeline code (`python -m src...`) |
+| `scripts/` | Sherlock submission/sync helpers and local runner scripts |
+| `manifests/` | Holo/Apo manifest CSVs (`md_manifest*.csv`, `apo_md_manifest.csv`) |
+| `results/md_runs/` | Holo MD trajectories + JSON/state outputs by mutation/replicate |
+| `results/md_runs/apo/` | Apo MD trajectories + outputs |
+| `results/analysis/` | Containerized analysis products (tables + plots grouped by analysis type) |
+| `results/tables/` | Consolidated CSV outputs moved from `results/*.csv` |
+| `results/plots/png/` | Consolidated PNG outputs moved from `results/plots/**/*.png` |
+| `logs/` | Run logs and checkpoints |
+
+Triplet contact-story output container:
+
+| Path | Contents |
+|---|---|
+| `results/analysis/triplet_contact_story_100ns/plots/` | One figure per triplet (top: mean trace across replicates; bottom: pooled occupancy heatmap) |
+| `results/analysis/triplet_contact_story_100ns/tables/selection_summary.csv` | Selected story residue + pooled occupancy scores per triplet |
+| `results/analysis/triplet_contact_story_100ns/tables/mutation_occupancy.csv` | Mutation-level residue occupancy (unweighted mean + pooled) |
+| `results/analysis/triplet_contact_story_100ns/tables/replicate_occupancy.csv` | Per-replicate residue occupancy values |
+| `results/analysis/triplet_contact_story_100ns/tables/mean_traces.csv` | Mean/SEM distance traces used in plots |
+| `results/analysis/triplet_contact_story_100ns/tables/timing_audit.csv` | Frame count + effective ns used per mutation/replicate |
+| `results/analysis/triplet_contact_story_100ns/tables/fold_lookup.csv` | DOR fold-change lookup parsed from susceptibility sheet |
+| `results/analysis/triplet_contact_story_100ns/config/triplets.txt` | Triplet definitions used for the run |
 
 ## Systems simulated
 
@@ -79,32 +114,103 @@ bash scripts/run_analysis.sh
 > **Important**: Do not use bare `python -m` — the base Python environment lacks MDAnalysis.
 > `run_analysis.sh` handles the correct environment automatically.
 
+## Boltz-2 affinity test on Sherlock (WT RT + DOR)
+
+This is a separate workflow to test Boltz-2 affinity prediction on the WT RT/DOR
+complex used in this project.
+
+```bash
+# 0) (on Sherlock login node) one-time install (no conda env creation)
+bash scripts/sherlock/boltz/setup_boltz_env.sh
+
+# 1) request an interactive GPU session
+bash scripts/sherlock/boltz/salloc_boltz_gpu.sh
+
+# 2) from inside the allocation, run the WT job
+cd /scratch/users/$USER/nnrti-mechanisms
+bash scripts/sherlock/boltz/run_boltz_wt_affinity.sh
+```
+
+Notes:
+- The WT Boltz input YAML is auto-generated from `data/prepared/dor_4ncg/wt_4ncg.cif`.
+- Default output path is `/scratch/users/$USER/nnrti-mechanisms/results/boltz/wt_affinity`.
+- If your Sherlock account requires module loads for Python/CUDA, set:
+  `SHERLOCK_MODULES="python/3.12.1"` before setup/run scripts.
+- On smaller GPUs (for example 12 GB TITAN Xp), run with low-memory mode:
+  `BOLTZ_LOW_MEM=1 bash scripts/sherlock/boltz/run_boltz_wt_affinity.sh`.
+- Override runtime knobs with `BOLTZ_EXTRA_ARGS`, e.g.
+  `BOLTZ_EXTRA_ARGS="--sampling_steps 50 --diffusion_samples 1"`.
+
+### Boltz controls panel (K103N, Y181C, V106A, Y318F)
+
+```bash
+# inside an interactive GPU allocation
+cd /scratch/users/$USER/nnrti-mechanisms
+
+# one mutation
+BOLTZ_LOW_MEM=1 BOLTZ_EXTRA_ARGS="--seed 1001" \
+bash scripts/sherlock/boltz/run_boltz_mutation_affinity.sh K103N
+
+# full control panel with replicates
+BOLTZ_LOW_MEM=1 BOLTZ_REPLICATES=10 BOLTZ_SEED_START=1001 \
+bash scripts/sherlock/boltz/run_boltz_control_panel.sh
+
+# summarize replicate outputs
+python3 scripts/sherlock/boltz/summarize_boltz_panel.py \
+  --glob "/scratch/users/$USER/nnrti-mechanisms/results/boltz/control_panel/*/replicates/affinity_seed*.json" \
+  --out-csv "/scratch/users/$USER/nnrti-mechanisms/results/boltz/control_panel/summary.csv"
+```
+
 ## Analysis outputs
+
+### Primary result (contact occupancy triplets)
+
+Current primary deliverable lives in:
+
+- `results/analysis/triplet_contact_story_100ns/`
+
+Re-generate it with:
+
+```bash
+MPLCONFIGDIR=/tmp/mplconfig PYTHONPATH=. \
+/Users/rohitpro/miniconda3/envs/nnrti-prep/bin/python \
+  -m src.analysis.cli.plot_triplet_contact_story \
+  --manifest manifests/md_manifest.csv \
+  --susceptibility-xlsx data/DRM-susceptibilities.csv.xlsx \
+  --window-ns 100 \
+  --contact-cutoff 4.0
+```
+
+Key files:
+
+- `results/analysis/triplet_contact_story_100ns/plots/`
+- `results/analysis/triplet_contact_story_100ns/tables/selection_summary.csv`
+- `results/analysis/triplet_contact_story_100ns/tables/timing_audit.csv`
 
 ### Per-replicate data
 | File | Contents |
 |---|---|
-| `results/mmgbsa_replicate_metrics.csv` | MM/GBSA ΔG components per replicate |
-| `results/ddg_full.csv` | ΔΔG vs WT + structural metrics merged |
-| `results/structural_metrics.csv` | ensemble-averaged contacts, H-bonds, pocket volume |
-| `results/rmsd_ca_profiles.csv` | Cα RMSD over time (200-frame resolution) |
-| `results/com_distance_profiles.csv` | DOR–pocket COM distance over time |
-| `results/pocket_volume_profiles.csv` | NNBP pocket volume over time |
-| `results/boundness_qc.csv` | DOR minimum distance QC per replicate |
-| `results/drm_sidechain_distance_timeseries_all_mutations.csv` | DRM sidechain↔DOR distances |
+| `results/tables/holo/mmgbsa_replicate_metrics.csv` | MM/GBSA ΔG components per replicate |
+| `results/tables/holo/ddg_full.csv` | ΔΔG vs WT + structural metrics merged |
+| `results/tables/holo/structural_metrics.csv` | ensemble-averaged contacts, H-bonds, pocket volume |
+| `results/tables/holo/rmsd_ca_profiles.csv` | Cα RMSD over time (200-frame resolution) |
+| `results/tables/holo/com_distance_profiles.csv` | DOR–pocket COM distance over time |
+| `results/tables/holo/pocket_volume_profiles.csv` | NNBP pocket volume over time |
+| `results/tables/holo/boundness_qc.csv` | DOR minimum distance QC per replicate |
+| `results/tables/holo/drm_sidechain_distance_timeseries_all_mutations.csv` | DRM sidechain↔DOR distances |
 
 ### Plots
 | Path | Description |
 |---|---|
-| `results/plots/all_metrics_vs_fold_reduction.png` | Scatter grid: all metrics vs FR |
-| `results/plots/rmsd_convergence.png` | Cα RMSD convergence by mutation |
-| `results/plots/com_distance_convergence.png` | COM distance convergence |
-| `results/plots/boundness_qc_min_distance.png` | DOR boundness QC |
-| `results/plots/drm_distances/` | Per-mutation DRM sidechain↔DOR distance traces |
-| `results/plots/dor_key_contacts/` | Per-mutation crystal-derived DOR contact distances |
-| `results/plots/pocket_volume_timeseries/` | Per-mutation NNBP pocket volume traces |
-| `results/plots/resistance_heatmap.png` | Mutation × metric heatmap |
-| `results/plots/manuscript_global_signatures.png` | Global signature figure |
+| `results/plots/png/all_metrics_vs_fold_reduction.png` | Scatter grid: all metrics vs FR |
+| `results/plots/png/rmsd_convergence.png` | Cα RMSD convergence by mutation |
+| `results/plots/png/com_distance_convergence.png` | COM distance convergence |
+| `results/plots/png/boundness_qc_min_distance.png` | DOR boundness QC |
+| `results/plots/png/drm_distances/` | Per-mutation DRM sidechain↔DOR distance traces |
+| `results/plots/png/dor_key_contacts/` | Per-mutation crystal-derived DOR contact distances |
+| `results/plots/png/pocket_volume_timeseries/` | Per-mutation NNBP pocket volume traces |
+| `results/plots/png/resistance_heatmap.png` | Mutation × metric heatmap |
+| `results/plots/png/manuscript_global_signatures.png` | Global signature figure |
 
 ## DCD trajectory time metadata — known issue and fix
 
@@ -153,18 +259,18 @@ Use `--mutations ...` to run only a subset (for example the prior 7-priority pan
 ```bash
 OPENMM_PLATFORM=CPU python -m src.md.dor_md_pipeline_apo \
     --holo-runs results/md_runs \
-    --apo-runs  results/apo_md_runs \
-    --manifest  results/apo_md_manifest.csv
+    --apo-runs  results/md_runs/apo \
+    --manifest  manifests/apo_md_manifest.csv
 ```
 
 This strips DOR (resname 2KW) from each holo minimized PDB, builds an amber-only
-system, solvates, and writes `results/apo_md_manifest.csv`.
+system, solvates, and writes `manifests/apo_md_manifest.csv`.
 
 ### 2. Apo MD on Sherlock
 
 ```bash
 # Sync apo assets to Sherlock
-SHERLOCK_USER=rsatija bash scripts/rsync_results.sh push  # or rsync apo_md_runs directly
+SHERLOCK_USER=rsatija bash scripts/rsync_apo.sh push
 
 # Submit (same batched workflow)
 bash scripts/sherlock/submit_apo_md_batched.sh 6 12
@@ -178,7 +284,7 @@ squeue -u $USER
 ```bash
 # Sync completed apo trajectories back
 SHERLOCK_USER=rsatija COMPLETE_ONLY=1 MD_PRODUCTION_NS=100.0 \
-bash scripts/rsync_results.sh pull  # sync apo_md_runs as well
+bash scripts/rsync_apo.sh pull
 
 # Run full apo analysis (PBC fix + tunnel dynamics + DCCM, apo and holo comparison)
 bash scripts/run_apo_analysis.sh
@@ -188,12 +294,12 @@ Key output files:
 
 | File | Description |
 |---|---|
-| `results/apo_nnbp_tunnel_summary.csv` | Gate mean±std per replicate (apo) |
-| `results/holo_nnbp_tunnel_summary.csv` | Gate mean±std per replicate (holo, same mutations) |
-| `results/apo_dccm_allosteric_coupling.csv` | NNBP↔fingers/palm/thumb coupling scalars (apo) |
-| `results/holo_dccm_allosteric_coupling.csv` | Same, holo |
-| `results/plots/apo_nnbp_tunnel/` | Per-gate distance timeseries + distributions (apo) |
-| `results/plots/apo_dccm/` | DCCM heatmaps per replicate (apo) |
+| `results/tables/apo/apo_nnbp_tunnel_summary.csv` | Gate mean±std per replicate (apo) |
+| `results/tables/holo/holo_nnbp_tunnel_summary.csv` | Gate mean±std per replicate (holo, same mutations) |
+| `results/tables/apo/apo_dccm_allosteric_coupling.csv` | NNBP↔fingers/palm/thumb coupling scalars (apo) |
+| `results/tables/holo/holo_dccm_allosteric_coupling.csv` | Same, holo |
+| `results/plots/png/nnbp_tunnel/apo/` | Per-gate distance timeseries + distributions (apo) |
+| `results/plots/png/dccm/apo/` | DCCM heatmaps per replicate (apo) |
 
 See `src/README.md` for full argument documentation.
 

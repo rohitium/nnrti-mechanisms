@@ -5,6 +5,8 @@ import argparse
 import tempfile
 from pathlib import Path
 
+import numpy as np
+
 
 def _topology_for_dcd(dcd_path: Path) -> Path:
     name = dcd_path.name
@@ -40,12 +42,29 @@ def _correct_one_mdtraj(
     if traj.n_atoms < 1:
         raise ValueError(f"No atoms in topology for {dcd_path}")
 
-    # Prefer MDTraj's high-level molecule imaging; fallback to whole-molecule
-    # reconstruction if imaging fails (e.g., missing/invalid unit cell data).
-    try:
-        traj.image_molecules(inplace=True)
-    except Exception:
-        traj.make_molecules_whole(inplace=True)
+    # 1) Rebuild each molecule from its bond graph.
+    traj.make_molecules_whole(inplace=True)
+
+    # 2) Apply molecule-wise no-jump unwrapping across frames. This removes
+    # frame-to-frame image hops that still remain after "whole molecule"
+    # reconstruction (observed as abrupt RMSD/COM spikes).
+    mol_indices = [
+        np.asarray([atom.index for atom in mol], dtype=int)
+        for mol in traj.topology.find_molecules()
+    ]
+    for frame_i in range(1, traj.n_frames):
+        if traj.unitcell_lengths is None:
+            break
+        box = traj.unitcell_lengths[frame_i]
+        if box is None or not np.all(np.isfinite(box)) or not np.all(box > 0):
+            continue
+        for mol_idx in mol_indices:
+            if mol_idx.size == 0:
+                continue
+            prev_com = traj.xyz[frame_i - 1, mol_idx].mean(axis=0)
+            curr_com = traj.xyz[frame_i, mol_idx].mean(axis=0)
+            shift = -box * np.round((curr_com - prev_com) / box)
+            traj.xyz[frame_i, mol_idx] += shift
 
     traj.save_dcd(str(out_path))
     return int(traj.n_frames), int(traj.n_atoms)

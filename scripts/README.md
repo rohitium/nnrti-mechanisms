@@ -72,7 +72,7 @@ bash scripts/run_analysis.sh
 OPENMM_PLATFORM=CPU python -m src.md.dor_md_pipeline_apo
 ```
 
-This strips DOR from each holo minimized PDB and writes `results/apo_md_manifest.csv`.
+This strips DOR from each holo minimized PDB and writes `manifests/apo_md_manifest.csv`.
 
 ### Step 2 — push apo assets to Sherlock + submit
 
@@ -99,19 +99,100 @@ bash scripts/run_apo_analysis.sh
 
 ---
 
+## Boltz-2 affinity workflow (WT RT + DOR, Sherlock)
+
+### Step 1 — one-time environment install (login node)
+
+```bash
+bash scripts/sherlock/boltz/setup_boltz_env.sh
+```
+
+No conda env is created; this installs Boltz into your active Python/user site.
+
+### Step 2 — request an interactive GPU
+
+```bash
+bash scripts/sherlock/boltz/salloc_boltz_gpu.sh
+```
+
+### Step 3 — run Boltz WT affinity
+
+```bash
+cd /scratch/users/$USER/nnrti-mechanisms
+bash scripts/sherlock/boltz/run_boltz_wt_affinity.sh
+```
+
+The run script auto-generates the Boltz input YAML from:
+`data/prepared/dor_4ncg/wt_4ncg.cif`
+
+Default output:
+`/scratch/users/$USER/nnrti-mechanisms/results/boltz/wt_affinity`
+
+If your Sherlock account needs explicit module loads for Python/CUDA:
+
+```bash
+export SHERLOCK_MODULES="python/3.12.1"
+```
+
+Optional speed/sampling override:
+
+```bash
+BOLTZ_EXTRA_ARGS="--sampling_steps 50 --diffusion_samples 1" \
+bash scripts/sherlock/boltz/run_boltz_wt_affinity.sh
+```
+
+Low-memory mode for smaller GPUs (for example 12 GB cards):
+
+```bash
+BOLTZ_LOW_MEM=1 bash scripts/sherlock/boltz/run_boltz_wt_affinity.sh
+```
+
+### Step 4 — run control mutations (K103N, Y181C, V106A, Y318F)
+
+Single mutation:
+
+```bash
+BOLTZ_LOW_MEM=1 BOLTZ_EXTRA_ARGS="--seed 1001" \
+bash scripts/sherlock/boltz/run_boltz_mutation_affinity.sh K103N
+```
+
+Control panel with replicates:
+
+```bash
+BOLTZ_LOW_MEM=1 BOLTZ_REPLICATES=10 BOLTZ_SEED_START=1001 \
+bash scripts/sherlock/boltz/run_boltz_control_panel.sh
+```
+
+Summarize replicate outputs:
+
+```bash
+python3 scripts/sherlock/boltz/summarize_boltz_panel.py \
+  --glob "/scratch/users/$USER/nnrti-mechanisms/results/boltz/control_panel/*/replicates/affinity_seed*.json" \
+  --out-csv "/scratch/users/$USER/nnrti-mechanisms/results/boltz/control_panel/summary.csv"
+```
+
+---
+
 ## File inventory
 
 | File | Purpose |
 |---|---|
 | `rsync_and_analyze.sh` | **One-command**: pull completed results + run full analysis (holo + apo when available) |
-| `run_analysis.sh` | Full analysis pipeline (holo core + apo/holo comparative analyses when `results/apo_md_manifest.csv` exists) |
+| `run_analysis.sh` | Full analysis pipeline (holo core + apo/holo comparative analyses when `manifests/apo_md_manifest.csv` exists) |
 | `run_apo_analysis.sh` | Apo analysis (PBC fix → tunnel dynamics → DCCM, apo vs holo comparison) |
 | `rsync_results.sh` | Push/pull `results/md_runs/` to/from Sherlock (parallel push, one Duo auth) |
-| `rsync_apo.sh` | Push/pull `results/apo_md_runs/` to/from Sherlock (same parallel logic) |
+| `rsync_apo.sh` | Push/pull `results/md_runs/apo/` to/from Sherlock (same parallel logic) |
 | `sherlock/submit_md_batched.sh` | Submit holo MD jobs in batches with queue monitoring |
-| `sherlock/submit_apo_md_batched.sh` | Submit apo MD jobs (same logic, targets `results/apo_md_runs/`) |
+| `sherlock/submit_apo_md_batched.sh` | Submit apo MD jobs (same logic, targets `results/md_runs/apo/`) |
 | `sherlock/report_md_progress.py` | Summarize job completion vs target steps, flag errors |
 | `sherlock/test_one_job.sh` | Single-job smoke test for debugging on Sherlock |
+| `sherlock/boltz/setup_boltz_env.sh` | Install/update Boltz-2 on Sherlock without creating a conda env |
+| `sherlock/boltz/salloc_boltz_gpu.sh` | Request an interactive GPU allocation sized for Boltz tests |
+| `sherlock/boltz/make_boltz_wt_input.py` | Generate RT + DOR Boltz affinity YAML from prepared mmCIFs |
+| `sherlock/boltz/run_boltz_wt_affinity.sh` | Run WT RT + DOR Boltz affinity prediction in an interactive GPU session |
+| `sherlock/boltz/run_boltz_mutation_affinity.sh` | Run one mutation (or WT) Boltz affinity prediction from prepared mutant CIF |
+| `sherlock/boltz/run_boltz_control_panel.sh` | Run the default control panel (`K103N Y181C V106A Y318F`) with N replicates |
+| `sherlock/boltz/summarize_boltz_panel.py` | Aggregate replicate affinity JSONs into per-mutation mean/SD/95% CI |
 | `src/analysis/cli/validate_manuscript_citations.py` | Check that manuscript figure files exist |
 
 ---

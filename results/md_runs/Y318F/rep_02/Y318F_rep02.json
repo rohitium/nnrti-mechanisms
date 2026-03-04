@@ -1,5 +1,5 @@
 {
-  "task_id": 7,
+  "task_id": 4,
   "structure": "Y318F",
   "mutation": "Y318F",
   "safe_label": "Y318F",
@@ -16,10 +16,10 @@
   "final_pdb": "results/md_runs/Y318F/rep_02/Y318F_rep02_md_final.pdb",
   "checkpoint_path": "results/md_runs/Y318F/rep_02/Y318F_rep02_md.chk",
   "md_heating_steps": 0,
-  "md_production_steps": 5000000,
-  "md_production_steps_completed": 5000000,
-  "md_total_steps": 5000000,
+  "md_production_steps": 50000000,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50000000,
   "resumed_from_checkpoint": true,
-  "elapsed_seconds": 19645.134576177923,
+  "elapsed_seconds": 131198.08570964402,
   "status": "ok"
 }

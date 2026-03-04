@@ -1,5 +1,5 @@
 {
-  "task_id": 34,
+  "task_id": 1,
   "structure": "wt",
   "mutation": "wt",
   "safe_label": "wt",
@@ -16,10 +16,10 @@
   "final_pdb": "results/md_runs/wt/rep_02/wt_rep02_md_final.pdb",
   "checkpoint_path": "results/md_runs/wt/rep_02/wt_rep02_md.chk",
   "md_heating_steps": 0,
-  "md_production_steps": 5000000,
-  "md_production_steps_completed": 5000000,
-  "md_total_steps": 5000000,
+  "md_production_steps": 50000000,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50000000,
   "resumed_from_checkpoint": true,
-  "elapsed_seconds": 11461.818980439799,
+  "elapsed_seconds": 63197.19105984899,
   "status": "ok"
 }

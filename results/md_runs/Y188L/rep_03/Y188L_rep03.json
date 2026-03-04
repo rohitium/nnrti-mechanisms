@@ -1,5 +1,5 @@
 {
-  "task_id": 38,
+  "task_id": 5,
   "structure": "Y188L",
   "mutation": "Y188L",
   "safe_label": "Y188L",
@@ -16,10 +16,10 @@
   "final_pdb": "results/md_runs/Y188L/rep_03/Y188L_rep03_md_final.pdb",
   "checkpoint_path": "results/md_runs/Y188L/rep_03/Y188L_rep03_md.chk",
   "md_heating_steps": 0,
-  "md_production_steps": 5000000,
-  "md_production_steps_completed": 5000000,
-  "md_total_steps": 5000000,
+  "md_production_steps": 50000000,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50000000,
   "resumed_from_checkpoint": true,
-  "elapsed_seconds": 9789.47929054196,
+  "elapsed_seconds": 119109.27226526395,
   "status": "ok"
 }

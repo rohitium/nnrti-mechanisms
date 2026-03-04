@@ -28,15 +28,16 @@ PARALLEL_JOBS="${PARALLEL_JOBS:-6}"
 MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-100.0}"
 REMOTE_BASE="/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms"
 REMOTE_HOST="${SHERLOCK_USER}@login.sherlock.stanford.edu"
-LOCAL_APO_RUNS="results/apo_md_runs/"
-LOCAL_MANIFEST="results/apo_md_manifest.csv"
-REMOTE_APO_RUNS="${REMOTE_HOST}:${REMOTE_BASE}/results/apo_md_runs/"
-REMOTE_MANIFEST="${REMOTE_HOST}:${REMOTE_BASE}/results/apo_md_manifest.csv"
+LOCAL_APO_RUNS="results/md_runs/apo/"
+LOCAL_MANIFEST="manifests/apo_md_manifest.csv"
+REMOTE_APO_RUNS="${REMOTE_HOST}:${REMOTE_BASE}/results/md_runs/apo/"
+REMOTE_MANIFEST="${REMOTE_HOST}:${REMOTE_BASE}/manifests/apo_md_manifest.csv"
 
 # SSH ControlMaster socket — one Duo auth shared across all parallel rsync workers.
 SSH_CTL="${TMPDIR:-/tmp}/nnrti_sherlock_ctl_${SHERLOCK_USER}.sock"
 
 mkdir -p "${LOCAL_APO_RUNS}"
+mkdir -p "$(dirname "${LOCAL_MANIFEST}")"
 
 # Open a persistent master connection if one isn't already running.
 if ! ssh -S "${SSH_CTL}" -O check "${REMOTE_HOST}" 2>/dev/null; then
@@ -120,7 +121,7 @@ import glob, json, os, re, sys
 target_steps = int(sys.argv[1])
 json_pat = re.compile(r'.*_apo_rep[0-9]{2}\.json$')
 paths = set()
-for jp in glob.glob('results/apo_md_runs/*/rep_*/*.json'):
+for jp in glob.glob('results/md_runs/apo/*/rep_*/*.json'):
     if not json_pat.match(jp): continue
     try:
         with open(jp) as fh: payload = json.load(fh)
@@ -131,15 +132,15 @@ for jp in glob.glob('results/apo_md_runs/*/rep_*/*.json'):
     rep_dir = os.path.dirname(jp)
     for root, _dirs, files in os.walk(rep_dir):
         for fn in files: paths.add(os.path.join(root, fn))
-if os.path.exists('results/apo_md_manifest.csv'):
-    paths.add('results/apo_md_manifest.csv')
+if os.path.exists('manifests/apo_md_manifest.csv'):
+    paths.add('manifests/apo_md_manifest.csv')
 for p in sorted(paths): print(p)
 PY" > "${out_file}"
 }
 
 if [[ "${DIRECTION}" = "push" ]]; then
   sync_parallel_subdirs "${LOCAL_APO_RUNS}" \
-    "${REMOTE_HOST}:${REMOTE_BASE}/results/apo_md_runs" "push apo_md_runs"
+    "${REMOTE_HOST}:${REMOTE_BASE}/results/md_runs/apo" "push apo_md_runs"
 
   if [[ -f "${LOCAL_MANIFEST}" ]]; then
     sync_with_retries "${LOCAL_MANIFEST}" "${REMOTE_MANIFEST}" "push apo_md_manifest.csv"

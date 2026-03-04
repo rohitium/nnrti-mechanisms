@@ -2,11 +2,11 @@
 """Compute T290-I63 C-alpha distance across apo+holo trajectories.
 
 Outputs:
-  - results/reference_t290_i63_distance.csv
-  - results/t290_i63_distance_dynamics.csv
-  - results/t290_i63_distance_summary.csv
-  - results/apo_t290_i63_distance.csv
-  - results/plots/apo_t290_i63_distance_{timeseries,distribution,vs_fold}.png
+  - results/tables/holo/reference_t290_i63_distance.csv
+  - results/tables/holo/t290_i63_distance_dynamics.csv
+  - results/tables/holo/t290_i63_distance_summary.csv
+  - results/tables/apo/apo_t290_i63_distance.csv
+  - results/plots/png/apo/apo_t290_i63_distance_{timeseries,distribution,vs_fold}.png
 
 """
 
@@ -25,16 +25,18 @@ from Bio.PDB import MMCIFParser
 
 REPO = Path(__file__).resolve().parents[3]
 RESULTS = REPO / "results"
-PLOTS = RESULTS / "plots"
+TABLES_HOLO = RESULTS / "tables" / "holo"
+TABLES_APO = RESULTS / "tables" / "apo"
+PLOTS = RESULTS / "plots" / "png" / "apo"
 
-HOLO_MANIFEST = RESULTS / "md_manifest.csv"
-APO_MANIFEST = RESULTS / "apo_md_manifest.csv"
+HOLO_MANIFEST = REPO / "manifests" / "md_manifest.csv"
+APO_MANIFEST = REPO / "manifests" / "apo_md_manifest.csv"
 SUSCEPTIBILITY_XLSX = REPO / "data" / "DRM-susceptibilities.csv.xlsx"
 
-OUT_REF = RESULTS / "reference_t290_i63_distance.csv"
-OUT_DYNAMICS = RESULTS / "t290_i63_distance_dynamics.csv"
-OUT_SUMMARY = RESULTS / "t290_i63_distance_summary.csv"
-OUT_APO = RESULTS / "apo_t290_i63_distance.csv"
+OUT_REF = TABLES_HOLO / "reference_t290_i63_distance.csv"
+OUT_DYNAMICS = TABLES_HOLO / "t290_i63_distance_dynamics.csv"
+OUT_SUMMARY = TABLES_HOLO / "t290_i63_distance_summary.csv"
+OUT_APO = TABLES_APO / "apo_t290_i63_distance.csv"
 
 RESID_OFFSET = -3
 I63_CANON = 63
@@ -364,6 +366,10 @@ def _plot_apo(
     plt.close(fig)
 
 def main() -> None:
+    TABLES_HOLO.mkdir(parents=True, exist_ok=True)
+    TABLES_APO.mkdir(parents=True, exist_ok=True)
+    PLOTS.mkdir(parents=True, exist_ok=True)
+
     ref_1dlo = _reference_distance(REPO / "data/structures/1DLO.cif", I63_CANON, T290_CANON, ATOM_NAME)
     ref_4ncg = _reference_distance(REPO / "data/structures/4NCG.cif", I63_CANON, T290_CANON, ATOM_NAME)
     ref_df = pd.DataFrame(
