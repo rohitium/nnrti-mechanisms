@@ -86,6 +86,11 @@ if [ -n "${MUTATION_SUBMIT_ORDER}" ]; then
 fi
 echo ""
 
+python3 scripts/sherlock/reconcile_md_metadata.py \
+    --root . \
+    --target-ns "${MD_PRODUCTION_NS}" \
+    --write >/dev/null
+
 # Build submission list
 SYSTEMS_TO_RUN=()
 SKIPPED_DONE=0

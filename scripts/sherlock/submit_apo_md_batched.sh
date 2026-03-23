@@ -83,6 +83,12 @@ if [ -n "${MUTATION_ALLOWLIST}" ]; then
 fi
 echo ""
 
+python3 scripts/sherlock/reconcile_md_metadata.py \
+    --root . \
+    --include-apo \
+    --target-ns "${MD_PRODUCTION_NS}" \
+    --write >/dev/null
+
 SYSTEMS_TO_RUN=()
 SKIPPED_DONE=0
 SKIPPED_AT_TARGET=0

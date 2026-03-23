@@ -118,16 +118,27 @@ build_complete_files_list() {
   ssh -S "${SSH_CTL}" "${REMOTE_HOST}" \
     "cd '${REMOTE_BASE}' && python3 - '${TARGET_STEPS}' <<'PY'
 import glob, json, os, re, sys
+from pathlib import Path
+
+from src.md.artifact_steps import infer_state_csv_path, reconcile_json_with_state_csv
 target_steps = int(sys.argv[1])
 json_pat = re.compile(r'.*_apo_rep[0-9]{2}\.json$')
 paths = set()
 for jp in glob.glob('results/md_runs/apo/*/rep_*/*.json'):
     if not json_pat.match(jp): continue
+    json_path = Path(jp)
     try:
         with open(jp) as fh: payload = json.load(fh)
     except Exception: continue
     status = str(payload.get('status', '')).lower()
-    steps = int(payload.get('md_production_steps_completed', payload.get('md_production_steps', 0)) or 0)
+    reconciled = reconcile_json_with_state_csv(
+        json_path=json_path,
+        state_csv_path=infer_state_csv_path(json_path),
+        write=True,
+        target_steps=target_steps,
+    )
+    status = reconciled.status
+    steps = reconciled.json_steps
     if status != 'ok' or steps < target_steps: continue
     rep_dir = os.path.dirname(jp)
     for root, _dirs, files in os.walk(rep_dir):

@@ -167,6 +167,10 @@ import os
 import re
 import sys
 
+from pathlib import Path
+
+from src.md.artifact_steps import infer_state_csv_path, reconcile_json_with_state_csv
+
 target_steps = int(sys.argv[1])
 json_pat = re.compile(r'.*_rep[0-9]{2}\.json$')
 paths = set()
@@ -174,17 +178,19 @@ paths = set()
 for jp in glob.glob('results/md_runs/*/rep_*/*.json'):
     if not json_pat.match(jp):
         continue
+    json_path = Path(jp)
     try:
-        with open(jp) as fh:
-            payload = json.load(fh)
+        status = str(json.loads(json_path.read_text()).get('status', '')).lower()
     except Exception:
         continue
-    status = str(payload.get('status', '')).lower()
-    steps_raw = payload.get('md_production_steps_completed', payload.get('md_production_steps', 0))
-    try:
-        steps = int(steps_raw or 0)
-    except Exception:
-        steps = 0
+    reconciled = reconcile_json_with_state_csv(
+        json_path=json_path,
+        state_csv_path=infer_state_csv_path(json_path),
+        write=True,
+        target_steps=target_steps,
+    )
+    status = reconciled.status
+    steps = reconciled.json_steps
     if status != 'ok' or steps < target_steps:
         continue
 

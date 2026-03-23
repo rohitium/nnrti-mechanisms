@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-"""Summarize MD extension progress and identify tasks to resume.
-
-Safe on older Python 3 runtimes typically found on cluster login nodes.
-"""
+"""Summarize MD extension progress and identify tasks to resume."""
+from __future__ import annotations
 
 import argparse
 import glob
@@ -10,7 +8,14 @@ import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.md.artifact_steps import infer_state_csv_path, reconcile_json_with_state_csv
 
 
 class TaskState(object):
@@ -22,6 +27,9 @@ class TaskState(object):
         json_path,
         status,
         steps,
+        json_steps,
+        state_csv_steps,
+        steps_consistent,
         running,
         latest_log,
         latest_log_jobid,
@@ -33,6 +41,9 @@ class TaskState(object):
         self.json_path = json_path
         self.status = status
         self.steps = steps
+        self.json_steps = json_steps
+        self.state_csv_steps = state_csv_steps
+        self.steps_consistent = steps_consistent
         self.running = running
         self.latest_log = latest_log
         self.latest_log_jobid = latest_log_jobid
@@ -41,14 +52,6 @@ class TaskState(object):
 
 def _target_steps(ns):
     return max(1, int(round((float(ns) * 1_000_000.0) / 2.0)))
-
-
-def _safe_steps(payload):
-    value = payload.get("md_production_steps_completed", payload.get("md_production_steps", 0))
-    try:
-        return int(value or 0)
-    except Exception:
-        return 0
 
 
 def _active_md_job_names(user):
@@ -96,7 +99,7 @@ def _has_segfault(path):
     return "Segmentation fault" in text
 
 
-def collect_states(root, user):
+def collect_states(root, user, repair=False, target_steps=None):
     md_runs = root / "results" / "md_runs"
     logs_dir = root / "logs"
     active_names = _active_md_job_names(user)
@@ -113,15 +116,12 @@ def collect_states(root, user):
         rep = rep_token.replace("rep_", "", 1)
         json_path = rep_dir / "{}_rep{}.json".format(mutation, rep)
 
-        status = ""
-        steps = 0
-        if json_path.exists():
-            try:
-                payload = json.loads(json_path.read_text())
-            except Exception:
-                payload = {}
-            status = str(payload.get("status", "")).lower()
-            steps = _safe_steps(payload)
+        reconciled = reconcile_json_with_state_csv(
+            json_path=json_path,
+            state_csv_path=infer_state_csv_path(json_path),
+            write=bool(repair),
+            target_steps=target_steps,
+        )
 
         running = "md_{}_{}".format(mutation, rep) in active_names
         latest = latest_logs.get((mutation, rep))
@@ -135,8 +135,11 @@ def collect_states(root, user):
                 rep=rep,
                 rep_dir=rep_dir,
                 json_path=json_path,
-                status=status,
-                steps=steps,
+                status=reconciled.status,
+                steps=reconciled.json_steps,
+                json_steps=reconciled.json_steps,
+                state_csv_steps=reconciled.state_csv_steps,
+                steps_consistent=reconciled.consistent,
                 running=running,
                 latest_log=latest_log,
                 latest_log_jobid=latest_jobid,
@@ -165,18 +168,24 @@ def main():
         action="store_true",
         help="Write complete/incomplete key lists under results/.status",
     )
+    parser.add_argument(
+        "--repair",
+        action="store_true",
+        help="Rewrite stale JSON step metadata from md_state.csv before reporting",
+    )
     args = parser.parse_args()
 
     root = args.root.resolve()
     user = os.environ.get("USER", "")
     target_steps = _target_steps(args.target_ns)
-    states = collect_states(root, user)
+    states = collect_states(root, user, repair=args.repair, target_steps=target_steps)
 
     total = len(states)
     complete = sum(1 for s in states if s.status == "ok" and s.steps >= target_steps)
     ok_below = sum(1 for s in states if s.status == "ok" and s.steps < target_steps)
     missing_json = sum(1 for s in states if not s.json_path.exists())
     non_ok_json = sum(1 for s in states if s.json_path.exists() and s.status not in {"", "ok"})
+    mismatched = sum(1 for s in states if not s.steps_consistent)
     running = sum(1 for s in states if s.running)
     incomplete_not_running = sum(
         1 for s in states if (s.status != "ok" or s.steps < target_steps) and not s.running
@@ -198,6 +207,7 @@ def main():
     print("OK but below target:      {}".format(ok_below))
     print("Missing JSON:             {}".format(missing_json))
     print("Non-ok JSON:              {}".format(non_ok_json))
+    print("JSON/state mismatches:    {}".format(mismatched))
     print("Currently running (PD/R): {}".format(running))
     print("Incomplete not running:   {}".format(incomplete_not_running))
     print("Segfault in latest log:   {}".format(segfault_latest))
@@ -228,11 +238,14 @@ def main():
             seg = "yes" if s.segfault_in_latest_log else "no"
             run = "yes" if s.running else "no"
             print(
-                "- {} rep_{}: status={} steps={} running={} segfault_latest={} log={}".format(
+                "- {} rep_{}: status={} steps={} consistent={} json_steps={} state_csv_steps={} running={} segfault_latest={} log={}".format(
                     s.mutation,
                     s.rep,
                     s.status or "missing",
                     s.steps,
+                    "yes" if s.steps_consistent else "no",
+                    s.json_steps,
+                    s.state_csv_steps,
                     run,
                     seg,
                     log_hint,
