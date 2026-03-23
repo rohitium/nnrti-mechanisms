@@ -228,3 +228,8 @@ results/tables/holo/dor_key_contacts_timeseries_all_mutations.csv
 results/tables/holo/dor_key_contacts_timeseries_by_mutation/*.csv
 *.npy
 *.bak
+
+# Operational status scratch files; keep the committed Sherlock reconciliation audit only.
+results/.status/complete_at_target.txt
+results/.status/incomplete_not_running.txt
+results/.status/reconcile_md_metadata_local*.csv
