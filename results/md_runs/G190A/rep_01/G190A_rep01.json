@@ -17,8 +17,8 @@
   "checkpoint_path": "results/md_runs/G190A/rep_01/G190A_rep01_md.chk",
   "md_heating_steps": 0,
   "md_production_steps": 50000000,
-  "md_production_steps_completed": 50000000,
-  "md_total_steps": 50000000,
+  "md_production_steps_completed": 25218000,
+  "md_total_steps": 25218000,
   "resumed_from_checkpoint": true,
   "elapsed_seconds": 137069.3203220209,
   "status": "ok"

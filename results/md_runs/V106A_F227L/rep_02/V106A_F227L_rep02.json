@@ -16,9 +16,9 @@
   "final_pdb": "results/md_runs/V106A_F227L/rep_02/V106A_F227L_rep02_md_final.pdb",
   "checkpoint_path": "results/md_runs/V106A_F227L/rep_02/V106A_F227L_rep02_md.chk",
   "md_heating_steps": 0,
-  "md_production_steps": 5000000,
-  "md_production_steps_completed": 5000000,
-  "md_total_steps": 5000000,
+  "md_production_steps": 50000000,
+  "md_production_steps_completed": 35752000,
+  "md_total_steps": 35752000,
   "resumed_from_checkpoint": true,
   "elapsed_seconds": 12466.277384900954,
   "status": "ok"

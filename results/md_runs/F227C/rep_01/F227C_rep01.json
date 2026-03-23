@@ -17,8 +17,8 @@
   "checkpoint_path": "results/md_runs/F227C/rep_01/F227C_rep01_md.chk",
   "md_heating_steps": 0,
   "md_production_steps": 50000000,
-  "md_production_steps_completed": 50000000,
-  "md_total_steps": 50000000,
+  "md_production_steps_completed": 26286000,
+  "md_total_steps": 26286000,
   "resumed_from_checkpoint": true,
   "elapsed_seconds": 139691.703537866,
   "status": "ok"

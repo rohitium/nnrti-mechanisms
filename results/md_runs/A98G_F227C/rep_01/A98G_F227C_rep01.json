@@ -17,8 +17,8 @@
   "checkpoint_path": "results/md_runs/A98G_F227C/rep_01/A98G_F227C_rep01_md.chk",
   "md_heating_steps": 0,
   "md_production_steps": 50000000,
-  "md_production_steps_completed": 50000000,
-  "md_total_steps": 50000000,
+  "md_production_steps_completed": 26044000,
+  "md_total_steps": 26044000,
   "resumed_from_checkpoint": true,
   "elapsed_seconds": 132078.0364196482,
   "status": "ok"
