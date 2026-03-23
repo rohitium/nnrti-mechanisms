@@ -18,6 +18,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ..pbc import apply_mdtraj_pbc_correction
+
 
 @dataclass
 class ReplicateMeta:
@@ -151,27 +153,6 @@ def _atom_signature(topology) -> tuple[tuple[int, int, str, str, str], ...]:
     return tuple(sig)
 
 
-def _make_molecules_whole_nojump(traj) -> None:
-    traj.make_molecules_whole(inplace=True)
-    if getattr(traj, "unitcell_lengths", None) is None:
-        return
-    mol_indices = [
-        np.asarray([atom.index for atom in mol], dtype=int)
-        for mol in traj.topology.find_molecules()
-    ]
-    for frame_i in range(1, traj.n_frames):
-        box = traj.unitcell_lengths[frame_i]
-        if box is None or not np.all(np.isfinite(box)) or not np.all(box > 0):
-            continue
-        for mol_idx in mol_indices:
-            if mol_idx.size == 0:
-                continue
-            prev_com = traj.xyz[frame_i - 1, mol_idx].mean(axis=0)
-            curr_com = traj.xyz[frame_i, mol_idx].mean(axis=0)
-            shift = -box * np.round((curr_com - prev_com) / box)
-            traj.xyz[frame_i, mol_idx] += shift
-
-
 def _window_trajectory(traj, total_ns: float, window_ns: float):
     n_frames = int(traj.n_frames)
     t_ns = np.linspace(0.0, float(total_ns), n_frames)
@@ -272,7 +253,7 @@ def main() -> int:
             total_ns=usable_ns,
             window_ns=float(args.window_ns),
         )
-        _make_molecules_whole_nojump(traj)
+        apply_mdtraj_pbc_correction(traj, anchor_selection="protein", ligand_resname="2KW")
         prepped.append(
             {
                 "meta": m,

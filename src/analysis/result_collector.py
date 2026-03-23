@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from .pbc import apply_mdtraj_pbc_correction, load_mdtraj_trajectory
 from ..md.manifest import load_manifest
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -268,33 +269,14 @@ def _ca_rmsd_worker(job: dict, frame_stride: int, max_frames: int) -> tuple[list
     _silence_mdanalysis_noise()
     try:
         import mdtraj as md
-        import mdtraj.formats
     except Exception as exc:
         return [], str(exc)
 
     try:
         ref = md.load(job["topology"])
 
-        # MDTraj infers format from the file extension; .bak files are DCDs
-        # and must be loaded explicitly via DCDTrajectoryFile.
-        traj_path = job["trajectory"]
-        if traj_path.endswith(".bak"):
-            with mdtraj.formats.DCDTrajectoryFile(traj_path, "r") as f:
-                xyz, lengths, angles = f.read()
-            traj = md.Trajectory(
-                xyz / 10.0,                    # Å → nm
-                ref.topology,
-                unitcell_lengths=lengths / 10.0,  # Å → nm
-                unitcell_angles=angles,
-            )
-        else:
-            traj = md.load(traj_path, top=job["topology"])
-
-        # Reconstruct whole molecules (bond-graph traversal, no image_molecules).
-        # image_molecules without anchor_molecules can place protein and ligand
-        # in independent periodic images, causing spurious 50-60 Å separations
-        # that look like ligand unbinding but are purely a PBC artifact.
-        traj.make_molecules_whole(inplace=True)
+        traj = load_mdtraj_trajectory(Path(job["trajectory"]), Path(job["topology"]))
+        apply_mdtraj_pbc_correction(traj, anchor_selection="protein", ligand_resname="2KW")
 
         n_total_frames = len(traj)
         production_ps  = float(job.get("production_ps") or 100_000.0)
@@ -344,33 +326,18 @@ def _com_distance_worker(
     _silence_mdanalysis_noise()
     try:
         import mdtraj as md
-        import mdtraj.formats
     except Exception as exc:
         return [], str(exc)
 
     try:
         ref = md.load(job["topology"])
 
-        traj_path = job["trajectory"]
-        if traj_path.endswith(".bak"):
-            with mdtraj.formats.DCDTrajectoryFile(traj_path, "r") as f:
-                xyz, lengths, angles = f.read()
-            traj = md.Trajectory(
-                xyz / 10.0,
-                ref.topology,
-                unitcell_lengths=lengths / 10.0,
-                unitcell_angles=angles,
-            )
-        else:
-            traj = md.load(traj_path, top=job["topology"])
-
-        # Make each molecule whole via bond-graph traversal, then explicitly
-        # wrap the ligand COM to the nearest image of the protein COM.
-        # image_molecules() without anchor_molecules places molecules
-        # independently, so protein and ligand can end up ~55 Å apart (both
-        # inside the ~12 nm box) while the min-image threshold (~60 Å) fails
-        # to correct it — causing false "drift" in the convergence plot.
-        traj.make_molecules_whole(inplace=True)
+        traj = load_mdtraj_trajectory(Path(job["trajectory"]), Path(job["topology"]))
+        apply_mdtraj_pbc_correction(
+            traj,
+            anchor_selection="protein",
+            ligand_resname=ligand_resname,
+        )
 
         # Quote the residue name so MDTraj handles names starting with a digit
         # (e.g. '2KW') correctly.
@@ -442,7 +409,6 @@ def _pocket_volume_worker(
     _silence_mdanalysis_noise()
     try:
         import mdtraj as md
-        import mdtraj.formats
         import MDAnalysis as mda
         from .metrics import pocket_volume_proxy_from_universe
     except Exception as exc:
@@ -451,22 +417,8 @@ def _pocket_volume_worker(
     try:
         ref = md.load(job["topology"])
 
-        traj_path = job["trajectory"]
-        if traj_path.endswith(".bak"):
-            with mdtraj.formats.DCDTrajectoryFile(traj_path, "r") as f:
-                xyz, lengths, angles = f.read()
-            traj = md.Trajectory(
-                xyz / 10.0,
-                ref.topology,
-                unitcell_lengths=lengths / 10.0,
-                unitcell_angles=angles,
-            )
-        else:
-            traj = md.load(traj_path, top=job["topology"])
-
-        # Reconstruct whole molecules; avoid image_molecules which can scatter
-        # protein and ligand to independent images (PBC artifact).
-        traj.make_molecules_whole(inplace=True)
+        traj = load_mdtraj_trajectory(Path(job["trajectory"]), Path(job["topology"]))
+        apply_mdtraj_pbc_correction(traj, anchor_selection="protein", ligand_resname="2KW")
 
         n_total_frames = len(traj)
         production_ps  = float(job.get("production_ps") or 100_000.0)

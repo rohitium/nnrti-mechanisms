@@ -45,6 +45,8 @@ Post-MD analysis and plotting.
 | `compute_nnbp_tunnel_dynamics.py` | NNBP gate distances over time (K101↔Y188, V106↔Y181, etc.) |
 | `compute_dccm.py` | Dynamic cross-correlation matrix; NNBP↔domain allosteric coupling |
 | `fix_pbc_trajectories.py` | Batch PBC correction for `*_analysis.dcd` files |
+| `audit_pbc_trajectories.py` | Thresholded QC audit for residual PBC artifacts after correction |
+| `align_trajectories_to_4ncg.py` | Batch-align corrected trajectories to `4NCG.cif` using protein C-alpha atoms |
 
 #### Plotting
 

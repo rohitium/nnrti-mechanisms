@@ -33,6 +33,9 @@ echo "=== Step 1: PBC correction (apo trajectories) ==="
 $PYTHON -m src.analysis.cli.fix_pbc_trajectories \
     --root results/md_runs/apo \
     --in-place
+$PYTHON -m src.analysis.cli.audit_pbc_trajectories \
+    --root results/md_runs/apo \
+    --output-csv "${APO_TABLES_DIR}/apo_pbc_audit.csv"
 
 # ── Step 2: Tunnel dynamics (apo) ────────────────────────────────────────────
 echo ""

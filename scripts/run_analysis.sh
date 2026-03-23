@@ -21,6 +21,9 @@ KEY_CONTACTS_BY_MUT_DIR="${HOLO_TABLES_DIR}/dor_key_contacts_timeseries_by_mutat
 mkdir -p "${HOLO_TABLES_DIR}" "${APO_TABLES_DIR}" "${PLOTS_PNG_DIR}" "${KEY_CONTACTS_BY_MUT_DIR}"
 
 run "$PYTHON" -m src.analysis.cli.fix_pbc_trajectories --root results/md_runs --in-place
+run "$PYTHON" -m src.analysis.cli.audit_pbc_trajectories \
+  --root results/md_runs \
+  --output-csv results/tables/pbc_audit.csv
 run "$PYTHON" -m src.analysis.cli.analyze_incremental --step collect --force
 run "$PYTHON" -m src.analysis.cli.analyze_incremental --step metrics --force
 run "$PYTHON" -m src.analysis.cli.compute_mmgbsa_safe --snapshots 100 --sample-window-ns 1.0 --timestep-fs 2.0 --workers 2

@@ -5,32 +5,7 @@ import argparse
 import tempfile
 from pathlib import Path
 
-import numpy as np
-
-
-def _topology_for_dcd(dcd_path: Path) -> Path:
-    name = dcd_path.name
-    if not name.endswith("_analysis.dcd"):
-        raise ValueError(f"Unexpected DCD name (expected *_analysis.dcd): {dcd_path}")
-    topo_name = name.replace("_analysis.dcd", "_analysis_topology.pdb")
-    return dcd_path.with_name(topo_name)
-
-
-def _load_mdtraj_trajectory(dcd_path: Path, topo_path: Path):
-    import mdtraj as md
-    import mdtraj.formats
-
-    if str(dcd_path).endswith(".bak"):
-        ref = md.load(str(topo_path))
-        with mdtraj.formats.DCDTrajectoryFile(str(dcd_path), "r") as handle:
-            xyz, lengths, angles = handle.read()
-        return md.Trajectory(
-            xyz / 10.0,  # A -> nm
-            ref.topology,
-            unitcell_lengths=(lengths / 10.0) if lengths is not None else None,
-            unitcell_angles=angles,
-        )
-    return md.load(str(dcd_path), top=str(topo_path))
+from ..pbc import apply_mdtraj_pbc_correction, load_mdtraj_trajectory, topology_for_analysis_dcd
 
 
 def _correct_one_mdtraj(
@@ -38,34 +13,10 @@ def _correct_one_mdtraj(
     topo_path: Path,
     out_path: Path,
 ) -> tuple[int, int]:
-    traj = _load_mdtraj_trajectory(dcd_path=dcd_path, topo_path=topo_path)
+    traj = load_mdtraj_trajectory(dcd_path=dcd_path, topo_path=topo_path)
     if traj.n_atoms < 1:
         raise ValueError(f"No atoms in topology for {dcd_path}")
-
-    # 1) Rebuild each molecule from its bond graph.
-    traj.make_molecules_whole(inplace=True)
-
-    # 2) Apply molecule-wise no-jump unwrapping across frames. This removes
-    # frame-to-frame image hops that still remain after "whole molecule"
-    # reconstruction (observed as abrupt RMSD/COM spikes).
-    mol_indices = [
-        np.asarray([atom.index for atom in mol], dtype=int)
-        for mol in traj.topology.find_molecules()
-    ]
-    for frame_i in range(1, traj.n_frames):
-        if traj.unitcell_lengths is None:
-            break
-        box = traj.unitcell_lengths[frame_i]
-        if box is None or not np.all(np.isfinite(box)) or not np.all(box > 0):
-            continue
-        for mol_idx in mol_indices:
-            if mol_idx.size == 0:
-                continue
-            prev_com = traj.xyz[frame_i - 1, mol_idx].mean(axis=0)
-            curr_com = traj.xyz[frame_i, mol_idx].mean(axis=0)
-            shift = -box * np.round((curr_com - prev_com) / box)
-            traj.xyz[frame_i, mol_idx] += shift
-
+    apply_mdtraj_pbc_correction(traj, anchor_selection="protein", ligand_resname="2KW")
     traj.save_dcd(str(out_path))
     return int(traj.n_frames), int(traj.n_atoms)
 
@@ -127,7 +78,7 @@ def _correct_one(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Apply PBC correction (NoJump + center_in_box) to analysis trajectories."
+        description="Apply MDTraj-based PBC correction to analysis trajectories."
     )
     parser.add_argument(
         "--root",
@@ -162,7 +113,7 @@ def main() -> int:
         "--backend",
         choices=["mdtraj", "mdanalysis"],
         default="mdtraj",
-        help="PBC correction backend (default: mdtraj).",
+        help="PBC correction backend (default: mdtraj; recommended).",
     )
     args = parser.parse_args()
 
@@ -175,7 +126,7 @@ def main() -> int:
     ok = 0
     failed = 0
     for dcd_path in dcd_paths:
-        topo_path = _topology_for_dcd(dcd_path)
+        topo_path = topology_for_analysis_dcd(dcd_path)
         if not topo_path.exists():
             print(f"[skip] missing topology: {topo_path}")
             failed += 1
