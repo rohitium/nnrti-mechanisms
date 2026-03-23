@@ -217,7 +217,7 @@ def compute_ensemble_metrics(
     ligand_resname: str,
     frame_stride: int = 1,
     max_frames: int | None = 200,
-    sample_window_ns: float | None = 1.0,
+    sample_window_ns: float | None = None,
     total_time_ns: float | None = None,
     contact_cutoff_angstrom: float = 4.0,
     grid_spacing: float = 0.75,

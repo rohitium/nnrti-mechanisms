@@ -1,24 +1,18 @@
-# Analysis Containers
+# Analysis Outputs
 
-This directory holds analysis outputs grouped by analysis type.
+Active analysis folders:
 
-## Primary result (current)
+- `triplet_contact_story_100ns/`
+  final triplet-contact figures and supporting trace tables
+- `ligand_pocket_features/`
+  aligned frame-level structural features used as reusable inputs
+- `logistic_regression/`
+  consolidated low-vs-high resistance classifier, interpretability outputs, and feature triplets
+- `binding_energy/`
+  final MM/GBSA component summaries and fold-change comparison plots
 
-`triplet_contact_story_100ns/`
-
-- `plots/`: final triplet contact-story figures (mean trace across replicates + pooled occupancy heatmap)
-- `tables/`: summary, occupancy, timing, and mean-trace CSVs used by the plots
-- `config/`: run configuration (triplet definitions)
-
-Start here:
-
-- `triplet_contact_story_100ns/plots/`
-- `triplet_contact_story_100ns/tables/selection_summary.csv`
-
-## Convention
-
-For future analyses, create one sibling folder per analysis type:
+Each analysis folder follows the same container layout:
 
 `results/analysis/<analysis_name>/{plots,tables,config}/`
 
-This keeps exploratory outputs separate from primary deliverables.
+Exploratory folders that were superseded during this cleanup were removed.

@@ -1,0 +1,18 @@
+{
+  "replicate_csv": "results/mmgbsa_replicate_metrics.csv",
+  "ddg_csv": "results/ddg_full.csv",
+  "component_columns": [
+    "binding_dg",
+    "binding_dg_vdw",
+    "binding_dg_electrostatic",
+    "binding_dg_gb",
+    "binding_dg_sa"
+  ],
+  "ddg_columns": [
+    "ddg",
+    "ddg_vdw",
+    "ddg_electrostatic",
+    "ddg_gb",
+    "ddg_sa"
+  ]
+}

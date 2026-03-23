@@ -694,6 +694,7 @@ def compute_structural_metrics(
     ligand_resname: str,
     frame_stride: int = 5,
     max_frames: int = 200,
+    sample_window_ns: float | None = None,
 ) -> pd.DataFrame:
     from .metrics import compute_ensemble_metrics
 
@@ -750,6 +751,7 @@ def compute_structural_metrics(
                 ligand_resname=ligand_resname,
                 frame_stride=frame_stride,
                 max_frames=max_frames,
+                sample_window_ns=sample_window_ns,
                 total_time_ns=total_ns,
             )
             rows.append(
@@ -766,7 +768,11 @@ def compute_structural_metrics(
                     "pocket_volume_proxy_std": ens.pocket_volume_proxy_std,
                     "metric_n_frames": ens.n_frames,
                     "metric_source": "trajectory",
-                    "metric_sample_window_ns": 1.0,
+                    "metric_sample_window_ns": (
+                        float(sample_window_ns)
+                        if sample_window_ns is not None and float(sample_window_ns) > 0.0
+                        else np.nan
+                    ),
                     "metric_time_source": time_source,
                     "fold_reduction": row["fold_reduction"],
                 }
@@ -782,6 +788,7 @@ def compute_mmgbsa_metrics(
     ligand_resname: str,
     n_snapshots: int = 100,
     discard_fraction: float = 0.25,
+    sample_window_ns: float | None = None,
 ) -> pd.DataFrame:
     import gc
     from ..md.openmm.mmgbsa import compute_mmgbsa_from_trajectory
@@ -824,6 +831,7 @@ def compute_mmgbsa_metrics(
                 ligand_sdf=ligand_sdf,
                 n_snapshots=n_snapshots,
                 discard_fraction=discard_fraction,
+                sample_window_ns=sample_window_ns,
                 analysis_topology_pdb_path=analysis_topo,
             )
             rows.append(
@@ -849,6 +857,12 @@ def compute_mmgbsa_metrics(
                     "binding_dg_sa_std": mm.delta_g_sa_std,
                     "binding_dg_sa_sem": mm.delta_g_sa_sem,
                     "mmgbsa_snapshots": mm.n_snapshots,
+                    "mmgbsa_discard_fraction": float(discard_fraction),
+                    "mmgbsa_sample_window_ns": (
+                        float(sample_window_ns)
+                        if sample_window_ns is not None and float(sample_window_ns) > 0.0
+                        else np.nan
+                    ),
                 }
             )
         except Exception as exc:
@@ -958,8 +972,10 @@ def run_result_collection(
     compute_structural: bool = True,
     metric_frame_stride: int = 5,
     metric_max_frames: int = 200,
+    metric_sample_window_ns: float | None = None,
     mmgbsa_snapshots: int = 100,
     mmgbsa_discard_fraction: float = 0.25,
+    mmgbsa_sample_window_ns: float | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     if output_dir is None:
         output_dir = manifest_path.parent
@@ -1012,6 +1028,7 @@ def run_result_collection(
             ligand_resname=ligand_resname,
             n_snapshots=mmgbsa_snapshots,
             discard_fraction=mmgbsa_discard_fraction,
+            sample_window_ns=mmgbsa_sample_window_ns,
         )
         if mmgbsa_df.empty:
             raise ValueError("No MM/GBSA metrics could be computed")
@@ -1071,6 +1088,7 @@ def run_result_collection(
                 ligand_resname=ligand_resname,
                 frame_stride=metric_frame_stride,
                 max_frames=metric_max_frames,
+                sample_window_ns=metric_sample_window_ns,
             )
         if not struct_df.empty:
             # Defensive: a duplicated (mutation, replicate) row can silently propagate

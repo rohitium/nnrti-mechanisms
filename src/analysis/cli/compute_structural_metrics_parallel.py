@@ -61,9 +61,19 @@ def _infer_rep_dir(row: pd.Series) -> Path:
     return Path(".")
 
 
+def _normalize_sample_window_ns(value: float | None) -> float | None:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except Exception:
+        return None
+    return parsed if parsed > 0.0 else None
+
+
 def _compute_one_replicate(args_tuple):
     """Worker function for parallel processing."""
-    (row_dict, ligand_resname, frame_stride, max_frames) = args_tuple
+    (row_dict, ligand_resname, frame_stride, max_frames, sample_window_ns) = args_tuple
 
     # Import here to avoid issues with multiprocessing
     from src.analysis.metrics import compute_ensemble_metrics
@@ -97,6 +107,7 @@ def _compute_one_replicate(args_tuple):
             ligand_resname=ligand_resname,
             frame_stride=frame_stride,
             max_frames=max_frames,
+            sample_window_ns=sample_window_ns,
         )
         return {
             "structure": row["structure"],
@@ -111,6 +122,11 @@ def _compute_one_replicate(args_tuple):
             "pocket_volume_proxy_std": ens.pocket_volume_proxy_std,
             "metric_n_frames": ens.n_frames,
             "metric_source": "trajectory",
+            "metric_sample_window_ns": (
+                float(sample_window_ns)
+                if sample_window_ns is not None and float(sample_window_ns) > 0.0
+                else float("nan")
+            ),
             "fold_reduction": row["fold_reduction"],
             "error": None,
         }
@@ -131,10 +147,18 @@ def main() -> int:
     parser.add_argument("--output", type=Path, help="Output CSV path")
     parser.add_argument("--frame-stride", type=int, default=5)
     parser.add_argument("--max-frames", type=int, default=200)
+    parser.add_argument(
+        "--sample-window-ns",
+        type=float,
+        default=0.0,
+        help="If > 0, sample only the last N ns. Default 0 uses all sampled frames.",
+    )
     parser.add_argument("--ligand-resname", type=str, default="2KW")
     parser.add_argument("--workers", type=int, default=None, help="Number of parallel workers (default: CPU count)")
     parser.add_argument("--force", action="store_true", help="Recompute even if checkpoint exists")
     args = parser.parse_args()
+
+    sample_window_ns = _normalize_sample_window_ns(args.sample_window_ns)
 
     ckpt_dir = args.results_dir / ".checkpoints"
     output_path = args.output or (ckpt_dir / ".checkpoint_structural_metrics.csv")
@@ -169,7 +193,15 @@ def main() -> int:
         mutation = str(row["mutation"])
         replicate = int(row["replicate"])
         if (mutation, replicate) not in existing_results:
-            to_process.append((row.to_dict(), args.ligand_resname, args.frame_stride, args.max_frames))
+            to_process.append(
+                (
+                    row.to_dict(),
+                    args.ligand_resname,
+                    args.frame_stride,
+                    args.max_frames,
+                    sample_window_ns,
+                )
+            )
 
     if not to_process:
         logging.info("All structural metrics already computed!")

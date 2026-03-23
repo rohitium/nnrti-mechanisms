@@ -164,7 +164,12 @@ def main() -> int:
     parser.add_argument("--md-runs-dir", type=Path, default=Path("results/md_runs"))
     parser.add_argument("--output", type=Path, default=Path("results/plots/pocket_volume_distribution_by_mutation.png"))
     parser.add_argument("--max-points", type=int, default=1200, help="Downsample scatter overlay per mutation.")
-    parser.add_argument("--last-window-ns", type=float, default=1.0, help="Restrict to the last N ns of each trajectory.")
+    parser.add_argument(
+        "--last-window-ns",
+        type=float,
+        default=0.0,
+        help="If > 0, restrict to the last N ns of each trajectory. Default 0 uses all sampled frames.",
+    )
     args = parser.parse_args()
 
     if not args.profiles.exists():

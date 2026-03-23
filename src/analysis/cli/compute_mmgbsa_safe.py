@@ -76,6 +76,16 @@ def _steps_per_ns(timestep_fs: float) -> int:
     return int(round((1000.0 * 1000.0) / float(timestep_fs)))
 
 
+def _normalize_sample_window_ns(value: float | None) -> float | None:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except Exception:
+        return None
+    return parsed if parsed > 0.0 else None
+
+
 def _infer_total_steps_from_state_csv(rep_dir: Path, safe_label: str, replicate: int) -> int | None:
     state_csv = rep_dir / f"{safe_label}_rep{replicate:02d}_md_state.csv"
     if not state_csv.exists():
@@ -111,7 +121,7 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
             ligand_sdf=Path(task["ligand_sdf"]),
             n_snapshots=int(task["snapshots"]),
             discard_fraction=float(task["discard_fraction"]),
-            sample_window_ns=float(task["sample_window_ns"]),
+            sample_window_ns=task["sample_window_ns"],
             analysis_topology_pdb_path=Path(task["analysis_topo"]),
         )
         row = {
@@ -136,6 +146,12 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
             "binding_dg_sa_std": mm.delta_g_sa_std,
             "binding_dg_sa_sem": mm.delta_g_sa_sem,
             "mmgbsa_snapshots": mm.n_snapshots,
+            "mmgbsa_discard_fraction": float(task["discard_fraction"]),
+            "mmgbsa_sample_window_ns": (
+                float(task["sample_window_ns"])
+                if task["sample_window_ns"] is not None and float(task["sample_window_ns"]) > 0.0
+                else float("nan")
+            ),
         }
         return True, row, ""
     except Exception as exc:
@@ -151,12 +167,19 @@ def main() -> int:
     parser.add_argument("--output", type=Path, help="Output CSV path")
     parser.add_argument("--snapshots", type=int, default=100)
     parser.add_argument("--discard-fraction", type=float, default=0.25)
-    parser.add_argument("--sample-window-ns", type=float, default=1.0)
+    parser.add_argument(
+        "--sample-window-ns",
+        type=float,
+        default=0.0,
+        help="If > 0, sample only the last N ns. Default 0 uses the full post-discard region.",
+    )
     parser.add_argument("--timestep-fs", type=float, default=2.0)
     parser.add_argument("--ligand-resname", type=str, default="2KW")
     parser.add_argument("--workers", type=int, default=1, help="Parallel workers for per-replicate MM/GBSA")
     parser.add_argument("--force", action="store_true", help="Recompute even if checkpoint exists")
     args = parser.parse_args()
+
+    sample_window_ns = _normalize_sample_window_ns(args.sample_window_ns)
 
     ckpt_dir = args.results_dir / ".checkpoints"
     output_path = args.output or (ckpt_dir / ".checkpoint_mmgbsa_replicate_metrics.csv")
@@ -239,15 +262,15 @@ def main() -> int:
         # Derive fallback discard fraction from trajectory span when possible.
         # This is used only if DCD timing metadata is invalid inside MM/GBSA code.
         discard_fraction = float(args.discard_fraction)
-        if args.sample_window_ns > 0:
+        if sample_window_ns is not None:
             total_steps = _infer_total_steps_from_state_csv(rep_dir, safe, rep)
             if total_steps and total_steps > 0:
-                window_steps = _steps_per_ns(args.timestep_fs) * float(args.sample_window_ns)
+                window_steps = _steps_per_ns(args.timestep_fs) * float(sample_window_ns)
                 keep_fraction = min(1.0, float(window_steps) / float(total_steps))
                 discard_fraction = max(0.0, min(0.95, 1.0 - keep_fraction))
                 logging.info(
                     f"  {mutation} rep{replicate}: fallback discard_fraction={discard_fraction:.4f} "
-                    f"(window_ns={args.sample_window_ns}, total_steps={total_steps})"
+                    f"(window_ns={sample_window_ns}, total_steps={total_steps})"
                 )
             else:
                 logging.warning(
@@ -269,7 +292,7 @@ def main() -> int:
                 "ligand_resname": args.ligand_resname,
                 "snapshots": int(args.snapshots),
                 "discard_fraction": discard_fraction,
-                "sample_window_ns": float(args.sample_window_ns),
+                "sample_window_ns": sample_window_ns,
             }
         )
 

@@ -79,8 +79,20 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="Force recomputation even if checkpoint exists")
     parser.add_argument("--mmgbsa-snapshots", type=int, default=100)
     parser.add_argument("--mmgbsa-discard-fraction", type=float, default=0.25)
+    parser.add_argument(
+        "--mmgbsa-sample-window-ns",
+        type=float,
+        default=0.0,
+        help="If > 0, sample only the last N ns for MM/GBSA. Default 0 uses the full post-discard region.",
+    )
     parser.add_argument("--metric-frame-stride", type=int, default=5)
     parser.add_argument("--metric-max-frames", type=int, default=200)
+    parser.add_argument(
+        "--metric-sample-window-ns",
+        type=float,
+        default=0.0,
+        help="If > 0, sample only the last N ns for structural metrics. Default 0 uses all sampled frames.",
+    )
     parser.add_argument(
         "--profile-workers",
         type=int,
@@ -135,6 +147,7 @@ def main() -> int:
                 ligand_resname="2KW",
                 n_snapshots=args.mmgbsa_snapshots,
                 discard_fraction=args.mmgbsa_discard_fraction,
+                sample_window_ns=(float(args.mmgbsa_sample_window_ns) if args.mmgbsa_sample_window_ns > 0 else None),
             )
             mmgbsa_df.to_csv(ckpt_mmgbsa, index=False)
             logging.info(f"  Saved checkpoint: {ckpt_mmgbsa}")
@@ -226,6 +239,7 @@ def main() -> int:
                     "--output", str(ckpt_structural),
                     "--frame-stride", str(args.metric_frame_stride),
                     "--max-frames", str(args.metric_max_frames),
+                    "--sample-window-ns", str(args.metric_sample_window_ns),
                 ] + force_flag,
                 capture_output=True,
                 text=True,

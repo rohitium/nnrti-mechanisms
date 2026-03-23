@@ -1,0 +1,5 @@
+mutation,target_value,observed_class,predicted_class,prob_low,prob_high,correct,fold,error_type
+G190E,18.0,high,low,0.9799462507995468,0.02005374920045322,False,5,false_negative
+K103N+M230L,36.0,high,low,0.5815031162960987,0.41849688370390126,False,4,false_negative
+A98G+F227C,93.0,high,low,0.6524399599508541,0.34756004004914587,False,5,false_negative
+V106I+F227C,105.0,high,low,0.5752226824817512,0.42477731751824876,False,1,false_negative

@@ -1,0 +1,2 @@
+input_dcd,topology_pdb,output_dcd,n_frames,n_atoms,n_alignment_atoms,rmsd_first_frame_before_angstrom,rmsd_first_frame_after_angstrom
+results/md_runs/F227C/rep_01/F227C_rep01_analysis.dcd,results/md_runs/F227C/rep_01/F227C_rep01_analysis_topology.pdb,results/md_runs/F227C/rep_01/F227C_rep01_analysis_aligned_4ncg_ca.dcd,200,15784,955,69.26019287109375,1.7312517166137695

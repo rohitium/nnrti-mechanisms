@@ -26,7 +26,7 @@ run "$PYTHON" -m src.analysis.cli.audit_pbc_trajectories \
   --output-csv results/tables/pbc_audit.csv
 run "$PYTHON" -m src.analysis.cli.analyze_incremental --step collect --force
 run "$PYTHON" -m src.analysis.cli.analyze_incremental --step metrics --force
-run "$PYTHON" -m src.analysis.cli.compute_mmgbsa_safe --snapshots 100 --sample-window-ns 1.0 --timestep-fs 2.0 --workers 2
+run "$PYTHON" -m src.analysis.cli.compute_mmgbsa_safe --snapshots 100 --timestep-fs 2.0 --workers 2
 run "$PYTHON" -m src.analysis.cli.analyze_incremental --step plots --force
 run "$PYTHON" -m src.analysis.cli.plot_all_mutation_drm_distances \
   --plots-dir "${PLOTS_PNG_DIR}/drm_distances" \

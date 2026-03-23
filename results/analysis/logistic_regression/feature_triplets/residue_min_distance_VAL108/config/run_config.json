@@ -1,0 +1,22 @@
+{
+  "frame_feature_csv": "results/analysis/ligand_pocket_features/tables/frame_features.csv",
+  "triplets_txt": "results/analysis/triplet_contact_story_100ns/config/triplets.txt",
+  "susceptibility_xlsx": "data/DRM-susceptibilities.csv.xlsx",
+  "feature_column": "residue_min_distance_VAL108_angstrom",
+  "triplets": [
+    "WT|V106M|V106A",
+    "WT|G190A|G190E",
+    "WT|K103N|K103N+P225H",
+    "WT|K103N|K103N+M230L",
+    "WT|V106A|V106A+P225H",
+    "WT|V106I|V106I+F227C",
+    "WT|V106I|V106A+P225H",
+    "WT|V106I|V106A+L234I",
+    "WT|V106I|V106A",
+    "WT|V106A|V106A+L234I",
+    "WT|F227C|A98G+F227C",
+    "WT|F227C|V106I+F227C",
+    "WT|Y181C|Y188L",
+    "WT|K103N|Y318F"
+  ]
+}

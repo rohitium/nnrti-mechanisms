@@ -223,7 +223,7 @@ def _select_snapshot_indices(
     discard_fraction: float,
     n_snapshots: int,
     dt_ps: float | None = None,
-    sample_window_ns: float | None = 1.0,
+    sample_window_ns: float | None = None,
 ) -> np.ndarray:
     # Some legacy DCDs carry inflated dt metadata due to an interval double-count.
     # Example symptom: ~50000 ps/frame when the actual spacing is ~50 ps/frame.
@@ -298,7 +298,7 @@ def compute_mmgbsa_from_trajectory(
     ligand_sdf: Path,
     n_snapshots: int = 100,
     discard_fraction: float = 0.25,
-    sample_window_ns: float | None = 1.0,
+    sample_window_ns: float | None = None,
     analysis_topology_pdb_path: Path | None = None,
 ) -> MMGBSAResult:
     """Compute MM/GBSA-style decomposition from explicit-MD snapshots.
