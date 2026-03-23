@@ -1,0 +1,119 @@
+{
+  "medoid_pdb": "results/average_structures/WT_medoid_structure.pdb",
+  "reference_cif": "data/structures/4NCG.cif",
+  "output_pdb": "results/average_structures/WT_medoid_structure_aligned_to_4NCG_nnibp.pdb",
+  "atom_name": "CA",
+  "model_chain_index": 0,
+  "reference_chain_index": 0,
+  "model_resseq_offset": -3,
+  "n_alignment_atoms": 15,
+  "rmsd_before_angstrom": 5.638957619667053,
+  "rmsd_after_angstrom": 0.46041790395975113,
+  "pocket_mapping": [
+    {
+      "canonical_resSeq": 100,
+      "model_resSeq": 97,
+      "model_resname": "LEU",
+      "reference_resname": "LEU",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 101,
+      "model_resSeq": 98,
+      "model_resname": "LYS",
+      "reference_resname": "LYS",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 103,
+      "model_resSeq": 100,
+      "model_resname": "LYS",
+      "reference_resname": "LYS",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 106,
+      "model_resSeq": 103,
+      "model_resname": "VAL",
+      "reference_resname": "VAL",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 107,
+      "model_resSeq": 104,
+      "model_resname": "THR",
+      "reference_resname": "THR",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 108,
+      "model_resSeq": 105,
+      "model_resname": "VAL",
+      "reference_resname": "VAL",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 179,
+      "model_resSeq": 176,
+      "model_resname": "VAL",
+      "reference_resname": "VAL",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 181,
+      "model_resSeq": 178,
+      "model_resname": "TYR",
+      "reference_resname": "TYR",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 188,
+      "model_resSeq": 185,
+      "model_resname": "TYR",
+      "reference_resname": "TYR",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 189,
+      "model_resSeq": 186,
+      "model_resname": "VAL",
+      "reference_resname": "VAL",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 190,
+      "model_resSeq": 187,
+      "model_resname": "GLY",
+      "reference_resname": "GLY",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 227,
+      "model_resSeq": 224,
+      "model_resname": "PHE",
+      "reference_resname": "PHE",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 229,
+      "model_resSeq": 226,
+      "model_resname": "TRP",
+      "reference_resname": "TRP",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 234,
+      "model_resSeq": 231,
+      "model_resname": "LEU",
+      "reference_resname": "LEU",
+      "atom_name": "CA"
+    },
+    {
+      "canonical_resSeq": 318,
+      "model_resSeq": 315,
+      "model_resname": "TYR",
+      "reference_resname": "TYR",
+      "atom_name": "CA"
+    }
+  ]
+}

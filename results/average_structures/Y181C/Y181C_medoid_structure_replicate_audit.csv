@@ -1,0 +1,4 @@
+mutation,replicate,analysis_dcd,analysis_topology_pdb,n_frames_total,n_frames_window,n_frames_used,total_ns_used,timing_source,balance_mode,target_frames_per_rep,first_time_ns,last_time_ns,downsample_keep_index_first,downsample_keep_index_last
+Y181C,1,results/md_runs/Y181C/rep_01/Y181C_rep01_analysis.dcd,results/md_runs/Y181C/rep_01/Y181C_rep01_analysis_topology.pdb,180,180,180,100.0,state_csv,min_frames,180,0.0,100.0,0,179
+Y181C,2,results/md_runs/Y181C/rep_02/Y181C_rep02_analysis.dcd,results/md_runs/Y181C/rep_02/Y181C_rep02_analysis_topology.pdb,180,180,180,100.0,state_csv,min_frames,180,0.0,100.0,0,179
+Y181C,3,results/md_runs/Y181C/rep_03/Y181C_rep03_analysis.dcd,results/md_runs/Y181C/rep_03/Y181C_rep03_analysis_topology.pdb,180,180,180,100.0,state_csv,min_frames,180,0.0,100.0,0,179

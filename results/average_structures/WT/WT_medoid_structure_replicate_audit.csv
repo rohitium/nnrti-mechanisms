@@ -1,0 +1,4 @@
+mutation,replicate,analysis_dcd,analysis_topology_pdb,n_frames_total,n_frames_window,n_frames_used,total_ns_used,timing_source,balance_mode,target_frames_per_rep,first_time_ns,last_time_ns,downsample_keep_index_first,downsample_keep_index_last
+WT,1,results/md_runs/wt/rep_01/wt_rep01_analysis.dcd,results/md_runs/wt/rep_01/wt_rep01_analysis_topology.pdb,500,500,180,100.0,state_csv,min_frames,180,0.0,99.5991983967936,0,497
+WT,2,results/md_runs/wt/rep_02/wt_rep02_analysis.dcd,results/md_runs/wt/rep_02/wt_rep02_analysis_topology.pdb,180,180,180,100.0,state_csv,min_frames,180,0.0,100.0,0,179
+WT,3,results/md_runs/wt/rep_03/wt_rep03_analysis.dcd,results/md_runs/wt/rep_03/wt_rep03_analysis_topology.pdb,180,180,180,100.0,state_csv,min_frames,180,0.0,100.0,0,179

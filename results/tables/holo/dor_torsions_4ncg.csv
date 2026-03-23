@@ -1,0 +1,2 @@
+structure,cif_path,model_id,chain_id,ligand_resname,ligand_resid,tau1,tau2,tau3,tau4
+4NCG,/Users/rohitpro/Career/00_Github/nnrti-mechanisms/data/structures/4NCG.cif,0,A,2KW,601,56.20579886100395,58.21648131773372,-87.37329647166641,-95.52343912042683

@@ -17,8 +17,8 @@
   "checkpoint_path": "results/md_runs/V106A_P225H/rep_03/V106A_P225H_rep03_md.chk",
   "md_heating_steps": 0,
   "md_production_steps": 50000000,
-  "md_production_steps_completed": 35582000,
-  "md_total_steps": 35582000,
+  "md_production_steps_completed": 37334000,
+  "md_total_steps": 37334000,
   "resumed_from_checkpoint": true,
   "elapsed_seconds": 5359.2142126589315,
   "status": "ok"
