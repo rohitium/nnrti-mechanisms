@@ -1,5 +1,5 @@
 {
-  "task_id": 1,
+  "task_id": 9,
   "structure": "V106A_L234I",
   "mutation": "V106A+L234I",
   "safe_label": "V106A_L234I",
@@ -15,11 +15,11 @@
   "state_csv": "results/md_runs/V106A_L234I/rep_01/V106A_L234I_rep01_md_state.csv",
   "final_pdb": "results/md_runs/V106A_L234I/rep_01/V106A_L234I_rep01_md_final.pdb",
   "checkpoint_path": "results/md_runs/V106A_L234I/rep_01/V106A_L234I_rep01_md.chk",
-  "md_heating_steps": 0,
-  "md_production_steps": 5000000,
-  "md_production_steps_completed": 5000000,
-  "md_total_steps": 5000000,
-  "resumed_from_checkpoint": true,
-  "elapsed_seconds": 19570.020542171085,
+  "md_heating_steps": 12500,
+  "md_production_steps": 50000000,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50012500,
+  "resumed_from_checkpoint": false,
+  "elapsed_seconds": 144027.26213974785,
   "status": "ok"
 }

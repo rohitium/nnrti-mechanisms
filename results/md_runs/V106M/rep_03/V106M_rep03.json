@@ -1,5 +1,5 @@
 {
-  "task_id": 32,
+  "task_id": 15,
   "structure": "V106M",
   "mutation": "V106M",
   "safe_label": "V106M",
@@ -16,10 +16,10 @@
   "final_pdb": "results/md_runs/V106M/rep_03/V106M_rep03_md_final.pdb",
   "checkpoint_path": "results/md_runs/V106M/rep_03/V106M_rep03_md.chk",
   "md_heating_steps": 0,
-  "md_production_steps": 5000000,
-  "md_production_steps_completed": 5000000,
-  "md_total_steps": 5000000,
+  "md_production_steps": 50000000,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50000000,
   "resumed_from_checkpoint": true,
-  "elapsed_seconds": 12761.393182723084,
+  "elapsed_seconds": 86210.2240892346,
   "status": "ok"
 }
