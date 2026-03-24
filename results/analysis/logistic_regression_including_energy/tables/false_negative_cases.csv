@@ -1,0 +1,7 @@
+mutation,target_value,observed_class,predicted_class,prob_low,prob_high,correct,fold,error_type
+G190E,18.0,high,low,0.9879019035924741,0.012098096407525905,False,5,false_negative
+V106A,18.0,high,low,0.704698263959848,0.295301736040152,False,1,false_negative
+K103N+M230L,36.0,high,low,0.6459808582182756,0.35401914178172444,False,4,false_negative
+A98G+F227C,93.0,high,low,0.6054214436007873,0.3945785563992127,False,5,false_negative
+V106I+F227C,105.0,high,low,0.7584413827390489,0.24155861726095107,False,1,false_negative
+Y188L,149.0,high,low,0.5601179685465456,0.4398820314534544,False,3,false_negative

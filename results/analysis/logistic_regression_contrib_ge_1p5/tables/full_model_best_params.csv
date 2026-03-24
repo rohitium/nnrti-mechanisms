@@ -1,0 +1,2 @@
+best_params,best_score
+"{""model__C"": 0.1, ""selector__k"": ""all""}",0.95

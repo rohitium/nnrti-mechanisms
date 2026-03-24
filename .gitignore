@@ -233,3 +233,11 @@ results/tables/holo/dor_key_contacts_timeseries_by_mutation/*.csv
 results/.status/complete_at_target.txt
 results/.status/incomplete_not_running.txt
 results/.status/reconcile_md_metadata_local*.csv
+
+logistic_regression_allsd/
+logistic_regression_contrib_ge_0p5/
+logistic_regression_contrib_ge_1p0/
+logistic_regression_contrib_ge_2p0/
+logistic_regression_drop_residue/
+logistic_regression_including_energy_lasso/
+logistic_regression_only_residue/

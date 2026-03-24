@@ -1,0 +1,3 @@
+mutation,target_value,observed_class,predicted_class,prob_low,prob_high,correct,fold,error_type
+A98G+F227C,93.0,high,low,0.5562640253881949,0.44373597461180514,False,5,false_negative
+V106I+F227C,105.0,high,low,0.5571949982283998,0.4428050017716002,False,1,false_negative

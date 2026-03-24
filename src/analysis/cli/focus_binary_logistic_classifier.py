@@ -42,9 +42,12 @@ PREFERRED_TRIPLET_BASE_FEATURES = [
     "residue_min_distance_VAL108_angstrom",
     "ligand_pose_rmsd_angstrom",
 ]
+FEATURE_CONTRIBUTION_LOGIT_THRESHOLD = 1.0
 
 
-def _binary_logistic_pipeline(random_state: int) -> Pipeline:
+def _binary_logistic_pipeline(random_state: int, *, penalty: str = "l2") -> Pipeline:
+    penalty_text = str(penalty).strip().lower()
+    solver = "liblinear" if penalty_text == "l1" else "lbfgs"
     return Pipeline(
         [
             ("imputer", SimpleImputer(strategy="median")),
@@ -56,22 +59,26 @@ def _binary_logistic_pipeline(random_state: int) -> Pipeline:
                     max_iter=5000,
                     class_weight="balanced",
                     random_state=int(random_state),
+                    penalty=penalty_text,
+                    solver=solver,
                 ),
             ),
         ]
     )
 
 
-def _binary_logistic_grid(n_features: int) -> dict[str, list[object]]:
+def _binary_logistic_grid(n_features: int, *, penalty: str = "l2") -> dict[str, list[object]]:
+    penalty_text = str(penalty).strip().lower()
+    c_grid = [0.01, 0.1, 1.0, 10.0] if penalty_text == "l1" else [0.1, 1.0, 10.0]
     return {
         "selector__k": _selection_k_grid(n_features),
-        "model__C": [0.1, 1.0, 10.0],
+        "model__C": c_grid,
     }
 
 
 def _base_frame_feature(feature_name: str, frame_feature_columns: set[str]) -> str | None:
     text = str(feature_name).strip()
-    for suffix in ("_repstd", "_mean", "_median", "_std"):
+    for suffix in ("_repstd", "_sd", "_mean", "_median", "_std"):
         if text.endswith(suffix):
             candidate = text[: -len(suffix)]
             return candidate if candidate in frame_feature_columns else None
@@ -315,6 +322,50 @@ def _plot_selected_coefficients(coef_df: pd.DataFrame, output_png: Path) -> None
     plt.close(fig)
 
 
+def _pretty_feature_label(feature_name: str) -> str:
+    text = str(feature_name)
+    stat_suffix = ""
+    if text.endswith("_repstd"):
+        text = text[: -len("_repstd")]
+        stat_suffix = " (Replicate SD)"
+    elif text.endswith("_sd"):
+        text = text[: -len("_sd")]
+        stat_suffix = " (SD)"
+    elif text.endswith("_mean"):
+        text = text[: -len("_mean")]
+        stat_suffix = " (Mean)"
+    elif text.endswith("_std"):
+        text = text[: -len("_std")]
+        stat_suffix = " (SD)"
+
+    residue_prefix = "residue_min_distance_"
+    if text.startswith(residue_prefix):
+        residue = text[len(residue_prefix) :]
+        residue = residue.replace("_angstrom", "")
+        label = f"{residue[:3].title()}{residue[3:]} Minimum Distance"
+        return f"{label}{stat_suffix}"
+
+    replacements = {
+        "ligand_palm_distance_angstrom": "Ligand Palm Distance",
+        "ligand_pose_rmsd_angstrom": "Ligand Pose RMSD",
+        "ligand_entrance_distance_angstrom": "Ligand Entrance Distance",
+        "ligand_pocket_center_distance_angstrom": "Ligand Pocket Center Distance",
+        "ligand_palm_depth_projection_angstrom": "Ligand Palm Depth Projection",
+        "pocket_ca_rmsd_angstrom": "Pocket CA RMSD",
+        "binding_dg": "MM/GBSA Total Energy",
+        "binding_dg_vdw": "MM/GBSA Van Der Waals",
+        "binding_dg_electrostatic": "MM/GBSA Electrostatic",
+        "binding_dg_gb": "MM/GBSA GB Solvation",
+        "binding_dg_sa": "MM/GBSA SA",
+    }
+    if text in replacements:
+        return f"{replacements[text]}{stat_suffix}"
+
+    label = text.replace("_angstrom", "").replace("_", " ").title()
+    label = label.replace(" Ca ", " CA ").replace(" Rmsd", " RMSD").replace("Sd", "SD")
+    return f"{label}{stat_suffix}"
+
+
 def _plot_feature_contributions(
     contrib_df: pd.DataFrame,
     mutation_summary_df: pd.DataFrame,
@@ -326,32 +377,55 @@ def _plot_feature_contributions(
         return
     order_df = mutation_summary_df.copy().sort_values(["target_value", "fullfit_prob_high", "mutation"], ascending=[True, True, True])
     mutation_order = order_df["mutation"].astype(str).tolist()
-    pivot = contrib_df.pivot(index="feature", columns="mutation", values="contribution").fillna(0.0)
-    pivot = pivot.reindex(columns=mutation_order)
-    fig_w = max(6.5, 0.9 * len(pivot.columns) + 2.2)
-    fig_h = max(5.0, 0.35 * len(pivot.index) + 1.8)
+    pivot = contrib_df.pivot(index="feature", columns="mutation", values="contribution").fillna(0.0).reindex(columns=mutation_order)
+    max_abs = pivot.abs().max(axis=1).sort_values(ascending=False)
+    keep = max_abs[max_abs >= float(FEATURE_CONTRIBUTION_LOGIT_THRESHOLD)].index.tolist()
+    if not keep:
+        keep = max_abs.head(min(12, len(max_abs))).index.tolist()
+    pivot = pivot.loc[keep]
+    max_abs = max_abs.loc[keep]
+    pretty_labels = [_pretty_feature_label(feature) for feature in pivot.index.tolist()]
+
+    fig_w = max(11.5, 0.85 * len(pivot.columns) + 5.2)
+    fig_h = max(6.0, 0.42 * len(pivot.index) + 2.0)
     vmax = float(np.nanmax(np.abs(pivot.to_numpy(dtype=float))))
     vmax = max(vmax, 0.1)
-    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+
+    fig = plt.figure(figsize=(fig_w, fig_h), constrained_layout=True)
+    gs = fig.add_gridspec(nrows=1, ncols=2, width_ratios=[1.25, max(2.5, 0.42 * len(pivot.columns))], wspace=0.05)
+    ax_bar = fig.add_subplot(gs[0, 0])
+    ax = fig.add_subplot(gs[0, 1], sharey=ax_bar)
+
+    y_positions = np.arange(len(pivot.index), dtype=float)
+    bar_colors = ["#666666" for _ in pretty_labels]
+    ax_bar.barh(y_positions, max_abs.to_numpy(dtype=float), color=bar_colors, alpha=0.78)
+    ax_bar.set_yticks(y_positions)
+    ax_bar.set_yticklabels(pretty_labels, fontsize=10)
+    ax_bar.invert_yaxis()
+    ax_bar.set_xlabel("Max |Contribution|")
+    ax_bar.grid(axis="x", alpha=0.22)
+    ax_bar.spines["top"].set_visible(False)
+    ax_bar.spines["right"].set_visible(False)
+
     im = ax.imshow(pivot.to_numpy(dtype=float), aspect="auto", cmap="coolwarm", vmin=-vmax, vmax=vmax)
     ax.set_xticks(np.arange(len(pivot.columns)))
     ax.set_xticklabels(pivot.columns.tolist(), rotation=45, ha="right")
-    ax.set_yticks(np.arange(len(pivot.index)))
-    ax.set_yticklabels(pivot.index.tolist())
+    ax.tick_params(axis="y", left=False, labelleft=False)
+    ax.set_xlabel("Mutation")
+
     for idx, mutation in enumerate(pivot.columns.tolist()):
         if str(mutation) in false_negative_names:
             ax.axvline(idx - 0.5, color="#111111", linewidth=1.0, alpha=0.75)
             ax.axvline(idx + 0.5, color="#111111", linewidth=1.0, alpha=0.75)
-            ax.text(idx, -1.2, "FN", ha="center", va="bottom", fontsize=8, color="#d62828", fontweight="bold", clip_on=False)
+            ax.text(idx, -1.05, "FN", ha="center", va="bottom", fontsize=8, color="#d62828", fontweight="bold", clip_on=False)
     for tick in ax.get_xticklabels():
         if tick.get_text() in false_negative_names:
             tick.set_color("#d62828")
             tick.set_fontweight("bold")
-    ax.set_title("Full-Model Feature Contributions Across Mutations")
+    ax.set_title(f"Feature Contributions Across Mutations (|Contribution| >= {FEATURE_CONTRIBUTION_LOGIT_THRESHOLD:.1f})")
     cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.02)
     cbar.set_label("Contribution To High Logit")
     output_png.parent.mkdir(parents=True, exist_ok=True)
-    fig.tight_layout()
     fig.savefig(output_png, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
@@ -364,6 +438,7 @@ def _run_cv(
     cv_folds: int,
     random_state: int,
     low_max: float,
+    penalty: str,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     x = feat[feature_cols].copy()
     y = _binary_labels(feat[target_col].astype(float), low_max=low_max)
@@ -385,8 +460,8 @@ def _run_cv(
         inner_splits = max(2, min(3, int(y_train.value_counts().min())))
         inner = StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=int(random_state) + fold_idx)
         search = GridSearchCV(
-            _binary_logistic_pipeline(random_state=int(random_state)),
-            _binary_logistic_grid(len(feature_cols)),
+            _binary_logistic_pipeline(random_state=int(random_state), penalty=str(penalty)),
+            _binary_logistic_grid(len(feature_cols), penalty=str(penalty)),
             cv=inner.split(x_train, y_train),
             scoring="balanced_accuracy",
             n_jobs=1,
@@ -457,14 +532,15 @@ def _fit_full_model(
     cv_folds: int,
     random_state: int,
     low_max: float,
+    penalty: str,
 ) -> tuple[GridSearchCV, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     x = feat[feature_cols].copy()
     y = _binary_labels(feat[target_col].astype(float), low_max=low_max)
     effective_folds = max(2, min(int(cv_folds), int(y.value_counts().min())))
     splitter = StratifiedKFold(n_splits=effective_folds, shuffle=True, random_state=int(random_state))
     search = GridSearchCV(
-        _binary_logistic_pipeline(random_state=int(random_state)),
-        _binary_logistic_grid(len(feature_cols)),
+        _binary_logistic_pipeline(random_state=int(random_state), penalty=str(penalty)),
+        _binary_logistic_grid(len(feature_cols), penalty=str(penalty)),
         cv=splitter.split(x, y),
         scoring="balanced_accuracy",
         n_jobs=1,
@@ -646,6 +722,7 @@ def main() -> int:
     parser.add_argument("--random-state", type=int, default=0)
     parser.add_argument("--low-max-fold", type=float, default=10.0)
     parser.add_argument("--top-triplet-features", type=int, default=5)
+    parser.add_argument("--penalty", type=str, default="l2", choices=["l1", "l2"])
     args = parser.parse_args()
 
     feat = pd.read_csv(args.feature_matrix_csv)
@@ -674,6 +751,7 @@ def main() -> int:
         cv_folds=int(args.cv_folds),
         random_state=int(args.random_state),
         low_max=float(args.low_max_fold),
+        penalty=str(args.penalty),
     )
     metrics = _classification_metrics(pred_df["observed_class"].to_numpy(dtype=str), pred_df["predicted_class"].to_numpy(dtype=str))
     cm = confusion_matrix(pred_df["observed_class"], pred_df["predicted_class"], labels=["low", "high"])
@@ -715,6 +793,7 @@ def main() -> int:
         cv_folds=int(args.cv_folds),
         random_state=int(args.random_state),
         low_max=float(args.low_max_fold),
+        penalty=str(args.penalty),
     )
     selected_features = coef_df["feature"].tolist()
     class_feature_summary = (
@@ -726,6 +805,10 @@ def main() -> int:
     class_feature_summary = class_feature_summary.reset_index()
 
     false_neg_names = set(false_neg_df["mutation"].astype(str).tolist())
+    selected_feature_matrix = feat[["mutation", target_col]].copy().rename(columns={target_col: "target_fold_reduction"})
+    selected_feature_matrix["target_binary_class"] = _binary_labels(feat[target_col].astype(float), low_max=float(args.low_max_fold)).astype(str).to_numpy()
+    for feature in selected_features:
+        selected_feature_matrix[str(feature)] = feat[str(feature)].to_numpy()
 
     pred_df.to_csv(out_tables / "cv_predictions.csv", index=False)
     pd.DataFrame([metrics | {"n_mutations": int(len(pred_df)), "cv_folds": int(pred_df["fold"].nunique())}]).to_csv(out_tables / "cv_summary.csv", index=False)
@@ -740,6 +823,7 @@ def main() -> int:
     score_df.to_csv(out_tables / "full_model_mutation_scores.csv", index=False)
     contrib_df.to_csv(out_tables / "full_model_feature_contributions.csv", index=False)
     class_feature_summary.to_csv(out_tables / "selected_feature_class_summary.csv", index=False)
+    selected_feature_matrix.to_csv(out_tables / "selected_feature_matrix.csv", index=False)
     pd.DataFrame(
         [
             {
@@ -756,7 +840,7 @@ def main() -> int:
     _plot_confusion_matrix(
         cm,
         ["low", "high"],
-        "Binary Logistic Confusion Matrix",
+        "Logistic Regression Confusion Matrix",
         out_plots / "confusion_matrix.png",
     )
     _plot_cv_probability_ranked(pred_df, out_plots / "cv_probability_ranked.png")
@@ -789,7 +873,9 @@ def main() -> int:
                 "cv_folds_requested": int(args.cv_folds),
                 "random_state": int(args.random_state),
                 "low_max_fold": float(args.low_max_fold),
+                "penalty": str(args.penalty),
                 "top_triplet_features": int(args.top_triplet_features),
+                "selected_features": selected_features,
                 "n_mutations": int(len(feat)),
                 "n_features": int(len(feature_cols)),
                 "feature_columns": feature_cols,

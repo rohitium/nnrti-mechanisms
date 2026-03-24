@@ -1,0 +1,16 @@
+{
+  "input_csv": "results/analysis/logistic_regression/feature_screening/tables/mutation_feature_matrix.csv",
+  "output_csv": "results/analysis/logistic_regression_contrib_ge_1p5/feature_screening/tables/mutation_feature_matrix.csv",
+  "mode": "contribution_threshold",
+  "n_features_input": 48,
+  "n_features_output": 5,
+  "feature_columns_kept": [
+    "ligand_pose_rmsd_angstrom_mean",
+    "residue_min_distance_PRO236_angstrom_mean",
+    "ligand_palm_distance_angstrom_repstd",
+    "residue_min_distance_PRO95_angstrom_repstd",
+    "residue_min_distance_LYS101_angstrom_repstd"
+  ],
+  "contribution_csv": "results/analysis/logistic_regression/tables/full_model_feature_contributions.csv",
+  "contribution_threshold": 1.5
+}

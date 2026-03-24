@@ -1,0 +1,6 @@
+feature,base_frame_feature,importance_norm,rank_mean,n_folds
+residue_min_distance_LYS101_angstrom_repstd,residue_min_distance_LYS101_angstrom,0.22351843364821514,2.4,5
+ligand_palm_distance_angstrom_repstd,ligand_palm_distance_angstrom,0.22857862862775788,2.2,5
+residue_min_distance_PRO236_angstrom_mean,residue_min_distance_PRO236_angstrom,0.08422915115709777,17.2,5
+residue_min_distance_VAL108_angstrom_mean,residue_min_distance_VAL108_angstrom,0.05906722666458066,9.2,5
+ligand_pose_rmsd_angstrom_mean,ligand_pose_rmsd_angstrom,0.034445090195928146,6.2,5

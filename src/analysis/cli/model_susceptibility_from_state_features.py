@@ -359,6 +359,8 @@ def _mutation_feature_matrix(
     *,
     target_df: pd.DataFrame,
     temperature_k: float,
+    dispersion_mode: str = "replicate_sd",
+    mmgbsa_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     base_feature_cols = [
         c
@@ -378,18 +380,49 @@ def _mutation_feature_matrix(
         .mean()
         .rename(columns={c: f"{c}_mean" for c in base_feature_cols})
     )
-    mut_repstd = (
-        rep_mean.groupby("mutation", as_index=False)[global_feature_cols]
-        .std(ddof=1)
-        .fillna(0.0)
-        .rename(columns={c: f"{c}_repstd" for c in global_feature_cols})
-    )
+    if str(dispersion_mode) == "all_frame_sd":
+        mut_dispersion = (
+            frame_df.groupby("mutation", as_index=False)[global_feature_cols]
+            .std(ddof=1)
+            .fillna(0.0)
+            .rename(columns={c: f"{c}_sd" for c in global_feature_cols})
+        )
+    else:
+        mut_dispersion = (
+            rep_mean.groupby("mutation", as_index=False)[global_feature_cols]
+            .std(ddof=1)
+            .fillna(0.0)
+            .rename(columns={c: f"{c}_repstd" for c in global_feature_cols})
+        )
 
     target = target_df.copy()
     target["target_fold_reduction"] = pd.to_numeric(target["dor_fold_reduction"], errors="coerce")
 
     feat = target.merge(mut_mean, on="mutation", how="inner")
-    feat = feat.merge(mut_repstd, on="mutation", how="left")
+    feat = feat.merge(mut_dispersion, on="mutation", how="left")
+    if mmgbsa_df is not None and not mmgbsa_df.empty:
+        energy_feature_cols = [
+            "binding_dg",
+            "binding_dg_vdw",
+            "binding_dg_electrostatic",
+            "binding_dg_gb",
+            "binding_dg_sa",
+        ]
+        available_energy_cols = [c for c in energy_feature_cols if c in mmgbsa_df.columns]
+        if available_energy_cols:
+            energy_mean = (
+                mmgbsa_df.groupby("mutation", as_index=False)[available_energy_cols]
+                .mean()
+                .rename(columns={c: f"{c}_mean" for c in available_energy_cols})
+            )
+            energy_dispersion = (
+                mmgbsa_df.groupby("mutation", as_index=False)[available_energy_cols]
+                .std(ddof=1)
+                .fillna(0.0)
+                .rename(columns={c: f"{c}_repstd" for c in available_energy_cols})
+            )
+            feat = feat.merge(energy_mean, on="mutation", how="left")
+            feat = feat.merge(energy_dispersion, on="mutation", how="left")
     feat = feat.fillna(0.0)
     redundant_cols = [col for col in ("dor_fold_reduction", "order") if col in feat.columns]
     if redundant_cols:
@@ -410,16 +443,24 @@ def main() -> int:
         type=Path,
         default=Path("results/analysis/logistic_regression/feature_screening"),
     )
+    parser.add_argument(
+        "--mmgbsa-csv",
+        type=Path,
+        default=None,
+    )
     parser.add_argument("--temperature-k", type=float, default=DEFAULT_TEMPERATURE_K)
     parser.add_argument("--cv-folds", type=int, default=5)
     parser.add_argument("--random-state", type=int, default=0)
     parser.add_argument("--target", type=str, default="target_fold_reduction", choices=["target_fold_reduction"])
+    parser.add_argument("--dispersion-mode", type=str, default="replicate_sd", choices=["replicate_sd", "all_frame_sd"])
     args = parser.parse_args()
 
     if not args.susceptibility_xlsx.exists():
         raise FileNotFoundError(args.susceptibility_xlsx)
     if not args.frame_feature_csv.exists():
         raise FileNotFoundError(args.frame_feature_csv)
+    if args.mmgbsa_csv is not None and not args.mmgbsa_csv.exists():
+        raise FileNotFoundError(args.mmgbsa_csv)
 
     out_tables = args.output_dir / "tables"
     out_plots = args.output_dir / "plots"
@@ -430,11 +471,14 @@ def main() -> int:
 
     target_df = load_dor_susceptibilities(args.susceptibility_xlsx)
     frame_df = pd.read_csv(args.frame_feature_csv)
+    mmgbsa_df = pd.read_csv(args.mmgbsa_csv) if args.mmgbsa_csv is not None else None
 
     feat = _mutation_feature_matrix(
         frame_df,
         target_df=target_df,
         temperature_k=float(args.temperature_k),
+        dispersion_mode=str(args.dispersion_mode),
+        mmgbsa_df=mmgbsa_df,
     )
     feat = feat.sort_values("target_fold_reduction", ascending=True).reset_index(drop=True)
     feat.to_csv(out_tables / "mutation_feature_matrix.csv", index=False)
@@ -487,6 +531,7 @@ def main() -> int:
             {
                 "model": model_name,
                 "target": str(args.target),
+                "dispersion_mode": str(args.dispersion_mode),
                 "n_mutations": int(len(y)),
                 "cv_folds": int(n_splits),
                 **metrics,
@@ -540,11 +585,13 @@ def main() -> int:
     config = {
         "susceptibility_xlsx": str(args.susceptibility_xlsx),
         "frame_feature_csv": str(args.frame_feature_csv),
-        "temperature_k": float(args.temperature_k),
-        "target": str(args.target),
-        "n_mutations": int(len(y)),
-        "n_features": int(len(feature_cols)),
-        "cv_folds": int(n_splits),
+        "mmgbsa_csv": str(args.mmgbsa_csv) if args.mmgbsa_csv is not None else None,
+                "temperature_k": float(args.temperature_k),
+                "target": str(args.target),
+                "dispersion_mode": str(args.dispersion_mode),
+                "n_mutations": int(len(y)),
+                "n_features": int(len(feature_cols)),
+                "cv_folds": int(n_splits),
         "random_state": int(args.random_state),
         "feature_columns": feature_cols,
         "models": list(models.keys()),
