@@ -637,11 +637,7 @@ def main() -> int:
         "drug",
         "mutation",
         "chain",
-        "dor_fold_reduction",
-        "order",
         "target_fold_reduction",
-        "target_log10_fold_reduction",
-        "target_ddg_exp_kj",
     }
     feature_cols = [c for c in feat.columns if c not in non_feature_cols]
 

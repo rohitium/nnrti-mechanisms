@@ -387,12 +387,13 @@ def _mutation_feature_matrix(
 
     target = target_df.copy()
     target["target_fold_reduction"] = pd.to_numeric(target["dor_fold_reduction"], errors="coerce")
-    target["target_log10_fold_reduction"] = np.log10(target["target_fold_reduction"])
-    target["target_ddg_exp_kj"] = float(R_KJ_PER_MOL_K * float(temperature_k)) * np.log(target["target_fold_reduction"])
 
     feat = target.merge(mut_mean, on="mutation", how="inner")
     feat = feat.merge(mut_repstd, on="mutation", how="left")
     feat = feat.fillna(0.0)
+    redundant_cols = [col for col in ("dor_fold_reduction", "order") if col in feat.columns]
+    if redundant_cols:
+        feat = feat.drop(columns=redundant_cols)
     return feat
 
 
@@ -412,12 +413,7 @@ def main() -> int:
     parser.add_argument("--temperature-k", type=float, default=DEFAULT_TEMPERATURE_K)
     parser.add_argument("--cv-folds", type=int, default=5)
     parser.add_argument("--random-state", type=int, default=0)
-    parser.add_argument(
-        "--target",
-        type=str,
-        default="target_fold_reduction",
-        choices=["target_fold_reduction", "target_ddg_exp_kj", "target_log10_fold_reduction"],
-    )
+    parser.add_argument("--target", type=str, default="target_fold_reduction", choices=["target_fold_reduction"])
     args = parser.parse_args()
 
     if not args.susceptibility_xlsx.exists():
@@ -447,11 +443,7 @@ def main() -> int:
         "drug",
         "mutation",
         "chain",
-        "dor_fold_reduction",
-        "order",
         "target_fold_reduction",
-        "target_log10_fold_reduction",
-        "target_ddg_exp_kj",
     }
     feature_cols = [c for c in feat.columns if c not in non_feature_cols]
     x = feat[feature_cols].copy()
@@ -471,7 +463,7 @@ def main() -> int:
         **_fit_tree_models(),
     }
 
-    prediction_df = feat[["mutation", "target_fold_reduction", "target_log10_fold_reduction", "target_ddg_exp_kj"]].copy()
+    prediction_df = feat[["mutation", "target_fold_reduction"]].copy()
     prediction_df = prediction_df.rename(columns={str(args.target): "target_value"}) if str(args.target) in prediction_df.columns else prediction_df
     prediction_df["target_value"] = y.to_numpy(dtype=float)
     cv_fold_ref: np.ndarray | None = None
@@ -534,11 +526,7 @@ def main() -> int:
         title="Consensus Feature Importance (5-Fold Mean)",
     )
 
-    target_label = {
-        "target_ddg_exp_kj": "Experimental DDG (kJ/mol)",
-        "target_log10_fold_reduction": "log10(Fold Reduction)",
-        "target_fold_reduction": "Fold Reduction",
-    }[str(args.target)]
+    target_label = {"target_fold_reduction": "Fold Reduction"}[str(args.target)]
     _plot_feature_target_scatter_grid(
         feat,
         association_df,

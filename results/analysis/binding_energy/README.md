@@ -4,14 +4,18 @@ This folder contains the final MM/GBSA summary outputs.
 
 ## Main plots
 
-- `plots/mmgbsa_components_by_mutation.png`
-  mutation-level MM/GBSA component means with replicate SEM error bars
 - `plots/mmgbsa_ddg_components_vs_wt.png`
-  WT-referenced component shifts with replicate SEM error bars
-- `plots/mmgbsa_components_vs_fold_change.png`
-  mutation-level component means vs fold reduction on a log-scaled x-axis
-- `plots/mmgbsa_ddg_vs_fold_change.png`
-  WT-referenced component shifts vs fold reduction on a log-scaled x-axis
+  WT-referenced component shifts as bar charts with replicate SEM error bars
+- `plots/mmgbsa_total_vs_fold_change.png`
+  total MM/GBSA energy vs fold reduction with labeled mutations
+- `plots/mmgbsa_vdw_vs_fold_change.png`
+  vdW component vs fold reduction with labeled mutations
+- `plots/mmgbsa_electrostatic_vs_fold_change.png`
+  electrostatic component vs fold reduction with labeled mutations
+- `plots/mmgbsa_gb_vs_fold_change.png`
+  GB polar solvation component vs fold reduction with labeled mutations
+- `plots/mmgbsa_sa_vs_fold_change.png`
+  SA nonpolar component vs fold reduction with labeled mutations
 
 ## Main tables
 
