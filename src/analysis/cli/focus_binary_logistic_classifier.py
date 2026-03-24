@@ -212,14 +212,27 @@ def _place_greedy_annotations(
         placed_boxes.append((float(bbox.x0), float(bbox.y0), float(bbox.x1), float(bbox.y1)))
 
 
-def _plot_probability_vs_log_fold(pred_df: pd.DataFrame, output_png: Path) -> None:
+def _plot_probability_vs_fold(
+    pred_df: pd.DataFrame,
+    output_png: Path,
+    *,
+    use_log10_x: bool,
+) -> None:
     df = pred_df.copy()
-    df["log10_fold_change"] = np.log10(pd.to_numeric(df["target_value"], errors="coerce"))
-    df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=["log10_fold_change", "prob_high"]).reset_index(drop=True)
+    df["fold_reduction"] = pd.to_numeric(df["target_value"], errors="coerce")
+    if use_log10_x:
+        df["plot_x"] = np.log10(df["fold_reduction"])
+        x_label = "log10(Fold Reduction)"
+        title = "Binary Logistic CV Probability Tracks Resistance Severity"
+    else:
+        df["plot_x"] = df["fold_reduction"]
+        x_label = "Fold Change in DOR Susceptibility"
+        title = ""
+    df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=["plot_x", "prob_high"]).reset_index(drop=True)
     if df.empty:
         return
 
-    x = df["log10_fold_change"].to_numpy(dtype=float)
+    x = df["plot_x"].to_numpy(dtype=float)
     y = df["prob_high"].to_numpy(dtype=float)
     observed = df["observed_class"].astype(str).to_numpy()
     predicted = df["predicted_class"].astype(str).to_numpy()
@@ -232,14 +245,14 @@ def _plot_probability_vs_log_fold(pred_df: pd.DataFrame, output_png: Path) -> No
     colors = {"low": "#1d3557", "high": "#d62828"}
     markers = {"low": "o", "high": "X"}
 
-    fig, ax = plt.subplots(figsize=(8.6, 5.6))
+    fig, ax = plt.subplots(figsize=(8.6, 5.6) if use_log10_x else (15.5, 7.2))
     for idx, row in df.iterrows():
         obs = str(row["observed_class"])
         pred = str(row["predicted_class"])
         face = colors[obs] if obs == pred else "white"
         edge = colors[obs]
         ax.scatter(
-            float(row["log10_fold_change"]),
+            float(row["plot_x"]),
             float(row["prob_high"]),
             s=96,
             marker=markers[obs],
@@ -252,11 +265,15 @@ def _plot_probability_vs_log_fold(pred_df: pd.DataFrame, output_png: Path) -> No
 
     ax.plot(x_grid, y_grid, color="#444444", linestyle="--", linewidth=1.6, zorder=2)
     ax.axhline(0.5, color="#888888", linestyle=":", linewidth=1.0, alpha=0.9)
-    ax.set_xlim(float(np.min(x_grid)), float(np.max(x_grid)))
+    if use_log10_x:
+        ax.set_xlim(float(np.min(x_grid)), float(np.max(x_grid)))
+    else:
+        ax.set_xlim(0.0, 175.0)
     ax.set_ylim(-0.03, 1.03)
-    ax.set_xlabel("log10(Fold Reduction)")
-    ax.set_ylabel("CV Predicted Probability Of High")
-    ax.set_title("Binary Logistic CV Probability Tracks Resistance Severity")
+    ax.set_xlabel(x_label)
+    ax.set_ylabel('Logistic Regression Probability of "High" Resistance')
+    if title:
+        ax.set_title(title)
     ax.grid(alpha=0.22)
     _place_greedy_annotations(
         ax,
@@ -743,7 +760,8 @@ def main() -> int:
         out_plots / "confusion_matrix.png",
     )
     _plot_cv_probability_ranked(pred_df, out_plots / "cv_probability_ranked.png")
-    _plot_probability_vs_log_fold(pred_df, out_plots / "cv_probability_vs_log10_fold.png")
+    _plot_probability_vs_fold(pred_df, out_plots / "cv_probability_vs_log10_fold.png", use_log10_x=True)
+    _plot_probability_vs_fold(pred_df, out_plots / "cv_probability_vs_fold.png", use_log10_x=False)
     _plot_selected_coefficients(coef_df, out_plots / "full_model_feature_coefficients.png")
     _plot_feature_contributions(
         contrib_df,
