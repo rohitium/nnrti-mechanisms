@@ -10,6 +10,9 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from ..susceptibility import load_dor_susceptibilities
+from .model_susceptibility_from_state_features import _mutation_feature_matrix
+
 
 META_COLUMNS = {"drug", "mutation", "chain", "target_fold_reduction", "target_binary_class"}
 FEATURE_COLORS = ["#1d3557", "#d62828", "#2a9d8f", "#f4a261", "#6d597a"]
@@ -166,6 +169,40 @@ def _feature_specs(feature_cols: list[str]) -> list[tuple[str, str, str]]:
     for idx, feature in enumerate(feature_cols):
         specs.append((feature, _pretty_feature_label(feature), FEATURE_COLORS[idx % len(FEATURE_COLORS)]))
     return specs
+
+
+def _augment_with_wt_row(
+    feat: pd.DataFrame,
+    *,
+    frame_feature_csv: Path,
+    mmgbsa_replicate_csv: Path,
+    susceptibility_xlsx: Path,
+) -> pd.DataFrame:
+    if "WT" in feat["mutation"].astype(str).tolist():
+        return feat.copy()
+    frame_df = pd.read_csv(frame_feature_csv)
+    mmgbsa_df = pd.read_csv(mmgbsa_replicate_csv) if mmgbsa_replicate_csv.exists() else None
+    target_df = load_dor_susceptibilities(susceptibility_xlsx)
+    wt_row = pd.DataFrame(
+        [{"drug": "DOR", "mutation": "WT", "chain": "A", "dor_fold_reduction": 1.0, "order": -1}]
+    )
+    target_aug = pd.concat([target_df, wt_row], ignore_index=True)
+    full_aug = _mutation_feature_matrix(
+        frame_df,
+        target_df=target_aug,
+        temperature_k=300.0,
+        dispersion_mode="replicate_sd",
+        mmgbsa_df=mmgbsa_df,
+    )
+    if "WT" not in full_aug["mutation"].astype(str).tolist():
+        return feat.copy()
+    wt_aug = full_aug[full_aug["mutation"].astype(str) == "WT"].copy()
+    keep_cols = [c for c in feat.columns if c in wt_aug.columns]
+    wt_aug = wt_aug[keep_cols]
+    out = pd.concat([feat, wt_aug], ignore_index=True)
+    if "target_fold_reduction" in out.columns:
+        out = out.sort_values("target_fold_reduction", ascending=True, kind="stable").reset_index(drop=True)
+    return out
 
 
 def _feature_base_and_kind(feature_name: str) -> tuple[str, str]:
@@ -560,6 +597,12 @@ def main() -> int:
         type=Path,
         default=Path("results/mmgbsa_replicate_metrics.csv"),
     )
+    parser.add_argument(
+        "--susceptibility-xlsx",
+        type=Path,
+        default=Path("data/DRM-susceptibilities.csv.xlsx"),
+    )
+    parser.add_argument("--include-wt-reference", action="store_true")
     parser.add_argument("--ci-level", type=float, default=0.95)
     args = parser.parse_args()
 
@@ -567,6 +610,8 @@ def main() -> int:
         raise FileNotFoundError(args.feature_matrix_csv)
     if not args.frame_feature_csv.exists():
         raise FileNotFoundError(args.frame_feature_csv)
+    if args.include_wt_reference and not args.susceptibility_xlsx.exists():
+        raise FileNotFoundError(args.susceptibility_xlsx)
 
     out_tables = args.output_dir / "tables"
     out_plots = args.output_dir / "plots"
@@ -576,6 +621,13 @@ def main() -> int:
     out_config.mkdir(parents=True, exist_ok=True)
 
     feat = pd.read_csv(args.feature_matrix_csv)
+    if args.include_wt_reference:
+        feat = _augment_with_wt_row(
+            feat,
+            frame_feature_csv=args.frame_feature_csv,
+            mmgbsa_replicate_csv=args.mmgbsa_replicate_csv,
+            susceptibility_xlsx=args.susceptibility_xlsx,
+        )
     frame_df = pd.read_csv(args.frame_feature_csv)
     mmgbsa_df = pd.read_csv(args.mmgbsa_replicate_csv) if args.mmgbsa_replicate_csv.exists() else pd.DataFrame()
     feature_cols = [c for c in feat.columns if c not in META_COLUMNS]
@@ -599,6 +651,7 @@ def main() -> int:
     stats_df.to_csv(out_tables / "feature_vs_fold_change_stats.csv", index=False)
     uncertainty_df.to_csv(out_tables / "feature_uncertainty_by_mutation.csv", index=False)
     replicate_points_df.to_csv(out_tables / "feature_replicate_points.csv", index=False)
+    feat.to_csv(out_tables / "mutation_feature_matrix.csv", index=False)
 
     for feature, label, color in specs:
         _plot_feature_vs_fold_change(
@@ -618,6 +671,8 @@ def main() -> int:
                 "output_dir": str(args.output_dir),
                 "frame_feature_csv": str(args.frame_feature_csv),
                 "mmgbsa_replicate_csv": str(args.mmgbsa_replicate_csv),
+                "susceptibility_xlsx": str(args.susceptibility_xlsx),
+                "include_wt_reference": bool(args.include_wt_reference),
                 "repstd_ci_method": "exact_chi_square",
                 "ci_level": float(args.ci_level),
                 "n_mutations": int(len(feat)),

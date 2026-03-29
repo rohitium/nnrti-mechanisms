@@ -17,7 +17,9 @@ from .focus_binary_logistic_classifier import (
     _plot_probability_vs_fold,
     _plot_selected_coefficients,
 )
+from .model_susceptibility_from_state_features import _mutation_feature_matrix
 from .search_feature_combo_logistic import _binary_labels, _classification_metrics, _logistic_pipeline
+from ..susceptibility import load_dor_susceptibilities
 
 
 FEATURES = [
@@ -25,6 +27,29 @@ FEATURES = [
     "ligand_pose_rmsd_angstrom_mean",
     "ligand_palm_distance_angstrom_repstd",
 ]
+
+
+def _wt_feature_row(
+    *,
+    frame_feature_csv: Path,
+    mmgbsa_replicate_csv: Path,
+    susceptibility_xlsx: Path,
+) -> pd.DataFrame:
+    frame_df = pd.read_csv(frame_feature_csv)
+    mmgbsa_df = pd.read_csv(mmgbsa_replicate_csv) if mmgbsa_replicate_csv.exists() else None
+    target_df = load_dor_susceptibilities(susceptibility_xlsx)
+    wt_row = pd.DataFrame(
+        [{"drug": "DOR", "mutation": "WT", "chain": "A", "dor_fold_reduction": 1.0, "order": -1}]
+    )
+    target_aug = pd.concat([target_df, wt_row], ignore_index=True)
+    feat = _mutation_feature_matrix(
+        frame_df,
+        target_df=target_aug,
+        temperature_k=300.0,
+        dispersion_mode="replicate_sd",
+        mmgbsa_df=mmgbsa_df,
+    )
+    return feat[feat["mutation"].astype(str) == "WT"].copy()
 
 
 def main() -> int:
@@ -46,6 +71,21 @@ def main() -> int:
     parser.add_argument("--penalty", type=str, default="l1", choices=["l1", "l2"])
     parser.add_argument("--c-value", type=float, default=1.0)
     parser.add_argument("--decision-threshold", type=float, default=0.4)
+    parser.add_argument(
+        "--frame-feature-csv",
+        type=Path,
+        default=Path("results/analysis/ligand_pocket_features/tables/frame_features.csv"),
+    )
+    parser.add_argument(
+        "--mmgbsa-replicate-csv",
+        type=Path,
+        default=Path("results/mmgbsa_replicate_metrics.csv"),
+    )
+    parser.add_argument(
+        "--susceptibility-xlsx",
+        type=Path,
+        default=Path("data/DRM-susceptibilities.csv.xlsx"),
+    )
     args = parser.parse_args()
 
     feat = pd.read_csv(args.feature_matrix_csv)
@@ -184,6 +224,55 @@ def main() -> int:
         ]
     )
     raw_coef_df.to_csv(out_tables / "equation_terms.csv", index=False)
+
+    wt_df = _wt_feature_row(
+        frame_feature_csv=args.frame_feature_csv,
+        mmgbsa_replicate_csv=args.mmgbsa_replicate_csv,
+        susceptibility_xlsx=args.susceptibility_xlsx,
+    )
+    if not wt_df.empty:
+        x_wt = wt_df[FEATURES].copy()
+        classes = list(fitted.named_steps["model"].classes_)
+        pos_idx = int(classes.index("high"))
+        wt_prob = float(fitted.predict_proba(x_wt)[:, pos_idx][0])
+        wt_pred = "high" if wt_prob >= float(args.decision_threshold) else "low"
+        wt_row = {
+            "fold": 0,
+            "mutation": "WT",
+            "target_value": 1.0,
+            "observed_class": "low",
+            "predicted_class": wt_pred,
+            "prob_high": wt_prob,
+            "prob_low": float(1.0 - wt_prob),
+            "decision_threshold": float(args.decision_threshold),
+            "prediction_source": "full_fit_reference",
+        }
+        pred_with_wt = pred_df.copy()
+        pred_with_wt["prediction_source"] = "cv_out_of_fold"
+        pred_with_wt = pd.concat([pred_with_wt, pd.DataFrame([wt_row])], ignore_index=True)
+        pred_with_wt = pred_with_wt.sort_values(["prob_high", "target_value", "mutation"], ascending=[True, True, True], kind="stable").reset_index(drop=True)
+        pred_with_wt.to_csv(out_tables / "predictions_with_wt.csv", index=False)
+        _plot_cv_probability_ranked(pred_with_wt, out_plots / "probability_ranked_with_wt.png")
+        _plot_probability_vs_fold(pred_with_wt, out_plots / "probability_vs_fold_with_wt.png", use_log10_x=False)
+        _plot_probability_vs_fold(pred_with_wt, out_plots / "probability_vs_log10_fold_with_wt.png", use_log10_x=True)
+        cm_with_wt = confusion_matrix(
+            pred_with_wt["observed_class"],
+            pred_with_wt["predicted_class"],
+            labels=["low", "high"],
+        )
+        cm_with_wt_df = (
+            pd.DataFrame(cm_with_wt, index=["obs_low", "obs_high"], columns=["pred_low", "pred_high"])
+            .reset_index()
+            .rename(columns={"index": "observed"})
+        )
+        cm_with_wt_df.to_csv(out_tables / "confusion_matrix_with_wt.csv", index=False)
+        _plot_confusion_matrix(
+            cm_with_wt,
+            ["low", "high"],
+            f"Parsimonious Logistic Confusion Matrix With WT\n19 CV predictions + 1 full-fit WT reference, Threshold = {float(args.decision_threshold):.3f}",
+            out_plots / "confusion_matrix_with_wt.png",
+        )
+
     (out_config / "run_config.json").write_text(
         json.dumps(
             {
@@ -197,6 +286,9 @@ def main() -> int:
                 "penalty": str(args.penalty),
                 "c_value": float(args.c_value),
                 "decision_threshold": float(args.decision_threshold),
+                "frame_feature_csv": str(args.frame_feature_csv),
+                "mmgbsa_replicate_csv": str(args.mmgbsa_replicate_csv),
+                "susceptibility_xlsx": str(args.susceptibility_xlsx),
                 "fullfit_intercept_standardized_space": float(intercept),
                 "fullfit_intercept_raw_space": float(raw_intercept),
             },

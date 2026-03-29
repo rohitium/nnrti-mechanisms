@@ -13,6 +13,9 @@
   "penalty": "l1",
   "c_value": 1.0,
   "decision_threshold": 0.4,
+  "frame_feature_csv": "results/analysis/ligand_pocket_features/tables/frame_features.csv",
+  "mmgbsa_replicate_csv": "results/mmgbsa_replicate_metrics.csv",
+  "susceptibility_xlsx": "data/DRM-susceptibilities.csv.xlsx",
   "fullfit_intercept_standardized_space": -0.0,
   "fullfit_intercept_raw_space": -21.260569073621422
 }

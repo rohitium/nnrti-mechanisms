@@ -3,9 +3,11 @@
   "output_dir": "results/analysis/feature_vs_fold_r2_ge_0p1",
   "frame_feature_csv": "results/analysis/ligand_pocket_features/tables/frame_features.csv",
   "mmgbsa_replicate_csv": "results/mmgbsa_replicate_metrics.csv",
+  "susceptibility_xlsx": "data/DRM-susceptibilities.csv.xlsx",
+  "include_wt_reference": true,
   "repstd_ci_method": "exact_chi_square",
   "ci_level": 0.95,
-  "n_mutations": 19,
+  "n_mutations": 20,
   "n_features": 13,
   "feature_columns": [
     "binding_dg_electrostatic_mean",
