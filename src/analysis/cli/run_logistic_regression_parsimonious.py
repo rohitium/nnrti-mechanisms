@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fit and plot a fixed parsimonious logistic DOR classifier."""
+"""Fit and plot the current fixed parsimonious logistic DOR classifier."""
 from __future__ import annotations
 
 import argparse
@@ -23,9 +23,10 @@ from ..susceptibility import load_dor_susceptibilities
 
 
 FEATURES = [
+    "binding_dg_electrostatic_mean",
+    "residue_min_distance_PRO225_angstrom_repstd",
     "residue_min_distance_LYS101_angstrom_repstd",
     "ligand_pose_rmsd_angstrom_mean",
-    "ligand_palm_distance_angstrom_repstd",
 ]
 
 
@@ -68,9 +69,9 @@ def main() -> int:
     parser.add_argument("--low-max-fold", type=float, default=10.0)
     parser.add_argument("--cv-folds", type=int, default=5)
     parser.add_argument("--random-state", type=int, default=0)
-    parser.add_argument("--penalty", type=str, default="l1", choices=["l1", "l2"])
+    parser.add_argument("--penalty", type=str, default="l2", choices=["l1", "l2"])
     parser.add_argument("--c-value", type=float, default=1.0)
-    parser.add_argument("--decision-threshold", type=float, default=0.4)
+    parser.add_argument("--decision-threshold", type=float, default=0.5)
     parser.add_argument(
         "--frame-feature-csv",
         type=Path,
@@ -169,7 +170,7 @@ def main() -> int:
 
     cm_df = pd.DataFrame(cm, index=["obs_low", "obs_high"], columns=["pred_low", "pred_high"]).reset_index().rename(columns={"index": "observed"})
     summary_row = {
-        "model_name": "parsimonious_fixed_threshold_logistic",
+        "model_name": "parsimonious_standard_logistic",
         "feature_combo": "|".join(FEATURES),
         "penalty": str(args.penalty),
         "c_value": float(args.c_value),

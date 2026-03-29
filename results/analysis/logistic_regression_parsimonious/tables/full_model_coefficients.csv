@@ -1,4 +1,5 @@
 feature,coefficient,abs_coefficient,direction,intercept,penalty,c_value,decision_threshold
-residue_min_distance_LYS101_angstrom_repstd,1.5555594761688554,1.5555594761688554,toward_high,-0.0,l1,1.0,0.4
-ligand_pose_rmsd_angstrom_mean,1.1135683968119596,1.1135683968119596,toward_high,-0.0,l1,1.0,0.4
-ligand_palm_distance_angstrom_repstd,-0.7126502506934514,0.7126502506934514,toward_low,-0.0,l1,1.0,0.4
+residue_min_distance_LYS101_angstrom_repstd,1.515872279705943,1.515872279705943,toward_high,0.2367065179145768,l2,1.0,0.5
+ligand_pose_rmsd_angstrom_mean,0.9481021394380105,0.9481021394380105,toward_high,0.2367065179145768,l2,1.0,0.5
+binding_dg_electrostatic_mean,0.38301461525253194,0.38301461525253194,toward_high,0.2367065179145768,l2,1.0,0.5
+residue_min_distance_PRO225_angstrom_repstd,-0.08769660207592193,0.08769660207592193,toward_low,0.2367065179145768,l2,1.0,0.5

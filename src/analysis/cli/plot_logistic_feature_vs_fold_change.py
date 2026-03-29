@@ -479,32 +479,7 @@ def _plot_feature_vs_fold_change(
         return
 
     fig, ax = plt.subplots(figsize=(14.2, 9.2))
-    base_name, kind = _feature_base_and_kind(feature)
-    rep_points = replicate_points_df[replicate_points_df["feature"].astype(str) == str(feature)].copy()
-    if kind == "mean" and not rep_points.empty:
-        rep_singles = rep_points[~rep_points["is_combo"].astype(bool)].copy()
-        rep_combos = rep_points[rep_points["is_combo"].astype(bool)].copy()
-        for subset, marker, legend_label in [
-            (rep_singles, "o", "Replicate Values (Single DRM)"),
-            (rep_combos, "s", "Replicate Values (Combination DRM)"),
-        ]:
-            if subset.empty:
-                continue
-            x_rep = _replicate_x_positions(
-                subset["fold_reduction"].to_numpy(dtype=float),
-                subset["replicate"].to_numpy(),
-            )
-            ax.scatter(
-                x_rep,
-                subset["replicate_value"].to_numpy(dtype=float),
-                s=28,
-                color=color,
-                marker=marker,
-                edgecolors="none",
-                alpha=0.35,
-                label=legend_label,
-                zorder=1,
-            )
+    _base_name, kind = _feature_base_and_kind(feature)
     singles = df[~df["is_combo"]].copy()
     combos = df[df["is_combo"]].copy()
     for subset, marker, legend_label in [
@@ -513,6 +488,20 @@ def _plot_feature_vs_fold_change(
     ]:
         if subset.empty:
             continue
+        if kind == "mean":
+            err_subset = subset.dropna(subset=["yerr_lower", "yerr_upper"]).copy()
+            for row in err_subset.itertuples(index=False):
+                ax.errorbar(
+                    float(row.fold_reduction),
+                    float(getattr(row, feature)),
+                    yerr=np.array([[float(row.yerr_lower)], [float(row.yerr_upper)]]),
+                    fmt="none",
+                    ecolor=color,
+                    elinewidth=1.2,
+                    capsize=3.0,
+                    alpha=0.75,
+                    zorder=2,
+                )
         ax.scatter(
             subset["fold_reduction"],
             subset[feature],
@@ -542,11 +531,10 @@ def _plot_feature_vs_fold_change(
         )
     else:
         annotation = "Pearson r = NA\nSpearman rho = NA\nR^2 = NA\np = NA"
-    error_methods = [str(x) for x in df.get("error_method", pd.Series(dtype=str)).dropna().astype(str).unique().tolist()]
-    if kind == "mean" and not rep_points.empty:
-        annotation += "\nSmall points: replicate values"
-    elif error_methods and str(error_methods[0]).startswith("replicate_sd_chi_square_"):
-        annotation += "\nSummary point: replicate SD"
+    if kind == "mean":
+        annotation += "\nError bars: replicate SEM"
+    elif kind == "repstd":
+        annotation += "\nNo error bars: summary replicate SD"
 
     ax.set_xscale("log")
     ax.grid(alpha=0.25)

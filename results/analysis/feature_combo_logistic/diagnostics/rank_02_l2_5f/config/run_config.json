@@ -1,0 +1,14 @@
+{
+  "input_dir": "results/analysis/feature_combo_logistic",
+  "output_dir": "results/analysis/feature_combo_logistic/diagnostics/rank_02_l2_5f",
+  "rank": 2,
+  "penalty": "l2",
+  "combo_size": 5,
+  "feature_combo": [
+    "binding_dg_electrostatic_mean",
+    "residue_min_distance_LYS101_angstrom_repstd",
+    "residue_min_distance_PRO236_angstrom_mean",
+    "ligand_palm_distance_angstrom_repstd",
+    "ligand_pose_rmsd_angstrom_repstd"
+  ]
+}

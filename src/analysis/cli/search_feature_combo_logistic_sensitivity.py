@@ -380,7 +380,7 @@ def main() -> int:
     parser.add_argument("--l2-c-values", type=str, default="0.01,0.1,1,10")
     parser.add_argument("--l1-c-values", type=str, default="0.01,0.1,1,10")
     parser.add_argument("--n-jobs", type=int, default=-1)
-    parser.add_argument("--parallel-backend", type=str, default="threading", choices=["threading", "loky"])
+    parser.add_argument("--parallel-backend", type=str, default="loky", choices=["threading", "loky"])
     args = parser.parse_args()
 
     if not args.feature_matrix_csv.exists():
