@@ -1,6 +1,0 @@
-feature,coefficient,abs_coefficient,direction
-residue_min_distance_LYS101_angstrom_repstd,0.35624481534417385,0.35624481534417385,toward_high
-ligand_palm_distance_angstrom_repstd,-0.29297506682622104,0.29297506682622104,toward_low
-residue_min_distance_PRO236_angstrom_mean,0.2588804117614709,0.2588804117614709,toward_high
-residue_min_distance_PRO95_angstrom_repstd,0.23297666337003395,0.23297666337003395,toward_high
-ligand_pose_rmsd_angstrom_mean,0.20275086565024397,0.20275086565024397,toward_high

@@ -1,2 +1,0 @@
-accuracy,balanced_accuracy,macro_f1,macro_precision,macro_recall,n_mutations,cv_folds
-0.8947368421052632,0.9,0.8944444444444444,0.9090909090909092,0.9,19,5
