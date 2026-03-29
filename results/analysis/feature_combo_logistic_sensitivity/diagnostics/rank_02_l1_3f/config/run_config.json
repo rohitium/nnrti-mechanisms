@@ -1,0 +1,12 @@
+{
+  "input_dir": "results/analysis/feature_combo_logistic_sensitivity",
+  "output_dir": "results/analysis/feature_combo_logistic_sensitivity/diagnostics/rank_02_l1_3f",
+  "rank": 2,
+  "penalty": "l1",
+  "combo_size": 3,
+  "feature_combo": [
+    "residue_min_distance_LYS101_angstrom_repstd",
+    "ligand_pose_rmsd_angstrom_mean",
+    "ligand_palm_distance_angstrom_repstd"
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "input_dir": "results/analysis/feature_combo_logistic",
+  "output_dir": "results/analysis/feature_combo_logistic/diagnostics",
+  "top_n": 4
+}

@@ -1,0 +1,53 @@
+{
+  "feature_matrix_csv": "results/analysis/logistic_regression_including_energy/feature_screening/tables/mutation_feature_matrix.csv",
+  "output_dir": "results/analysis/feature_combo_logistic_sensitivity",
+  "target_col": "target_fold_reduction",
+  "min_r_squared": 0.1,
+  "combo_sizes": [
+    2,
+    3,
+    4,
+    5
+  ],
+  "cv_folds": 5,
+  "random_state": 0,
+  "low_max_fold": 10.0,
+  "threshold_objective": "min_fn_then_max_balanced_accuracy",
+  "l2_c_values": [
+    0.01,
+    0.1,
+    1.0,
+    10.0
+  ],
+  "l1_c_values": [
+    0.01,
+    0.1,
+    1.0,
+    10.0
+  ],
+  "n_mutations": 19,
+  "n_features_input": 58,
+  "n_features_filtered": 13,
+  "filtered_features": [
+    "binding_dg_electrostatic_mean",
+    "residue_min_distance_PRO225_angstrom_repstd",
+    "residue_min_distance_LYS101_angstrom_repstd",
+    "residue_min_distance_TYR318_angstrom_repstd",
+    "ligand_pose_rmsd_angstrom_mean",
+    "residue_min_distance_VAL179_angstrom_repstd",
+    "residue_min_distance_PRO236_angstrom_mean",
+    "residue_min_distance_VAL106_angstrom_mean",
+    "ligand_palm_depth_projection_angstrom_mean",
+    "ligand_palm_distance_angstrom_repstd",
+    "ligand_pose_rmsd_angstrom_repstd",
+    "ligand_entrance_distance_angstrom_mean",
+    "residue_min_distance_VAL108_angstrom_mean"
+  ],
+  "n_feature_combinations": 2366,
+  "penalties": [
+    "l2",
+    "l1"
+  ],
+  "n_jobs": -1,
+  "parallel_backend": "loky"
+}

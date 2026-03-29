@@ -1,0 +1,5 @@
+{
+  "input_dir": "results/analysis/feature_combo_logistic_sensitivity",
+  "output_dir": "results/analysis/feature_combo_logistic_sensitivity/diagnostics",
+  "top_n": 4
+}

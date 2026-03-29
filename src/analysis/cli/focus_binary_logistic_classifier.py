@@ -85,11 +85,21 @@ def _base_frame_feature(feature_name: str, frame_feature_columns: set[str]) -> s
     return text if text in frame_feature_columns else None
 
 
+def _decision_threshold_series(pred_df: pd.DataFrame) -> np.ndarray | None:
+    if "decision_threshold" not in pred_df.columns:
+        return None
+    values = pd.to_numeric(pred_df["decision_threshold"], errors="coerce").to_numpy(dtype=float)
+    if np.isfinite(values).sum() == 0:
+        return None
+    return values
+
+
 def _plot_cv_probability_ranked(pred_df: pd.DataFrame, output_png: Path) -> None:
     df = pred_df.copy().sort_values(["prob_high", "target_value"], ascending=[True, True]).reset_index(drop=True)
     x = np.arange(len(df), dtype=float)
     colors = {"low": "#1d3557", "high": "#d62828"}
     markers = {"low": "o", "high": "X"}
+    threshold_values = _decision_threshold_series(df)
 
     fig, ax = plt.subplots(figsize=(10.5, 4.8))
     for idx, row in df.iterrows():
@@ -108,12 +118,35 @@ def _plot_cv_probability_ranked(pred_df: pd.DataFrame, output_png: Path) -> None
             zorder=3,
         )
         ax.text(idx, float(row["prob_high"]) + 0.03, str(row["mutation"]), rotation=60, ha="left", va="bottom", fontsize=7)
-    ax.axhline(0.5, color="#666666", linestyle="--", linewidth=1.0)
+    if threshold_values is None:
+        ax.axhline(0.5, color="#666666", linestyle="--", linewidth=1.0)
+        threshold_text = "Decision threshold = 0.500"
+    else:
+        finite_thresholds = threshold_values[np.isfinite(threshold_values)]
+        thr_min = float(np.min(finite_thresholds))
+        thr_max = float(np.max(finite_thresholds))
+        thr_median = float(np.median(finite_thresholds))
+        if np.allclose(thr_min, thr_max):
+            ax.axhline(thr_median, color="#666666", linestyle="--", linewidth=1.0)
+            threshold_text = f"Decision threshold = {thr_median:.3f}"
+        else:
+            ax.step(x, threshold_values, where="mid", color="#666666", linestyle="--", linewidth=1.0, alpha=0.9, zorder=1)
+            threshold_text = f"Fold thresholds: median {thr_median:.3f}, range {thr_min:.3f}-{thr_max:.3f}"
     ax.set_ylim(-0.03, 1.03)
     ax.set_ylabel("CV Predicted Probability Of High")
     ax.set_xlabel("Mutations Sorted By Predicted Probability")
     ax.set_title("Binary Logistic CV Probabilities")
     ax.grid(axis="y", alpha=0.25)
+    ax.text(
+        0.02,
+        0.98,
+        threshold_text,
+        transform=ax.transAxes,
+        ha="left",
+        va="top",
+        fontsize=9,
+        bbox={"boxstyle": "round,pad=0.25", "facecolor": "white", "edgecolor": "#bbbbbb", "alpha": 0.92},
+    )
     output_png.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
     fig.savefig(output_png, dpi=220, bbox_inches="tight")
@@ -243,6 +276,7 @@ def _plot_probability_vs_fold(
     y = df["prob_high"].to_numpy(dtype=float)
     observed = df["observed_class"].astype(str).to_numpy()
     predicted = df["predicted_class"].astype(str).to_numpy()
+    threshold_values = _decision_threshold_series(df)
 
     pearson_r, pearson_p = stats.pearsonr(x, y)
     slope, intercept, r_value, p_value, _stderr = stats.linregress(x, y)
@@ -271,7 +305,19 @@ def _plot_probability_vs_fold(
         )
 
     ax.plot(x_grid, y_grid, color="#444444", linestyle="--", linewidth=1.6, zorder=2)
-    ax.axhline(0.5, color="#888888", linestyle=":", linewidth=1.0, alpha=0.9)
+    threshold_text = "Decision threshold = 0.500"
+    if threshold_values is None:
+        ax.axhline(0.5, color="#888888", linestyle=":", linewidth=1.0, alpha=0.9)
+    else:
+        finite_thresholds = threshold_values[np.isfinite(threshold_values)]
+        thr_min = float(np.min(finite_thresholds))
+        thr_max = float(np.max(finite_thresholds))
+        thr_median = float(np.median(finite_thresholds))
+        ax.axhline(thr_median, color="#888888", linestyle=":", linewidth=1.0, alpha=0.9)
+        if np.allclose(thr_min, thr_max):
+            threshold_text = f"Decision threshold = {thr_median:.3f}"
+        else:
+            threshold_text = f"Fold thresholds: median {thr_median:.3f}, range {thr_min:.3f}-{thr_max:.3f}"
     if use_log10_x:
         ax.set_xlim(float(np.min(x_grid)), float(np.max(x_grid)))
     else:
@@ -291,7 +337,7 @@ def _plot_probability_vs_fold(
     ax.text(
         0.02,
         0.98,
-        f"R^2 = {r_value**2:.3f}\np = {p_value:.4f}",
+        f"R^2 = {r_value**2:.3f}\np = {p_value:.4f}\n{threshold_text}",
         transform=ax.transAxes,
         ha="left",
         va="top",
