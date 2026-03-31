@@ -1,2 +1,0 @@
-model_name,feature_combo,penalty,c_value,decision_threshold,cv_folds,low_max_fold,tn,fp,fn,tp,accuracy,balanced_accuracy,macro_f1,macro_precision,macro_recall,roc_auc,average_precision
-parsimonious_standard_logistic,binding_dg_electrostatic_mean|residue_min_distance_PRO225_angstrom_repstd|residue_min_distance_LYS101_angstrom_repstd|ligand_pose_rmsd_angstrom_mean,l2,1.0,0.5,5,10.0,9,0,1,9,0.9473684210526315,0.95,0.9473684210526315,0.95,0.95,0.9,0.9526315789473684

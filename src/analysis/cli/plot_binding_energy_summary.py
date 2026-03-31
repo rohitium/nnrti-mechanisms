@@ -8,7 +8,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.patches import Patch
 from scipy import stats
+
+from .plot_dor_susceptibility_bars import CATEGORY_COLORS, _category_for_mutation, _sort_key
 
 COMPONENT_SPECS = [
     ("binding_dg", "Total", "#d62828"),
@@ -160,14 +163,11 @@ def _place_greedy_annotations(
 
 
 def _plot_ddg_bar_chart(summary: pd.DataFrame, specs: list[tuple[str, str, str]], title: str, output_png: Path) -> None:
-    fold_lookup = {
-        str(row["mutation"]): float(row["fold_reduction"])
-        for _, row in summary.iterrows()
-        if pd.notna(row["fold_reduction"])
-    }
     ordered = summary.copy()
-    ordered["sort_key"] = ordered["mutation"].astype(str).map(lambda x: _mutation_sort_key(x, fold_lookup))
+    ordered["category"] = ordered["mutation"].astype(str).map(_category_for_mutation)
+    ordered["sort_key"] = ordered["mutation"].astype(str).map(_sort_key)
     ordered = ordered.sort_values("sort_key").drop(columns=["sort_key"]).reset_index(drop=True)
+    highlight_column = "ddg_electrostatic"
 
     x = np.arange(len(ordered), dtype=float)
     fig, axes = plt.subplots(
@@ -178,15 +178,32 @@ def _plot_ddg_bar_chart(summary: pd.DataFrame, specs: list[tuple[str, str, str]]
         squeeze=False,
     )
     axes = axes[:, 0]
+    legend_handles = [
+        Patch(facecolor=CATEGORY_COLORS["Negative control"], edgecolor="#222222", label="Negative control"),
+        Patch(facecolor=CATEGORY_COLORS["Positive control"], edgecolor="#222222", label="Positive control"),
+        Patch(facecolor=CATEGORY_COLORS["Uncertain/limited data"], edgecolor="#222222", label="Uncertain/limited data"),
+    ]
     for ax, (column, label, color) in zip(axes, specs):
         y = ordered[f"{column}_mean"].to_numpy(dtype=float)
         yerr = ordered[f"{column}_sem"].to_numpy(dtype=float)
-        facecolors = ["#d62828" if bool(flag) else "#1d3557" for flag in ordered["is_combo"].tolist()]
+        facecolors = ordered["category"].map(CATEGORY_COLORS).tolist()
+        is_highlight = column == highlight_column
+        ax.set_facecolor("#eef8f6" if is_highlight else "#fbfbfb")
         ax.bar(x, y, color=facecolors, edgecolor=color, linewidth=0.8, alpha=0.82, zorder=2)
         ax.errorbar(x, y, yerr=yerr, fmt="none", ecolor="#333333", elinewidth=1.1, capsize=2.5, alpha=0.95, zorder=3)
         ax.grid(axis="y", linestyle=":", alpha=0.32)
-        ax.set_ylabel(f"{label}\n(kJ/mol)", fontsize=9)
+        ax.set_ylabel(
+            f"{label}\n(kJ/mol)",
+            fontsize=9,
+            fontweight="bold" if is_highlight else "normal",
+            color="#1f6f66" if is_highlight else "#222222",
+        )
         ax.axhline(0.0, color="#999999", linestyle="--", linewidth=1.0, alpha=0.8)
+        for spine in ax.spines.values():
+            spine.set_visible(True)
+            spine.set_linewidth(1.8 if is_highlight else 0.8)
+            spine.set_color("#2a9d8f" if is_highlight else "#d0d0d0")
+    axes[0].legend(handles=legend_handles, loc="upper left", frameon=False, fontsize=9, ncols=3)
 
     axes[-1].set_xticks(x, labels=ordered["mutation"].astype(str).tolist(), rotation=45, ha="right", fontsize=8)
     axes[-1].set_xlabel("Mutation", fontsize=10)
@@ -231,25 +248,26 @@ def _plot_component_vs_fold_change(
     output_png: Path,
 ) -> None:
     df = summary[summary["mutation"].astype(str) != "WT"].copy()
+    df["category"] = df["mutation"].astype(str).map(_category_for_mutation)
     df["log10_fold_reduction"] = np.log10(pd.to_numeric(df["fold_reduction"], errors="coerce"))
     df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=["log10_fold_reduction"]).reset_index(drop=True)
     if df.empty:
         return
 
     fig, ax = plt.subplots(figsize=(14.2, 9.2))
-    singles = df[~df["is_combo"]].copy()
-    combos = df[df["is_combo"]].copy()
-    for subset, point_color, legend_label, marker in [
-        (singles, "#1d3557", "Single DRM", "o"),
-        (combos, "#d62828", "Combination DRM", "s"),
+    for category, point_color in [
+        ("Negative control", CATEGORY_COLORS["Negative control"]),
+        ("Positive control", CATEGORY_COLORS["Positive control"]),
+        ("Uncertain/limited data", CATEGORY_COLORS["Uncertain/limited data"]),
     ]:
+        subset = df[df["category"] == category].copy()
         if subset.empty:
             continue
         ax.errorbar(
             subset["fold_reduction"],
             subset[f"{column}_mean"],
             yerr=subset[f"{column}_sem"],
-            fmt=marker,
+            fmt="o",
             ms=7.5,
             lw=0,
             elinewidth=1.15,
@@ -259,7 +277,7 @@ def _plot_component_vs_fold_change(
             markeredgecolor="white",
             markeredgewidth=0.7,
             alpha=0.95,
-            label=legend_label,
+            label=category,
             zorder=3,
         )
 
@@ -278,10 +296,14 @@ def _plot_component_vs_fold_change(
 
     ax.set_xscale("log")
     ax.grid(alpha=0.25)
-    ax.set_title(f"{label} Vs Fold Reduction", fontsize=14, fontweight="bold")
+    if column != "ddg_electrostatic":
+        ax.set_title(f"{label} Vs Fold Reduction", fontsize=14, fontweight="bold")
     ax.set_xlabel("Fold Reduction")
-    ax.set_ylabel("kJ/mol")
-    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0.0, fontsize=10, frameon=False)
+    ax.set_ylabel(f"MM/GBSA {label} (kJ/mol)")
+    if column in {"binding_dg_electrostatic", "ddg_electrostatic"}:
+        ax.legend(loc="lower right", fontsize=10, frameon=True, framealpha=0.9, facecolor="white", edgecolor="#cccccc")
+    else:
+        ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0.0, fontsize=10, frameon=False)
     _place_greedy_annotations(
         ax,
         df["fold_reduction"].to_numpy(dtype=float),
@@ -345,6 +367,13 @@ def main() -> int:
             color,
             out_plots / f"mmgbsa_{slug}_vs_fold_change.png",
         )
+    _plot_component_vs_fold_change(
+        ddg_summary,
+        "ddg_electrostatic",
+        "ΔΔG Electrostatics",
+        "#2a9d8f",
+        out_plots / "mmgbsa_ddg_electrostatics_vs_fold_change.png",
+    )
 
     for stale in [
         out_plots / "mmgbsa_components_by_mutation.png",

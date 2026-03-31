@@ -1,0 +1,11 @@
+{
+  "manifest": "manifests/md_manifest.csv",
+  "frame_features_csv": "results/analysis/ligand_pocket_features/tables/frame_features.csv",
+  "mechanism_panel_csv": "results/analysis/custom_mechanism_selected_model/tables/mechanism_panel_feature_matrix.csv",
+  "output_dir": "results/analysis/custom_mechanism_selected_model",
+  "feature_columns": [
+    "ser105_dor_distance_angstrom",
+    "residue_min_distance_TYR188_angstrom",
+    "ligand_pose_rmsd_angstrom"
+  ]
+}
