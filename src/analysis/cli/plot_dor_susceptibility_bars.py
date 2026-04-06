@@ -9,6 +9,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from matplotlib.patches import Patch
 
 from ..susceptibility import load_dor_susceptibilities
@@ -17,8 +18,6 @@ NEGATIVE_CONTROLS = {
     "K103N",
     "Y181C",
     "G190A",
-    "V106I",
-    "F227C",
 }
 
 POSITIVE_CONTROLS = {
@@ -32,7 +31,8 @@ POSITIVE_CONTROLS = {
     "V106I+F227C",
 }
 
-UNCERTAIN_LIMITED = {
+TEST_SET = {
+    "V106I",
     "L100I+K103N",
     "K103N+P225H",
     "K103N+M230L",
@@ -41,11 +41,20 @@ UNCERTAIN_LIMITED = {
     "G190S",
 }
 
+CATEGORY_ORDER = {
+    "Negative control": 0,
+    "Positive control": 1,
+    "Test set": 2,
+}
+
 CATEGORY_COLORS = {
     "Negative control": "#4c78a8",
     "Positive control": "#e45756",
+    "Test set": "#9aa0a6",
     "Uncertain/limited data": "#9aa0a6",
 }
+
+UNCERTAIN_LIMITED = TEST_SET
 
 
 def _parse_args() -> argparse.Namespace:
@@ -69,8 +78,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dagger-mutation",
         type=str,
-        default="F227C",
-        help="Mutation to annotate with a dagger symbol.",
+        default="",
+        help="Optional mutation to annotate with a dagger symbol.",
     )
     parser.add_argument(
         "--title",
@@ -88,15 +97,56 @@ def _sort_key(label: str) -> tuple[int, str]:
     return (min(positions), str(label).upper())
 
 
+def _display_mutations() -> set[str]:
+    return {str(label).strip().upper() for label in (NEGATIVE_CONTROLS | POSITIVE_CONTROLS | TEST_SET)}
+
+
 def _category_for_mutation(label: str) -> str:
     mutation = str(label).strip().upper()
     if mutation in NEGATIVE_CONTROLS:
         return "Negative control"
     if mutation in POSITIVE_CONTROLS:
         return "Positive control"
-    if mutation in UNCERTAIN_LIMITED:
-        return "Uncertain/limited data"
+    if mutation in TEST_SET:
+        return "Test set"
     raise ValueError(f"Missing category for mutation: {label}")
+
+
+def _filter_display_mutations(
+    df: pd.DataFrame,
+    *,
+    mutation_col: str = "mutation",
+    include_wt: bool = False,
+) -> pd.DataFrame:
+    labels = df[mutation_col].astype(str).str.strip().str.upper()
+    mask = labels.isin(_display_mutations())
+    if include_wt:
+        mask |= labels.eq("WT")
+    return df.loc[mask].copy()
+
+
+def order_mutation_panel(
+    df: pd.DataFrame,
+    *,
+    mutation_col: str = "mutation",
+    fold_col: str = "dor_fold_reduction",
+    include_wt: bool = False,
+) -> pd.DataFrame:
+    ordered = _filter_display_mutations(df, mutation_col=mutation_col, include_wt=include_wt)
+    mutation_upper = ordered[mutation_col].astype(str).str.strip().str.upper()
+    ordered["_category"] = mutation_upper.map(lambda label: "WT" if label == "WT" else _category_for_mutation(label))
+    ordered["_category_rank"] = ordered["_category"].map(lambda label: -1 if label == "WT" else CATEGORY_ORDER.get(label, 99))
+    ordered["_fold_sort"] = pd.to_numeric(ordered[fold_col], errors="coerce")
+    ordered["_position_sort"] = ordered[mutation_col].map(lambda label: _sort_key(label)[0])
+    ordered["_alpha_sort"] = ordered[mutation_col].map(lambda label: _sort_key(label)[1])
+    ordered = ordered.sort_values(
+        ["_category_rank", "_fold_sort", "_position_sort", "_alpha_sort"],
+        kind="stable",
+    ).reset_index(drop=True)
+    if "category" in ordered.columns:
+        ordered["category"] = ordered["_category"]
+    ordered = ordered.drop(columns=["_category", "_category_rank", "_fold_sort", "_position_sort", "_alpha_sort"])
+    return ordered
 
 
 def _plot(df, output_png: Path, *, star_mutation: str, dagger_mutation: str, title: str) -> None:
@@ -144,14 +194,15 @@ def _plot(df, output_png: Path, *, star_mutation: str, dagger_mutation: str, tit
     legend_handles = [
         Patch(facecolor=CATEGORY_COLORS["Negative control"], edgecolor="#222222", label="Negative control"),
         Patch(facecolor=CATEGORY_COLORS["Positive control"], edgecolor="#222222", label="Positive control"),
-        Patch(facecolor=CATEGORY_COLORS["Uncertain/limited data"], edgecolor="#222222", label="Uncertain/limited data"),
+        Patch(facecolor=CATEGORY_COLORS["Test set"], edgecolor="#222222", label="Test set"),
     ]
     ax.legend(handles=legend_handles, loc="upper left", frameon=False, fontsize=9)
 
-    annotations = {
-        str(star_mutation).strip().upper(): "*",
-        str(dagger_mutation).strip().upper(): "\u2020",
-    }
+    annotations: dict[str, str] = {}
+    if str(star_mutation).strip():
+        annotations[str(star_mutation).strip().upper()] = "*"
+    if str(dagger_mutation).strip():
+        annotations[str(dagger_mutation).strip().upper()] = "\u2020"
     for bar, label, value in zip(bars, labels, values):
         symbol = annotations.get(str(label).upper())
         if symbol is None:
@@ -170,7 +221,6 @@ def _plot(df, output_png: Path, *, star_mutation: str, dagger_mutation: str, tit
     fig.tight_layout()
     output_png.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_png, dpi=300, bbox_inches="tight")
-    fig.savefig(output_png.with_suffix(".pdf"), bbox_inches="tight")
     plt.close(fig)
 
 
@@ -188,9 +238,8 @@ def main() -> int:
 
     df = (
         load_dor_susceptibilities(args.susceptibility_xlsx)
-        .sort_values("mutation", key=lambda s: s.map(_sort_key), kind="stable")
-        .reset_index(drop=True)
     )
+    df = order_mutation_panel(df, fold_col="dor_fold_reduction")
     df["category"] = df["mutation"].map(_category_for_mutation)
     df.to_csv(out_tables / "dor_susceptibility_values.csv", index=False)
 

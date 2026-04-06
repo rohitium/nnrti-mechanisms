@@ -37,6 +37,13 @@ FEATURE_LABELS = {
     "ligand_pose_rmsd_angstrom_mean": "Ligand Pose RMSD",
 }
 
+DISPLAY_TEST_SET_LABEL = "Test set"
+DISPLAY_CATEGORY_COLORS = {
+    "Negative control": CATEGORY_COLORS["Negative control"],
+    "Positive control": CATEGORY_COLORS["Positive control"],
+    DISPLAY_TEST_SET_LABEL: CATEGORY_COLORS["Uncertain/limited data"],
+}
+
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Promote the selected custom mechanism logistic model.")
@@ -58,16 +65,43 @@ def _parse_args() -> argparse.Namespace:
 
 
 def _category_color(label: str) -> str:
+    category = _display_category(label)
+    if category == "WT":
+        return "#333333"
+    if category in DISPLAY_CATEGORY_COLORS:
+        return DISPLAY_CATEGORY_COLORS[category]
+    return "#777777"
+
+
+def _display_category(label: str) -> str:
     mutation = str(label).strip().upper()
     if mutation == "WT":
-        return "#333333"
-    if mutation in NEGATIVE_CONTROLS:
-        return CATEGORY_COLORS["Negative control"]
-    if mutation in POSITIVE_CONTROLS:
-        return CATEGORY_COLORS["Positive control"]
+        return "WT"
+    if mutation in {"F227C", "V106I"}:
+        return "Negative control"
     if mutation in UNCERTAIN_LIMITED:
-        return CATEGORY_COLORS["Uncertain/limited data"]
-    return "#777777"
+        return DISPLAY_TEST_SET_LABEL
+    if mutation in NEGATIVE_CONTROLS:
+        return "Negative control"
+    if mutation in POSITIVE_CONTROLS:
+        return "Positive control"
+    return "Other"
+
+
+def _filter_selected_model_plot_df(df: pd.DataFrame) -> pd.DataFrame:
+    plot_df = df.copy()
+    if "display_category" not in plot_df.columns:
+        plot_df["display_category"] = plot_df["mutation"].astype(str).map(_display_category)
+    return plot_df.reset_index(drop=True)
+
+
+def _display_control_cv_df(df: pd.DataFrame) -> pd.DataFrame:
+    return _filter_selected_model_plot_df(df)
+
+
+def _display_holdout_rank_df(df: pd.DataFrame) -> pd.DataFrame:
+    plot_df = _filter_selected_model_plot_df(df)
+    return plot_df[plot_df["display_category"].isin([DISPLAY_TEST_SET_LABEL, "WT"])].reset_index(drop=True)
 
 
 def _pipeline(penalty: str, c_value: float) -> Pipeline:
@@ -210,7 +244,7 @@ def _plot_all_probability_vs_fold(df: pd.DataFrame, out: Path) -> None:
     category_handles = [
         Line2D([0], [0], marker="o", color="none", markerfacecolor=CATEGORY_COLORS["Negative control"], markeredgecolor="white", markersize=8, label="Negative control"),
         Line2D([0], [0], marker="o", color="none", markerfacecolor=CATEGORY_COLORS["Positive control"], markeredgecolor="white", markersize=8, label="Positive control"),
-        Line2D([0], [0], marker="o", color="none", markerfacecolor=CATEGORY_COLORS["Uncertain/limited data"], markeredgecolor="white", markersize=8, label="Uncertain/limited data"),
+        Line2D([0], [0], marker="o", color="none", markerfacecolor=CATEGORY_COLORS["Uncertain/limited data"], markeredgecolor="white", markersize=8, label=DISPLAY_TEST_SET_LABEL),
         Line2D([0], [0], marker="o", color="none", markerfacecolor="#333333", markeredgecolor="white", markersize=8, label="WT"),
     ]
     ax.legend(handles=category_handles, loc="center left", frameon=True, facecolor="white", framealpha=0.92)
@@ -423,13 +457,22 @@ def main() -> int:
     ).sort_values("target_fold_reduction", kind="stable").reset_index(drop=True)
     all_prob.to_csv(out_tables / "all_mutation_probabilities.csv", index=False)
 
-    _plot_cv_vs_fold(cv_df, out_plots / "cv_probability_vs_fold_change.png")
-    _plot_all_probability_vs_fold(all_prob, out_plots / "all_mutation_probability_vs_fold_change.png")
-    _plot_ranked_probabilities(cv_df, out_plots / "cv_probability_ranked.png")
-    _plot_roc_curve(y_train, probs, out_plots / "cv_roc_curve.png")
+    cv_plot_df = _display_control_cv_df(cv_df)
+    all_prob_plot_df = _filter_selected_model_plot_df(all_prob)
+    hold_out_plot_df = _display_holdout_rank_df(all_prob)
+
+    display_probs = cv_plot_df["prob_high"].to_numpy(dtype=float)
+    display_y_true = cv_plot_df["observed_class"].astype(str)
+    display_y_pred = np.where(display_probs >= float(args.decision_threshold), "high", "low")
+    display_cm = confusion_matrix(display_y_true, display_y_pred, labels=["low", "high"])
+
+    _plot_cv_vs_fold(cv_plot_df, out_plots / "cv_probability_vs_fold_change.png")
+    _plot_all_probability_vs_fold(all_prob_plot_df, out_plots / "all_mutation_probability_vs_fold_change.png")
+    _plot_ranked_probabilities(cv_plot_df, out_plots / "cv_probability_ranked.png")
+    _plot_roc_curve(display_y_true, display_probs, out_plots / "cv_roc_curve.png")
     _plot_coefficients(coef_df, out_plots / "full_model_feature_coefficients.png")
-    _plot_confusion_matrix(cm, out_plots / "confusion_matrix.png")
-    _plot_holdout(hold_out, out_plots / "holdout_probability_ranked.png")
+    _plot_confusion_matrix(display_cm, out_plots / "confusion_matrix.png")
+    _plot_holdout(hold_out_plot_df, out_plots / "holdout_probability_ranked.png")
 
     (out_config / "run_config.json").write_text(
         json.dumps(
