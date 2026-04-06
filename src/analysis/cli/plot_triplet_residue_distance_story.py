@@ -69,6 +69,12 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--resid-offset", type=int, default=-3)
     parser.add_argument("--ligand-resname", type=str, default="2KW")
+    parser.add_argument(
+        "--triplet-colors",
+        type=str,
+        default="",
+        help="Optional comma-separated colors to apply to the triplet in order.",
+    )
     return parser.parse_args()
 
 
@@ -323,6 +329,9 @@ def main() -> int:
     triplet = [token.strip() for token in str(args.triplet).split(",") if token.strip()]
     if len(triplet) != 3:
         raise ValueError("--triplet must contain exactly three comma-separated mutations")
+    triplet_colors = [token.strip() for token in str(args.triplet_colors).split(",") if token.strip()]
+    if triplet_colors and len(triplet_colors) != len(triplet):
+        raise ValueError("--triplet-colors must provide exactly one color per triplet entry")
 
     out_tables = args.output_dir / "tables"
     out_plots = args.output_dir / "plots"
@@ -401,8 +410,8 @@ def main() -> int:
     metric_name = str(args.metric_name)
     ylabel = str(args.ylabel)
     sub = mean_df_all[mean_df_all["metric"].astype(str) == metric_name].copy()
-    for mutation in triplet:
-        color = MUTATION_COLORS.get(mutation, "#555555")
+    for idx, mutation in enumerate(triplet):
+        color = triplet_colors[idx] if triplet_colors else MUTATION_COLORS.get(mutation, "#555555")
         mut_mean = sub[sub["mutation"].astype(str) == mutation].copy()
         x = mut_mean["time_ns"].to_numpy(dtype=float)
         y = mut_mean["metric_mean"].to_numpy(dtype=float)
@@ -428,7 +437,6 @@ def main() -> int:
 
     png = out_plots / f"{str(args.output_prefix)}.png"
     fig.savefig(png, dpi=300, bbox_inches="tight")
-    fig.savefig(png.with_suffix(".pdf"), bbox_inches="tight")
     plt.close(fig)
 
     (out_config / "run_config.json").write_text(
@@ -445,6 +453,7 @@ def main() -> int:
                 "metrics": [str(args.metric_name)],
                 "ylabel": str(args.ylabel),
                 "output_prefix": str(args.output_prefix),
+                "triplet_colors": triplet_colors,
                 "force_total_ns": None if args.force_total_ns is None else float(args.force_total_ns),
                 "aggregation": "replicates interpolated onto common time grid before mean/SEM",
                 "timing_mode": (
