@@ -65,6 +65,11 @@ def _parse_args() -> argparse.Namespace:
 
 
 def _category_color(label: str) -> str:
+    category = str(label)
+    if category == "WT":
+        return "#333333"
+    if category in DISPLAY_CATEGORY_COLORS:
+        return DISPLAY_CATEGORY_COLORS[category]
     category = _display_category(label)
     if category == "WT":
         return "#333333"
@@ -73,12 +78,24 @@ def _category_color(label: str) -> str:
     return "#777777"
 
 
+def _display_category_from_control_category(control_category: str, mutation: str) -> str:
+    mutation_label = str(mutation).strip().upper()
+    category = str(control_category).strip().lower()
+    if mutation_label == "WT" or category == "wt_reference":
+        return "WT"
+    if category == "negative_control":
+        return "Negative control"
+    if category == "positive_control":
+        return "Positive control"
+    if category == "uncertain_limited":
+        return DISPLAY_TEST_SET_LABEL
+    return _display_category(mutation)
+
+
 def _display_category(label: str) -> str:
     mutation = str(label).strip().upper()
     if mutation == "WT":
         return "WT"
-    if mutation in {"F227C", "V106I"}:
-        return "Negative control"
     if mutation in UNCERTAIN_LIMITED:
         return DISPLAY_TEST_SET_LABEL
     if mutation in NEGATIVE_CONTROLS:
@@ -90,8 +107,10 @@ def _display_category(label: str) -> str:
 
 def _filter_selected_model_plot_df(df: pd.DataFrame) -> pd.DataFrame:
     plot_df = df.copy()
-    if "display_category" not in plot_df.columns:
-        plot_df["display_category"] = plot_df["mutation"].astype(str).map(_display_category)
+    plot_df["display_category"] = [
+        _display_category_from_control_category(control_category=row.get("control_category", ""), mutation=row.get("mutation", ""))
+        for _, row in plot_df.iterrows()
+    ]
     return plot_df.reset_index(drop=True)
 
 
