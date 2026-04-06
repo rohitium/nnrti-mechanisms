@@ -5,6 +5,7 @@
   "c_value": 3.0,
   "decision_threshold": 0.5,
   "low_max_fold": 10.0,
+  "all_probability_mode": "full_fit",
   "selected_features": [
     "ser105_dor_distance_angstrom_mean",
     "residue_min_distance_TYR188_angstrom_mean",

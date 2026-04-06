@@ -61,6 +61,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--c-value", type=float, default=3.0)
     parser.add_argument("--decision-threshold", type=float, default=0.5)
     parser.add_argument("--low-max-fold", type=float, default=10.0)
+    parser.add_argument("--all-probability-mode", choices=["mixed", "full_fit"], default="mixed")
     return parser.parse_args()
 
 
@@ -153,7 +154,7 @@ def _annotate_points(ax: plt.Axes, df: pd.DataFrame, overrides: dict[str, tuple[
     for _, row in df.sort_values(["target_fold_reduction", "prob_high"], kind="stable").iterrows():
         label = str(row["mutation"])
         xy = (float(row["target_fold_reduction"]), float(row["prob_high"]))
-        color = _category_color(label)
+        color = _category_color(row.get("display_category", label))
         if label in overrides:
             candidates = [overrides[label]]
         else:
@@ -197,7 +198,7 @@ def _plot_cv_vs_fold(df: pd.DataFrame, out: Path) -> None:
         m = str(row["mutation"])
         x = float(row["target_fold_reduction"])
         y = float(row["prob_high"])
-        c = _category_color(m)
+        c = _category_color(row.get("display_category", m))
         ax.scatter(x, y, s=48, color=c, edgecolor="white", linewidth=0.7, zorder=3)
     x = df["target_fold_reduction"].astype(float).to_numpy()
     y = df["prob_high"].astype(float).to_numpy()
@@ -229,7 +230,7 @@ def _plot_all_probability_vs_fold(df: pd.DataFrame, out: Path) -> None:
         m = str(row["mutation"])
         x = float(row["target_fold_reduction"])
         y = float(row["prob_high"])
-        c = _category_color(m)
+        c = _category_color(row.get("display_category", m))
         marker = marker_map.get(str(row["prediction_source"]), "o")
         ax.scatter(x, y, s=52, marker=marker, color=c, edgecolor="white", linewidth=0.7, zorder=3)
     x = df["target_fold_reduction"].astype(float).to_numpy()
@@ -277,7 +278,7 @@ def _plot_ranked_probabilities(df: pd.DataFrame, out: Path) -> None:
     plot_df = df.sort_values(["prob_high", "target_fold_reduction"], ascending=[False, True], kind="stable").reset_index(drop=True)
     fig, ax = plt.subplots(figsize=(8.0, 4.8))
     xs = np.arange(len(plot_df))
-    colors = [_category_color(m) for m in plot_df["mutation"]]
+    colors = [_category_color(c) for c in plot_df["display_category"]]
     ax.bar(xs, plot_df["prob_high"], color=colors, edgecolor="white", linewidth=0.7)
     ax.axhline(0.5, color="#888888", linestyle=":", linewidth=1.0)
     ax.set_ylabel("P(high)")
@@ -321,7 +322,7 @@ def _plot_holdout(df: pd.DataFrame, out: Path) -> None:
     plot_df = df.sort_values(["prob_high", "target_fold_reduction"], ascending=[False, True], kind="stable").reset_index(drop=True)
     fig, ax = plt.subplots(figsize=(7.2, 4.8))
     xs = np.arange(len(plot_df))
-    colors = [_category_color(m) for m in plot_df["mutation"]]
+    colors = [_category_color(c) for c in plot_df["display_category"]]
     ax.bar(xs, plot_df["prob_high"], color=colors, edgecolor="white", linewidth=0.7)
     ax.axhline(0.5, color="#888888", linestyle=":", linewidth=1.0)
     ax.set_ylabel("Full-fit P(high)")
@@ -443,37 +444,46 @@ def main() -> int:
     hold_out["prediction_source"] = np.where(hold_out["control_category"] == "wt_reference", "wt_reference", "holdout")
     hold_out.to_csv(out_tables / "holdout_predictions.csv", index=False)
 
-    all_prob = pd.concat(
-        [
-            cv_df[
-                [
-                    "mutation",
-                    "control_category",
-                    "target_fold_reduction",
-                    "observed_class",
-                    "prob_high",
-                    "prob_low",
-                    "logit_prob_high",
-                    "predicted_class",
-                    "prediction_source",
-                ]
-            ].rename(columns={"observed_class": "target_binary_class"}),
-            hold_out[
-                [
-                    "mutation",
-                    "control_category",
-                    "target_fold_reduction",
-                    "target_binary_class",
-                    "prob_high",
-                    "prob_low",
-                    "logit_prob_high",
-                    "predicted_class",
-                    "prediction_source",
-                ]
+    if str(args.all_probability_mode) == "full_fit":
+        all_prob = df[["mutation", "control_category", "target_fold_reduction", "target_binary_class"]].copy()
+        all_prob["prob_high"] = full.predict_proba(df[SELECTED_FEATURES])[:, pos_idx]
+        all_prob["prob_low"] = 1.0 - all_prob["prob_high"]
+        all_prob["logit_prob_high"] = _safe_logit(all_prob["prob_high"].to_numpy(dtype=float))
+        all_prob["predicted_class"] = np.where(all_prob["prob_high"] >= float(args.decision_threshold), "high", "low")
+        all_prob["prediction_source"] = np.where(all_prob["control_category"] == "wt_reference", "wt_reference", "full_fit")
+    else:
+        all_prob = pd.concat(
+            [
+                cv_df[
+                    [
+                        "mutation",
+                        "control_category",
+                        "target_fold_reduction",
+                        "observed_class",
+                        "prob_high",
+                        "prob_low",
+                        "logit_prob_high",
+                        "predicted_class",
+                        "prediction_source",
+                    ]
+                ].rename(columns={"observed_class": "target_binary_class"}),
+                hold_out[
+                    [
+                        "mutation",
+                        "control_category",
+                        "target_fold_reduction",
+                        "target_binary_class",
+                        "prob_high",
+                        "prob_low",
+                        "logit_prob_high",
+                        "predicted_class",
+                        "prediction_source",
+                    ]
+                ],
             ],
-        ],
-        ignore_index=True,
-    ).sort_values("target_fold_reduction", kind="stable").reset_index(drop=True)
+            ignore_index=True,
+        )
+    all_prob = all_prob.sort_values("target_fold_reduction", kind="stable").reset_index(drop=True)
     all_prob.to_csv(out_tables / "all_mutation_probabilities.csv", index=False)
 
     cv_plot_df = _display_control_cv_df(cv_df)
@@ -502,6 +512,7 @@ def main() -> int:
                 "c_value": float(args.c_value),
                 "decision_threshold": float(args.decision_threshold),
                 "low_max_fold": float(args.low_max_fold),
+                "all_probability_mode": str(args.all_probability_mode),
                 "selected_features": SELECTED_FEATURES,
             },
             indent=2,
