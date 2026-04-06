@@ -9,6 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib.patheffects as pe
+from matplotlib.transforms import Bbox
 import numpy as np
 import pandas as pd
 from scipy.special import logit
@@ -143,23 +144,34 @@ def _annotate_points(ax: plt.Axes, df: pd.DataFrame, overrides: dict[str, tuple[
     overrides = overrides or {}
     right_side_candidates = [(-10, 5), (-10, -8), (-14, 10), (-14, -12), (-18, 4), (-18, -10)]
     left_side_candidates = [(5, 5), (5, -8), (9, 10), (9, -12), (14, 4), (14, -10)]
+    lower_left_candidates = [(0, 8), (0, 10), (4, 8), (-4, 8), (0, 12), (5, 5)]
     middle_candidates = [(5, 5), (5, -8), (-10, 5), (-10, -8), (9, 10), (9, -12)]
     renderer = ax.figure.canvas.get_renderer()
     placed: list[object] = []
-    xvals = df["target_fold_reduction"].astype(float).to_numpy()
+    x_col = "plot_target_fold_reduction" if "plot_target_fold_reduction" in df.columns else "target_fold_reduction"
+    y_col = "plot_prob_high" if "plot_prob_high" in df.columns else "prob_high"
+    marker_radius_px = 9.0
+    point_boxes = []
+    for _, row in df.iterrows():
+        px, py = ax.transData.transform((float(row[x_col]), float(row[y_col])))
+        point_boxes.append(Bbox.from_bounds(px - marker_radius_px, py - marker_radius_px, 2.0 * marker_radius_px, 2.0 * marker_radius_px))
+    xvals = df[x_col].astype(float).to_numpy()
     xmin = float(np.min(xvals))
     xmax = float(np.max(xvals))
     lxmin = np.log10(xmin)
     lxmax = np.log10(xmax)
-    for _, row in df.sort_values(["target_fold_reduction", "prob_high"], kind="stable").iterrows():
+    for _, row in df.sort_values([x_col, y_col], kind="stable").iterrows():
         label = str(row["mutation"])
-        xy = (float(row["target_fold_reduction"]), float(row["prob_high"]))
+        xy = (float(row[x_col]), float(row[y_col]))
         color = _category_color(row.get("display_category", label))
         if label in overrides:
             candidates = [overrides[label]]
         else:
             xfrac = (np.log10(xy[0]) - lxmin) / max(lxmax - lxmin, 1e-8)
-            if xfrac > 0.72:
+            yfrac = xy[1]
+            if xfrac < 0.28 and yfrac < 0.35:
+                candidates = lower_left_candidates
+            elif xfrac > 0.72:
                 candidates = right_side_candidates
             elif xfrac < 0.22:
                 candidates = left_side_candidates
@@ -174,12 +186,12 @@ def _annotate_points(ax: plt.Axes, df: pd.DataFrame, overrides: dict[str, tuple[
                 textcoords="offset points",
                 xytext=(dx, dy),
                 fontsize=8,
-                ha="right" if dx < 0 else "left",
+                ha="center" if dx == 0 else ("right" if dx < 0 else "left"),
                 color=color,
             )
             ann.set_path_effects([pe.withStroke(linewidth=3, foreground="white", alpha=0.92)])
             bbox = ann.get_window_extent(renderer=renderer).expanded(1.05, 1.15)
-            overlap = sum(bbox.overlaps(prev) for prev in placed)
+            overlap = sum(bbox.overlaps(prev) for prev in placed) + sum(bbox.overlaps(point_box) for point_box in point_boxes)
             score = (overlap, abs(dy), abs(dx))
             if best_score is None or score < best_score:
                 if best_ann is not None:
@@ -224,12 +236,16 @@ def _plot_cv_vs_fold(df: pd.DataFrame, out: Path) -> None:
 
 
 def _plot_all_probability_vs_fold(df: pd.DataFrame, out: Path) -> None:
+    plot_df = df.copy()
+    plot_df["plot_target_fold_reduction"] = plot_df["target_fold_reduction"].astype(float)
+    plot_df["plot_prob_high"] = plot_df["prob_high"].astype(float)
+
     fig, ax = plt.subplots(figsize=(7.4, 5.0))
     marker_map = {"cv_control": "o", "holdout": "s", "wt_reference": "D"}
-    for _, row in df.iterrows():
+    for _, row in plot_df.iterrows():
         m = str(row["mutation"])
-        x = float(row["target_fold_reduction"])
-        y = float(row["prob_high"])
+        x = float(row["plot_target_fold_reduction"])
+        y = float(row["plot_prob_high"])
         c = _category_color(row.get("display_category", m))
         marker = marker_map.get(str(row["prediction_source"]), "o")
         ax.scatter(x, y, s=52, marker=marker, color=c, edgecolor="white", linewidth=0.7, zorder=3)
@@ -246,12 +262,15 @@ def _plot_all_probability_vs_fold(df: pd.DataFrame, out: Path) -> None:
     ax.set_xscale("log")
     ax.set_xlabel("DOR Fold-change")
     ax.set_ylabel("P(high)")
-    ax.set_ylim(-0.02, 1.02)
+    xmin = float(np.min(x))
+    xmax = float(np.max(x))
+    ax.set_xlim(xmin / 1.3, xmax * 1.45)
+    ax.set_ylim(-0.02, 1.06)
     ax.grid(alpha=0.22, linestyle=":")
     fig.canvas.draw()
     _annotate_points(
         ax,
-        df,
+        plot_df,
         overrides={
             "Y188L": (-8, 8),
             "V106A+P225H": (-12, -8),
@@ -267,10 +286,10 @@ def _plot_all_probability_vs_fold(df: pd.DataFrame, out: Path) -> None:
         Line2D([0], [0], marker="o", color="none", markerfacecolor=CATEGORY_COLORS["Uncertain/limited data"], markeredgecolor="white", markersize=8, label=DISPLAY_TEST_SET_LABEL),
         Line2D([0], [0], marker="o", color="none", markerfacecolor="#333333", markeredgecolor="white", markersize=8, label="WT"),
     ]
-    ax.legend(handles=category_handles, loc="center left", frameon=True, facecolor="white", framealpha=0.92)
+    ax.legend(handles=category_handles, loc="upper left", frameon=True, facecolor="white", framealpha=0.92)
     ax.set_title(f"$R^2$ = {r**2:.3f}    p = {p_value:.3g}", fontsize=10, pad=10)
     fig.tight_layout()
-    fig.savefig(out, dpi=300)
+    fig.savefig(out, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 

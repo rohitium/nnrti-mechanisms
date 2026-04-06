@@ -1,0 +1,20 @@
+{
+  "input_csv": "results/analysis/custom_mechanism_selected_model_retrained_testset/tables/mechanism_panel_feature_matrix.csv",
+  "susceptibility_xlsx": "data/DRM-susceptibilities.csv.xlsx",
+  "ddg_summary_csv": "results/analysis/binding_energy/tables/mutation_ddg_summary.csv",
+  "output_dir": "results/analysis/custom_mechanism_linear_regression_controls_retrained_testset",
+  "wt_reference_fold": 1.0,
+  "features": [
+    "ser105_dor_distance_angstrom_mean",
+    "residue_min_distance_TYR188_angstrom_mean",
+    "ligand_pose_rmsd_angstrom_mean",
+    "ddg_electrostatic_mean"
+  ],
+  "best_model": {
+    "model": "lasso",
+    "params": "{\"alpha\": 0.133}",
+    "cv_rmse": 0.5703901137215959,
+    "cv_mae": 0.441932380514247,
+    "cv_r2": 0.5142479596202125
+  }
+}
