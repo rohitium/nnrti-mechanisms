@@ -1,0 +1,28 @@
+{
+  "manifest": "manifests/md_manifest.csv",
+  "frame_feature_csv": "results/analysis/ligand_pocket_features/tables/frame_features.csv",
+  "reference_cif": "data/structures/4NCG.cif",
+  "contact_defs": "results/tables/holo/dor_key_contact_definitions_4ncg.csv",
+  "susceptibility_xlsx": "data/DRM-susceptibilities.csv.xlsx",
+  "output_dir": "results/analysis/triplet_story_analyses/geometry_wt_v106a_f227l_v106i_f227c_pose_rmsd",
+  "triplet": [
+    "WT",
+    "V106A+F227L",
+    "V106I+F227C"
+  ],
+  "max_time_ns": 100.0,
+  "metric": "ligand_pose_rmsd_angstrom",
+  "ylabel": "Ligand Pose RMSD (A)",
+  "title": "Ligand Pose RMSD",
+  "output_prefix": "triplet_story_100ns_WT_V106A_F227L_V106I_F227C_POSE_RMSD",
+  "triplet_colors": [
+    "#333333",
+    "#4c78a8",
+    "#e45756"
+  ],
+  "aligned_suffix": "_aligned_4ncg_ca",
+  "ligand_resname": "2KW",
+  "data_source": "full_aligned_trajectory",
+  "aggregation": "replicates interpolated onto common time grid before mean/SEM",
+  "common_time_grid_size": 2311
+}

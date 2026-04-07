@@ -235,7 +235,7 @@ def _plot_cv_vs_fold(df: pd.DataFrame, out: Path) -> None:
     plt.close(fig)
 
 
-def _plot_all_probability_vs_fold(df: pd.DataFrame, out: Path) -> None:
+def _plot_all_probability_vs_fold(df: pd.DataFrame, out: Path, *, low_max_fold: float) -> None:
     plot_df = df.copy()
     plot_df["plot_target_fold_reduction"] = plot_df["target_fold_reduction"].astype(float)
     plot_df["plot_prob_high"] = plot_df["prob_high"].astype(float)
@@ -259,6 +259,7 @@ def _plot_all_probability_vs_fold(df: pd.DataFrame, out: Path) -> None:
     r, p_value = pearsonr(logx, y)
     ax.plot(x_line, y_line, color="#444444", linewidth=1.6, linestyle="--", zorder=2)
     ax.axhline(0.5, color="#888888", linestyle=":", linewidth=1.0)
+    ax.axvline(float(low_max_fold), color="#888888", linestyle=":", linewidth=1.0, zorder=1)
     ax.set_xscale("log")
     ax.set_xlabel("DOR Fold-change")
     ax.set_ylabel("Predicted probability of resistance")
@@ -322,7 +323,7 @@ def _plot_coefficients(df: pd.DataFrame, out: Path) -> None:
     plt.close(fig)
 
 
-def _plot_confusion_matrix(cm: np.ndarray, out: Path) -> None:
+def _plot_confusion_matrix(cm: np.ndarray, out: Path, *, title: str | None = None) -> None:
     display_cm = cm[[1, 0], :]
     fig, ax = plt.subplots(figsize=(4.4, 4.0))
     im = ax.imshow(display_cm, cmap="Blues")
@@ -331,6 +332,8 @@ def _plot_confusion_matrix(cm: np.ndarray, out: Path) -> None:
             ax.text(j, i, str(int(display_cm[i, j])), ha="center", va="center", color="#111111", fontsize=12)
     ax.set_xticks([0, 1], labels=["Pred low", "Pred high"])
     ax.set_yticks([0, 1], labels=["True high", "True low"])
+    if title:
+        ax.set_title(title, fontsize=11, pad=10)
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     fig.tight_layout()
     fig.savefig(out, dpi=300)
@@ -353,7 +356,7 @@ def _plot_holdout(df: pd.DataFrame, out: Path) -> None:
     plt.close(fig)
 
 
-def _plot_roc_curve(y_true: pd.Series, probs: np.ndarray, out: Path) -> None:
+def _plot_roc_curve(y_true: pd.Series, probs: np.ndarray, out: Path, *, title: str | None = "Control LOO ROC Curve") -> None:
     y_bin = (y_true.astype(str) == "high").astype(int).to_numpy(dtype=int)
     fpr, tpr, _ = roc_curve(y_bin, probs)
     auc = roc_auc_score(y_bin, probs)
@@ -363,7 +366,8 @@ def _plot_roc_curve(y_true: pd.Series, probs: np.ndarray, out: Path) -> None:
     ax.plot([0, 1], [0, 1], color="#888888", linestyle="--", linewidth=1.0)
     ax.set_xlabel("False Positive Rate")
     ax.set_ylabel("True Positive Rate")
-    ax.set_title("Control LOO ROC Curve", fontsize=11, pad=10)
+    if title:
+        ax.set_title(title, fontsize=11, pad=10)
     ax.set_xlim(0.0, 1.0)
     ax.set_ylim(0.0, 1.0)
     ax.grid(alpha=0.25)
@@ -505,6 +509,11 @@ def main() -> int:
     all_prob = all_prob.sort_values("target_fold_reduction", kind="stable").reset_index(drop=True)
     all_prob.to_csv(out_tables / "all_mutation_probabilities.csv", index=False)
 
+    full_fit_controls = all_prob[
+        all_prob["control_category"].astype(str).isin(["negative_control", "positive_control"])
+    ].copy()
+    full_fit_controls.to_csv(out_tables / "full_fit_control_predictions.csv", index=False)
+
     cv_plot_df = _display_control_cv_df(cv_df)
     all_prob_plot_df = _filter_selected_model_plot_df(all_prob)
     hold_out_plot_df = _display_holdout_rank_df(all_prob)
@@ -514,12 +523,32 @@ def main() -> int:
     display_y_pred = np.where(display_probs >= float(args.decision_threshold), "high", "low")
     display_cm = confusion_matrix(display_y_true, display_y_pred, labels=["low", "high"])
 
+    full_fit_display_df = _display_control_cv_df(
+        full_fit_controls.rename(columns={"target_binary_class": "observed_class"})
+    )
+    full_fit_display_probs = full_fit_display_df["prob_high"].to_numpy(dtype=float)
+    full_fit_display_y_true = full_fit_display_df["observed_class"].astype(str)
+    full_fit_display_y_pred = np.where(full_fit_display_probs >= float(args.decision_threshold), "high", "low")
+    full_fit_display_cm = confusion_matrix(full_fit_display_y_true, full_fit_display_y_pred, labels=["low", "high"])
+
     _plot_cv_vs_fold(cv_plot_df, out_plots / "cv_probability_vs_fold_change.png")
-    _plot_all_probability_vs_fold(all_prob_plot_df, out_plots / "all_mutation_probability_vs_fold_change.png")
+    _plot_all_probability_vs_fold(
+        all_prob_plot_df,
+        out_plots / "all_mutation_probability_vs_fold_change.png",
+        low_max_fold=float(args.low_max_fold),
+    )
     _plot_ranked_probabilities(cv_plot_df, out_plots / "cv_probability_ranked.png")
     _plot_roc_curve(display_y_true, display_probs, out_plots / "cv_roc_curve.png")
     _plot_coefficients(coef_df, out_plots / "full_model_feature_coefficients.png")
     _plot_confusion_matrix(display_cm, out_plots / "confusion_matrix.png")
+    _plot_roc_curve(full_fit_display_y_true, full_fit_display_probs, out_plots / "full_fit_roc_curve.png", title=None)
+    _plot_confusion_matrix(full_fit_display_cm, out_plots / "full_fit_confusion_matrix.png", title=None)
+    all_fit_y_true = all_prob["target_binary_class"].astype(str)
+    all_fit_probs = all_prob["prob_high"].to_numpy(dtype=float)
+    all_fit_y_pred = np.where(all_fit_probs >= float(args.decision_threshold), "high", "low")
+    all_fit_cm = confusion_matrix(all_fit_y_true, all_fit_y_pred, labels=["low", "high"])
+    _plot_roc_curve(all_fit_y_true, all_fit_probs, out_plots / "all_mutation_full_fit_roc_curve.png", title=None)
+    _plot_confusion_matrix(all_fit_cm, out_plots / "all_mutation_full_fit_confusion_matrix.png", title=None)
     _plot_holdout(hold_out_plot_df, out_plots / "holdout_probability_ranked.png")
 
     (out_config / "run_config.json").write_text(
