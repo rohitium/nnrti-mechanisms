@@ -175,7 +175,6 @@ def main() -> int:
 
     png = out_plots / "triplet_story_100ns_WT_Y181C_Y188L_PRO225.png"
     fig.savefig(png, dpi=300, bbox_inches="tight")
-    fig.savefig(png.with_suffix(".pdf"), bbox_inches="tight")
     plt.close(fig)
 
     (out_config / "run_config.json").write_text(

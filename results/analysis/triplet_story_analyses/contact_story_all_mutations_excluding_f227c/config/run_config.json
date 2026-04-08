@@ -1,0 +1,16 @@
+{
+  "manifest": "manifests/md_manifest.csv",
+  "susceptibility_xlsx": "data/DRM-susceptibilities.csv.xlsx",
+  "output_dir": "results/analysis/triplet_story_analyses/contact_story_all_mutations_excluding_f227c",
+  "ligand_resname": "2KW",
+  "resid_offset": -3,
+  "contact_cutoff": 4.0,
+  "window_ns": 100.0,
+  "min_any_mean_occ_display": 0.5,
+  "exclude_mutations": [
+    "F227C"
+  ],
+  "n_mutations": 19,
+  "n_display_residues": 20,
+  "output_png": "results/analysis/triplet_story_analyses/contact_story_all_mutations_excluding_f227c/plots/all_mutation_mean_occupancy_heatmap_excluding_f227c.png"
+}

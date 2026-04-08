@@ -11,7 +11,7 @@ import pandas as pd
 from matplotlib.patches import Patch
 from scipy import stats
 
-from .plot_dor_susceptibility_bars import CATEGORY_COLORS, _category_for_mutation, _sort_key
+from .plot_dor_susceptibility_bars import CATEGORY_COLORS, _category_for_mutation, order_mutation_panel
 
 COMPONENT_SPECS = [
     ("binding_dg", "Total", "#d62828"),
@@ -163,10 +163,8 @@ def _place_greedy_annotations(
 
 
 def _plot_ddg_bar_chart(summary: pd.DataFrame, specs: list[tuple[str, str, str]], title: str, output_png: Path) -> None:
-    ordered = summary.copy()
+    ordered = order_mutation_panel(summary, fold_col="fold_reduction")
     ordered["category"] = ordered["mutation"].astype(str).map(_category_for_mutation)
-    ordered["sort_key"] = ordered["mutation"].astype(str).map(_sort_key)
-    ordered = ordered.sort_values("sort_key").drop(columns=["sort_key"]).reset_index(drop=True)
     highlight_column = "ddg_electrostatic"
 
     x = np.arange(len(ordered), dtype=float)
@@ -181,7 +179,7 @@ def _plot_ddg_bar_chart(summary: pd.DataFrame, specs: list[tuple[str, str, str]]
     legend_handles = [
         Patch(facecolor=CATEGORY_COLORS["Negative control"], edgecolor="#222222", label="Negative control"),
         Patch(facecolor=CATEGORY_COLORS["Positive control"], edgecolor="#222222", label="Positive control"),
-        Patch(facecolor=CATEGORY_COLORS["Uncertain/limited data"], edgecolor="#222222", label="Uncertain/limited data"),
+        Patch(facecolor=CATEGORY_COLORS["Test set"], edgecolor="#222222", label="Test set"),
     ]
     for ax, (column, label, color) in zip(axes, specs):
         y = ordered[f"{column}_mean"].to_numpy(dtype=float)
@@ -258,7 +256,7 @@ def _plot_component_vs_fold_change(
     for category, point_color in [
         ("Negative control", CATEGORY_COLORS["Negative control"]),
         ("Positive control", CATEGORY_COLORS["Positive control"]),
-        ("Uncertain/limited data", CATEGORY_COLORS["Uncertain/limited data"]),
+        ("Test set", CATEGORY_COLORS["Test set"]),
     ]:
         subset = df[df["category"] == category].copy()
         if subset.empty:
@@ -347,8 +345,15 @@ def main() -> int:
     rep_df = pd.read_csv(args.replicate_csv)
     ddg_df = pd.read_csv(args.ddg_csv)
 
-    rep_summary = _aggregate_summary(rep_df, COMPONENT_SPECS)
-    ddg_summary = _aggregate_summary(ddg_df[ddg_df["mutation"].astype(str) != "WT"].copy(), DDG_SPECS)
+    rep_summary = order_mutation_panel(
+        _aggregate_summary(rep_df, COMPONENT_SPECS),
+        fold_col="fold_reduction",
+        include_wt=True,
+    )
+    ddg_summary = order_mutation_panel(
+        _aggregate_summary(ddg_df[ddg_df["mutation"].astype(str) != "WT"].copy(), DDG_SPECS),
+        fold_col="fold_reduction",
+    )
 
     rep_df.to_csv(out_tables / "mmgbsa_replicate_metrics.csv", index=False)
     ddg_df.to_csv(out_tables / "ddg_full.csv", index=False)

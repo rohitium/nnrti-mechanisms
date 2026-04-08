@@ -21,6 +21,13 @@ FEATURE_SPECS = [
     ("ligand_pose_rmsd_angstrom", "Ligand Pose RMSD", "Ligand Pose RMSD (Å)"),
 ]
 
+DISPLAY_TEST_SET_LABEL = "Test set"
+DISPLAY_CATEGORY_COLORS = {
+    "Negative control": CATEGORY_COLORS["Negative control"],
+    "Positive control": CATEGORY_COLORS["Positive control"],
+    DISPLAY_TEST_SET_LABEL: CATEGORY_COLORS["Uncertain/limited data"],
+}
+
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Plot selected mechanism features against DOR fold-change.")
@@ -53,8 +60,23 @@ def _sem(values: pd.Series) -> float:
     return float(np.nanstd(arr, ddof=1) / np.sqrt(arr.size))
 
 
+def _display_category_for_control_category(control_category: str, mutation: str) -> str:
+    label = str(mutation).strip().upper()
+    category = str(control_category).strip().lower()
+    if label == "WT" or category == "wt_reference":
+        return "WT"
+    if category == "negative_control":
+        return "Negative control"
+    if category == "positive_control":
+        return "Positive control"
+    if category == "uncertain_limited":
+        return DISPLAY_TEST_SET_LABEL
+    return _category_for_mutation(str(mutation))
+
+
 def _build_feature_summary(args: argparse.Namespace) -> tuple[pd.DataFrame, pd.DataFrame]:
     panel = pd.read_csv(args.mechanism_panel_csv)
+    panel_category_map = panel.set_index(panel["mutation"].astype(str))["control_category"].astype(str).to_dict()
     mutations = set(panel["mutation"].astype(str).tolist())
     metas = _load_replicate_meta(args.manifest, needed_mutations=mutations)
 
@@ -78,7 +100,12 @@ def _build_feature_summary(args: argparse.Namespace) -> tuple[pd.DataFrame, pd.D
     )
 
     rep = rep_frame.merge(rep_custom, on=["mutation", "replicate"], how="left")
-    rep["category"] = rep["mutation"].astype(str).map(lambda x: "WT" if str(x).upper() == "WT" else _category_for_mutation(str(x)))
+    rep = rep[rep["mutation"].astype(str).isin(mutations)].copy()
+    rep["control_category"] = rep["mutation"].astype(str).map(panel_category_map)
+    rep["category"] = [
+        _display_category_for_control_category(control_category=row.get("control_category", ""), mutation=row.get("mutation", ""))
+        for _, row in rep.iterrows()
+    ]
 
     agg_map: dict[str, tuple[str, str]] = {
         "fold_reduction": ("fold_reduction", "first"),
@@ -96,7 +123,8 @@ def _build_feature_summary(args: argparse.Namespace) -> tuple[pd.DataFrame, pd.D
 def _plot_feature(summary: pd.DataFrame, column: str, label: str, ylabel: str, output_png: Path) -> dict[str, float]:
     import matplotlib.pyplot as plt
 
-    df = summary[summary["mutation"].astype(str) != "WT"].copy()
+    df = summary[summary["mutation"].astype(str).str.upper() != "WT"].copy()
+    df["display_category"] = df["category"].astype(str)
     df["log10_fold_reduction"] = np.log10(pd.to_numeric(df["fold_reduction"], errors="coerce"))
     df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=["log10_fold_reduction"]).reset_index(drop=True)
     if df.empty:
@@ -104,11 +132,11 @@ def _plot_feature(summary: pd.DataFrame, column: str, label: str, ylabel: str, o
 
     fig, ax = plt.subplots(figsize=(14.2, 9.2))
     for category, point_color in [
-        ("Negative control", CATEGORY_COLORS["Negative control"]),
-        ("Positive control", CATEGORY_COLORS["Positive control"]),
-        ("Uncertain/limited data", CATEGORY_COLORS["Uncertain/limited data"]),
+        ("Negative control", DISPLAY_CATEGORY_COLORS["Negative control"]),
+        ("Positive control", DISPLAY_CATEGORY_COLORS["Positive control"]),
+        (DISPLAY_TEST_SET_LABEL, DISPLAY_CATEGORY_COLORS[DISPLAY_TEST_SET_LABEL]),
     ]:
-        subset = df[df["category"] == category].copy()
+        subset = df[df["display_category"] == category].copy()
         if subset.empty:
             continue
         ax.errorbar(
