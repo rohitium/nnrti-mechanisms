@@ -856,6 +856,23 @@ def _format_fold_label(mutation: str, fold_map: dict[str, float]) -> str:
     return mutation
 
 
+def _wt_contact_region(auth_resid: int) -> tuple[int, str, str]:
+    auth_resid = int(auth_resid)
+    region_specs = [
+        (0, "β6", "#4c78a8", {95, 97}),
+        (1, "Binding-pocket entrance", "#f58518", {100, 101, 103, 179, 181}),
+        (2, "103-108 loop", "#eeca3b", {102, 104, 105, 106, 107, 108}),
+        (3, "Hydrophobic tunnel", "#54a24b", {188, 227, 229, 234}),
+        (4, "β9-β10 hairpin", "#e45756", {180, 189, 190}),
+        (5, "β12-β13 primer grip", "#b279a2", {223, 225, 228, 235, 236, 237}),
+        (6, "Distal pocket wall", "#72b7b2", {318}),
+    ]
+    for order, label, color, members in region_specs:
+        if auth_resid in members:
+            return int(order), str(label), str(color)
+    return 99, "other pocket contacts", "#9d9da1"
+
+
 def _plot_triplet_figure(
     triplet: tuple[str, str, str],
     mut_occ: pd.DataFrame,
@@ -1004,37 +1021,43 @@ def _plot_wt_contacts_figure(
     import matplotlib.pyplot as plt
 
     wt = str(wt_mutation)
-    wt_occ = mut_occ[mut_occ["mutation"] == wt].copy()
-    wt_occ["occupancy_mean"] = pd.to_numeric(wt_occ["occupancy_mean"], errors="coerce")
-    wt_occ["occupancy_sem"] = pd.to_numeric(wt_occ["occupancy_sem"], errors="coerce")
-    wt_occ = wt_occ[wt_occ["occupancy_mean"] >= float(min_wt_mean_occ)].copy()
-    if wt_occ.empty:
-        raise ValueError(f"No residues satisfy contact_mean >= {min_wt_mean_occ:.2f} for mutation {wt}")
+    wt_occ_all = mut_occ[mut_occ["mutation"] == wt].copy()
+    wt_occ_all["occupancy_mean"] = pd.to_numeric(wt_occ_all["occupancy_mean"], errors="coerce")
+    wt_occ_all["occupancy_sem"] = pd.to_numeric(wt_occ_all["occupancy_sem"], errors="coerce")
+    wt_occ_all = wt_occ_all[np.isfinite(wt_occ_all["occupancy_mean"])].copy()
+    if wt_occ_all.empty:
+        raise ValueError(f"No contacted residues available for mutation {wt}")
 
-    wt_occ = wt_occ.sort_values(["occupancy_mean", "auth_resid"], ascending=[False, True]).reset_index(drop=True)
-    wt_occ["label"] = wt_occ.apply(
+    wt_occ_all[["region_order", "pocket_region", "region_color"]] = wt_occ_all["auth_resid"].apply(
+        lambda v: pd.Series(_wt_contact_region(int(v)))
+    )
+    wt_occ_all = wt_occ_all.sort_values(["region_order", "auth_resid", "occupancy_mean"], ascending=[True, True, False]).reset_index(drop=True)
+    wt_occ_all["label"] = wt_occ_all.apply(
         lambda r: _residue_label(int(r["auth_resid"]), str(r.get("resname", ""))),
         axis=1,
     )
 
-    allowed_auth = {int(v) for v in wt_occ["auth_resid"].tolist()}
+    wt_occ_trace = wt_occ_all[wt_occ_all["occupancy_mean"] >= float(min_wt_mean_occ)].copy()
+    if wt_occ_trace.empty:
+        raise ValueError(f"No residues satisfy contact_mean >= {min_wt_mean_occ:.2f} for mutation {wt}")
+
+    allowed_auth_all = {int(v) for v in wt_occ_all["auth_resid"].tolist()}
     requested_auth = [int(v) for v in (wt_trace_auth_resids or [])]
     if requested_auth:
-        auth_resids = [int(v) for v in requested_auth if int(v) in allowed_auth]
-        missing = [int(v) for v in requested_auth if int(v) not in allowed_auth]
+        auth_resids = [int(v) for v in requested_auth if int(v) in allowed_auth_all]
+        missing = [int(v) for v in requested_auth if int(v) not in allowed_auth_all]
         if missing:
             print(
-                f"Warning: skipping requested WT trace auth_resid(s) not in contact-filtered set "
-                f"(>= {min_wt_mean_occ:.2f}): {missing}"
+                f"Warning: skipping requested WT trace auth_resid(s) not present in WT contact set: {missing}"
             )
         if not auth_resids:
             raise ValueError(
-                f"None of the requested WT trace auth_resid(s) pass contact filtering (>= {min_wt_mean_occ:.2f})."
+                "None of the requested WT trace auth_resid(s) are present in the WT contact set."
             )
     else:
-        auth_resids = [int(v) for v in wt_occ["auth_resid"].tolist()]
+        auth_resids = [int(v) for v in wt_occ_trace["auth_resid"].tolist()]
 
-    label_by_auth = {int(a): str(l) for a, l in zip(wt_occ["auth_resid"], wt_occ["label"])}
+    label_by_auth = {int(a): str(l) for a, l in zip(wt_occ_all["auth_resid"], wt_occ_all["label"])}
     mean_traces = _extract_mutation_mean_traces_mdtraj(
         metas=metas,
         mutation=wt,
@@ -1045,10 +1068,9 @@ def _plot_wt_contacts_figure(
         n_grid=int(n_grid),
     )
 
-    xpos = np.arange(len(wt_occ), dtype=float)
-    bar_cmap = plt.get_cmap("tab20")
-    bar_colors = [bar_cmap(i % 20) for i in range(len(wt_occ))]
-    color_by_auth = {int(a): c for a, c in zip(wt_occ["auth_resid"], bar_colors)}
+    xpos = np.arange(len(wt_occ_all), dtype=float)
+    bar_colors = wt_occ_all["region_color"].tolist()
+    color_by_auth = {int(a): c for a, c in zip(wt_occ_all["auth_resid"], bar_colors)}
 
     traces: list[tuple[int, str, np.ndarray, np.ndarray, np.ndarray]] = []
     for auth_resid in auth_resids:
@@ -1093,8 +1115,8 @@ def _plot_wt_contacts_figure(
     ax_top.grid(alpha=0.22, linestyle=":")
     ax_top.legend(loc="upper right", frameon=True, fontsize=8)
 
-    means = wt_occ["occupancy_mean"].to_numpy(dtype=float)
-    sems = wt_occ["occupancy_sem"].to_numpy(dtype=float)
+    means = wt_occ_all["occupancy_mean"].to_numpy(dtype=float)
+    sems = wt_occ_all["occupancy_sem"].to_numpy(dtype=float)
     ax_bot.bar(
         xpos,
         means,
@@ -1105,12 +1127,35 @@ def _plot_wt_contacts_figure(
         capsize=3.0,
         alpha=0.95,
     )
-    ax_bot.set_xticks(xpos, wt_occ["label"].tolist(), rotation=45, ha="right")
+    ax_bot.set_xticks(xpos, wt_occ_all["label"].tolist(), rotation=45, ha="right")
     ax_bot.set_ylim(0.0, 1.05)
     ax_bot.set_ylabel("Mean occupancy")
     ax_bot.set_xlabel("Residue")
-    ax_bot.set_title("WT Mean Occupancy +/- SEM")
     ax_bot.grid(axis="y", alpha=0.2, linestyle=":")
+
+    region_spans = (
+        wt_occ_all.assign(xpos=xpos)
+        .groupby(["region_order", "pocket_region"], as_index=False)
+        .agg(xmin=("xpos", "min"), xmax=("xpos", "max"))
+        .sort_values(["region_order", "xmin"])
+    )
+    for _, row in region_spans.iterrows():
+        xmin = float(row["xmin"])
+        xmax = float(row["xmax"])
+        xmid = 0.5 * (xmin + xmax)
+        ax_bot.text(
+            xmid,
+            1.02,
+            str(row["pocket_region"]),
+            transform=ax_bot.get_xaxis_transform(),
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            clip_on=False,
+        )
+        ax_bot.axvspan(xmin - 0.5, xmax + 0.5, color="#000000", alpha=0.025, zorder=0)
+    for edge in region_spans["xmax"].tolist()[:-1]:
+        ax_bot.axvline(float(edge) + 0.5, color="#666666", linestyle="--", linewidth=0.8, alpha=0.6)
 
     output_png.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_png, dpi=320, bbox_inches="tight")
@@ -1318,7 +1363,7 @@ def main() -> int:
     parser.add_argument(
         "--wt-only-trace-auth-resids",
         type=str,
-        default="106,188,103",
+        default="95,318",
         help="Comma-separated auth residue numbers to show in WT-only top-panel traces.",
     )
     args = parser.parse_args()
