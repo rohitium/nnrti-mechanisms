@@ -177,7 +177,7 @@ def _plot(df, output_png: Path, *, star_mutation: str, dagger_mutation: str, tit
     ax.yaxis.grid(True, color="#d9d9d9", linewidth=0.9)
     ax.xaxis.grid(False)
 
-    ax.set_ylabel("Fold-change", fontsize=11, fontweight="bold")
+    ax.set_ylabel("Fold-change", fontsize=15, fontweight="bold")
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=50, ha="right", fontsize=9)
     ax.tick_params(axis="y", labelsize=9)
@@ -196,7 +196,7 @@ def _plot(df, output_png: Path, *, star_mutation: str, dagger_mutation: str, tit
         Patch(facecolor=CATEGORY_COLORS["Positive control"], edgecolor="#222222", label="Positive control"),
         Patch(facecolor=CATEGORY_COLORS["Test set"], edgecolor="#222222", label="Limited data"),
     ]
-    ax.legend(handles=legend_handles, loc="upper left", frameon=False, fontsize=9)
+    ax.legend(handles=legend_handles, loc="upper left", frameon=False, fontsize=13)
 
     annotations: dict[str, str] = {}
     if str(star_mutation).strip():
