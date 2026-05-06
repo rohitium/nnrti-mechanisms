@@ -194,7 +194,7 @@ def _plot(df, output_png: Path, *, star_mutation: str, dagger_mutation: str, tit
     legend_handles = [
         Patch(facecolor=CATEGORY_COLORS["Negative control"], edgecolor="#222222", label="Negative control"),
         Patch(facecolor=CATEGORY_COLORS["Positive control"], edgecolor="#222222", label="Positive control"),
-        Patch(facecolor=CATEGORY_COLORS["Test set"], edgecolor="#222222", label="Test set"),
+        Patch(facecolor=CATEGORY_COLORS["Test set"], edgecolor="#222222", label="Limited data"),
     ]
     ax.legend(handles=legend_handles, loc="upper left", frameon=False, fontsize=9)
 
