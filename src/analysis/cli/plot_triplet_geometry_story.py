@@ -20,7 +20,7 @@ MUTATION_COLORS = {
 }
 
 METRIC = "residue_min_distance_PRO225_angstrom"
-YLABEL = "Min PRO225-DOR Distance (A)"
+YLABEL = "Min PRO225-DOR Distance (Å)"
 TITLE = "PRO225"
 
 
@@ -139,7 +139,7 @@ def main() -> int:
     ).astype(float)
     mean_df.to_csv(out_tables / "mean_traces.csv", index=False)
 
-    fig, ax = plt.subplots(figsize=(13.8, 5.6), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(15.8, 6.4), constrained_layout=True)
     xmax = 0.0
     for mutation in triplet:
         color = MUTATION_COLORS.get(mutation, "#555555")
@@ -154,7 +154,7 @@ def main() -> int:
             x,
             y,
             color=color,
-            linewidth=2.1,
+            linewidth=2.8,
             alpha=0.95,
             label=label,
         )
@@ -163,13 +163,14 @@ def main() -> int:
         ok = np.isfinite(lo) & np.isfinite(hi)
         if np.any(ok):
             ax.fill_between(x[ok], lo[ok], hi[ok], color=color, alpha=0.16, linewidth=0)
-    ax.axhline(4.0, color="#666666", linestyle=":", linewidth=1.1, label="4.0 A reference")
+    ax.axhline(4.0, color="#666666", linestyle=":", linewidth=1.8, label="Contact cutoff (4 Å)")
     ax.set_xlim(0.0, xmax if xmax > 0 else float(args.max_time_ns))
-    ax.set_xlabel("Time (ns)")
-    ax.set_ylabel(YLABEL)
-    ax.set_title(TITLE)
+    ax.set_xlabel("Time (ns)", fontsize=18)
+    ax.set_ylabel(YLABEL, fontsize=18)
+    ax.set_title(TITLE, fontsize=20, fontweight="bold")
+    ax.tick_params(axis="both", labelsize=19)
     ax.grid(alpha=0.22, linestyle=":")
-    ax.legend(loc="upper right", frameon=True, fontsize=9)
+    ax.legend(loc="upper right", frameon=True, fontsize=14)
     for spine in ("top", "right"):
         ax.spines[spine].set_visible(False)
 

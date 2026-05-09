@@ -38,7 +38,7 @@ FEATURE_LABELS = {
     "ligand_pose_rmsd_angstrom_mean": "Ligand Pose RMSD",
 }
 
-DISPLAY_TEST_SET_LABEL = "Test set"
+DISPLAY_TEST_SET_LABEL = "Limited data"
 DISPLAY_CATEGORY_COLORS = {
     "Negative control": CATEGORY_COLORS["Negative control"],
     "Positive control": CATEGORY_COLORS["Positive control"],
@@ -285,7 +285,7 @@ def _plot_all_probability_vs_fold(df: pd.DataFrame, out: Path, *, low_max_fold: 
         Line2D([0], [0], marker="o", color="none", markerfacecolor=CATEGORY_COLORS["Negative control"], markeredgecolor="white", markersize=8, label="Negative control"),
         Line2D([0], [0], marker="o", color="none", markerfacecolor=CATEGORY_COLORS["Positive control"], markeredgecolor="white", markersize=8, label="Positive control"),
         Line2D([0], [0], marker="o", color="none", markerfacecolor=CATEGORY_COLORS["Uncertain/limited data"], markeredgecolor="white", markersize=8, label=DISPLAY_TEST_SET_LABEL),
-        Line2D([0], [0], marker="o", color="none", markerfacecolor="#333333", markeredgecolor="white", markersize=8, label="WT"),
+        Line2D([0], [0], marker="D", color="none", markerfacecolor="#333333", markeredgecolor="white", markersize=8, label="WT"),
     ]
     ax.legend(handles=category_handles, loc="upper left", frameon=True, facecolor="white", framealpha=0.92)
     ax.set_title(f"$R^2$ = {r**2:.3f}    p = {p_value:.3g}", fontsize=10, pad=10)

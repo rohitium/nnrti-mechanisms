@@ -47,7 +47,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ylabels",
         type=str,
-        default="Min SER105-DOR Distance (A),Min residue 227-DOR Distance (A)",
+        default="Min SER105-DOR Distance (Å),Min residue 227-DOR Distance (Å)",
     )
     parser.add_argument("--titles", type=str, default="SER105,Position 227")
     parser.add_argument("--output-prefix", type=str, default="triplet_story_100ns_WT_V106A_F227L_V106I_F227C_SER105_POS227")
@@ -168,7 +168,7 @@ def main() -> int:
     interp_df_all.to_csv(out_tables / "trace_values.csv", index=False)
     mean_df_all.to_csv(out_tables / "mean_traces.csv", index=False)
 
-    fig, axes = plt.subplots(1, n_panels, figsize=(7.0 * n_panels, 5.6), sharex=True, constrained_layout=True)
+    fig, axes = plt.subplots(1, n_panels, figsize=(8.4 * n_panels, 6.4), sharex=True, constrained_layout=True)
     if n_panels == 1:
         axes = [axes]
 
@@ -186,17 +186,18 @@ def main() -> int:
             xmax = max(xmax, float(np.nanmax(x)) if len(x) else 0.0)
             fold = fold_map.get(mutation, float("nan"))
             label = f"{mutation} ({fold:.1f}x)" if pd.notna(fold) else str(mutation)
-            ax.plot(x, y, color=color, linewidth=2.1, alpha=0.95, label=label)
+            ax.plot(x, y, color=color, linewidth=2.8, alpha=0.95, label=label)
             lo = y - sem
             hi = y + sem
             ok = np.isfinite(lo) & np.isfinite(hi)
             if np.any(ok):
                 ax.fill_between(x[ok], lo[ok], hi[ok], color=color, alpha=0.16, linewidth=0)
-        ax.axhline(4.0, color="#666666", linestyle=":", linewidth=1.1)
+        ax.axhline(4.0, color="#666666", linestyle=":", linewidth=1.8)
         ax.set_xlim(0.0, xmax if xmax > 0 else float(args.max_time_ns))
-        ax.set_xlabel("Time (ns)")
-        ax.set_ylabel(ylabel)
-        ax.set_title(title)
+        ax.set_xlabel("Time (ns)", fontsize=18)
+        ax.set_ylabel(ylabel, fontsize=18)
+        ax.set_title(title, fontsize=20, fontweight="bold")
+        ax.tick_params(axis="both", labelsize=19)
         ax.grid(alpha=0.22, linestyle=":")
         for spine in ("top", "right"):
             ax.spines[spine].set_visible(False)
@@ -204,9 +205,9 @@ def main() -> int:
             legend_handles, legend_labels = ax.get_legend_handles_labels()
 
     if legend_handles and legend_labels:
-        legend_handles = list(legend_handles) + [plt.Line2D([0], [0], color="#666666", linestyle=":", linewidth=1.1)]
-        legend_labels = list(legend_labels) + ["4.0 A reference"]
-        axes[-1].legend(legend_handles, legend_labels, loc="upper right", frameon=True, fontsize=9)
+        legend_handles = list(legend_handles) + [plt.Line2D([0], [0], color="#666666", linestyle=":", linewidth=1.8)]
+        legend_labels = list(legend_labels) + ["Contact cutoff (4 Å)"]
+        axes[-1].legend(legend_handles, legend_labels, loc="upper right", frameon=True, fontsize=14)
 
     png = out_plots / f"{str(args.output_prefix)}.png"
     fig.savefig(png, dpi=300, bbox_inches="tight")

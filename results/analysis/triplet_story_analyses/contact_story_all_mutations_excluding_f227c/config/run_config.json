@@ -7,10 +7,20 @@
   "contact_cutoff": 4.0,
   "window_ns": 100.0,
   "min_any_mean_occ_display": 0.5,
+  "include_all_contacted_residues": false,
+  "wt_reference": true,
+  "drop_wt_row": true,
+  "restrict_to_wt_contacted_residues": true,
+  "wt_contact_table": "results/analysis/triplet_story_analyses/contact_story_100ns/tables/mutation_contact.csv",
+  "group_by_wt_contact_region": true,
+  "group_by_mutation_set": true,
+  "reuse_existing_tables": true,
   "exclude_mutations": [
     "F227C"
   ],
   "n_mutations": 19,
-  "n_display_residues": 20,
-  "output_png": "results/analysis/triplet_story_analyses/contact_story_all_mutations_excluding_f227c/plots/all_mutation_mean_occupancy_heatmap_excluding_f227c.png"
+  "n_display_residues": 27,
+  "output_png": "results/analysis/triplet_story_analyses/contact_story_all_mutations_excluding_f227c/plots/all_mutation_wt_referenced_occupancy_heatmap_wt_contacted_residues_by_region_excluding_f227c.png",
+  "residue_table": "results/analysis/triplet_story_analyses/contact_story_all_mutations_excluding_f227c/tables/all_mutation_wt_referenced_occupancy_heatmap_wt_contacted_residues_by_region_excluding_f227c_display_residues.csv",
+  "matrix_table": "results/analysis/triplet_story_analyses/contact_story_all_mutations_excluding_f227c/tables/all_mutation_wt_referenced_occupancy_heatmap_wt_contacted_residues_by_region_excluding_f227c_matrix.csv"
 }

@@ -14,6 +14,7 @@ import argparse
 import json
 import os
 import re
+import textwrap
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
@@ -859,8 +860,8 @@ def _format_fold_label(mutation: str, fold_map: dict[str, float]) -> str:
 def _wt_contact_region(auth_resid: int) -> tuple[int, str, str]:
     auth_resid = int(auth_resid)
     region_specs = [
-        (0, "β6", "#4c78a8", {95, 97}),
-        (1, "Binding-pocket entrance", "#f58518", {100, 101, 103, 179, 181}),
+        (0, "β6 strand", "#4c78a8", {95, 97}),
+        (1, "Pocket entrance", "#f58518", {100, 101, 103, 179, 181}),
         (2, "103-108 loop", "#eeca3b", {102, 104, 105, 106, 107, 108}),
         (3, "Hydrophobic tunnel", "#54a24b", {188, 227, 229, 234}),
         (4, "β9-β10 hairpin", "#e45756", {180, 189, 190}),
@@ -1106,14 +1107,15 @@ def _plot_wt_contacts_figure(
         color="#666666",
         linestyle=":",
         linewidth=1.2,
-        label=f"{contact_cutoff:.1f} A contact cutoff",
+        label=f"{contact_cutoff:.1f} Å contact cutoff",
     )
     ax_top.set_xlim(0.0, float(window_ns))
-    ax_top.set_xlabel("Time (ns)")
-    ax_top.set_ylabel("Min residue-DOR distance (A)")
-    ax_top.set_title("WT RT-DOR trajectories")
+    ax_top.set_xlabel("Time (ns)", fontsize=18)
+    ax_top.set_ylabel("Min residue-DOR distance (Å)", fontsize=22)
+    ax_top.set_title("WT RT-DOR trajectories", fontsize=26, pad=14)
+    ax_top.tick_params(axis="both", labelsize=18)
     ax_top.grid(alpha=0.22, linestyle=":")
-    ax_top.legend(loc="upper right", frameon=True, fontsize=8)
+    ax_top.legend(loc="upper right", frameon=True, fontsize=18)
 
     means = wt_occ_all["occupancy_mean"].to_numpy(dtype=float)
     sems = wt_occ_all["occupancy_sem"].to_numpy(dtype=float)
@@ -1128,9 +1130,10 @@ def _plot_wt_contacts_figure(
         alpha=0.95,
     )
     ax_bot.set_xticks(xpos, wt_occ_all["label"].tolist(), rotation=45, ha="right")
+    ax_bot.tick_params(axis="both", labelsize=18)
     ax_bot.set_ylim(0.0, 1.05)
-    ax_bot.set_ylabel("Mean occupancy")
-    ax_bot.set_xlabel("Residue")
+    ax_bot.set_ylabel("Mean occupancy", fontsize=22)
+    ax_bot.set_xlabel("Residue", fontsize=18)
     ax_bot.grid(axis="y", alpha=0.2, linestyle=":")
 
     region_spans = (
@@ -1143,14 +1146,22 @@ def _plot_wt_contacts_figure(
         xmin = float(row["xmin"])
         xmax = float(row["xmax"])
         xmid = 0.5 * (xmin + xmax)
+        span_width = max(1, int(round(xmax - xmin + 1.0)))
+        region_label = "\n".join(
+            textwrap.wrap(
+                str(row["pocket_region"]),
+                width=max(4, span_width * 4),
+                break_long_words=False,
+            )
+        )
         ax_bot.text(
             xmid,
             1.02,
-            str(row["pocket_region"]),
+            region_label,
             transform=ax_bot.get_xaxis_transform(),
             ha="center",
             va="bottom",
-            fontsize=8,
+            fontsize=11,
             clip_on=False,
         )
         ax_bot.axvspan(xmin - 0.5, xmax + 0.5, color="#000000", alpha=0.025, zorder=0)

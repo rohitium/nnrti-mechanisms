@@ -69,7 +69,9 @@ def _place_greedy_annotations(
     y_values: np.ndarray,
     labels: list[str],
     *,
+    fontsize: int = 9,
     text_color: str = "#333333",
+    fixed_offsets: dict[str, tuple[int, int]] | None = None,
 ) -> None:
     fig = ax.figure
     fig.canvas.draw()
@@ -95,6 +97,20 @@ def _place_greedy_annotations(
         (-30, 18),
         (30, -18),
         (-30, -18),
+        (42, 10),
+        (-42, 10),
+        (42, -10),
+        (-42, -10),
+        (48, 24),
+        (-48, 24),
+        (48, -24),
+        (-48, -24),
+        (60, 0),
+        (-60, 0),
+        (60, 30),
+        (-60, 30),
+        (60, -30),
+        (-60, -30),
     ]
     placed_boxes: list[tuple[float, float, float, float]] = []
 
@@ -109,13 +125,14 @@ def _place_greedy_annotations(
 
         best = None
         best_score = None
-        for dx_pt, dy_pt in candidate_offsets:
+        candidates = [fixed_offsets[label]] if fixed_offsets and label in fixed_offsets else candidate_offsets
+        for dx_pt, dy_pt in candidates:
             ann = ax.annotate(
                 label,
                 xy=(x, y),
                 xytext=(dx_pt, dy_pt),
                 textcoords="offset points",
-                fontsize=9,
+                fontsize=fontsize,
                 color=text_color,
                 alpha=0.92,
                 ha="left" if dx_pt >= 0 else "right",
@@ -151,7 +168,7 @@ def _place_greedy_annotations(
             xy=(x, y),
             xytext=(dx_pt, dy_pt),
             textcoords="offset points",
-            fontsize=9,
+            fontsize=fontsize,
             color=text_color,
             alpha=0.92,
             ha="left" if dx_pt >= 0 else "right",
@@ -251,6 +268,13 @@ def _plot_component_vs_fold_change(
     df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=["log10_fold_reduction"]).reset_index(drop=True)
     if df.empty:
         return
+    is_target_panel = column == "ddg_electrostatic"
+    df["plot_fold_reduction"] = df["fold_reduction"].astype(float)
+    if is_target_panel:
+        jitter_factors = {"G190E": 0.985, "V106A": 1.015}
+        for mutation, factor in jitter_factors.items():
+            mask = df["mutation"].astype(str).eq(mutation)
+            df.loc[mask, "plot_fold_reduction"] = df.loc[mask, "plot_fold_reduction"] * factor
 
     fig, ax = plt.subplots(figsize=(14.2, 9.2))
     for category, point_color in [
@@ -261,8 +285,9 @@ def _plot_component_vs_fold_change(
         subset = df[df["category"] == category].copy()
         if subset.empty:
             continue
+        legend_label = "Limited data" if is_target_panel and category == "Test set" else category
         ax.errorbar(
-            subset["fold_reduction"],
+            subset["plot_fold_reduction"],
             subset[f"{column}_mean"],
             yerr=subset[f"{column}_sem"],
             fmt="o",
@@ -275,7 +300,7 @@ def _plot_component_vs_fold_change(
             markeredgecolor="white",
             markeredgewidth=0.7,
             alpha=0.95,
-            label=category,
+            label=legend_label,
             zorder=3,
         )
 
@@ -293,20 +318,38 @@ def _plot_component_vs_fold_change(
         annotation = "R^2 = NA\np = NA"
 
     ax.set_xscale("log")
+    if is_target_panel:
+        ax.set_xlim(
+            float(df["fold_reduction"].min()) * 0.85,
+            float(df["fold_reduction"].max()) * 1.6,
+        )
     ax.grid(alpha=0.25)
     if column != "ddg_electrostatic":
         ax.set_title(f"{label} Vs Fold Reduction", fontsize=14, fontweight="bold")
-    ax.set_xlabel("Fold Reduction")
-    ax.set_ylabel(f"MM/GBSA {label} (kJ/mol)")
+    axis_label_fontsize = 20 if is_target_panel else None
+    ax.set_xlabel("Fold Reduction", fontsize=axis_label_fontsize)
+    ax.set_ylabel(f"MM/GBSA {label} (kJ/mol)", fontsize=axis_label_fontsize)
+    if is_target_panel:
+        ax.tick_params(axis="both", labelsize=17)
     if column in {"binding_dg_electrostatic", "ddg_electrostatic"}:
-        ax.legend(loc="lower right", fontsize=10, frameon=True, framealpha=0.9, facecolor="white", edgecolor="#cccccc")
+        legend_fontsize = 17 if is_target_panel else 10
+        ax.legend(loc="lower right", fontsize=legend_fontsize, frameon=True, framealpha=0.9, facecolor="white", edgecolor="#cccccc")
     else:
         ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0.0, fontsize=10, frameon=False)
     _place_greedy_annotations(
         ax,
-        df["fold_reduction"].to_numpy(dtype=float),
+        df["plot_fold_reduction"].to_numpy(dtype=float),
         df[f"{column}_mean"].to_numpy(dtype=float),
         df["mutation"].astype(str).tolist(),
+        fontsize=13 if is_target_panel else 9,
+        fixed_offsets={
+            "V106A+F227L": (-34, 16),
+            "V106A+P225H": (64, 30),
+            "Y188L": (74, -28),
+            "V106A+L234I": (-86, -34),
+        }
+        if is_target_panel
+        else None,
     )
     ax.text(
         0.02,
@@ -315,7 +358,7 @@ def _plot_component_vs_fold_change(
         transform=ax.transAxes,
         ha="left",
         va="top",
-        fontsize=10,
+        fontsize=17 if is_target_panel else 10,
         bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "edgecolor": "#cccccc", "alpha": 0.92},
     )
     output_png.parent.mkdir(parents=True, exist_ok=True)

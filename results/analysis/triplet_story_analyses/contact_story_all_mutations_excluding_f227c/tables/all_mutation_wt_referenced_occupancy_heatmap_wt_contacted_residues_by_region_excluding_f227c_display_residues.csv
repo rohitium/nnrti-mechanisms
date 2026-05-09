@@ -1,0 +1,28 @@
+traj_resid,auth_resid,resname,label,region_order,pocket_region,region_color
+92,95,PRO,PRO95,0,β6 strand,#4c78a8
+94,97,PRO,PRO97,0,β6 strand,#4c78a8
+97,100,LEU,LEU100,1,Pocket entrance,#f58518
+98,101,LYS,LYS101,1,Pocket entrance,#f58518
+100,103,LYS,LYS103,1,Pocket entrance,#f58518
+176,179,VAL,VAL179,1,Pocket entrance,#f58518
+178,181,TYR,TYR181,1,Pocket entrance,#f58518
+99,102,LYS,LYS102,2,103-108 loop,#eeca3b
+101,104,LYS,LYS104,2,103-108 loop,#eeca3b
+102,105,SER,SER105,2,103-108 loop,#eeca3b
+103,106,VAL,VAL106,2,103-108 loop,#eeca3b
+104,107,THR,THR107,2,103-108 loop,#eeca3b
+105,108,VAL,VAL108,2,103-108 loop,#eeca3b
+185,188,TYR,TYR188,3,Hydrophobic tunnel,#54a24b
+224,227,PHE,PHE227,3,Hydrophobic tunnel,#54a24b
+226,229,TRP,TRP229,3,Hydrophobic tunnel,#54a24b
+231,234,LEU,LEU234,3,Hydrophobic tunnel,#54a24b
+177,180,ILE,ILE180,4,β9-β10 hairpin,#e45756
+186,189,VAL,VAL189,4,β9-β10 hairpin,#e45756
+187,190,GLY,GLY190,4,β9-β10 hairpin,#e45756
+220,223,LYS,LYS223,5,β12-β13 primer grip,#b279a2
+222,225,PRO,PRO225,5,β12-β13 primer grip,#b279a2
+225,228,LEU,LEU228,5,β12-β13 primer grip,#b279a2
+232,235,HIS,HIS235,5,β12-β13 primer grip,#b279a2
+233,236,PRO,PRO236,5,β12-β13 primer grip,#b279a2
+234,237,ASP,ASP237,5,β12-β13 primer grip,#b279a2
+315,318,TYR,TYR318,6,Distal pocket wall,#72b7b2

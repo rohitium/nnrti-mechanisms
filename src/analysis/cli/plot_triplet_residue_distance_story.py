@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import mdtraj as md
 import numpy as np
 import pandas as pd
 
@@ -58,7 +57,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--triplet", type=str, default="WT,V106I,V106A")
     parser.add_argument("--auth-resseq", type=int, default=105)
     parser.add_argument("--metric-name", type=str, default="SER105-DOR")
-    parser.add_argument("--ylabel", type=str, default="Min SER105-DOR Distance (A)")
+    parser.add_argument("--ylabel", type=str, default="Min SER105-DOR Distance (Å)")
     parser.add_argument("--output-prefix", type=str, default="triplet_story_100ns_WT_V106I_V106A_SER105")
     parser.add_argument("--max-time-ns", type=float, default=100.0)
     parser.add_argument(
@@ -265,6 +264,42 @@ def _compute_residue_trace(
     resid_offset: int,
     ligand_resname: str,
 ) -> tuple[np.ndarray, np.ndarray]:
+    try:
+        return _compute_residue_trace_mdtraj(
+            analysis_dcd=analysis_dcd,
+            topology_pdb=topology_pdb,
+            total_ns=total_ns,
+            window_ns=window_ns,
+            auth_resseq=auth_resseq,
+            resid_offset=resid_offset,
+            ligand_resname=ligand_resname,
+        )
+    except ModuleNotFoundError as exc:
+        if exc.name != "mdtraj":
+            raise
+        return _compute_residue_trace_mdanalysis(
+            analysis_dcd=analysis_dcd,
+            topology_pdb=topology_pdb,
+            total_ns=total_ns,
+            window_ns=window_ns,
+            auth_resseq=auth_resseq,
+            resid_offset=resid_offset,
+            ligand_resname=ligand_resname,
+        )
+
+
+def _compute_residue_trace_mdtraj(
+    analysis_dcd: str | Path,
+    topology_pdb: str | Path,
+    total_ns: float,
+    window_ns: float,
+    *,
+    auth_resseq: int,
+    resid_offset: int,
+    ligand_resname: str,
+) -> tuple[np.ndarray, np.ndarray]:
+    import mdtraj as md
+
     traj = md.load_dcd(str(analysis_dcd), top=str(topology_pdb))
     n_frames = int(traj.n_frames)
     if n_frames < 2:
@@ -287,6 +322,54 @@ def _compute_residue_trace(
         periodic=True,
     )
     return t_sel.astype(float), (distances_nm[:, 0] * 10.0).astype(float)
+
+
+def _compute_residue_trace_mdanalysis(
+    analysis_dcd: str | Path,
+    topology_pdb: str | Path,
+    total_ns: float,
+    window_ns: float,
+    *,
+    auth_resseq: int,
+    resid_offset: int,
+    ligand_resname: str,
+) -> tuple[np.ndarray, np.ndarray]:
+    import MDAnalysis as mda
+    from MDAnalysis.lib.distances import distance_array
+
+    u = mda.Universe(str(topology_pdb), str(analysis_dcd))
+    n_frames = len(u.trajectory)
+    if n_frames < 2:
+        raise ValueError(f"Too few frames in {analysis_dcd}")
+
+    total_ns = float(total_ns) if np.isfinite(total_ns) and total_ns > 0 else float(window_ns)
+    t_ns = np.linspace(0.0, total_ns, n_frames)
+    target_resid = int(auth_resseq) + int(resid_offset)
+
+    protein = u.select_atoms("protein")
+    segments = sorted(protein.segments, key=lambda seg: len(seg.atoms), reverse=True)
+    if not segments:
+        raise ValueError("No protein segment found in topology")
+    segid = str(segments[0].segid)
+    residue = u.select_atoms(f"protein and segid {segid} and resid {target_resid} and not name H*")
+    ligand = u.select_atoms(f"resname {ligand_resname} and not name H*")
+    if len(residue) == 0:
+        raise ValueError(f"Could not map protein residue {target_resid} on segment {segid}")
+    if len(ligand) == 0:
+        raise ValueError(f"Could not map ligand residue {ligand_resname}")
+
+    times: list[float] = []
+    distances: list[float] = []
+    for frame_idx, ts in enumerate(u.trajectory):
+        time_ns = float(t_ns[frame_idx])
+        if time_ns > float(window_ns):
+            continue
+        d = distance_array(residue.positions, ligand.positions, box=ts.dimensions)
+        times.append(time_ns)
+        distances.append(float(np.nanmin(d)))
+    if len(times) < 2:
+        raise ValueError(f"Too few frames retained in {analysis_dcd}")
+    return np.asarray(times, dtype=float), np.asarray(distances, dtype=float)
 
 
 def _interpolate_replicates_to_grid(trace_df: pd.DataFrame, metric: str, time_grid: np.ndarray) -> pd.DataFrame:
@@ -404,7 +487,7 @@ def main() -> int:
     mean_df_all = pd.concat(mean_rows, ignore_index=True)
     mean_df_all.to_csv(out_tables / "mean_traces.csv", index=False)
 
-    fig, ax = plt.subplots(figsize=(13.8, 5.6), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(15.8, 6.4), constrained_layout=True)
 
     xmax = 0.0
     metric_name = str(args.metric_name)
@@ -419,19 +502,20 @@ def main() -> int:
         xmax = max(xmax, float(np.nanmax(x)) if len(x) else 0.0)
         fold = fold_map.get(mutation, float("nan"))
         label = f"{mutation} ({fold:.1f}x)" if pd.notna(fold) else str(mutation)
-        ax.plot(x, y, color=color, linewidth=2.1, alpha=0.95, label=label)
+        ax.plot(x, y, color=color, linewidth=2.8, alpha=0.95, label=label)
         lo = y - sem
         hi = y + sem
         ok = np.isfinite(lo) & np.isfinite(hi)
         if np.any(ok):
             ax.fill_between(x[ok], lo[ok], hi[ok], color=color, alpha=0.16, linewidth=0)
-    ax.axhline(4.0, color="#666666", linestyle=":", linewidth=1.1, label="4.0 A reference")
+    ax.axhline(4.0, color="#666666", linestyle=":", linewidth=1.8, label="Contact cutoff (4 Å)")
     ax.set_xlim(0.0, xmax if xmax > 0 else float(args.max_time_ns))
-    ax.set_xlabel("Time (ns)")
-    ax.set_ylabel(ylabel)
-    ax.set_title(metric_name)
+    ax.set_xlabel("Time (ns)", fontsize=18)
+    ax.set_ylabel(ylabel, fontsize=18)
+    ax.set_title(metric_name, fontsize=20, fontweight="bold")
+    ax.tick_params(axis="both", labelsize=19)
     ax.grid(alpha=0.22, linestyle=":")
-    ax.legend(loc="upper right", frameon=True, fontsize=9)
+    ax.legend(loc="upper right", frameon=True, fontsize=14)
     for spine in ("top", "right"):
         ax.spines[spine].set_visible(False)
 
