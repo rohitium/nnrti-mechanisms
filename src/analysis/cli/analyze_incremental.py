@@ -261,8 +261,8 @@ def main() -> int:
             md_df = pd.read_csv(ckpt_md_metadata) if ckpt_md_metadata.exists() else pd.DataFrame()
             mmgbsa_df, mmgbsa_source = _load_best_dataset(
                 [
-                    results_dir / "mmgbsa_replicate_metrics.csv",
                     ckpt_mmgbsa,
+                    results_dir / "mmgbsa_replicate_metrics.csv",
                 ],
                 required_columns={"mutation", "replicate", "binding_dg"},
             )

@@ -1,19 +1,19 @@
 drug,mutation,chain,dor_fold_reduction,order,category
+DOR,V106I,A,1.1,16,Negative control
 DOR,K103N,A,1.2,14,Negative control
 DOR,Y181C,A,1.4,2,Negative control
 DOR,G190A,A,2.7,15,Negative control
+DOR,V106M,A,3.4,1,Uncertain Phenotype
+DOR,G190S,A,5.2,5,Uncertain Phenotype
+DOR,L100I+K103N,A,6.8,7,Uncertain Phenotype
+DOR,K103N+P225H,A,7.8,8,Uncertain Phenotype
+DOR,G190E,A,18.0,4,Uncertain Phenotype
+DOR,K103N+M230L,A,36.0,9,Uncertain Phenotype
+DOR,V106A,A,9.6,0,Positive control
 DOR,Y318F,A,11.0,6,Positive control
-DOR,V106A,A,18.0,0,Positive control
 DOR,A98G+F227C,A,93.0,17,Positive control
 DOR,V106I+F227C,A,105.0,12,Positive control
 DOR,V106A+F227L,A,106.0,11,Positive control
 DOR,Y188L,A,149.0,3,Positive control
 DOR,V106A+P225H,A,153.0,10,Positive control
 DOR,V106A+L234I,A,161.0,13,Positive control
-DOR,V106I,A,1.1,16,Test set
-DOR,V106M,A,3.4,1,Test set
-DOR,G190S,A,5.2,5,Test set
-DOR,L100I+K103N,A,6.8,7,Test set
-DOR,K103N+P225H,A,7.8,8,Test set
-DOR,G190E,A,18.0,4,Test set
-DOR,K103N+M230L,A,36.0,9,Test set

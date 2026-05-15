@@ -1,7 +1,7 @@
 {
   "susceptibility_xlsx": "data/DRM-susceptibilities.csv.xlsx",
   "output_dir": "results/analysis/dor_susceptibility_bar_chart",
-  "star_mutation": "V106A+L234I",
+  "star_mutation": "",
   "dagger_mutation": "",
   "title": ""
 }

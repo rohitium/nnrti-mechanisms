@@ -1,6 +1,8 @@
 # Binding Energy
 
-This folder contains the final MM/GBSA summary outputs.
+This folder contains the default MM/GBSA summary outputs. As of 2026-05-14,
+the default binding-energy analysis uses the final 20 saved trajectory frames
+from each replicate.
 
 ## Main plots
 
@@ -26,14 +28,35 @@ This folder contains the final MM/GBSA summary outputs.
 
 ## Current readout
 
-The total MM/GBSA signal remains weak against susceptibility:
+These outputs were promoted on 2026-05-14 from:
 
-- total `binding_dg` vs fold change: `R^2 = 0.018`, `p = 0.586`
-- total `ddg` vs fold change: `R^2 = 0.018`, `p = 0.586`
+```text
+results/analysis/binding_energy/last20frames/
+```
 
-Among the components, the clearest remaining association is the electrostatic term:
+The previous top-level defaults and alternate window/diagnostic analyses were
+archived under:
 
-- `binding_dg_electrostatic` vs fold change: `R^2 = 0.254`, `p = 0.028`
-- `ddg_electrostatic` vs fold change: `R^2 = 0.254`, `p = 0.028`
+```text
+results/archive/2026-05-14_binding_energy_nondefault/
+```
+
+Earlier stale cached binding-energy outputs remain archived under:
+
+```text
+results/archive/2026-05-13_binding_energy_pre_recompute/
+```
+
+The total MM/GBSA signal remains weak against susceptibility in the last-20-frame
+analysis:
+
+- total `binding_dg` vs fold change: `R^2 = 0.010`, `p = 0.697`
+- total `ddg` vs fold change: `R^2 = 0.010`, `p = 0.697`
+
+Among the components, the electrostatic term is still the largest association,
+but it remains weak:
+
+- `binding_dg_electrostatic` vs fold change: `R^2 = 0.106`, `p = 0.187`
+- `ddg_electrostatic` vs fold change: `R^2 = 0.106`, `p = 0.187`
 
 So this folder is best treated as a mechanistic comparison package, not a standalone predictive explanation of susceptibility.

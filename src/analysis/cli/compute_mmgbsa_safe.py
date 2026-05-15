@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import concurrent.futures as cf
 import gc
+import json
 import logging
 from pathlib import Path
 
@@ -94,6 +95,35 @@ def _infer_total_steps_from_state_csv(rep_dir: Path, safe_label: str, replicate:
         df = pd.read_csv(state_csv)
     except Exception:
         return None
+
+
+def _infer_total_steps(row: pd.Series, rep_dir: Path, safe_label: str, replicate: int) -> int | None:
+    step_candidates: list[int] = []
+
+    output_json = _resolve_local_path(
+        _nonempty_path(row.get("output_json")),
+        rep_dir / f"{safe_label}_rep{replicate:02d}.json",
+    )
+    if output_json is not None and output_json.exists():
+        try:
+            payload = json.loads(output_json.read_text())
+            steps = int(
+                payload.get("md_production_steps_completed")
+                or payload.get("md_production_steps")
+                or 0
+            )
+            if steps > 0:
+                step_candidates.append(steps)
+        except Exception:
+            pass
+
+    state_steps = _infer_total_steps_from_state_csv(rep_dir, safe_label, replicate)
+    if state_steps is not None and state_steps > 0:
+        step_candidates.append(int(state_steps))
+
+    if not step_candidates:
+        return None
+    return max(step_candidates)
     col = None
     for candidate in ('#"Step"', "Step"):
         if candidate in df.columns:
@@ -122,6 +152,8 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
             n_snapshots=int(task["snapshots"]),
             discard_fraction=float(task["discard_fraction"]),
             sample_window_ns=task["sample_window_ns"],
+            total_time_ns=task["total_time_ns"],
+            sample_last_frames=task["sample_last_frames"],
             analysis_topology_pdb_path=Path(task["analysis_topo"]),
         )
         row = {
@@ -152,6 +184,17 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
                 if task["sample_window_ns"] is not None and float(task["sample_window_ns"]) > 0.0
                 else float("nan")
             ),
+            "mmgbsa_total_time_ns": (
+                float(task["total_time_ns"])
+                if task["total_time_ns"] is not None and float(task["total_time_ns"]) > 0.0
+                else float("nan")
+            ),
+            "mmgbsa_time_source": task["time_source"],
+            "mmgbsa_sample_last_frames": (
+                int(task["sample_last_frames"])
+                if task["sample_last_frames"] is not None and int(task["sample_last_frames"]) > 0
+                else float("nan")
+            ),
         }
         return True, row, ""
     except Exception as exc:
@@ -173,13 +216,20 @@ def main() -> int:
         default=0.0,
         help="If > 0, sample only the last N ns. Default 0 uses the full post-discard region.",
     )
+    parser.add_argument(
+        "--sample-last-frames",
+        type=int,
+        default=0,
+        help="If > 0, sample the last N saved trajectory frames. Overrides --sample-window-ns.",
+    )
     parser.add_argument("--timestep-fs", type=float, default=2.0)
     parser.add_argument("--ligand-resname", type=str, default="2KW")
     parser.add_argument("--workers", type=int, default=1, help="Parallel workers for per-replicate MM/GBSA")
     parser.add_argument("--force", action="store_true", help="Recompute even if checkpoint exists")
     args = parser.parse_args()
 
-    sample_window_ns = _normalize_sample_window_ns(args.sample_window_ns)
+    sample_last_frames = int(args.sample_last_frames) if int(args.sample_last_frames) > 0 else None
+    sample_window_ns = None if sample_last_frames is not None else _normalize_sample_window_ns(args.sample_window_ns)
 
     ckpt_dir = args.results_dir / ".checkpoints"
     output_path = args.output or (ckpt_dir / ".checkpoint_mmgbsa_replicate_metrics.csv")
@@ -262,15 +312,19 @@ def main() -> int:
         # Derive fallback discard fraction from trajectory span when possible.
         # This is used only if DCD timing metadata is invalid inside MM/GBSA code.
         discard_fraction = float(args.discard_fraction)
+        total_time_ns = None
+        time_source = "trajectory_dt"
         if sample_window_ns is not None:
-            total_steps = _infer_total_steps_from_state_csv(rep_dir, safe, rep)
+            total_steps = _infer_total_steps(row, rep_dir, safe, rep)
             if total_steps and total_steps > 0:
+                total_time_ns = float(total_steps) * float(args.timestep_fs) / 1_000_000.0
+                time_source = "run_artifacts"
                 window_steps = _steps_per_ns(args.timestep_fs) * float(sample_window_ns)
                 keep_fraction = min(1.0, float(window_steps) / float(total_steps))
                 discard_fraction = max(0.0, min(0.95, 1.0 - keep_fraction))
                 logging.info(
                     f"  {mutation} rep{replicate}: fallback discard_fraction={discard_fraction:.4f} "
-                    f"(window_ns={sample_window_ns}, total_steps={total_steps})"
+                    f"(window_ns={sample_window_ns}, total_steps={total_steps}, total_ns={total_time_ns:.3f})"
                 )
             else:
                 logging.warning(
@@ -293,6 +347,9 @@ def main() -> int:
                 "snapshots": int(args.snapshots),
                 "discard_fraction": discard_fraction,
                 "sample_window_ns": sample_window_ns,
+                "total_time_ns": total_time_ns,
+                "time_source": time_source,
+                "sample_last_frames": sample_last_frames,
             }
         )
 

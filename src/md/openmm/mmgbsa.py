@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
 from typing import Iterable
 
@@ -131,7 +132,15 @@ def _make_context(system):
     openmm = require_module("openmm")
     unit = require_module("openmm.unit")
     integrator = openmm.VerletIntegrator(0.001 * unit.picoseconds)
-    return openmm.Context(system, integrator)
+    platform_name = os.environ.get("OPENMM_PLATFORM", "CPU").strip() or "CPU"
+    try:
+        platform = openmm.Platform.getPlatformByName(platform_name)
+        properties = {}
+        if platform_name == "CPU":
+            properties["Threads"] = os.environ.get("OPENMM_CPU_THREADS", "1")
+        return openmm.Context(system, integrator, platform, properties)
+    except Exception:
+        return openmm.Context(system, integrator)
 
 
 def _build_h_relax_context(topology, forcefield, k_kj_per_nm2: float = 10_000.0):
@@ -165,7 +174,15 @@ def _build_h_relax_context(topology, forcefield, k_kj_per_nm2: float = 10_000.0)
     system.addForce(restraint)
 
     integrator = openmm.VerletIntegrator(0.001 * unit.picoseconds)
-    context = openmm.Context(system, integrator)
+    platform_name = os.environ.get("OPENMM_PLATFORM", "CPU").strip() or "CPU"
+    try:
+        platform = openmm.Platform.getPlatformByName(platform_name)
+        properties = {}
+        if platform_name == "CPU":
+            properties["Threads"] = os.environ.get("OPENMM_CPU_THREADS", "1")
+        context = openmm.Context(system, integrator, platform, properties)
+    except Exception:
+        context = openmm.Context(system, integrator)
     return context, restraint, heavy_particles
 
 
@@ -224,7 +241,35 @@ def _select_snapshot_indices(
     n_snapshots: int,
     dt_ps: float | None = None,
     sample_window_ns: float | None = None,
+    total_time_ns: float | None = None,
+    sample_last_frames: int | None = None,
 ) -> np.ndarray:
+    if sample_last_frames is not None and int(sample_last_frames) > 0:
+        start = max(0, int(n_frames) - int(sample_last_frames))
+        available = n_frames - start
+        n_take = min(max(1, int(n_snapshots)), max(1, available))
+        return np.linspace(start, n_frames - 1, num=n_take, dtype=int)
+
+    if (
+        sample_window_ns is not None
+        and sample_window_ns > 0.0
+        and total_time_ns is not None
+        and np.isfinite(total_time_ns)
+        and float(total_time_ns) > 0.0
+        and n_frames > 1
+    ):
+        window_ns = float(sample_window_ns)
+        total_ns = float(total_time_ns)
+        if window_ns >= total_ns:
+            start = 0
+        else:
+            frac_start = max(0.0, (total_ns - window_ns) / total_ns)
+            start = int(np.ceil(frac_start * float(n_frames - 1)))
+        start = min(max(0, start), max(0, n_frames - 1))
+        available = n_frames - start
+        n_take = min(max(1, int(n_snapshots)), max(1, available))
+        return np.linspace(start, n_frames - 1, num=n_take, dtype=int)
+
     # Some legacy DCDs carry inflated dt metadata due to an interval double-count.
     # Example symptom: ~50000 ps/frame when the actual spacing is ~50 ps/frame.
     max_reasonable_dt_ps = 1_000.0
@@ -299,6 +344,8 @@ def compute_mmgbsa_from_trajectory(
     n_snapshots: int = 100,
     discard_fraction: float = 0.25,
     sample_window_ns: float | None = None,
+    total_time_ns: float | None = None,
+    sample_last_frames: int | None = None,
     analysis_topology_pdb_path: Path | None = None,
 ) -> MMGBSAResult:
     """Compute MM/GBSA-style decomposition from explicit-MD snapshots.
@@ -363,6 +410,8 @@ def compute_mmgbsa_from_trajectory(
         n_snapshots=n_snapshots,
         dt_ps=getattr(u.trajectory, "dt", None),
         sample_window_ns=sample_window_ns,
+        total_time_ns=total_time_ns,
+        sample_last_frames=sample_last_frames,
     )
 
     d_vdw: list[float] = []

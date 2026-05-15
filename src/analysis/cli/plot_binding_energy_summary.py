@@ -29,6 +29,15 @@ DDG_SPECS = [
     ("ddg_sa", "ΔΔG SA", "#6d597a"),
 ]
 
+AXIS_LABEL_SIZE = 22
+BAR_AXIS_LABEL_SIZE = 18
+TICK_LABEL_SIZE = 15
+BAR_TICK_LABEL_SIZE = 13
+LEGEND_LABEL_SIZE = 16
+TITLE_SIZE = 20
+POINT_LABEL_SIZE = 13
+STATS_LABEL_SIZE = 14
+
 
 def _mutation_sort_key(mutation: str, fold_lookup: dict[str, float]) -> tuple[float, float, str]:
     if mutation == "WT":
@@ -195,8 +204,8 @@ def _plot_ddg_bar_chart(summary: pd.DataFrame, specs: list[tuple[str, str, str]]
     axes = axes[:, 0]
     legend_handles = [
         Patch(facecolor=CATEGORY_COLORS["Negative control"], edgecolor="#222222", label="Negative control"),
+        Patch(facecolor=CATEGORY_COLORS["Uncertain Phenotype"], edgecolor="#222222", label="Uncertain Phenotype"),
         Patch(facecolor=CATEGORY_COLORS["Positive control"], edgecolor="#222222", label="Positive control"),
-        Patch(facecolor=CATEGORY_COLORS["Test set"], edgecolor="#222222", label="Test set"),
     ]
     for ax, (column, label, color) in zip(axes, specs):
         y = ordered[f"{column}_mean"].to_numpy(dtype=float)
@@ -209,20 +218,25 @@ def _plot_ddg_bar_chart(summary: pd.DataFrame, specs: list[tuple[str, str, str]]
         ax.grid(axis="y", linestyle=":", alpha=0.32)
         ax.set_ylabel(
             f"{label}\n(kJ/mol)",
-            fontsize=9,
+            fontsize=BAR_AXIS_LABEL_SIZE,
             fontweight="bold" if is_highlight else "normal",
             color="#1f6f66" if is_highlight else "#222222",
         )
+        ax.tick_params(axis="y", labelsize=BAR_TICK_LABEL_SIZE)
         ax.axhline(0.0, color="#999999", linestyle="--", linewidth=1.0, alpha=0.8)
+        for spine in ("top", "right"):
+            ax.spines[spine].set_visible(False)
         for spine in ax.spines.values():
+            if not spine.get_visible():
+                continue
             spine.set_visible(True)
             spine.set_linewidth(1.8 if is_highlight else 0.8)
             spine.set_color("#2a9d8f" if is_highlight else "#d0d0d0")
-    axes[0].legend(handles=legend_handles, loc="upper left", frameon=False, fontsize=9, ncols=3)
+    axes[0].legend(handles=legend_handles, loc="upper left", frameon=False, fontsize=LEGEND_LABEL_SIZE, ncols=3)
 
-    axes[-1].set_xticks(x, labels=ordered["mutation"].astype(str).tolist(), rotation=45, ha="right", fontsize=8)
-    axes[-1].set_xlabel("Mutation", fontsize=10)
-    fig.suptitle(title, fontsize=13, fontweight="bold", y=0.995)
+    axes[-1].set_xticks(x, labels=ordered["mutation"].astype(str).tolist(), rotation=50, ha="right", fontsize=BAR_TICK_LABEL_SIZE)
+    axes[-1].set_xlabel("Mutation", fontsize=AXIS_LABEL_SIZE, fontweight="bold")
+    fig.suptitle(title, fontsize=TITLE_SIZE, fontweight="bold", y=0.995)
     output_png.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
     fig.savefig(output_png, dpi=300, bbox_inches="tight")
@@ -269,23 +283,25 @@ def _plot_component_vs_fold_change(
     if df.empty:
         return
     is_target_panel = column == "ddg_electrostatic"
-    df["plot_fold_reduction"] = df["fold_reduction"].astype(float)
     if is_target_panel:
-        jitter_factors = {"G190E": 0.985, "V106A": 1.015}
-        for mutation, factor in jitter_factors.items():
-            mask = df["mutation"].astype(str).eq(mutation)
-            df.loc[mask, "plot_fold_reduction"] = df.loc[mask, "plot_fold_reduction"] * factor
+        df = df[df["category"].isin(["Negative control", "Positive control"])].reset_index(drop=True)
+        if df.empty:
+            return
+    df["plot_fold_reduction"] = df["fold_reduction"].astype(float)
 
     fig, ax = plt.subplots(figsize=(14.2, 9.2))
-    for category, point_color in [
+    categories = [
         ("Negative control", CATEGORY_COLORS["Negative control"]),
         ("Positive control", CATEGORY_COLORS["Positive control"]),
-        ("Test set", CATEGORY_COLORS["Test set"]),
-    ]:
+    ] if is_target_panel else [
+        ("Negative control", CATEGORY_COLORS["Negative control"]),
+        ("Uncertain Phenotype", CATEGORY_COLORS["Uncertain Phenotype"]),
+        ("Positive control", CATEGORY_COLORS["Positive control"]),
+    ]
+    for category, point_color in categories:
         subset = df[df["category"] == category].copy()
         if subset.empty:
             continue
-        legend_label = "Limited data" if is_target_panel and category == "Test set" else category
         ax.errorbar(
             subset["plot_fold_reduction"],
             subset[f"{column}_mean"],
@@ -300,7 +316,7 @@ def _plot_component_vs_fold_change(
             markeredgecolor="white",
             markeredgewidth=0.7,
             alpha=0.95,
-            label=legend_label,
+            label=category,
             zorder=3,
         )
 
@@ -313,7 +329,10 @@ def _plot_component_vs_fold_change(
         x_grid = np.geomspace(float(df["fold_reduction"].min()) * 0.9, float(df["fold_reduction"].max()) * 1.1, 300)
         y_grid = slope * np.log10(x_grid) + intercept
         ax.plot(x_grid, y_grid, color="#444444", linestyle="--", linewidth=1.5, zorder=2)
-        annotation = f"R^2 = {r_value**2:.3f}\np = {p_value:.3f}"
+        if is_target_panel:
+            annotation = f"R\u00b2 = {r_value**2:.3f}\np = {p_value:.3f}"
+        else:
+            annotation = f"R^2 = {r_value**2:.3f}\np = {p_value:.3f}"
     else:
         annotation = "R^2 = NA\np = NA"
 
@@ -324,33 +343,44 @@ def _plot_component_vs_fold_change(
             float(df["fold_reduction"].max()) * 1.6,
         )
     ax.grid(alpha=0.25)
+    for spine in ("top", "right"):
+        ax.spines[spine].set_visible(False)
+    ax.spines["left"].set_linewidth(1.2)
+    ax.spines["bottom"].set_linewidth(1.2)
     if column != "ddg_electrostatic":
-        ax.set_title(f"{label} Vs Fold Reduction", fontsize=14, fontweight="bold")
-    axis_label_fontsize = 20 if is_target_panel else None
-    ax.set_xlabel("Fold Reduction", fontsize=axis_label_fontsize)
-    ax.set_ylabel(f"MM/GBSA {label} (kJ/mol)", fontsize=axis_label_fontsize)
-    if is_target_panel:
-        ax.tick_params(axis="both", labelsize=17)
+        ax.set_title(f"{label} Vs Fold Reduction", fontsize=TITLE_SIZE, fontweight="bold")
+    ax.set_xlabel("Fold Reduction", fontsize=AXIS_LABEL_SIZE, fontweight="bold")
+    y_label = f"{label} (kJ/mol)" if label.startswith("ΔΔG") else f"MM/GBSA {label} (kJ/mol)"
+    ax.set_ylabel(y_label, fontsize=AXIS_LABEL_SIZE, fontweight="bold")
+    ax.tick_params(axis="both", labelsize=TICK_LABEL_SIZE)
     if column in {"binding_dg_electrostatic", "ddg_electrostatic"}:
-        legend_fontsize = 17 if is_target_panel else 10
-        ax.legend(loc="lower right", fontsize=legend_fontsize, frameon=True, framealpha=0.9, facecolor="white", edgecolor="#cccccc")
+        ax.legend(loc="lower right", fontsize=LEGEND_LABEL_SIZE, frameon=True, framealpha=0.9, facecolor="white", edgecolor="#cccccc")
     else:
-        ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0.0, fontsize=10, frameon=False)
-    _place_greedy_annotations(
-        ax,
-        df["plot_fold_reduction"].to_numpy(dtype=float),
-        df[f"{column}_mean"].to_numpy(dtype=float),
-        df["mutation"].astype(str).tolist(),
-        fontsize=13 if is_target_panel else 9,
-        fixed_offsets={
-            "V106A+F227L": (-34, 16),
-            "V106A+P225H": (64, 30),
-            "Y188L": (74, -28),
-            "V106A+L234I": (-86, -34),
-        }
-        if is_target_panel
-        else None,
-    )
+        ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0.0, fontsize=LEGEND_LABEL_SIZE, frameon=False)
+    if is_target_panel:
+        left_label_mutations = {"V106I+F227C", "V106A+F227L", "A98G+F227C"}
+        for _, row in df.iterrows():
+            label_left = str(row["mutation"]) in left_label_mutations
+            ax.annotate(
+                str(row["mutation"]),
+                xy=(float(row["plot_fold_reduction"]), float(row[f"{column}_mean"])),
+                xytext=(-8, 8) if label_left else (8, 8),
+                textcoords="offset points",
+                fontsize=POINT_LABEL_SIZE,
+                color="#333333",
+                alpha=0.92,
+                ha="right" if label_left else "left",
+                va="bottom",
+                bbox={"boxstyle": "round,pad=0.18", "facecolor": "white", "edgecolor": "none", "alpha": 0.78},
+            )
+    else:
+        _place_greedy_annotations(
+            ax,
+            df["plot_fold_reduction"].to_numpy(dtype=float),
+            df[f"{column}_mean"].to_numpy(dtype=float),
+            df["mutation"].astype(str).tolist(),
+            fontsize=POINT_LABEL_SIZE,
+        )
     ax.text(
         0.02,
         0.98,
@@ -358,11 +388,12 @@ def _plot_component_vs_fold_change(
         transform=ax.transAxes,
         ha="left",
         va="top",
-        fontsize=17 if is_target_panel else 10,
+        fontsize=STATS_LABEL_SIZE,
         bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "edgecolor": "#cccccc", "alpha": 0.92},
     )
     output_png.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_png, dpi=300, bbox_inches="tight")
+    fig.tight_layout(pad=2.0)
+    fig.savefig(output_png, dpi=300, bbox_inches="tight", pad_inches=0.25)
     plt.close(fig)
 
 

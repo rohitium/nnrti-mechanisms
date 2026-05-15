@@ -18,6 +18,7 @@ NEGATIVE_CONTROLS = {
     "K103N",
     "Y181C",
     "G190A",
+    "V106I",
 }
 
 POSITIVE_CONTROLS = {
@@ -31,8 +32,7 @@ POSITIVE_CONTROLS = {
     "V106I+F227C",
 }
 
-TEST_SET = {
-    "V106I",
+UNCERTAIN_PHENOTYPE = {
     "L100I+K103N",
     "K103N+P225H",
     "K103N+M230L",
@@ -43,18 +43,23 @@ TEST_SET = {
 
 CATEGORY_ORDER = {
     "Negative control": 0,
-    "Positive control": 1,
-    "Test set": 2,
+    "Uncertain Phenotype": 1,
+    "Positive control": 2,
 }
 
 CATEGORY_COLORS = {
     "Negative control": "#4c78a8",
     "Positive control": "#e45756",
-    "Test set": "#9aa0a6",
-    "Uncertain/limited data": "#9aa0a6",
+    "Uncertain Phenotype": "#9aa0a6",
 }
 
-UNCERTAIN_LIMITED = TEST_SET
+UNCERTAIN_LIMITED = UNCERTAIN_PHENOTYPE
+
+AXIS_LABEL_SIZE = 22
+TICK_LABEL_SIZE = 14
+LEGEND_LABEL_SIZE = 16
+TITLE_SIZE = 18
+MARKER_LABEL_SIZE = 20
 
 
 def _parse_args() -> argparse.Namespace:
@@ -72,7 +77,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--star-mutation",
         type=str,
-        default="V106A+L234I",
+        default="",
         help="Mutation to annotate with a star.",
     )
     parser.add_argument(
@@ -98,7 +103,7 @@ def _sort_key(label: str) -> tuple[int, str]:
 
 
 def _display_mutations() -> set[str]:
-    return {str(label).strip().upper() for label in (NEGATIVE_CONTROLS | POSITIVE_CONTROLS | TEST_SET)}
+    return {str(label).strip().upper() for label in (NEGATIVE_CONTROLS | POSITIVE_CONTROLS | UNCERTAIN_PHENOTYPE)}
 
 
 def _category_for_mutation(label: str) -> str:
@@ -107,8 +112,8 @@ def _category_for_mutation(label: str) -> str:
         return "Negative control"
     if mutation in POSITIVE_CONTROLS:
         return "Positive control"
-    if mutation in TEST_SET:
-        return "Test set"
+    if mutation in UNCERTAIN_PHENOTYPE:
+        return "Uncertain Phenotype"
     raise ValueError(f"Missing category for mutation: {label}")
 
 
@@ -158,7 +163,7 @@ def _plot(df, output_png: Path, *, star_mutation: str, dagger_mutation: str, tit
     ymax = float(np.nanmax(values))
     ypad = max(8.0, 0.12 * ymax)
 
-    fig, ax = plt.subplots(figsize=(10.8, 4.6))
+    fig, ax = plt.subplots(figsize=(12.5, 6.2))
     bars = ax.bar(
         x,
         values,
@@ -177,10 +182,10 @@ def _plot(df, output_png: Path, *, star_mutation: str, dagger_mutation: str, tit
     ax.yaxis.grid(True, color="#d9d9d9", linewidth=0.9)
     ax.xaxis.grid(False)
 
-    ax.set_ylabel("Fold-change", fontsize=15, fontweight="bold")
+    ax.set_ylabel("Fold-change", fontsize=AXIS_LABEL_SIZE, fontweight="bold")
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=50, ha="right", fontsize=9)
-    ax.tick_params(axis="y", labelsize=9)
+    ax.set_xticklabels(labels, rotation=50, ha="right", fontsize=TICK_LABEL_SIZE)
+    ax.tick_params(axis="y", labelsize=TICK_LABEL_SIZE)
     ax.tick_params(axis="x", length=0)
     ax.set_xlim(-0.6, len(labels) - 0.4)
     ax.set_ylim(0.0, ymax + ypad)
@@ -189,14 +194,14 @@ def _plot(df, output_png: Path, *, star_mutation: str, dagger_mutation: str, tit
     ax.set_yticks(np.arange(0.0, ymax + ypad + tick_step, tick_step))
 
     if title:
-        ax.set_title(title, fontsize=12, fontweight="bold", pad=10)
+        ax.set_title(title, fontsize=TITLE_SIZE, fontweight="bold", pad=10)
 
     legend_handles = [
         Patch(facecolor=CATEGORY_COLORS["Negative control"], edgecolor="#222222", label="Negative control"),
+        Patch(facecolor=CATEGORY_COLORS["Uncertain Phenotype"], edgecolor="#222222", label="Uncertain Phenotype"),
         Patch(facecolor=CATEGORY_COLORS["Positive control"], edgecolor="#222222", label="Positive control"),
-        Patch(facecolor=CATEGORY_COLORS["Test set"], edgecolor="#222222", label="Limited data"),
     ]
-    ax.legend(handles=legend_handles, loc="upper left", frameon=False, fontsize=13)
+    ax.legend(handles=legend_handles, loc="upper left", frameon=False, fontsize=LEGEND_LABEL_SIZE)
 
     annotations: dict[str, str] = {}
     if str(star_mutation).strip():
@@ -213,14 +218,14 @@ def _plot(df, output_png: Path, *, star_mutation: str, dagger_mutation: str, tit
             symbol,
             ha="center",
             va="bottom",
-            fontsize=16,
+            fontsize=MARKER_LABEL_SIZE,
             fontweight="bold",
             color="#111111",
         )
 
     fig.tight_layout()
     output_png.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_png, dpi=300, bbox_inches="tight")
+    fig.savefig(output_png, dpi=300, bbox_inches="tight", pad_inches=0.25)
     plt.close(fig)
 
 

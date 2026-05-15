@@ -218,6 +218,7 @@ __marimo__/
 # Local outputs
 *.dcd*
 *.pdb
+results/archive/
 *.xml
 *.chk*
 logs/
