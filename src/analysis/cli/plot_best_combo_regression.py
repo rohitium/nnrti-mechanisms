@@ -129,8 +129,8 @@ def _plot_predictions(df: pd.DataFrame, output_png: Path, title: str) -> dict[st
     ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], linestyle="--", color="#888888", linewidth=1.1, zorder=1)
     ax.plot(grid, slope * grid + intercept, linestyle="-", color="#d62828", linewidth=1.5, zorder=2)
     _place_greedy_annotations(ax, x, y, df["mutation"].astype(str).tolist())
-    ax.set_xlabel("Observed Fold Reduction")
-    ax.set_ylabel("CV Predicted Fold Reduction")
+    ax.set_xlabel("Observed Fold-change")
+    ax.set_ylabel("CV Predicted Fold-change")
     ax.set_title(title)
     ax.grid(alpha=0.24)
     ax.text(

@@ -538,8 +538,8 @@ def _plot_feature_vs_fold_change(
 
     ax.set_xscale("log")
     ax.grid(alpha=0.25)
-    ax.set_title(f"{label} Vs Fold Reduction", fontsize=14, fontweight="bold")
-    ax.set_xlabel("Fold Reduction")
+    ax.set_title(f"{label} vs Fold-change", fontsize=14, fontweight="bold")
+    ax.set_xlabel("Fold-change")
     ax.set_ylabel(label)
     ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0), borderaxespad=0.0, fontsize=10, frameon=False)
     _place_greedy_annotations(

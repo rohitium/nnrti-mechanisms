@@ -262,7 +262,7 @@ def _plot_probability_vs_fold(
     df["fold_reduction"] = pd.to_numeric(df["target_value"], errors="coerce")
     if use_log10_x:
         df["plot_x"] = np.log10(df["fold_reduction"])
-        x_label = "log10(Fold Reduction)"
+        x_label = "log10(Fold-change)"
         title = "Binary Logistic CV Probability Tracks Resistance Severity"
     else:
         df["plot_x"] = df["fold_reduction"]

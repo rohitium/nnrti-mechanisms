@@ -432,7 +432,7 @@ def _plot_top_features(
                 f"R² = {float(row['pearson_r_log10_fold']) ** 2:.3f}, p = {float(row['pearson_p_log10_fold']):.3g}",
                 fontsize=11,
             )
-            ax.set_xlabel("DOR Fold-change")
+            ax.set_xlabel("Fold-change")
             ax.set_xscale("log")
             xticks = [1, 2, 5, 10, 20, 50, 100]
             x_present = [tick for tick in xticks if float(np.nanmin(x)) <= tick <= float(np.nanmax(x))]

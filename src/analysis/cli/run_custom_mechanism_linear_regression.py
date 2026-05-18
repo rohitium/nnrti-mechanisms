@@ -230,8 +230,8 @@ def _plot_predicted_vs_observed(df: pd.DataFrame, output_png: Path, title: str) 
     y_line = 10 ** (slope * np.log10(x_line) + intercept)
     ax.plot(x_line, y_line, color="#444444", linewidth=1.4, linestyle="-", zorder=2)
     ax.grid(alpha=0.22, linestyle=":")
-    ax.set_xlabel("Observed DOR Fold-change")
-    ax.set_ylabel("Predicted DOR Fold-change")
+    ax.set_xlabel("Observed Fold-change")
+    ax.set_ylabel("Predicted Fold-change")
     ax.set_title(f"{title}\n$R^2$ = {r_value**2:.3f}    p = {p_value:.3g}", pad=12)
     present_categories = [cat for cat in ["Negative control", "Positive control", "Test set", "WT"] if cat in set(df["display_category"].astype(str))]
     legend_handles = [
@@ -279,7 +279,7 @@ def _plot_ranked_predictions(df: pd.DataFrame, output_png: Path, title: str) -> 
     colors = [_category_color(cat) for cat in plot_df["display_category"]]
     ax.bar(xs, plot_df["predicted_fold"], color=colors, edgecolor="white", linewidth=0.7)
     ax.set_yscale("log")
-    ax.set_ylabel("Predicted DOR Fold-change")
+    ax.set_ylabel("Predicted Fold-change")
     ax.set_xticks(xs)
     ax.set_xticklabels(plot_df["mutation"], rotation=45, ha="right", fontsize=8)
     ax.set_title(title)
@@ -347,7 +347,7 @@ def main() -> int:
         title="",
     )
     _plot_coefficients(coef_df, out_plots / "full_model_feature_coefficients.png", title="Full-Model Regression Coefficients")
-    _plot_ranked_predictions(all_df, out_plots / "all_mutation_predicted_fold_ranked.png", title="All-Mutation Predicted DOR Fold-change")
+    _plot_ranked_predictions(all_df, out_plots / "all_mutation_predicted_fold_ranked.png", title="All-Mutation Predicted Fold-change")
 
     stats_rows = [
         {"plot": "cv_predicted_vs_observed_fold_change", **cv_plot_stats},

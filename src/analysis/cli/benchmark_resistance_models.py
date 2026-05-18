@@ -522,7 +522,7 @@ def _run_regression(
     pd.DataFrame(summary_rows).sort_values("mae", ascending=True).to_csv(output_dir / "tables" / "regression_cv_summary.csv", index=False)
     pred_df.to_csv(output_dir / "tables" / "regression_cv_predictions.csv", index=False)
     pd.DataFrame(param_rows).to_csv(output_dir / "tables" / "regression_best_params_by_fold.csv", index=False)
-    _plot_regression_predictions(pred_df, output_dir / "plots" / "regression_cv_predictions.png", "Fold Reduction")
+    _plot_regression_predictions(pred_df, output_dir / "plots" / "regression_cv_predictions.png", "Fold-change")
 
     if importance_rows:
         imp_df = pd.concat(importance_rows, ignore_index=True)

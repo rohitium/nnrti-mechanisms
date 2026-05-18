@@ -1111,11 +1111,12 @@ def _plot_wt_contacts_figure(
     )
     ax_top.set_xlim(0.0, float(window_ns))
     ax_top.set_xlabel("Time (ns)", fontsize=18)
-    ax_top.set_ylabel("Min residue-DOR distance (Å)", fontsize=22)
-    ax_top.set_title("WT RT-DOR trajectories", fontsize=26, pad=14)
+    ax_top.set_ylabel("Min residue-DOR\n distance (Å)", fontsize=22)
     ax_top.tick_params(axis="both", labelsize=18)
+    ax_top.spines["top"].set_visible(False)
+    ax_top.spines["right"].set_visible(False)
     ax_top.grid(alpha=0.22, linestyle=":")
-    ax_top.legend(loc="upper right", frameon=True, fontsize=18)
+    ax_top.legend(loc="upper right", frameon=True, fontsize=15)
 
     means = wt_occ_all["occupancy_mean"].to_numpy(dtype=float)
     sems = wt_occ_all["occupancy_sem"].to_numpy(dtype=float)
@@ -1131,9 +1132,11 @@ def _plot_wt_contacts_figure(
     )
     ax_bot.set_xticks(xpos, wt_occ_all["label"].tolist(), rotation=45, ha="right")
     ax_bot.tick_params(axis="both", labelsize=18)
+    ax_bot.spines["top"].set_visible(False)
+    ax_bot.spines["right"].set_visible(False)
     ax_bot.set_ylim(0.0, 1.05)
     ax_bot.set_ylabel("Mean occupancy", fontsize=22)
-    ax_bot.set_xlabel("Residue", fontsize=18)
+    ax_bot.set_xlabel("")
     ax_bot.grid(axis="y", alpha=0.2, linestyle=":")
 
     region_spans = (

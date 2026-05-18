@@ -1,0 +1,14 @@
+fold,mutation,control_category,target_fold_change,observed_class,prob_high,predicted_class
+1,V106I,negative_control,1.1,low,0.290381124799867,low
+2,K103N,negative_control,1.2,low,1.707810162765444e-05,low
+3,Y181C,negative_control,1.4,low,0.6237659087551961,high
+4,G190A,negative_control,2.7,low,0.019714849892134012,low
+5,V106A,positive_control,9.6,high,0.9985922585924264,high
+6,Y318F,positive_control,11.0,high,0.9692142640379862,high
+7,A98G+F227C,positive_control,93.0,high,0.3947310526160085,low
+8,V106I+F227C,positive_control,105.0,high,0.5058134204713847,high
+9,V106A+F227L,positive_control,106.0,high,0.9992612492128711,high
+10,Y188L,positive_control,149.0,high,0.9999999991291486,high
+11,V106A+P225H,positive_control,153.0,high,0.999999813913925,high
+12,V106A+L234I,positive_control,161.0,high,0.7470531596931667,high
+13,WT,wt_reference,1.0,low,0.00037442504053364356,low

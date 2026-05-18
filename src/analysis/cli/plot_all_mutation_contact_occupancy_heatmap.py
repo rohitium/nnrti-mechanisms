@@ -13,7 +13,13 @@ import pandas as pd
 os.environ.setdefault("MPLBACKEND", "Agg")
 
 from ..susceptibility import load_dor_susceptibilities
-from .plot_dor_susceptibility_bars import CATEGORY_COLORS, CATEGORY_ORDER, NEGATIVE_CONTROLS, POSITIVE_CONTROLS, TEST_SET
+from .plot_dor_susceptibility_bars import (
+    CATEGORY_COLORS,
+    CATEGORY_ORDER,
+    NEGATIVE_CONTROLS,
+    POSITIVE_CONTROLS,
+    UNCERTAIN_PHENOTYPE,
+)
 from .plot_triplet_contact_story import (
     _aa1_to_aa3,
     _compute_triplet_contact_stats,
@@ -110,8 +116,8 @@ def _mutation_order(manifest_csv: Path, fold_map: dict[str, float], excluded: se
             return CATEGORY_ORDER["Negative control"]
         if mutation in POSITIVE_CONTROLS:
             return CATEGORY_ORDER["Positive control"]
-        if mutation in TEST_SET:
-            return CATEGORY_ORDER["Test set"]
+        if mutation in UNCERTAIN_PHENOTYPE:
+            return CATEGORY_ORDER["Uncertain Phenotype"]
         return 99
 
     return sorted(
@@ -140,16 +146,16 @@ def _mutation_set_label(mutation: str) -> str:
         return "Negative control"
     if mutation in POSITIVE_CONTROLS:
         return "Positive control"
-    if mutation in TEST_SET:
-        return "Limited data"
+    if mutation in UNCERTAIN_PHENOTYPE:
+        return "Uncertain Phenotype"
     if mutation == "WT":
         return "WT"
     return "Other"
 
 
 def _mutation_set_color(label: str) -> str:
-    if label == "Limited data":
-        return CATEGORY_COLORS["Test set"]
+    if label == "Uncertain Phenotype":
+        return CATEGORY_COLORS["Uncertain Phenotype"]
     return CATEGORY_COLORS.get(label, "#9d9da1")
 
 
@@ -270,6 +276,8 @@ def _plot_heatmap(
         boundaries = np.arange(0.0, 1.0001, 0.025)
     norm = BoundaryNorm(boundaries=boundaries, ncolors=cmap.N, clip=True)
     im = ax.imshow(arr, aspect="auto", cmap=cmap, norm=norm)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
     ax.set_yticks(
         np.arange(len(matrix.index)),
         [_format_fold_label(m, fold_map=fold_map) for m in matrix.index.tolist()],
@@ -277,13 +285,8 @@ def _plot_heatmap(
     ax.set_xticks(np.arange(len(matrix.columns)), matrix.columns.tolist(), rotation=45, ha="right")
     ax.tick_params(axis="x", labelsize=15)
     ax.tick_params(axis="y", labelsize=15)
-    ax.set_xlabel("Residue", fontsize=17)
-    ax.set_ylabel("Mutation", fontsize=17)
-    ax.set_title(
-        "WT-referenced DOR Contact Occupancy Heatmap" if wt_reference else "Mean Occupancy Heatmap",
-        fontsize=19,
-        pad=84 if group_by_wt_contact_region else 12,
-    )
+    ax.set_xlabel("")
+    ax.set_ylabel("")
     if group_by_wt_contact_region and {"pocket_region", "region_color"}.issubset(residue_df.columns):
         trans = blended_transform_factory(ax.transData, ax.transAxes)
         for _region, g in residue_df.groupby("pocket_region", sort=False):

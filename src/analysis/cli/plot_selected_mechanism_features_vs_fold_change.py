@@ -21,11 +21,11 @@ FEATURE_SPECS = [
     ("ligand_pose_rmsd_angstrom", "Ligand Pose RMSD", "Ligand Pose RMSD (Å)"),
 ]
 
-DISPLAY_TEST_SET_LABEL = "Test set"
+DISPLAY_TEST_SET_LABEL = "Uncertain Phenotype"
 DISPLAY_CATEGORY_COLORS = {
     "Negative control": CATEGORY_COLORS["Negative control"],
     "Positive control": CATEGORY_COLORS["Positive control"],
-    DISPLAY_TEST_SET_LABEL: CATEGORY_COLORS["Uncertain/limited data"],
+    DISPLAY_TEST_SET_LABEL: CATEGORY_COLORS["Uncertain Phenotype"],
 }
 
 
@@ -71,12 +71,16 @@ def _display_category_for_control_category(control_category: str, mutation: str)
         return "Positive control"
     if category == "uncertain_limited":
         return DISPLAY_TEST_SET_LABEL
-    return _category_for_mutation(str(mutation))
+    try:
+        return _category_for_mutation(str(mutation))
+    except ValueError:
+        return "Other"
 
 
 def _build_feature_summary(args: argparse.Namespace) -> tuple[pd.DataFrame, pd.DataFrame]:
     panel = pd.read_csv(args.mechanism_panel_csv)
     panel_category_map = panel.set_index(panel["mutation"].astype(str))["control_category"].astype(str).to_dict()
+    panel_fold_map = panel.set_index(panel["mutation"].astype(str))["target_fold_reduction"].astype(float).to_dict()
     mutations = set(panel["mutation"].astype(str).tolist())
     metas = _load_replicate_meta(args.manifest, needed_mutations=mutations)
 
@@ -101,6 +105,7 @@ def _build_feature_summary(args: argparse.Namespace) -> tuple[pd.DataFrame, pd.D
 
     rep = rep_frame.merge(rep_custom, on=["mutation", "replicate"], how="left")
     rep = rep[rep["mutation"].astype(str).isin(mutations)].copy()
+    rep["fold_reduction"] = rep["mutation"].astype(str).map(panel_fold_map)
     rep["control_category"] = rep["mutation"].astype(str).map(panel_category_map)
     rep["category"] = [
         _display_category_for_control_category(control_category=row.get("control_category", ""), mutation=row.get("mutation", ""))
@@ -170,10 +175,13 @@ def _plot_feature(summary: pd.DataFrame, column: str, label: str, ylabel: str, o
 
     ax.set_xscale("log")
     ax.grid(alpha=0.25)
-    ax.set_xlabel("Fold Reduction")
-    ax.set_ylabel(ylabel)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="both", labelsize=16)
+    ax.set_xlabel("Fold-change", fontsize=22)
+    ax.set_ylabel(ylabel, fontsize=22)
     legend_loc = "lower left" if column == "ser105_dor_distance_angstrom" else "lower right"
-    ax.legend(loc=legend_loc, fontsize=10, frameon=True, framealpha=0.9, facecolor="white", edgecolor="#cccccc")
+    ax.legend(loc=legend_loc, fontsize=16, frameon=True, framealpha=0.9, facecolor="white", edgecolor="#cccccc")
     _place_greedy_annotations(
         ax,
         df["fold_reduction"].to_numpy(dtype=float),
@@ -187,7 +195,7 @@ def _plot_feature(summary: pd.DataFrame, column: str, label: str, ylabel: str, o
         transform=ax.transAxes,
         ha="left",
         va="top",
-        fontsize=10,
+        fontsize=18,
         bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "edgecolor": "#cccccc", "alpha": 0.92},
     )
     output_png.parent.mkdir(parents=True, exist_ok=True)

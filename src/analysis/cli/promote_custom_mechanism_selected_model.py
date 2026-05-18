@@ -38,12 +38,24 @@ FEATURE_LABELS = {
     "ligand_pose_rmsd_angstrom_mean": "Ligand Pose RMSD",
 }
 
-DISPLAY_TEST_SET_LABEL = "Limited data"
+DISPLAY_TEST_SET_LABEL = "Uncertain Phenotype"
 DISPLAY_CATEGORY_COLORS = {
     "Negative control": CATEGORY_COLORS["Negative control"],
     "Positive control": CATEGORY_COLORS["Positive control"],
-    DISPLAY_TEST_SET_LABEL: CATEGORY_COLORS["Uncertain/limited data"],
+    DISPLAY_TEST_SET_LABEL: CATEGORY_COLORS["Uncertain Phenotype"],
 }
+
+
+AXIS_LABEL_SIZE = 18
+TICK_LABEL_SIZE = 14
+LEGEND_LABEL_SIZE = 13
+TITLE_SIZE = 18
+
+
+def _style_axes(ax: plt.Axes) -> None:
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="both", labelsize=TICK_LABEL_SIZE)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -223,15 +235,16 @@ def _plot_cv_vs_fold(df: pd.DataFrame, out: Path) -> None:
     ax.plot(x_line, y_line, color="#444444", linewidth=1.6, linestyle="--", zorder=2)
     ax.axhline(0.5, color="#888888", linestyle=":", linewidth=1.0)
     ax.set_xscale("log")
-    ax.set_xlabel("DOR Fold-change")
-    ax.set_ylabel("LOO CV predicted probability of resistance")
+    ax.set_xlabel("Fold-change", fontsize=AXIS_LABEL_SIZE)
+    ax.set_ylabel("LOO CV predicted probability of resistance", fontsize=AXIS_LABEL_SIZE)
     ax.set_ylim(-0.02, 1.02)
     ax.grid(alpha=0.22, linestyle=":")
+    _style_axes(ax)
     fig.canvas.draw()
     _annotate_points(ax, df)
-    ax.set_title(f"$R^2$ = {r**2:.3f}    p = {p_value:.3g}", fontsize=10, pad=10)
+    ax.set_title(f"$R^2$ = {r**2:.3f}    p = {p_value:.3g}", fontsize=TITLE_SIZE, pad=10)
     fig.tight_layout()
-    fig.savefig(out, dpi=300)
+    fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.25)
     plt.close(fig)
 
 
@@ -261,13 +274,14 @@ def _plot_all_probability_vs_fold(df: pd.DataFrame, out: Path, *, low_max_fold: 
     ax.axhline(0.5, color="#888888", linestyle=":", linewidth=1.0)
     ax.axvline(float(low_max_fold), color="#888888", linestyle=":", linewidth=1.0, zorder=1)
     ax.set_xscale("log")
-    ax.set_xlabel("DOR Fold-change")
-    ax.set_ylabel("Predicted probability of resistance")
+    ax.set_xlabel("Fold-change", fontsize=AXIS_LABEL_SIZE)
+    ax.set_ylabel("Predicted probability of resistance", fontsize=AXIS_LABEL_SIZE)
     xmin = float(np.min(x))
     xmax = float(np.max(x))
     ax.set_xlim(xmin / 1.3, xmax * 1.45)
     ax.set_ylim(-0.02, 1.06)
     ax.grid(alpha=0.22, linestyle=":")
+    _style_axes(ax)
     fig.canvas.draw()
     _annotate_points(
         ax,
@@ -284,13 +298,13 @@ def _plot_all_probability_vs_fold(df: pd.DataFrame, out: Path, *, low_max_fold: 
     category_handles = [
         Line2D([0], [0], marker="o", color="none", markerfacecolor=CATEGORY_COLORS["Negative control"], markeredgecolor="white", markersize=8, label="Negative control"),
         Line2D([0], [0], marker="o", color="none", markerfacecolor=CATEGORY_COLORS["Positive control"], markeredgecolor="white", markersize=8, label="Positive control"),
-        Line2D([0], [0], marker="o", color="none", markerfacecolor=CATEGORY_COLORS["Uncertain/limited data"], markeredgecolor="white", markersize=8, label=DISPLAY_TEST_SET_LABEL),
+        Line2D([0], [0], marker="o", color="none", markerfacecolor=CATEGORY_COLORS["Uncertain Phenotype"], markeredgecolor="white", markersize=8, label=DISPLAY_TEST_SET_LABEL),
         Line2D([0], [0], marker="D", color="none", markerfacecolor="#333333", markeredgecolor="white", markersize=8, label="WT"),
     ]
-    ax.legend(handles=category_handles, loc="upper left", frameon=True, facecolor="white", framealpha=0.92)
-    ax.set_title(f"$R^2$ = {r**2:.3f}    p = {p_value:.3g}", fontsize=10, pad=10)
+    ax.legend(handles=category_handles, loc="upper left", frameon=True, facecolor="white", framealpha=0.92, fontsize=LEGEND_LABEL_SIZE)
+    ax.set_title(f"$R^2$ = {r**2:.3f}    p = {p_value:.3g}", fontsize=TITLE_SIZE, pad=10)
     fig.tight_layout()
-    fig.savefig(out, dpi=300, bbox_inches="tight")
+    fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.25)
     plt.close(fig)
 
 
@@ -301,12 +315,13 @@ def _plot_ranked_probabilities(df: pd.DataFrame, out: Path) -> None:
     colors = [_category_color(c) for c in plot_df["display_category"]]
     ax.bar(xs, plot_df["prob_high"], color=colors, edgecolor="white", linewidth=0.7)
     ax.axhline(0.5, color="#888888", linestyle=":", linewidth=1.0)
-    ax.set_ylabel("Predicted probability of resistance")
+    ax.set_ylabel("Predicted probability of resistance", fontsize=AXIS_LABEL_SIZE)
     ax.set_ylim(0.0, 1.02)
     ax.set_xticks(xs)
-    ax.set_xticklabels(plot_df["mutation"], rotation=45, ha="right", fontsize=8)
+    ax.set_xticklabels(plot_df["mutation"], rotation=45, ha="right", fontsize=12)
+    _style_axes(ax)
     fig.tight_layout()
-    fig.savefig(out, dpi=300)
+    fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.25)
     plt.close(fig)
 
 
@@ -317,9 +332,10 @@ def _plot_coefficients(df: pd.DataFrame, out: Path) -> None:
     labels = [FEATURE_LABELS.get(str(f), str(f)) for f in plot_df["feature"]]
     ax.barh(labels, plot_df["coefficient"], color=colors)
     ax.axvline(0.0, color="#444444", linewidth=1.0)
-    ax.set_xlabel("Coefficient")
+    ax.set_xlabel("Coefficient", fontsize=AXIS_LABEL_SIZE)
+    _style_axes(ax)
     fig.tight_layout()
-    fig.savefig(out, dpi=300)
+    fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.25)
     plt.close(fig)
 
 
@@ -327,16 +343,19 @@ def _plot_confusion_matrix(cm: np.ndarray, out: Path, *, title: str | None = Non
     display_cm = cm[[1, 0], :]
     fig, ax = plt.subplots(figsize=(4.4, 4.0))
     im = ax.imshow(display_cm, cmap="Blues")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
     for i in range(display_cm.shape[0]):
         for j in range(display_cm.shape[1]):
             ax.text(j, i, str(int(display_cm[i, j])), ha="center", va="center", color="#111111", fontsize=12)
     ax.set_xticks([0, 1], labels=["Pred low", "Pred high"])
     ax.set_yticks([0, 1], labels=["True high", "True low"])
     if title:
-        ax.set_title(title, fontsize=11, pad=10)
+        ax.set_title(title, fontsize=TITLE_SIZE, pad=10)
+    ax.tick_params(axis="both", labelsize=14)
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     fig.tight_layout()
-    fig.savefig(out, dpi=300)
+    fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.25)
     plt.close(fig)
 
 
@@ -347,12 +366,13 @@ def _plot_holdout(df: pd.DataFrame, out: Path) -> None:
     colors = [_category_color(c) for c in plot_df["display_category"]]
     ax.bar(xs, plot_df["prob_high"], color=colors, edgecolor="white", linewidth=0.7)
     ax.axhline(0.5, color="#888888", linestyle=":", linewidth=1.0)
-    ax.set_ylabel("Full-fit predicted probability of resistance")
+    ax.set_ylabel("Full-fit predicted probability of resistance", fontsize=AXIS_LABEL_SIZE)
     ax.set_ylim(0.0, 1.02)
     ax.set_xticks(xs)
-    ax.set_xticklabels(plot_df["mutation"], rotation=45, ha="right", fontsize=8)
+    ax.set_xticklabels(plot_df["mutation"], rotation=45, ha="right", fontsize=12)
+    _style_axes(ax)
     fig.tight_layout()
-    fig.savefig(out, dpi=300)
+    fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.25)
     plt.close(fig)
 
 
@@ -364,16 +384,17 @@ def _plot_roc_curve(y_true: pd.Series, probs: np.ndarray, out: Path, *, title: s
     fig, ax = plt.subplots(figsize=(5.2, 5.0))
     ax.plot(fpr, tpr, color="#2a6fbb", linewidth=2.0, label=f"AUC = {auc:.3f}")
     ax.plot([0, 1], [0, 1], color="#888888", linestyle="--", linewidth=1.0)
-    ax.set_xlabel("False Positive Rate")
-    ax.set_ylabel("True Positive Rate")
+    ax.set_xlabel("False Positive Rate", fontsize=AXIS_LABEL_SIZE)
+    ax.set_ylabel("True Positive Rate", fontsize=AXIS_LABEL_SIZE)
     if title:
-        ax.set_title(title, fontsize=11, pad=10)
+        ax.set_title(title, fontsize=TITLE_SIZE, pad=10)
     ax.set_xlim(0.0, 1.0)
     ax.set_ylim(0.0, 1.0)
     ax.grid(alpha=0.25)
-    ax.legend(loc="lower right", frameon=True, framealpha=0.92, facecolor="white", edgecolor="#cccccc")
+    _style_axes(ax)
+    ax.legend(loc="lower right", frameon=True, framealpha=0.92, facecolor="white", edgecolor="#cccccc", fontsize=LEGEND_LABEL_SIZE)
     fig.tight_layout()
-    fig.savefig(out, dpi=300)
+    fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.25)
     plt.close(fig)
 
 

@@ -571,7 +571,7 @@ def main() -> int:
         title="Consensus Feature Importance (5-Fold Mean)",
     )
 
-    target_label = {"target_fold_reduction": "Fold Reduction"}[str(args.target)]
+    target_label = {"target_fold_reduction": "Fold-change"}[str(args.target)]
     _plot_feature_target_scatter_grid(
         feat,
         association_df,

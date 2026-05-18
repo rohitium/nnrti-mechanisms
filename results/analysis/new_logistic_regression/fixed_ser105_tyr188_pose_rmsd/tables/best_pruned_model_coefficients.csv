@@ -1,0 +1,4 @@
+feature,coefficient,abs_coefficient
+residue_min_distance_SER105_angstrom_mean,1.776600722271603,1.776600722271603
+ligand_pose_rmsd_angstrom_mean,-1.6502663471951067,1.6502663471951067
+residue_min_distance_TYR188_angstrom_mean,-1.2332973371931881,1.2332973371931881

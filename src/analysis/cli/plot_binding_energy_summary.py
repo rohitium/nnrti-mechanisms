@@ -36,7 +36,7 @@ BAR_TICK_LABEL_SIZE = 13
 LEGEND_LABEL_SIZE = 16
 TITLE_SIZE = 20
 POINT_LABEL_SIZE = 13
-STATS_LABEL_SIZE = 14
+STATS_LABEL_SIZE = 20
 
 
 def _mutation_sort_key(mutation: str, fold_lookup: dict[str, float]) -> tuple[float, float, str]:
@@ -348,8 +348,8 @@ def _plot_component_vs_fold_change(
     ax.spines["left"].set_linewidth(1.2)
     ax.spines["bottom"].set_linewidth(1.2)
     if column != "ddg_electrostatic":
-        ax.set_title(f"{label} Vs Fold Reduction", fontsize=TITLE_SIZE, fontweight="bold")
-    ax.set_xlabel("Fold Reduction", fontsize=AXIS_LABEL_SIZE, fontweight="bold")
+        ax.set_title(f"{label} vs Fold-change", fontsize=TITLE_SIZE, fontweight="bold")
+    ax.set_xlabel("Fold-change", fontsize=AXIS_LABEL_SIZE, fontweight="bold")
     y_label = f"{label} (kJ/mol)" if label.startswith("ΔΔG") else f"MM/GBSA {label} (kJ/mol)"
     ax.set_ylabel(y_label, fontsize=AXIS_LABEL_SIZE, fontweight="bold")
     ax.tick_params(axis="both", labelsize=TICK_LABEL_SIZE)
@@ -389,6 +389,7 @@ def _plot_component_vs_fold_change(
         ha="left",
         va="top",
         fontsize=STATS_LABEL_SIZE,
+        fontweight="bold",
         bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "edgecolor": "#cccccc", "alpha": 0.92},
     )
     output_png.parent.mkdir(parents=True, exist_ok=True)

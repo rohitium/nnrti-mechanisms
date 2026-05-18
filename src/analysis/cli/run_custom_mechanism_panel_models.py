@@ -27,6 +27,7 @@ from sklearn.preprocessing import StandardScaler
 
 from .plot_dor_susceptibility_bars import NEGATIVE_CONTROLS, POSITIVE_CONTROLS, UNCERTAIN_LIMITED
 from .plot_triplet_contact_story import _load_replicate_meta
+from ..susceptibility import load_dor_susceptibilities
 
 
 def _parse_args() -> argparse.Namespace:
@@ -41,6 +42,11 @@ def _parse_args() -> argparse.Namespace:
         "--output-dir",
         type=Path,
         default=Path("results/analysis/custom_mechanism_panel_models"),
+    )
+    parser.add_argument(
+        "--susceptibility-xlsx",
+        type=Path,
+        default=Path("data/DRM-susceptibilities.csv.xlsx"),
     )
     parser.add_argument("--ligand-resname", type=str, default="2KW")
     parser.add_argument("--resid-offset", type=int, default=-3)
@@ -221,10 +227,14 @@ def main() -> int:
     panel_df["control_category"] = panel_df["mutation"].map(_control_category)
 
     fold_map = (
-        pd.read_csv("results/analysis/contact_occupancy_feature_screen/tables/occupancy_mean_feature_matrix.csv")[["mutation", "dor_fold_reduction"]]
+        load_dor_susceptibilities(args.susceptibility_xlsx)[["mutation", "dor_fold_reduction"]]
         .drop_duplicates()
         .rename(columns={"dor_fold_reduction": "target_fold_reduction"})
     )
+    fold_map = pd.concat(
+        [fold_map, pd.DataFrame([{"mutation": "WT", "target_fold_reduction": 1.0}])],
+        ignore_index=True,
+    ).drop_duplicates(subset=["mutation"], keep="last")
     panel_df = panel_df.merge(fold_map, on="mutation", how="left")
     panel_df["target_binary_class"] = panel_df["target_fold_reduction"].map(
         lambda x: _binary_class(x, float(args.low_max_fold)) if np.isfinite(x) else np.nan
@@ -370,6 +380,7 @@ def main() -> int:
             {
                 "manifest": str(args.manifest),
                 "frame_features_csv": str(args.frame_features_csv),
+                "susceptibility_xlsx": str(args.susceptibility_xlsx),
                 "output_dir": str(args.output_dir),
                 "ligand_resname": str(args.ligand_resname),
                 "resid_offset": int(args.resid_offset),
