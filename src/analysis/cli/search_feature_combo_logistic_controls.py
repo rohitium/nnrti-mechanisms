@@ -44,12 +44,12 @@ POSITIVE_CONTROLS = {
     "V106A+L234I",
     "V106A+P225H",
     "V106I+F227C",
+    "K103N+M230L",
 }
 
 UNCERTAIN_LIMITED = {
     "L100I+K103N",
     "K103N+P225H",
-    "K103N+M230L",
     "V106M",
     "G190E",
     "G190S",

@@ -1,2 +1,2 @@
 c_value,penalty,solver,class_weight,n_features,features,accuracy,balanced_accuracy,macro_f1,macro_precision,macro_recall,roc_auc,tn,fp,fn,tp,wt_prob_high,round,dropped_feature,feature_set_source
-3.0,l2,lbfgs,balanced,3,residue_min_distance_SER105_angstrom_mean|residue_min_distance_TYR188_angstrom_mean|ligand_pose_rmsd_angstrom_mean,0.8461538461538461,0.8375,0.8375,0.8375,0.8375,0.9750000000000001,4,1,1,7,0.0709818486284759,0,,initial_all_features
+0.001,l2,lbfgs,balanced,3,residue_min_distance_SER105_angstrom_mean|residue_min_distance_TYR188_angstrom_mean|ligand_pose_rmsd_angstrom_mean,0.7857142857142857,0.788888888888889,0.7754010695187166,0.7708333333333333,0.788888888888889,0.8222222222222222,4,1,2,7,0.4983383405342937,0,,initial_all_features
