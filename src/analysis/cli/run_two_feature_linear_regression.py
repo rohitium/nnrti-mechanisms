@@ -266,7 +266,7 @@ def _plot_predicted_vs_fold(summary_df: pd.DataFrame, output_png: Path, *, show_
     ax.text(
         0.05,
         0.95,
-        f"R$^2$ = {fit.rvalue**2:.2f}\np = {fit.pvalue:.3g}",
+        f"R$^2$ = {fit.rvalue**2:.2f}\np = {fit.pvalue:.1g}",
         transform=ax.transAxes,
         ha="left",
         va="top",

@@ -1,4 +1,4 @@
 feature,label,coefficient_per_standardized_feature,abs_coefficient
-ligand_pose_rmsd_angstrom_mean,DOR pose RMSD,0.5048099697775663,0.5048099697775663
-residue_min_distance_SER105_angstrom_mean,SER105-DOR distance,-0.49238928034571283,0.49238928034571283
+ligand_pose_rmsd_angstrom_mean,DOR pose RMSD,0.5048099697775666,0.5048099697775666
+residue_min_distance_SER105_angstrom_mean,SER105-DOR distance,-0.4923892803457131,0.4923892803457131
 intercept,Intercept,1.2041224170113238,1.2041224170113238

@@ -1377,7 +1377,7 @@ def main() -> int:
     parser.add_argument(
         "--wt-only-trace-auth-resids",
         type=str,
-        default="95,318",
+        default="105,179",
         help="Comma-separated auth residue numbers to show in WT-only top-panel traces.",
     )
     args = parser.parse_args()

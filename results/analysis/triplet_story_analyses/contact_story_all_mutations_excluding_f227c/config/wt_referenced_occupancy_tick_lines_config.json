@@ -1,0 +1,41 @@
+{
+  "matrix_csv": "results/analysis/triplet_story_analyses/contact_story_all_mutations_excluding_f227c/tables/all_mutation_wt_referenced_occupancy_heatmap_wt_contacted_residues_by_region_excluding_f227c_matrix.csv",
+  "residue_csv": "results/analysis/triplet_story_analyses/contact_story_all_mutations_excluding_f227c/tables/all_mutation_wt_referenced_occupancy_heatmap_wt_contacted_residues_by_region_excluding_f227c_display_residues.csv",
+  "susceptibility_xlsx": "data/DRM-susceptibilities.csv.xlsx",
+  "output_png": "results/analysis/triplet_story_analyses/contact_story_all_mutations_excluding_f227c/plots/all_mutation_wt_referenced_occupancy_tick_lines_wt_contacted_residues_by_region_excluding_f227c.png",
+  "output_csv": "results/analysis/triplet_story_analyses/contact_story_all_mutations_excluding_f227c/tables/all_mutation_wt_referenced_occupancy_tick_lines_thresholded_matrix.csv",
+  "zero_threshold": 0.1,
+  "min_tick_height": 0.13,
+  "max_tick_height": 0.42,
+  "tick_linewidth": 10.0,
+  "n_display_residues": 22,
+  "display_residues": [
+    "PRO95",
+    "LEU100",
+    "LYS101",
+    "LYS103",
+    "VAL179",
+    "TYR181",
+    "LYS102",
+    "LYS104",
+    "SER105",
+    "THR107",
+    "VAL108",
+    "PHE227",
+    "TRP229",
+    "LEU234",
+    "ILE180",
+    "VAL189",
+    "PRO225",
+    "LEU228",
+    "HIS235",
+    "PRO236",
+    "ASP237",
+    "TYR318"
+  ],
+  "category_labels": [
+    "Susceptible",
+    "Uncertain",
+    "Resistant"
+  ]
+}
