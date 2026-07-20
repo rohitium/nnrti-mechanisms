@@ -1,0 +1,16 @@
+name: nnrti-fep
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - perses=0.10.3
+  - openmmtools
+  - openmmforcefields
+  - openff-toolkit
+  - openeye-toolkits
+  - pdbfixer
+  - pymbar
+  - mdtraj
+  - mdanalysis
+  - pandas
+  - numpy
