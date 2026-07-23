@@ -4,6 +4,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 import json
 
+from .mutations import Mutation, MutationLeg
+
 
 @dataclass(frozen=True)
 class LambdaSchedule:
@@ -18,9 +20,11 @@ class LambdaSchedule:
 
 @dataclass(frozen=True)
 class FEPConfig:
-    """Configuration for WT(λ=0)→V106A(λ=1) in holo and apo RT."""
+    """Configuration for one single-residue alchemical leg."""
 
     mutation: str = "V106A"
+    start_label: str = "WT"
+    end_label: str = "V106A"
     chain_id: str = "A"
     residue_id: str = "106"
     wt_residue: str = "VAL"
@@ -42,20 +46,40 @@ class FEPConfig:
     collision_rate_per_ps: float = 1.0
     platform: str = "CUDA"
 
+    @classmethod
+    def for_leg(cls, leg: MutationLeg, **overrides) -> "FEPConfig":
+        mutation = Mutation.parse(leg.mutation)
+        return cls(
+            mutation=mutation.label,
+            start_label=leg.start_label,
+            end_label=leg.end_label,
+            residue_id=mutation.residue_id,
+            wt_residue=mutation.old_residue,
+            mutant_residue=mutation.new_residue,
+            **overrides,
+        )
+
+    @property
+    def leg(self) -> MutationLeg:
+        return MutationLeg(self.start_label, self.end_label, self.mutation)
+
     @property
     def run_dir(self) -> Path:
-        return self.output_dir / self.mutation
+        return self.output_dir / "legs" / self.leg.leg_id
 
     def validate(self, require_inputs: bool = False) -> None:
-        if (self.mutation, self.wt_residue, self.mutant_residue) != (
-            "V106A", "VAL", "ALA"
+        parsed = Mutation.parse(self.mutation)
+        if (self.residue_id, self.wt_residue, self.mutant_residue) != (
+            parsed.residue_id, parsed.old_residue, parsed.new_residue
         ):
-            raise ValueError("Initial implementation is restricted to WT→V106A")
+            raise ValueError("Mutation label and residue fields are inconsistent")
         self.lambda_schedule.validate()
         if min(self.equilibration_steps, self.production_steps, self.energy_interval) < 1:
             raise ValueError("Step counts and energy interval must be positive")
         if self.production_steps % self.energy_interval:
             raise ValueError("production_steps must be divisible by energy_interval")
+        if self.checkpoint_interval < 1 or self.checkpoint_interval % self.energy_interval:
+            raise ValueError("checkpoint_interval must be a positive multiple of energy_interval")
         if require_inputs:
             for path in (self.wt_complex_pdb, self.ligand_sdf):
                 if not path.is_file():
@@ -66,5 +90,6 @@ class FEPConfig:
         for key in ("wt_complex_pdb", "ligand_sdf", "output_dir"):
             data[key] = str(data[key])
         data["lambda_schedule"] = list(self.lambda_schedule.values)
+        data["leg_id"] = self.leg.leg_id
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2) + "\n")
