@@ -6,7 +6,16 @@ from pathlib import Path
 import shlex
 
 from .config import FEPConfig
-from .mutations import MANUSCRIPT_TARGETS, unique_manuscript_legs
+from .mutations import MANUSCRIPT_TARGETS, Mutation, MutationLeg, unique_manuscript_legs
+
+
+def legs_for_mutation(mutation: str) -> tuple[MutationLeg, ...]:
+    """Return manuscript legs whose single-residue change matches ``mutation``."""
+    label = Mutation.parse(mutation).label
+    legs = tuple(leg for leg in unique_manuscript_legs() if leg.mutation == label)
+    if not legs:
+        raise ValueError(f"No manuscript leg found for mutation {label!r}")
+    return legs
 
 
 def preparation_commands(output_dir: Path, replicate: int = 1) -> list[str]:
@@ -32,8 +41,10 @@ def write_worker_manifest(
     destination: Path,
     output_dir: Path,
     config: FEPConfig | None = None,
+    legs: tuple[MutationLeg, ...] | None = None,
 ) -> int:
     settings = config or FEPConfig(output_dir=output_dir)
+    selected_legs = legs or unique_manuscript_legs()
     fields = [
         "task_id", "leg_id", "start_label", "end_label", "mutation", "phase",
         "state_index", "phase_dir", "window_dir", "temperature_k", "timestep_fs",
@@ -45,7 +56,7 @@ def write_worker_manifest(
     with destination.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
-        for leg in unique_manuscript_legs():
+        for leg in selected_legs:
             leg_dir = output_dir / "legs" / leg.leg_id
             for state_index in range(len(settings.lambda_schedule.values)):
                 writer.writerow(
@@ -79,11 +90,21 @@ def main() -> int:
     )
     parser.add_argument("--output-dir", type=Path, default=FEPConfig().output_dir)
     parser.add_argument("--replicate", type=int, default=1)
+    parser.add_argument(
+        "--mutation",
+        help="If set, write a worker manifest for this mutation only (e.g. V106A)",
+    )
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--preparation-script", type=Path)
     args = parser.parse_args()
-    manifest = args.manifest or args.output_dir / "worker_manifest.csv"
-    count = write_worker_manifest(manifest, args.output_dir)
+    legs = legs_for_mutation(args.mutation) if args.mutation else None
+    if args.manifest:
+        manifest = args.manifest
+    elif args.mutation:
+        manifest = args.output_dir / f"worker_manifest_{Mutation.parse(args.mutation).label.lower()}.csv"
+    else:
+        manifest = args.output_dir / "worker_manifest.csv"
+    count = write_worker_manifest(manifest, args.output_dir, legs=legs)
     preparation_script = args.preparation_script or args.output_dir / "prepare_all.sh"
     preparation_script.parent.mkdir(parents=True, exist_ok=True)
     preparation_script.write_text(
@@ -93,7 +114,7 @@ def main() -> int:
     )
     preparation_script.chmod(0o755)
     print(f"Targets: {len(MANUSCRIPT_TARGETS)}")
-    print(f"Unique alchemical legs: {len(unique_manuscript_legs())}")
+    print(f"Unique alchemical legs: {len(legs or unique_manuscript_legs())}")
     print(f"OpenMM holo worker tasks: {count}")
     print(f"Preparation script: {preparation_script}")
     print(f"Worker manifest: {manifest}")

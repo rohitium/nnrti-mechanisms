@@ -122,6 +122,37 @@ def test_panel_prepare_commands_default_to_perses_backend() -> None:
     assert "--backend perses" in command
 
 
+def test_legs_for_mutation_v106a() -> None:
+    from scripts.fep_jorgensen.panel import legs_for_mutation
+
+    legs = legs_for_mutation("V106A")
+    assert len(legs) == 1
+    assert legs[0].leg_id == "wt_to_V106A"
+    assert legs[0].mutation == "V106A"
+
+
+def test_panel_mutation_manifest_writes_single_leg(tmp_path: Path) -> None:
+    from scripts.fep_jorgensen.panel import legs_for_mutation
+
+    manifest = tmp_path / "worker_manifest_v106a.csv"
+    config = FEPConfig(
+        output_dir=tmp_path,
+        lambda_schedule=LambdaSchedule((0.0, 0.5, 1.0)),
+        platform="CUDA",
+    )
+    count = write_worker_manifest(
+        manifest,
+        tmp_path,
+        config=config,
+        legs=legs_for_mutation("V106A"),
+    )
+    assert count == 3
+    rows = list(csv.DictReader(manifest.open()))
+    assert len(rows) == 3
+    assert {row["leg_id"] for row in rows} == {"wt_to_V106A"}
+    assert {int(row["state_index"]) for row in rows} == {0, 1, 2}
+
+
 @pytest.mark.skipif(not perses_available(), reason="Perses/openmmtools not installed")
 def test_openeye_shim_formats_val_template_names() -> None:
     from pkg_resources import resource_filename
