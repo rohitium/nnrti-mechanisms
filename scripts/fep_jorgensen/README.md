@@ -1,87 +1,80 @@
-# Mutation-agnostic Jorgensen-style FEP
+# Jorgensen FEP workflows
 
-This workflow computes doravirine binding effects relative to WT using reusable
-single-residue alchemical legs. It covers every mutant in `manifests/md_manifest.csv`.
+This directory now separates two scientifically different calculations.
 
-Single mutants use one leg:
+## Exact Rizzo/Jorgensen (2000) reproduction
 
-```text
-WT -> V106A
+`exact_protocol.py` is the machine-readable contract for the protocol described
+in `docs/Jorgensen-FEP-protocol.md`. It fixes all reported details:
+
+- the published truncated HIV-1 RT binding-site residue set;
+- CM1P-augmented OPLS-AA and the distance-dependent dielectric `epsilon=4r`;
+- IMPACT c1.00, ten minimization cycles, 1 fs Verlet integration, SHAKE,
+  Berendsen coupling at 0.2 ps, 3 ps at 100 K, 50 ps at 300 K, and six 4 ps
+  quench blocks from 300 K to 50 K;
+- a 22 A TIP4P water cap (about 850 waters);
+- the published rigid/flexible MCPRO residue partitions, fixed protein
+  backbone, and fully flexible inhibitor;
+- 1,000,000 solvent-only equilibration, 10,000,000 full-equilibration, and
+  10,000,000 averaging configurations per FEP window;
+- protein-side-chain mutation in each inhibitor complex; and
+- inhibitor-relative normalization to Sustiva.
+
+Write the immutable protocol manifest with:
+
+```bash
+python - <<'PY'
+from pathlib import Path
+from scripts.fep_jorgensen.exact_protocol import ExactJorgensenProtocol
+ExactJorgensenProtocol().write(Path("results/analysis/fep_jorgensen/exact_protocol.json"))
+PY
 ```
 
-Compound mutants use two sequential legs and reuse the first-leg result:
+The original calculation requires licensed/historical IMPACT c1.00 and MCPRO
+1.65 executables plus the CM1P-augmented OPLS-AA parameter set and the original
+inhibitor models. Those assets are not distributed in this repository. OpenMM,
+Perses, Amber ff14SB, OpenFF, PME, TIP3P, Langevin dynamics, MBAR, or an apo leg
+are not exact substitutes and must not be reported as an exact reproduction.
+
+After MCPRO produces one protein-mutation free energy for every inhibitor,
+provide a CSV with:
 
 ```text
-WT -> V106A -> V106A+L234I
+inhibitor,delta_g_mutation_kcal_mol,uncertainty_kcal_mol
+sustiva,...,...
+nevirapine,...,...
+mkc-442,...,...
+9-cl-tibo,...,...
 ```
 
-The target free energy and uncertainty are:
+Then apply the paper's thermodynamic cycle:
 
-```text
-ddG(WT -> target) = sum(ddG_leg)
-sigma_target = sqrt(sum(sigma_leg**2))
+```bash
+PYTHONPATH=. python -m scripts.fep_jorgensen.analyze_exact mcpro_legs.csv \
+  --mutation V106A --output v106a_relative_to_sustiva.csv
 ```
 
-## 1. Generate the panel plan locally
+For inhibitor `i`, the reported value is
+`DeltaG_mutation(i) - DeltaG_mutation(Sustiva)`. Sustiva is therefore 0.00 by
+definition. The code propagates independent leg uncertainties in quadrature.
+
+## OpenMM/Perses approximation retained from the source branch
+
+The pre-existing `prepare.py`, `worker.py`, `panel.py`, and `analyze.py` workflow
+is retained so earlier work is not destroyed. It computes explicit-solvent,
+periodic holo-minus-apo mutation free energies with Perses/OpenMM and MBAR,
+normalized to WT. It is mutation-agnostic and useful as a modern approximation,
+but it does **not** exactly follow Jorgensen's protocol.
+
+To run that approximation, generate its panel with:
 
 ```bash
 PYTHONPATH=. python -m scripts.fep_jorgensen.panel
 ```
 
-This writes:
-
-- `results/analysis/fep_jorgensen/prepare_all.sh`
-- `results/analysis/fep_jorgensen/worker_manifest.csv`
-
-The default panel contains 19 targets, 19 unique alchemical legs, and 418
-OpenMM tasks (19 legs x 2 phases x 11 lambda states).
-
-## 2. Prepare hybrid systems locally
-
-Run the generated script in the full `nnrti-fep` environment. Perses,
-OpenMMTools, OpenEye, and ligand parameterization packages are needed only for
-this stage.
-
-```bash
-results/analysis/fep_jorgensen/prepare_all.sh
-```
-
-Each leg is serialized under `results/analysis/fep_jorgensen/legs/` as OpenMM
-XML, PDB, and JSON inputs.
-
-## 3. Run GPU sampling on Sherlock
-
-Transfer the serialized leg directories, manifest, repository code, and an
-OpenMM-only environment to Sherlock, then submit the array:
-
-```bash
-./scripts/sherlock/submit_fep_jorgensen_windows.sh
-```
-
-The Sherlock workers import only Python's standard library and OpenMM.
-Concurrency can be limited with `SHERLOCK_MAX_CONCURRENT`.
-
-## 4. Analyze locally
-
-PyMBAR and NumPy are needed only on the local machine.
+Prepare hybrid systems locally with Perses and OpenMMTools, run the generated
+OpenMM manifest on Sherlock, and analyze locally with:
 
 ```bash
 PYTHONPATH=. python -m scripts.fep_jorgensen.analyze --all-targets
 ```
-
-Target summaries are written under `targets/`, and the combined table is
-`manuscript_panel_summary.csv`. Positive values indicate weaker doravirine
-binding than WT.
-
-## Individual calculations
-
-Prepare one arbitrary single-residue leg:
-
-```bash
-PYTHONPATH=. python -m scripts.fep_jorgensen.prepare \
-  --mutation Y181C --start-label WT --end-label Y181C \
-  --input-complex-pdb results/md_runs/wt/rep_01/assets/wt_md_rep01_start.pdb
-```
-
-Compound mutants must be expressed as sequential single-residue legs; a
-compound label must never be passed as `--mutation`.
