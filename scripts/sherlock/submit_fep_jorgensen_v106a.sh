@@ -11,7 +11,7 @@
 #   ./scripts/sherlock/submit_fep_jorgensen_v106a.sh
 #
 # Optional env vars (passed through to submit_fep_jorgensen_windows.sh):
-#   CONDA_ENV=nnrti-openmm
+#   SHERLOCK_OPENMM_MODULE="chemistry py-openmm/8.1.1_py312"
 #   SHERLOCK_PARTITION=gpu
 #   SHERLOCK_GRES=gpu:1
 #   SHERLOCK_TIME=24:00:00

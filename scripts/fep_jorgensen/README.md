@@ -47,8 +47,8 @@ conda activate nnrti-fep
 | Step | Env |
 | --- | --- |
 | `prepare.py` (Perses hybrid) | `nnrti-prep` after setup script |
-| `analyze.py` | `nnrti-prep` or `nnrti-openmm` |
-| `worker.py` on Sherlock | `nnrti-openmm` |
+| `analyze.py` | `nnrti-prep` (local) |
+| `worker.py` on Sherlock | `module load chemistry py-openmm/8.1.1_py312` |
 
 Perses hybrid prep extracts unsolvated protein+ligand coordinates from your existing MD
 start PDBs, then builds a solvated hybrid system with proper topology changes. It does **not**

@@ -1,0 +1,12 @@
+task_id,leg_id,start_label,end_label,mutation,phase,state_index,phase_dir,window_dir,temperature_k,timestep_fs,collision_rate_per_ps,equilibration_steps,production_steps,energy_interval,checkpoint_interval,platform
+0,wt_to_V106A,WT,V106A,V106A,holo,0,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows,300.0,2.0,1.0,250000,2500000,2500,25000,CUDA
+1,wt_to_V106A,WT,V106A,V106A,holo,1,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows,300.0,2.0,1.0,250000,2500000,2500,25000,CUDA
+2,wt_to_V106A,WT,V106A,V106A,holo,2,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows,300.0,2.0,1.0,250000,2500000,2500,25000,CUDA
+3,wt_to_V106A,WT,V106A,V106A,holo,3,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows,300.0,2.0,1.0,250000,2500000,2500,25000,CUDA
+4,wt_to_V106A,WT,V106A,V106A,holo,4,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows,300.0,2.0,1.0,250000,2500000,2500,25000,CUDA
+5,wt_to_V106A,WT,V106A,V106A,holo,5,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows,300.0,2.0,1.0,250000,2500000,2500,25000,CUDA
+6,wt_to_V106A,WT,V106A,V106A,holo,6,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows,300.0,2.0,1.0,250000,2500000,2500,25000,CUDA
+7,wt_to_V106A,WT,V106A,V106A,holo,7,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows,300.0,2.0,1.0,250000,2500000,2500,25000,CUDA
+8,wt_to_V106A,WT,V106A,V106A,holo,8,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows,300.0,2.0,1.0,250000,2500000,2500,25000,CUDA
+9,wt_to_V106A,WT,V106A,V106A,holo,9,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows,300.0,2.0,1.0,250000,2500000,2500,25000,CUDA
+10,wt_to_V106A,WT,V106A,V106A,holo,10,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo,results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows,300.0,2.0,1.0,250000,2500000,2500,25000,CUDA

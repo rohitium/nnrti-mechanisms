@@ -6,10 +6,13 @@ windows on a laptop CPU.
 
 ## Environments
 
-| Location | Env | Used for |
+| Location | Runtime | Used for |
 | --- | --- | --- |
-| Local Mac | `nnrti-prep` | `prepare --backend perses`, `panel`, `analyze` |
-| Sherlock | `nnrti-openmm` | `worker.py` lambda windows (CUDA) |
+| Local Mac | `nnrti-prep` (conda) | `prepare --backend perses`, `panel`, `analyze` |
+| Sherlock | `module load chemistry py-openmm/8.1.1_py312` | `worker.py` lambda windows (CUDA) |
+
+Sherlock uses the same OpenMM module stack as `submit_md_batched.sh` — no conda env required.
+The worker only needs OpenMM (stdlib otherwise); MBAR analysis runs locally.
 
 One-time local setup:
 
@@ -97,12 +100,13 @@ bash scripts/sherlock/salloc_fep_jorgensen_gpu.sh
 When the interactive shell starts:
 
 ```bash
-source ~/.bashrc
-conda activate nnrti-openmm
-cd $SCRATCH/nnrti-mechanisms
+cd $SCRATCH/nnrti-mechanisms-git   # or your repo clone
+export PROJECT_ROOT=$PWD
 
-# Optional: confirm CUDA
-python -c "from openmm import Platform; print(Platform.getPlatformByName('CUDA').getName())"
+# Optional: confirm CUDA + OpenMM (pilot script loads the module for you)
+module load chemistry py-openmm/8.1.1_py312
+nvidia-smi
+python3 -c "from openmm import Platform; print(Platform.getPlatformByName('CUDA').getName())"
 
 # One λ=0 window, ~50 ps production (pilot defaults)
 bash scripts/sherlock/run_fep_jorgensen_pilot.sh
@@ -204,7 +208,7 @@ results/analysis/fep_jorgensen/targets/V106A/summary.json
 | `CUDA` platform not found in pilot | Confirm `salloc --gres=gpu:1`; `nvidia-smi` |
 | Pilot hangs / OOM | `SHERLOCK_MEM=64G`; reduce `FEP_PROD_STEPS` first |
 | `Unsupported lambda parameter functions` | `schedule.json` must say `perses-default` (Perses prep) |
-| Batch job 0 samples | Read `logs/fep_jorgensen.*.err`; often path or conda env |
+| Batch job 0 samples | Read `logs/fep_jorgensen.*.err`; often path or missing `module load py-openmm` |
 
 ---
 

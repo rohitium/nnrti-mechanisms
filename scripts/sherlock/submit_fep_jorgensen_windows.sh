@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 MANIFEST="${MANIFEST:-$PROJECT_ROOT/results/analysis/fep_jorgensen/worker_manifest.csv}"
-CONDA_ENV="${CONDA_ENV:-nnrti-openmm}"
+SHERLOCK_OPENMM_MODULE="${SHERLOCK_OPENMM_MODULE:-chemistry py-openmm/8.1.1_py312}"
 SHERLOCK_PARTITION="${SHERLOCK_PARTITION:-gpu}"
 SHERLOCK_GRES="${SHERLOCK_GRES:-gpu:1}"
 SHERLOCK_TIME="${SHERLOCK_TIME:-24:00:00}"
@@ -37,4 +37,4 @@ sbatch \
     --array="0-${last_task}%${SHERLOCK_MAX_CONCURRENT}" \
     --output="$PROJECT_ROOT/logs/fep_jorgensen.%A_%a.out" \
     --error="$PROJECT_ROOT/logs/fep_jorgensen.%A_%a.err" \
-    --wrap="source ~/.bashrc && conda activate '$CONDA_ENV' && cd '$PROJECT_ROOT' && PYTHONPATH=. python -m scripts.fep_jorgensen.run_manifest_task --manifest '$MANIFEST' --task-id \$SLURM_ARRAY_TASK_ID"
+    --wrap="set -euo pipefail && module load ${SHERLOCK_OPENMM_MODULE} && cd '$PROJECT_ROOT' && PYTHONPATH=. python3 -m scripts.fep_jorgensen.run_manifest_task --manifest '$MANIFEST' --task-id \$SLURM_ARRAY_TASK_ID"

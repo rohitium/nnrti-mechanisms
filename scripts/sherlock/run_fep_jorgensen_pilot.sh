@@ -3,7 +3,8 @@
 # Run one short FEP lambda window on the current node (interactive GPU or CPU).
 # Use this inside salloc before submitting the full V106A array.
 #
-# Usage (on Sherlock, after conda activate nnrti-openmm):
+# Usage (on Sherlock GPU node, after loading OpenMM module):
+#   source scripts/sherlock/load_openmm_module.sh
 #   bash scripts/sherlock/run_fep_jorgensen_pilot.sh
 #
 # Optional env vars:
@@ -21,6 +22,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
+
+# shellcheck source=load_openmm_module.sh
+source "$SCRIPT_DIR/load_openmm_module.sh"
 
 FEP_LEG_ID="${FEP_LEG_ID:-wt_to_V106A}"
 FEP_STATE_INDEX="${FEP_STATE_INDEX:-0}"
@@ -49,7 +53,7 @@ echo "Equil steps:  $FEP_EQUIL_STEPS"
 echo "Prod steps:   $FEP_PROD_STEPS"
 echo
 
-PYTHONPATH=. python -m scripts.fep_jorgensen.worker \
+PYTHONPATH=. python3 -m scripts.fep_jorgensen.worker \
     --phase-dir "$PHASE_DIR" \
     --output-dir "$WINDOW_DIR" \
     --state-index "$FEP_STATE_INDEX" \
