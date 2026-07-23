@@ -75,7 +75,8 @@ PYTHONNOUSERSITE=1 PYTHONPATH=. python -m scripts.fep_jorgensen.panel --mutation
 # rsync legs/wt_to_V106A/ to Sherlock, then:
 #   bash scripts/sherlock/salloc_fep_jorgensen_gpu.sh
 #   bash scripts/sherlock/run_fep_jorgensen_pilot.sh
-#   ./scripts/sherlock/submit_fep_jorgensen_v106a.sh
+#   ./scripts/sherlock/submit_fep_jorgensen_v106a_single.sh   # one full window first
+#   ./scripts/sherlock/submit_fep_jorgensen_v106a.sh          # all 11 after that validates
 PYTHONPATH=. python -m scripts.fep_jorgensen.analyze --target V106A
 ```
 

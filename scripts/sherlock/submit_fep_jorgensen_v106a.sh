@@ -1,6 +1,9 @@
 #!/bin/bash
 #
-# Submit all lambda windows for WT -> V106A holo FEP on Sherlock GPUs.
+# Submit all 11 lambda windows for WT -> V106A holo FEP on Sherlock GPUs.
+#
+# Run submit_fep_jorgensen_v106a_single.sh first and confirm one full window
+# completes before using this script.
 #
 # Prerequisites:
 #   1. Perses hybrid prep done locally for V106A
@@ -8,6 +11,7 @@
 #   3. worker_manifest_v106a.csv present (generate locally with panel.py --mutation V106A)
 #
 # Usage (on Sherlock):
+#   export PROJECT_ROOT=$PWD
 #   ./scripts/sherlock/submit_fep_jorgensen_v106a.sh
 #
 # Optional env vars (passed through to submit_fep_jorgensen_windows.sh):

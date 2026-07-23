@@ -128,12 +128,49 @@ Exit the allocation when done: `exit`
 
 ---
 
-## Phase 4 — Batch: all 11 lambda windows
+## Phase 4 — One full-production window (sbatch smoke test)
 
-Still on Sherlock (login node is fine for `sbatch`):
+After the short interactive pilot, submit **one** manifest task with full production
+settings before flooding the queue with all 11 windows.
 
 ```bash
-cd $SCRATCH/nnrti-mechanisms
+cd $SCRATCH/nnrti-mechanisms-git
+export PROJECT_ROOT=$PWD
+git pull origin jorgensen-fep
+
+./scripts/sherlock/submit_fep_jorgensen_v106a_single.sh
+# default: manifest task_id=1 (state_index=1, λ≈0.1)
+```
+
+Monitor:
+
+```bash
+squeue -u $USER
+tail -f logs/fep_jorgensen.<JOBID>_1.err   # should NOT show COLORTERM errors
+```
+
+Success:
+
+```bash
+wc -l results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows/state_01_energies.csv
+# expect 1001 (header + 1000 samples)
+```
+
+Pick another λ window if you prefer:
+
+```bash
+FEP_TASK_ID=5 ./scripts/sherlock/submit_fep_jorgensen_v106a_single.sh
+```
+
+---
+
+## Phase 5 — Batch: all 11 lambda windows
+
+Only after Phase 4 completes cleanly:
+
+```bash
+cd $SCRATCH/nnrti-mechanisms-git
+export PROJECT_ROOT=$PWD
 ./scripts/sherlock/submit_fep_jorgensen_v106a.sh
 ```
 

@@ -28,13 +28,28 @@ fi
 last_task=$((task_count - 1))
 mkdir -p "$PROJECT_ROOT/logs"
 
+if [[ -n "${SHERLOCK_ARRAY_TASK:-}" ]]; then
+    if (( SHERLOCK_ARRAY_TASK < 0 || SHERLOCK_ARRAY_TASK > last_task )); then
+        echo "SHERLOCK_ARRAY_TASK=${SHERLOCK_ARRAY_TASK} out of range 0-${last_task}" >&2
+        exit 1
+    fi
+    ARRAY_SPEC="${SHERLOCK_ARRAY_TASK}"
+else
+    ARRAY_SPEC="0-${last_task}%${SHERLOCK_MAX_CONCURRENT}"
+fi
+
+echo "Manifest:  $MANIFEST"
+echo "Array:     $ARRAY_SPEC"
+echo "Partition: $SHERLOCK_PARTITION  GRES: $SHERLOCK_GRES  TIME: $SHERLOCK_TIME  MEM: $SHERLOCK_MEM"
+echo
+
 sbatch \
     --job-name=fep_jorgensen \
     --partition="$SHERLOCK_PARTITION" \
     --gres="$SHERLOCK_GRES" \
     --time="$SHERLOCK_TIME" \
     --mem="$SHERLOCK_MEM" \
-    --array="0-${last_task}%${SHERLOCK_MAX_CONCURRENT}" \
+    --array="$ARRAY_SPEC" \
     --output="$PROJECT_ROOT/logs/fep_jorgensen.%A_%a.out" \
     --error="$PROJECT_ROOT/logs/fep_jorgensen.%A_%a.err" \
     <<SBATCH_EOF
