@@ -18,6 +18,7 @@ from scripts.fep_jorgensen.mutations import (
     unique_manuscript_legs,
 )
 from scripts.fep_jorgensen.panel import write_worker_manifest
+from scripts.fep_jorgensen.perses_hybrid import perses_available
 from scripts.fep_jorgensen.worker import _perses_default_parameters, run_window
 
 
@@ -112,6 +113,51 @@ def test_complete_manuscript_panel_has_continuous_single_residue_legs() -> None:
             assert first.end_label == second.start_label
     with pytest.raises(ValueError, match="does not add exactly"):
         MutationLeg("WT", "Y181C", "V106A")
+
+
+def test_panel_prepare_commands_default_to_perses_backend() -> None:
+    from scripts.fep_jorgensen.panel import preparation_commands
+
+    command = preparation_commands(Path("results/analysis/fep_jorgensen"))[0]
+    assert "--backend perses" in command
+
+
+@pytest.mark.skipif(not perses_available(), reason="Perses/openmmtools not installed")
+def test_openeye_shim_formats_val_template_names() -> None:
+    from pkg_resources import resource_filename
+    import os
+
+    from scripts.fep_jorgensen.openeye_shim import _create_oemol_from_sdf, install_openeye_shim
+
+    install_openeye_shim()
+    pdb = resource_filename("perses", os.path.join("data", "amino_acid_templates", "VAL.pdb"))
+    mol = _create_oemol_from_sdf(pdb, add_hydrogens=True)
+    for atom in mol.GetAtoms():
+        name = atom.GetName().replace(" ", "")
+        if name and name[0].isdigit():
+            atom.SetName(name[1:] + name[0])
+    names = {atom.GetName() for atom in mol.GetAtoms()}
+    assert {"HG11", "HG21", "CB"}.issubset(names)
+
+
+@pytest.mark.skipif(not perses_available(), reason="Perses/openmmtools not installed")
+def test_perses_prepare_v106a_smoke(tmp_path: Path) -> None:
+    from scripts.fep_jorgensen.prepare import prepare
+    from scripts.fep_jorgensen.config import FEPConfig
+    from scripts.fep_jorgensen.mutations import MutationLeg
+
+    leg = MutationLeg("WT", "V106A", "V106A")
+    config = FEPConfig.for_leg(
+        leg,
+        output_dir=tmp_path,
+        prepare_backend="perses",
+    )
+    prepare(config, replicate=1)
+    holo = tmp_path / "legs" / leg.leg_id / "holo"
+    schedule = json.loads((holo / "schedule.json").read_text())
+    assert schedule["prepare_backend"] == "perses"
+    assert schedule["lambda_parameter_functions"] == "perses-default"
+    assert (holo / "hybrid_system.xml").is_file()
 
 
 def test_panel_manifest_has_every_lambda_state_for_holo_only(tmp_path: Path) -> None:

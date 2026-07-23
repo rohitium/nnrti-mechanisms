@@ -48,6 +48,7 @@ class FEPConfig:
     platform: str = "CUDA"
     approx_protocol: ApproxJorgensenProtocol = ApproxJorgensenProtocol()
     skip_equilibration: bool = True
+    prepare_backend: str = "perses"
 
     @classmethod
     def for_leg(cls, leg: MutationLeg, **overrides) -> "FEPConfig":

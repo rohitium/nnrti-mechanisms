@@ -1,4 +1,4 @@
-"""Integrated openmmtools MCMC sampling for one prepared holo leg."""
+"""Integrated openmmtools MCMC sampling for one Perses-prepared holo leg."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import time
 
 from .config import FEPConfig
 from .mutations import MutationLeg
+from .perses_hybrid import perses_available, prepare_holo_hybrid
 
 
 def _run_holo_mcmc(htf, run_dir: Path, config: FEPConfig, args) -> Path:
@@ -49,7 +50,7 @@ def _run_holo_mcmc(htf, run_dir: Path, config: FEPConfig, args) -> Path:
     return reporter_path
 
 
-def _load_executor(config: FEPConfig):
+def _load_hybrid_factory(config: FEPConfig):
     from openmm import MonteCarloBarostat, app, unit
     from perses.app.relative_point_mutation_setup import PointMutationExecutor
 
@@ -88,20 +89,25 @@ def _load_executor(config: FEPConfig):
         conduct_endstate_validation=False,
         generate_unmodified_hybrid_topology_factory=True,
         generate_rest_capable_hybrid_topology_factory=False,
-    )
+    ).get_complex_htf()
 
 
 def sample_holo_leg(config: FEPConfig, args) -> Path:
     holo_dir = config.run_dir / "holo"
+    input_dir = config.run_dir / "inputs"
     if not (holo_dir / "hybrid_system.xml").is_file():
-        raise FileNotFoundError(f"Missing prepared holo leg at {holo_dir}")
-    executor = _load_executor(config)
-    return _run_holo_mcmc(executor.get_complex_htf(), config.run_dir, config, args)
+        if not perses_available():
+            raise ImportError("Perses/openmmtools required for mcmc_sample")
+        prepare_holo_hybrid(config)
+    elif not input_dir.is_dir():
+        prepare_holo_hybrid(config)
+    htf = _load_hybrid_factory(config)
+    return _run_holo_mcmc(htf, config.run_dir, config, args)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Run openmmtools multistate MCMC on one prepared holo leg"
+        description="Run openmmtools multistate MCMC on one Perses-prepared holo leg"
     )
     parser.add_argument("--mutation", default="V106A")
     parser.add_argument("--start-label", default="WT")
@@ -116,7 +122,7 @@ def main() -> int:
     args = parser.parse_args()
     end_label = args.end_label or args.mutation
     leg = MutationLeg(args.start_label, end_label, args.mutation)
-    config = FEPConfig.for_leg(leg, output_dir=args.output_dir)
+    config = FEPConfig.for_leg(leg, output_dir=args.output_dir, prepare_backend="perses")
     start = time.time()
     reporter = sample_holo_leg(config, args)
     summary = {

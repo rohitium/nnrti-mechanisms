@@ -81,12 +81,14 @@ def analyze_leg(run_dir: Path, temperature_k: float | None = None) -> dict:
     config = json.loads(config_path.read_text()) if config_path.exists() else {}
     temperature = float(temperature_k or config.get("temperature_k", 300.0))
     holo = analyze_phase(run_dir / "holo", temperature)
-    holo_strategy = json.loads((run_dir / "holo" / "schedule.json").read_text()).get(
-        "alchemical_plan", {}
-    ).get("strategy", "annihilate_wt_sidechain")
+    holo_schedule = json.loads((run_dir / "holo" / "schedule.json").read_text())
+    backend = holo_schedule.get("prepare_backend", "scaling")
+    holo_strategy = holo_schedule.get("alchemical_plan", {}).get(
+        "strategy", "annihilate_wt_sidechain"
+    )
     delta_kj = holo["delta_g_kj_mol"]
     uncertainty_kj = holo["uncertainty_kj_mol"]
-    if holo_strategy == "annihilate_mutant_sidechain":
+    if backend == "scaling" and holo_strategy == "annihilate_mutant_sidechain":
         delta_kj *= -1.0
     summary = {
         "leg_id": config.get("leg_id", run_dir.name),
@@ -99,7 +101,8 @@ def analyze_leg(run_dir: Path, temperature_k: float | None = None) -> dict:
         "uncertainty_kcal_mol": uncertainty_kj / 4.184,
         "thermodynamic_cycle": "protein-side-chain mutation in inhibitor-bound complex",
         "sign_convention": "positive means the end-state mutation is higher in free energy",
-        "sampling_strategy": holo_strategy,
+        "prepare_backend": backend,
+        "sampling_strategy": holo_strategy if backend == "scaling" else "perses-default",
         "holo": holo,
     }
     (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")

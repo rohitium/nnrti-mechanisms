@@ -16,6 +16,7 @@ def preparation_commands(output_dir: Path, replicate: int = 1) -> list[str]:
             shlex.join(
                 [
                     "python", "-m", "scripts.fep_jorgensen.prepare",
+                    "--backend", "perses",
                     "--mutation", leg.mutation,
                     "--start-label", leg.start_label,
                     "--end-label", leg.end_label,
