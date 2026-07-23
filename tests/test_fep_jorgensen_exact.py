@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from scripts.fep_jorgensen.analyze_exact import normalize_to_sustiva, read_mutation_legs
+from scripts.fep_jorgensen.approx_protocol import ApproxJorgensenProtocol
 from scripts.fep_jorgensen.exact_protocol import (
     ExactJorgensenProtocol,
     MC_FLEXIBLE_RESIDUES,
@@ -39,6 +40,15 @@ def test_exact_protocol_rejects_openmm_style_substitution() -> None:
         ExactJorgensenProtocol(water_model="TIP3P").validate()
     with pytest.raises(ValueError, match="Not the exact Jorgensen protocol"):
         ExactJorgensenProtocol(md_integrator="LangevinMiddle").validate()
+
+
+def test_approx_protocol_writes_lambda_schedule(tmp_path: Path) -> None:
+    protocol = ApproxJorgensenProtocol(lambda_windows=5)
+    path = tmp_path / "approx_protocol.json"
+    protocol.write(path)
+    payload = path.read_text()
+    assert "Jorgensen-cycle inspired" in payload
+    assert protocol.md_initial_equilibration_steps == pytest.approx(1500)
 
 
 def test_jorgensen_cycle_is_normalized_to_sustiva() -> None:

@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 import json
 
+from .approx_protocol import ApproxJorgensenProtocol
 from .mutations import Mutation, MutationLeg
 
 
@@ -45,6 +46,8 @@ class FEPConfig:
     timestep_fs: float = 2.0
     collision_rate_per_ps: float = 1.0
     platform: str = "CUDA"
+    approx_protocol: ApproxJorgensenProtocol = ApproxJorgensenProtocol()
+    skip_equilibration: bool = False
 
     @classmethod
     def for_leg(cls, leg: MutationLeg, **overrides) -> "FEPConfig":
@@ -66,6 +69,17 @@ class FEPConfig:
     @property
     def run_dir(self) -> Path:
         return self.output_dir / "legs" / self.leg.leg_id
+
+    @property
+    def equilibrated_complex_pdb(self) -> Path:
+        return self.run_dir / "inputs" / "equilibrated_complex.pdb"
+
+    @property
+    def preparation_complex_pdb(self) -> Path:
+        if self.skip_equilibration:
+            return self.wt_complex_pdb
+        equilibrated = self.equilibrated_complex_pdb
+        return equilibrated if equilibrated.is_file() else self.wt_complex_pdb
 
     def validate(self, require_inputs: bool = False) -> None:
         parsed = Mutation.parse(self.mutation)

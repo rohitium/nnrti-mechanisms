@@ -1,80 +1,111 @@
-# Jorgensen FEP workflows
+# Jorgensen-inspired approximate mutation FEP
 
-This directory now separates two scientifically different calculations.
+This workflow merges the earlier `codex/fep-jorgensen-v106a` Perses/OpenMM panel with
+the exact-protocol specification work on `agent/exact-jorgensen-fep`, then refocuses
+both on a single achievable calculation:
 
-## Exact Rizzo/Jorgensen (2000) reproduction
+**OpenMM/openmmtools MD-equilibrated MCMC alchemical mutation FEP, Jorgensen-cycle inspired.**
 
-`exact_protocol.py` is the machine-readable contract for the protocol described
-in `docs/Jorgensen-FEP-protocol.md`. It fixes all reported details:
+That is *not* an exact MCPRO reproduction.  It keeps the paper's scientific shape:
 
-- the published truncated HIV-1 RT binding-site residue set;
-- CM1P-augmented OPLS-AA and the distance-dependent dielectric `epsilon=4r`;
-- IMPACT c1.00, ten minimization cycles, 1 fs Verlet integration, SHAKE,
-  Berendsen coupling at 0.2 ps, 3 ps at 100 K, 50 ps at 300 K, and six 4 ps
-  quench blocks from 300 K to 50 K;
-- a 22 A TIP4P water cap (about 850 waters);
-- the published rigid/flexible MCPRO residue partitions, fixed protein
-  backbone, and fully flexible inhibitor;
-- 1,000,000 solvent-only equilibration, 10,000,000 full-equilibration, and
-  10,000,000 averaging configurations per FEP window;
-- protein-side-chain mutation in each inhibitor complex; and
-- inhibitor-relative normalization to Sustiva.
+1. start from the 19 manuscript DOR-bound complexes;
+2. equilibrate each complex with OpenMM MD using a Jorgensen-inspired schedule;
+3. build **holo-only** protein-side-chain alchemical legs;
+4. sample each λ window with fixed-lambda OpenMM workers or optional openmmtools MCMC;
+5. estimate `ΔG_mutation` with MBAR;
+6. normalize mutation free energies relative to a reference system (default: WT).
 
-Write the immutable protocol manifest with:
+## Branch merge status
+
+`agent/exact-jorgensen-fep` already contains all commits from
+`codex/fep-jorgensen-v106a` plus the exact-protocol contract.  The old holo-minus-apo
+Perses approximation is removed from the default path in favor of the holo-only
+Jorgensen cycle above.  Use this branch going forward; `codex/fep-jorgensen-v106a` can
+be treated as superseded.
+
+## Three execution tiers
+
+| Tier | Purpose | Entry point |
+| --- | --- | --- |
+| Exact MCPRO | Only valid exact reproduction | `exact_protocol.py`, `analyze_exact.py` |
+| Approximate OpenMM | Default merged workflow | `prepare.py`, `worker.py`, `analyze.py` |
+| Optional MCMC | Local/Sherlock path with openmmtools replica exchange | `mcmc_sample.py` |
+
+## Approximate workflow
+
+Write the protocol manifest:
 
 ```bash
 python - <<'PY'
 from pathlib import Path
-from scripts.fep_jorgensen.exact_protocol import ExactJorgensenProtocol
-ExactJorgensenProtocol().write(Path("results/analysis/fep_jorgensen/exact_protocol.json"))
+from scripts.fep_jorgensen.approx_protocol import ApproxJorgensenProtocol
+ApproxJorgensenProtocol().write(Path("results/analysis/fep_jorgensen/approx_protocol.json"))
 PY
 ```
 
-The original calculation requires licensed/historical IMPACT c1.00 and MCPRO
-1.65 executables plus the CM1P-augmented OPLS-AA parameter set and the original
-inhibitor models. Those assets are not distributed in this repository. OpenMM,
-Perses, Amber ff14SB, OpenFF, PME, TIP3P, Langevin dynamics, MBAR, or an apo leg
-are not exact substitutes and must not be reported as an exact reproduction.
+Plan the full 19-leg panel:
 
-After MCPRO produces one protein-mutation free energy for every inhibitor,
-provide a CSV with:
-
-```text
-inhibitor,delta_g_mutation_kcal_mol,uncertainty_kcal_mol
-sustiva,...,...
-nevirapine,...,...
-mkc-442,...,...
-9-cl-tibo,...,...
+```bash
+PYTHONPATH=. python -m scripts.fep_jorgensen.panel
 ```
 
-Then apply the paper's thermodynamic cycle:
+This writes:
+
+- `equilibrate_all.sh` — Jorgensen-inspired MD on all 19 complexes
+- `prepare_all.sh` — equilibration + Perses hybrid setup (or use `--skip-equilibration` if reusing MD start structures)
+- `worker_manifest.csv` — 209 holo λ-window tasks (19 legs × 11 states)
+
+Prepare one leg locally (`nnrti-fep` env: Perses + OpenEye required):
+
+```bash
+PYTHONPATH=. python -m scripts.fep_jorgensen.prepare --mutation V106A
+```
+
+This runs, in order:
+
+1. `equilibrate.py` — Jorgensen-inspired minimization, 100 K → 300 K equilibration, quench blocks;
+2. Perses hybrid construction for the bound-complex mutation leg;
+3. serialization of `holo/hybrid_system.xml` and `holo/schedule.json` for Sherlock workers.
+
+Run fixed-λ windows on Sherlock:
+
+```bash
+bash scripts/sherlock/submit_fep_jorgensen_windows.sh
+```
+
+Analyze locally:
+
+```bash
+PYTHONPATH=. python -m scripts.fep_jorgensen.analyze --all-targets
+```
+
+Outputs:
+
+- `manuscript_panel_summary.csv` — absolute `ΔG_mutation` per target
+- `manuscript_panel_relative.csv` — values relative to WT (WT = 0 by definition)
+
+Optional integrated openmmtools MCMC on one prepared leg:
+
+```bash
+PYTHONPATH=. python -m scripts.fep_jorgensen.mcmc_sample --mutation V106A
+```
+
+## Exact MCPRO boundary
+
+The exact Rizzo/Jorgensen (2000) contract remains in `exact_protocol.py` and
+`docs/Jorgensen-FEP-protocol.md`.  After licensed MCPRO produces inhibitor legs, use:
 
 ```bash
 PYTHONPATH=. python -m scripts.fep_jorgensen.analyze_exact mcpro_legs.csv \
   --mutation V106A --output v106a_relative_to_sustiva.csv
 ```
 
-For inhibitor `i`, the reported value is
-`DeltaG_mutation(i) - DeltaG_mutation(Sustiva)`. Sustiva is therefore 0.00 by
-definition. The code propagates independent leg uncertainties in quadrature.
+Do not label OpenMM/Perses/OpenFF results as exact MCPRO reproduction.
 
-## OpenMM/Perses approximation retained from the source branch
+## What changed from `codex/fep-jorgensen-v106a`
 
-The pre-existing `prepare.py`, `worker.py`, `panel.py`, and `analyze.py` workflow
-is retained so earlier work is not destroyed. It computes explicit-solvent,
-periodic holo-minus-apo mutation free energies with Perses/OpenMM and MBAR,
-normalized to WT. It is mutation-agnostic and useful as a modern approximation,
-but it does **not** exactly follow Jorgensen's protocol.
-
-To run that approximation, generate its panel with:
-
-```bash
-PYTHONPATH=. python -m scripts.fep_jorgensen.panel
-```
-
-Prepare hybrid systems locally with Perses and OpenMMTools, run the generated
-OpenMM manifest on Sherlock, and analyze locally with:
-
-```bash
-PYTHONPATH=. python -m scripts.fep_jorgensen.analyze --all-targets
-```
+- Removed default holo-minus-apo thermodynamic cycle.
+- Added Jorgensen-inspired MD equilibration before alchemical setup.
+- Analysis now reports `ΔG_mutation` in the inhibitor-bound complex.
+- Added reference normalization mirroring the paper's inhibitor-relative cycle, with WT
+  as the manuscript reference instead of Sustiva.

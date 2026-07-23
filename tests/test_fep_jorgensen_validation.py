@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scripts.fep_jorgensen.analyze import analyze_phase, analyze_target
+from scripts.fep_jorgensen.analyze import analyze_phase, analyze_target, normalize_to_reference
 from scripts.fep_jorgensen.config import FEPConfig, LambdaSchedule
 from scripts.fep_jorgensen.mutations import (
     MANUSCRIPT_PLANS,
@@ -82,7 +82,7 @@ def test_complete_manuscript_panel_has_continuous_single_residue_legs() -> None:
         MutationLeg("WT", "Y181C", "V106A")
 
 
-def test_panel_manifest_has_every_phase_and_lambda_state(tmp_path: Path) -> None:
+def test_panel_manifest_has_every_lambda_state_for_holo_only(tmp_path: Path) -> None:
     manifest = tmp_path / "worker_manifest.csv"
     config = FEPConfig(
         output_dir=tmp_path,
@@ -90,16 +90,16 @@ def test_panel_manifest_has_every_phase_and_lambda_state(tmp_path: Path) -> None
     )
     count = write_worker_manifest(manifest, tmp_path, config)
     rows = list(csv.DictReader(manifest.open()))
-    assert count == 19 * 2 * 3
+    assert count == 19 * 3
     assert len(rows) == count
-    assert {row["phase"] for row in rows} == {"holo", "apo"}
+    assert {row["phase"] for row in rows} == {"holo"}
     assert {int(row["state_index"]) for row in rows} == {0, 1, 2}
 
 
 def test_double_mutant_analysis_sums_sequential_legs(tmp_path: Path) -> None:
     plan = MANUSCRIPT_PLANS["V106A+L234I"]
     values = ((2.0, 0.3), (4.0, 0.4))
-    for leg, (ddg, uncertainty) in zip(plan.legs, values):
+    for leg, (delta_g, uncertainty) in zip(plan.legs, values):
         run_dir = tmp_path / "legs" / leg.leg_id
         run_dir.mkdir(parents=True)
         (run_dir / "summary.json").write_text(
@@ -109,14 +109,31 @@ def test_double_mutant_analysis_sums_sequential_legs(tmp_path: Path) -> None:
                     "start_label": leg.start_label,
                     "end_label": leg.end_label,
                     "mutation": leg.mutation,
-                    "ddg_bind_kj_mol": ddg,
+                    "delta_g_mutation_kj_mol": delta_g,
                     "uncertainty_kj_mol": uncertainty,
                 }
             )
         )
     result = analyze_target("V106A_L234I", tmp_path)
-    assert result["ddg_bind_kj_mol"] == pytest.approx(6.0)
+    assert result["delta_g_mutation_kj_mol"] == pytest.approx(6.0)
     assert result["uncertainty_kj_mol"] == pytest.approx(0.5)
+
+
+def test_reference_normalization_makes_wt_zero() -> None:
+    summaries = {
+        "WT": {
+            "delta_g_mutation_kcal_mol": 0.5,
+            "uncertainty_kcal_mol": 0.1,
+        },
+        "V106A": {
+            "delta_g_mutation_kcal_mol": 2.5,
+            "uncertainty_kcal_mol": 0.2,
+        },
+    }
+    rows = normalize_to_reference(summaries, reference="WT")
+    by_target = {row["target"]: row for row in rows}
+    assert by_target["WT"]["delta_delta_g_kcal_mol"] == 0.0
+    assert by_target["V106A"]["delta_delta_g_kcal_mol"] == pytest.approx(2.0)
 
 
 @pytest.mark.parametrize(
@@ -133,10 +150,10 @@ def test_perses_default_staging(master: float, expected: tuple[float, float]) ->
 
 
 def test_openmm_worker_and_mbar_round_trip(tmp_path: Path) -> None:
-    phase, windows = tmp_path / "phase", tmp_path / "windows"
-    _write_toy_phase(phase)
+    holo, windows = tmp_path / "holo", tmp_path / "holo" / "windows"
+    _write_toy_phase(holo)
     for state in range(3):
-        arguments = _worker_arguments(phase, windows)
+        arguments = _worker_arguments(holo, windows)
         arguments["state_index"] = state
         run_window(**arguments)
     for state in range(3):
@@ -145,7 +162,7 @@ def test_openmm_worker_and_mbar_round_trip(tmp_path: Path) -> None:
         assert [float(rows[0][f"u_{i}"]) for i in range(3)] == pytest.approx(
             [0.0, 0.5 / (0.00831446261815324 * 300), 1.0 / (0.00831446261815324 * 300)]
         )
-    result = analyze_phase(windows, temperature_k=300.0)
+    result = analyze_phase(holo, temperature_k=300.0)
     assert result["samples"] == 12
     assert result["minimum_samples_per_state"] == 4
     assert result["delta_g_kj_mol"] == pytest.approx(1.0, abs=1e-6)
@@ -181,8 +198,10 @@ def test_production_steps_must_align_with_energy_interval(tmp_path: Path) -> Non
 
 
 def test_analysis_rejects_missing_window(tmp_path: Path) -> None:
+    windows = tmp_path / "windows"
+    windows.mkdir()
     for state in (0, 2):
-        (tmp_path / f"state_{state:02d}_energies.csv").write_text(
+        (windows / f"state_{state:02d}_energies.csv").write_text(
             "sample,origin_state,u_0,u_1\n0,%d,0,1\n" % state
         )
     with pytest.raises(ValueError, match="Missing lambda windows"):
@@ -190,8 +209,10 @@ def test_analysis_rejects_missing_window(tmp_path: Path) -> None:
 
 
 def test_analysis_accepts_unequal_sample_counts(tmp_path: Path) -> None:
+    windows = tmp_path / "windows"
+    windows.mkdir()
     for state, count in enumerate((2, 3, 5)):
-        path = tmp_path / f"state_{state:02d}_energies.csv"
+        path = windows / f"state_{state:02d}_energies.csv"
         with path.open("w", newline="") as handle:
             writer = csv.writer(handle)
             writer.writerow(["sample", "origin_state", "u_0", "u_1", "u_2"])
