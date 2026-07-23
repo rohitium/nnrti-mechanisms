@@ -1,8 +1,7 @@
 # Jorgensen-inspired approximate mutation FEP
 
-This workflow merges the earlier `codex/fep-jorgensen-v106a` Perses/OpenMM panel with
-the exact-protocol specification work on `agent/exact-jorgensen-fep`, then refocuses
-both on a single achievable calculation:
+This workflow consolidates the earlier Perses/OpenMM panel work and the exact-protocol
+specification into a single branch:
 
 **OpenMM/openmmtools MD-equilibrated MCMC alchemical mutation FEP, Jorgensen-cycle inspired.**
 
@@ -15,13 +14,10 @@ That is *not* an exact MCPRO reproduction.  It keeps the paper's scientific shap
 5. estimate `ΔG_mutation` with MBAR;
 6. normalize mutation free energies relative to a reference system (default: WT).
 
-## Branch merge status
+## Branch
 
-`agent/exact-jorgensen-fep` already contains all commits from
-`codex/fep-jorgensen-v106a` plus the exact-protocol contract.  The old holo-minus-apo
-Perses approximation is removed from the default path in favor of the holo-only
-Jorgensen cycle above.  Use this branch going forward; `codex/fep-jorgensen-v106a` can
-be treated as superseded.
+All FEP work lives on **`jorgensen-fep`**.  Older branches
+(`agent/exact-jorgensen-fep`, `codex/fep-jorgensen-v106a`) are retired.
 
 ## Three execution tiers
 

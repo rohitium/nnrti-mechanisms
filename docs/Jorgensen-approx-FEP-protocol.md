@@ -1,7 +1,7 @@
 # Jorgensen-inspired approximate mutation FEP
 
-This document describes the merged default workflow in `scripts/fep_jorgensen/`.
-It supersedes the holo-minus-apo Perses panel from `codex/fep-jorgensen-v106a`.
+This document describes the default workflow on the **`jorgensen-fep`** branch.
+It supersedes the earlier holo-minus-apo Perses panel.
 
 ## Scientific label
 
