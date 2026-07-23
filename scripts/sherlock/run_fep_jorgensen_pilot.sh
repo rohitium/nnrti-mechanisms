@@ -58,7 +58,7 @@ echo "Equil steps:  $FEP_EQUIL_STEPS"
 echo "Prod steps:   $FEP_PROD_STEPS"
 echo
 
-PYTHONPATH=. python3 -m scripts.fep_jorgensen.worker \
+python3 -m scripts.fep_jorgensen.worker \
     --phase-dir "$PHASE_DIR" \
     --output-dir "$WINDOW_DIR" \
     --state-index "$FEP_STATE_INDEX" \
