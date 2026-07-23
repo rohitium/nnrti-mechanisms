@@ -23,8 +23,11 @@ _sherlock_init_modules() {
         "${HOME}/.bashrc"
     do
         if [[ -f "${init}" ]]; then
+            # Profile snippets may reference unset vars; disable nounset while sourcing.
+            set +u
             # shellcheck disable=SC1090
             source "${init}"
+            set -u
             if command -v module >/dev/null 2>&1; then
                 return 0
             fi

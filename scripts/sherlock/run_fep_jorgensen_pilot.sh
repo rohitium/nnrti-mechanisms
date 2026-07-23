@@ -19,11 +19,6 @@
 
 set -euo pipefail
 
-if [[ -f /etc/profile ]]; then
-    # shellcheck disable=SC1091
-    source /etc/profile
-fi
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
