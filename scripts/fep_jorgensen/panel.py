@@ -9,30 +9,13 @@ from .config import FEPConfig
 from .mutations import MANUSCRIPT_TARGETS, unique_manuscript_legs
 
 
-def preparation_commands(output_dir: Path, replicate: int = 1, skip_equilibration: bool = False) -> list[str]:
-    commands = []
-    for leg in unique_manuscript_legs():
-        command = [
-            "python", "-m", "scripts.fep_jorgensen.prepare",
-            "--mutation", leg.mutation,
-            "--start-label", leg.start_label,
-            "--end-label", leg.end_label,
-            "--input-complex-pdb", str(leg.input_complex_pdb(replicate)),
-            "--output-dir", str(output_dir),
-        ]
-        if skip_equilibration:
-            command.append("--skip-equilibration")
-        commands.append(shlex.join(command))
-    return commands
-
-
-def equilibration_commands(output_dir: Path, replicate: int = 1) -> list[str]:
+def preparation_commands(output_dir: Path, replicate: int = 1) -> list[str]:
     commands = []
     for leg in unique_manuscript_legs():
         commands.append(
             shlex.join(
                 [
-                    "python", "-m", "scripts.fep_jorgensen.equilibrate",
+                    "python", "-m", "scripts.fep_jorgensen.prepare",
                     "--mutation", leg.mutation,
                     "--start-label", leg.start_label,
                     "--end-label", leg.end_label,
@@ -97,36 +80,20 @@ def main() -> int:
     parser.add_argument("--replicate", type=int, default=1)
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--preparation-script", type=Path)
-    parser.add_argument("--equilibration-script", type=Path)
-    parser.add_argument(
-        "--skip-equilibration",
-        action="store_true",
-        help="Generate prepare_all.sh without the MD equilibration step",
-    )
     args = parser.parse_args()
     manifest = args.manifest or args.output_dir / "worker_manifest.csv"
     count = write_worker_manifest(manifest, args.output_dir)
     preparation_script = args.preparation_script or args.output_dir / "prepare_all.sh"
-    equilibration_script = args.equilibration_script or args.output_dir / "equilibrate_all.sh"
     preparation_script.parent.mkdir(parents=True, exist_ok=True)
     preparation_script.write_text(
         "#!/bin/bash\nset -euo pipefail\n\n"
-        + "\n".join(
-            preparation_commands(args.output_dir, args.replicate, args.skip_equilibration)
-        )
+        + "\n".join(preparation_commands(args.output_dir, args.replicate))
         + "\n"
     )
     preparation_script.chmod(0o755)
-    equilibration_script.write_text(
-        "#!/bin/bash\nset -euo pipefail\n\n"
-        + "\n".join(equilibration_commands(args.output_dir, args.replicate))
-        + "\n"
-    )
-    equilibration_script.chmod(0o755)
     print(f"Targets: {len(MANUSCRIPT_TARGETS)}")
     print(f"Unique alchemical legs: {len(unique_manuscript_legs())}")
     print(f"OpenMM holo worker tasks: {count}")
-    print(f"Equilibration script: {equilibration_script}")
     print(f"Preparation script: {preparation_script}")
     print(f"Worker manifest: {manifest}")
     return 0

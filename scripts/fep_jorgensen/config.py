@@ -47,7 +47,7 @@ class FEPConfig:
     collision_rate_per_ps: float = 1.0
     platform: str = "CUDA"
     approx_protocol: ApproxJorgensenProtocol = ApproxJorgensenProtocol()
-    skip_equilibration: bool = False
+    skip_equilibration: bool = True
 
     @classmethod
     def for_leg(cls, leg: MutationLeg, **overrides) -> "FEPConfig":

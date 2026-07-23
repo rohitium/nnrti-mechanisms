@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from scripts.fep_jorgensen.alchemical import build_alchemical_plan, resolve_mutation_site
 from scripts.fep_jorgensen.analyze import analyze_phase, analyze_target, normalize_to_reference
 from scripts.fep_jorgensen.config import FEPConfig, LambdaSchedule
 from scripts.fep_jorgensen.mutations import (
@@ -21,21 +22,28 @@ from scripts.fep_jorgensen.worker import _perses_default_parameters, run_window
 
 
 def _write_toy_phase(path: Path) -> None:
-    from openmm import CustomExternalForce, System, XmlSerializer
+    from openmm import NonbondedForce, System, XmlSerializer, unit
 
     path.mkdir(parents=True)
     system = System()
     system.addParticle(39.9)
-    force = CustomExternalForce("lambda_sterics_core")
-    force.addGlobalParameter("lambda_sterics_core", 0.0)
-    force.addParticle(0, [])
+    force = NonbondedForce()
+    force.addParticle(1.0 * unit.elementary_charge, 0.3 * unit.nanometer, 0.5 * unit.kilojoule_per_mole)
     system.addForce(force)
     (path / "hybrid_system.xml").write_text(XmlSerializer.serialize(system))
     (path / "hybrid_topology.pdb").write_text(
         "ATOM      1  AR  ARG A   1       0.000   0.000   0.000  1.00  0.00          Ar\n"
         "TER\nEND\n"
     )
-    (path / "schedule.json").write_text(json.dumps({"lambda_values": [0.0, 0.5, 1.0]}))
+    (path / "schedule.json").write_text(
+        json.dumps(
+            {
+                "lambda_values": [0.0, 0.5, 1.0],
+                "lambda_parameter_functions": "nonbonded-scaling",
+                "alchemical_plan": {"alchemical_atom_indices": [0]},
+            }
+        )
+    )
 
 
 def _worker_arguments(phase: Path, windows: Path) -> dict:
@@ -52,6 +60,30 @@ def _worker_arguments(phase: Path, windows: Path) -> dict:
         "checkpoint_interval": 2,
         "platform_name": "CPU",
     }
+
+
+def test_resolve_v106a_site_from_md_endpoints() -> None:
+    from scripts.fep_jorgensen.mutations import Mutation
+
+    mutation = Mutation.parse("V106A")
+    site = resolve_mutation_site(
+        Path("results/md_runs/wt/rep_01/assets/wt_md_rep01_start.pdb"),
+        Path("results/md_runs/V106A/rep_01/assets/V106A_md_rep01_start.pdb"),
+        mutation,
+    )
+    assert site.old_residue == "VAL"
+    assert site.new_residue == "ALA"
+    assert site.pdb_residue_id == "103"
+
+
+def test_build_alchemical_plan_for_v106a() -> None:
+    from scripts.fep_jorgensen.mutations import MutationLeg
+
+    leg = MutationLeg("WT", "V106A", "V106A")
+    plan = build_alchemical_plan(leg, replicate=1)
+    assert plan.strategy == "annihilate_wt_sidechain"
+    assert len(plan.atom_indices) >= 6
+    assert plan.start_system_xml.is_file()
 
 
 def test_configuration_validation() -> None:
@@ -159,13 +191,11 @@ def test_openmm_worker_and_mbar_round_trip(tmp_path: Path) -> None:
     for state in range(3):
         rows = list(csv.DictReader((windows / f"state_{state:02d}_energies.csv").open()))
         assert len(rows) == 4
-        assert [float(rows[0][f"u_{i}"]) for i in range(3)] == pytest.approx(
-            [0.0, 0.5 / (0.00831446261815324 * 300), 1.0 / (0.00831446261815324 * 300)]
-        )
+        assert [float(rows[0][f"u_{i}"]) for i in range(3)] == pytest.approx([0.0, 0.0, 0.0])
     result = analyze_phase(holo, temperature_k=300.0)
     assert result["samples"] == 12
     assert result["minimum_samples_per_state"] == 4
-    assert result["delta_g_kj_mol"] == pytest.approx(1.0, abs=1e-6)
+    assert result["delta_g_kj_mol"] == pytest.approx(0.0, abs=1e-6)
 
 
 def test_completed_window_is_not_duplicated_on_resume(tmp_path: Path) -> None:

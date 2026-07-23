@@ -81,6 +81,17 @@ class MutationLeg:
             / f"{prefix}_md_rep{replicate:02d}_start.pdb"
         )
 
+    def input_complex_system(self, replicate: int = 1) -> Path:
+        pdb = self.input_complex_pdb(replicate)
+        return pdb.with_name(pdb.name.replace("_start.pdb", "_system.xml"))
+
+    def endpoint_complex_pdb(self, replicate: int = 1) -> Path:
+        label = safe_label(self.end_label)
+        return (
+            Path("results/md_runs") / label / f"rep_{replicate:02d}" / "assets"
+            / f"{label}_md_rep{replicate:02d}_start.pdb"
+        )
+
 
 @dataclass(frozen=True)
 class TargetPlan:
