@@ -201,7 +201,7 @@ SHERLOCK_TIME=48:00:00 SHERLOCK_MEM=32G \
 
 ---
 
-## Phase 5 — Sync results back and analyze locally
+## Phase 6 — Sync results back and analyze locally
 
 When all array tasks finish:
 
