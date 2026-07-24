@@ -230,6 +230,13 @@ results/tables/holo/dor_key_contacts_timeseries_by_mutation/*.csv
 *.npy
 *.bak
 
+# FEP Jorgensen runtime outputs (sync via rsync, not git)
+results/analysis/fep_jorgensen/legs/**/windows/
+results/analysis/fep_jorgensen/legs/**/multistate*.nc
+results/analysis/fep_jorgensen/legs/**/summary.json
+results/analysis/fep_jorgensen/legs/**/mcmc_summary.json
+results/analysis/fep_jorgensen/targets/
+
 # Operational status scratch files; keep the committed Sherlock reconciliation audit only.
 results/.status/complete_at_target.txt
 results/.status/incomplete_not_running.txt

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Prepare all manuscript FEP legs with Perses hybrid topology.
-# Skips legs that already have holo/hybrid_system.xml.
+# Prepare all manuscript FEP legs with Perses hybrid topology (holo + apo).
+# Skips legs that already have both holo/ and apo/ hybrid_system.xml.
 #
 # Usage (local Mac, nnrti-prep after setup_perses_env.sh):
 #   bash scripts/fep_jorgensen/prepare_panel.sh
@@ -37,13 +37,15 @@ print(MutationLeg("$start_label", "$end_label", "$mutation").leg_id)
 PY
 )"
     local holo_xml="$OUTPUT_DIR/legs/${leg_id}/holo/hybrid_system.xml"
-    if [[ "$FORCE" -eq 0 && -f "$holo_xml" ]]; then
-        echo "SKIP ${leg_id} (exists: $holo_xml)"
+    local apo_xml="$OUTPUT_DIR/legs/${leg_id}/apo/hybrid_system.xml"
+    if [[ "$FORCE" -eq 0 && -f "$holo_xml" && -f "$apo_xml" ]]; then
+        echo "SKIP ${leg_id} (exists: $holo_xml and $apo_xml)"
         return 0
     fi
-    echo "PREP ${leg_id} (${start_label} -> ${end_label}, mutation ${mutation})"
+    echo "PREP ${leg_id} (${start_label} -> ${end_label}, mutation ${mutation}, holo+apo)"
     PYTHONNOUSERSITE=1 PYTHONPATH=. "$PYTHON" -m scripts.fep_jorgensen.prepare \
         --backend perses \
+        --phase all \
         --mutation "$mutation" \
         --start-label "$start_label" \
         --end-label "$end_label" \

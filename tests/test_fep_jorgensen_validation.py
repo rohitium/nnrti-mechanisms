@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 from pathlib import Path
 
 import numpy as np
 import pytest
 
 from scripts.fep_jorgensen.alchemical import build_alchemical_plan, resolve_mutation_site
-from scripts.fep_jorgensen.analyze import analyze_phase, analyze_target, normalize_to_reference
+from scripts.fep_jorgensen.analyze import analyze_leg, analyze_phase, analyze_target, normalize_to_reference
+from scripts.fep_jorgensen.convergence import diagnose_phase
 from scripts.fep_jorgensen.config import FEPConfig, LambdaSchedule
 from scripts.fep_jorgensen.mutations import (
     MANUSCRIPT_PLANS,
@@ -115,11 +117,19 @@ def test_complete_manuscript_panel_has_continuous_single_residue_legs() -> None:
         MutationLeg("WT", "Y181C", "V106A")
 
 
+def test_v106a_apo_md_assets_exist() -> None:
+    leg = MutationLeg("WT", "V106A", "V106A")
+    assert leg.input_apo_pdb().is_file()
+    assert leg.endpoint_apo_pdb().is_file()
+    assert leg.endpoint_complex_pdb().is_file()
+
+
 def test_panel_prepare_commands_default_to_perses_backend() -> None:
     from scripts.fep_jorgensen.panel import preparation_commands
 
     command = preparation_commands(Path("results/analysis/fep_jorgensen"))[0]
     assert "--backend perses" in command
+    assert "--phase all" in command
 
 
 def test_legs_for_mutation_v106a() -> None:
@@ -146,10 +156,11 @@ def test_panel_mutation_manifest_writes_single_leg(tmp_path: Path) -> None:
         config=config,
         legs=legs_for_mutation("V106A"),
     )
-    assert count == 3
+    assert count == 6
     rows = list(csv.DictReader(manifest.open()))
-    assert len(rows) == 3
+    assert len(rows) == 6
     assert {row["leg_id"] for row in rows} == {"wt_to_V106A"}
+    assert {row["phase"] for row in rows} == {"holo", "apo"}
     assert {int(row["state_index"]) for row in rows} == {0, 1, 2}
 
 
@@ -191,7 +202,7 @@ def test_perses_prepare_v106a_smoke(tmp_path: Path) -> None:
     assert (holo / "hybrid_system.xml").is_file()
 
 
-def test_panel_manifest_has_every_lambda_state_for_holo_only(tmp_path: Path) -> None:
+def test_panel_manifest_has_holo_and_apo_phases(tmp_path: Path) -> None:
     manifest = tmp_path / "worker_manifest.csv"
     config = FEPConfig(
         output_dir=tmp_path,
@@ -199,10 +210,67 @@ def test_panel_manifest_has_every_lambda_state_for_holo_only(tmp_path: Path) -> 
     )
     count = write_worker_manifest(manifest, tmp_path, config)
     rows = list(csv.DictReader(manifest.open()))
-    assert count == 19 * 3
+    assert count == 19 * 3 * 2
     assert len(rows) == count
-    assert {row["phase"] for row in rows} == {"holo"}
+    assert {row["phase"] for row in rows} == {"holo", "apo"}
     assert {int(row["state_index"]) for row in rows} == {0, 1, 2}
+
+
+def test_analyze_leg_computes_binding_cycle_from_holo_and_apo(tmp_path: Path, monkeypatch) -> None:
+    run_dir = tmp_path / "legs" / "wt_to_V106A"
+    run_dir.mkdir(parents=True)
+    (run_dir / "config.json").write_text(
+        json.dumps(
+            {
+                "leg_id": "wt_to_V106A",
+                "start_label": "WT",
+                "end_label": "V106A",
+                "mutation": "V106A",
+            }
+        )
+    )
+    for phase in ("holo", "apo"):
+        phase_dir = run_dir / phase
+        phase_dir.mkdir(parents=True)
+        (phase_dir / "schedule.json").write_text(
+            json.dumps({"prepare_backend": "perses", "lambda_parameter_functions": "perses-default"})
+        )
+
+    def fake_analyze_phase(phase_dir: Path, temperature_k: float = 300.0) -> dict[str, float]:
+        if phase_dir.name == "holo":
+            return {
+                "delta_g_kj_mol": 2.0,
+                "uncertainty_kj_mol": 0.2,
+                "samples": 9,
+                "minimum_samples_per_state": 3,
+            }
+        return {
+            "delta_g_kj_mol": 5.0,
+            "uncertainty_kj_mol": 0.3,
+            "samples": 9,
+            "minimum_samples_per_state": 3,
+        }
+
+    monkeypatch.setattr("scripts.fep_jorgensen.analyze.analyze_phase", fake_analyze_phase)
+    summary = analyze_leg(run_dir, include_convergence=False)
+    assert summary["primary_quantity"] == "delta_delta_g_bind"
+    assert summary["delta_delta_g_bind_kj_mol"] == pytest.approx(-3.0)
+    assert summary["delta_g_mutation_holo_kj_mol"] == pytest.approx(2.0)
+    assert summary["delta_g_mutation_apo_kj_mol"] == pytest.approx(5.0)
+
+
+def test_convergence_flags_energy_drift(tmp_path: Path) -> None:
+    phase = tmp_path / "holo"
+    windows = phase / "windows"
+    windows.mkdir(parents=True)
+    path = windows / "state_00_energies.csv"
+    with path.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["sample", "origin_state", "u_0", "u_1", "u_2"])
+        for sample in range(200):
+            writer.writerow([sample, 0, -1000.0 - sample, -1000.5 - sample, -1001.0 - sample])
+    report = diagnose_phase(phase, target_samples=200)
+    assert report["windows"][0]["status"] == "drifting"
 
 
 def test_double_mutant_analysis_sums_sequential_legs(tmp_path: Path) -> None:
@@ -256,6 +324,38 @@ def test_perses_default_staging(master: float, expected: tuple[float, float]) ->
     assert values["lambda_electrostatics_delete"] == expected[0]
     assert values["lambda_sterics_delete"] == expected[1]
     assert values["lambda_electrostatics_insert"] == expected[1]
+
+
+@pytest.mark.skipif(not perses_available(), reason="Perses/openmmtools not installed")
+def test_perses_proline_charge_difference() -> None:
+    from perses.rjmc.topology_proposal import PolymerProposalEngine
+
+    assert "PRO" in PolymerProposalEngine._aminos
+    assert PolymerProposalEngine._get_charge_difference("PRO", "HIS") == 0
+
+
+@pytest.mark.skipif(
+    os.environ.get("FEP_RUN_SLOW_PERSES_TESTS") != "1",
+    reason="full P225H Perses prep is slow; set FEP_RUN_SLOW_PERSES_TESTS=1",
+)
+@pytest.mark.skipif(not perses_available(), reason="Perses/openmmtools not installed")
+def test_perses_prepare_p225h_on_k103n_background(tmp_path: Path) -> None:
+    from scripts.fep_jorgensen.prepare import prepare
+    from scripts.fep_jorgensen.mutations import MutationLeg
+
+    leg = MutationLeg("K103N", "K103N+P225H", "P225H")
+    config = FEPConfig.for_leg(
+        leg,
+        output_dir=tmp_path,
+        wt_complex_pdb=Path("results/md_runs/K103N/rep_01/assets/K103N_md_rep01_start.pdb"),
+        prepare_backend="perses",
+    )
+    prepare(config)
+    holo = tmp_path / "legs" / leg.leg_id / "holo"
+    schedule = json.loads((holo / "schedule.json").read_text())
+    assert schedule["prepare_backend"] == "perses"
+    assert schedule["lambda_parameter_functions"] == "perses-default"
+    assert (holo / "hybrid_system.xml").is_file()
 
 
 def test_openmm_worker_and_mbar_round_trip(tmp_path: Path) -> None:

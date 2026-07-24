@@ -34,9 +34,10 @@ git pull
 # Perses hybrid for WT -> V106A (~15-20 min CPU)
 PYTHONNOUSERSITE=1 PYTHONPATH=. python -m scripts.fep_jorgensen.prepare \
   --mutation V106A \
-  --backend perses
+  --backend perses \
+  --phase all
 
-# Worker manifest for this leg only (11 lambda states)
+# Worker manifest for this leg only (11 lambda states x holo + apo = 22 GPU tasks)
 PYTHONNOUSERSITE=1 PYTHONPATH=. python -m scripts.fep_jorgensen.panel \
   --mutation V106A
 ```
@@ -45,6 +46,7 @@ Expected outputs:
 
 ```text
 results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/hybrid_system.xml
+results/analysis/fep_jorgensen/legs/wt_to_V106A/apo/hybrid_system.xml
 results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/hybrid_topology.pdb
 results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/schedule.json
 results/analysis/fep_jorgensen/worker_manifest_v106a.csv
@@ -206,26 +208,29 @@ SHERLOCK_TIME=48:00:00 SHERLOCK_MEM=32G \
 When all array tasks finish:
 
 ```bash
-# On Sherlock — quick check
-ls results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows/state_*_energies.csv | wc -l
-# expect 11
+# On Sherlock — quick check (holo + apo)
+for phase in holo apo; do
+  echo "== $phase =="
+  ls results/analysis/fep_jorgensen/legs/wt_to_V106A/$phase/windows/state_*_energies.csv | wc -l
+done
+# expect 11 per phase
 ```
 
 ```bash
 # From local Mac
 rsync -av --progress \
-  sherlock:$SCRATCH/nnrti-mechanisms/results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows/ \
-  results/analysis/fep_jorgensen/legs/wt_to_V106A/holo/windows/
+  sherlock:$SCRATCH/nnrti-mechanisms-git/results/analysis/fep_jorgensen/legs/wt_to_V106A/ \
+  results/analysis/fep_jorgensen/legs/wt_to_V106A/
 ```
 
-Analyze:
+Analyze (requires pymbar in `nnrti-prep`):
 
 ```bash
-PYTHONPATH=. python -m scripts.fep_jorgensen.analyze \
+PYTHONNOUSERSITE=1 PYTHONPATH=. python -m scripts.fep_jorgensen.convergence_cli \
   --leg-dir results/analysis/fep_jorgensen/legs/wt_to_V106A
 
-# or by target label
-PYTHONPATH=. python -m scripts.fep_jorgensen.analyze --target V106A
+PYTHONNOUSERSITE=1 PYTHONPATH=. python -m scripts.fep_jorgensen.analyze \
+  --leg-dir results/analysis/fep_jorgensen/legs/wt_to_V106A
 ```
 
 Summary lands in:

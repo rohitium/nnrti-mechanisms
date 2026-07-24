@@ -92,6 +92,30 @@ class MutationLeg:
             / f"{label}_md_rep{replicate:02d}_start.pdb"
         )
 
+    def _apo_assets_dir(self, label: str, replicate: int) -> Path:
+        return (
+            Path("results/md_runs") / "apo" / safe_label(label) / f"rep_{replicate:02d}" / "assets"
+        )
+
+    def input_apo_pdb(self, replicate: int = 1) -> Path:
+        label = safe_label(self.start_label)
+        prefix = "wt" if self.start_label == "WT" else label
+        return (
+            self._apo_assets_dir(self.start_label, replicate)
+            / f"{prefix}_apo_md_rep{replicate:02d}_start.pdb"
+        )
+
+    def input_apo_system(self, replicate: int = 1) -> Path:
+        pdb = self.input_apo_pdb(replicate)
+        return pdb.with_name(pdb.name.replace("_start.pdb", "_system.xml"))
+
+    def endpoint_apo_pdb(self, replicate: int = 1) -> Path:
+        label = safe_label(self.end_label)
+        return (
+            self._apo_assets_dir(self.end_label, replicate)
+            / f"{label}_apo_md_rep{replicate:02d}_start.pdb"
+        )
+
 
 @dataclass(frozen=True)
 class TargetPlan:

@@ -8,8 +8,27 @@ from pathlib import Path
 import time
 
 from .config import FEPConfig
-from .mutations import MutationLeg
-from .perses_hybrid import perses_available, prepare_holo_hybrid
+from .mutations import Mutation, MutationLeg
+from .openeye_shim import install_openeye_shim
+from .perses_hybrid import _configure_perses_runtime, perses_available, prepare_holo_hybrid
+from .perses_patches import patch_perses_proline_support
+
+
+def _pdb_residue_id(config: FEPConfig) -> str:
+    meta_path = config.run_dir / "prepare_backend.json"
+    if meta_path.is_file():
+        pdb_residue_id = json.loads(meta_path.read_text()).get("pdb_residue_id")
+        if pdb_residue_id:
+            return str(pdb_residue_id)
+    from .alchemical import resolve_mutation_site
+
+    site = resolve_mutation_site(
+        config.leg.input_complex_pdb(),
+        config.leg.endpoint_complex_pdb(),
+        Mutation.parse(config.mutation),
+        chain_id=config.chain_id,
+    )
+    return site.pdb_residue_id
 
 
 def _run_holo_mcmc(htf, run_dir: Path, config: FEPConfig, args) -> Path:
@@ -34,13 +53,15 @@ def _run_holo_mcmc(htf, run_dir: Path, config: FEPConfig, args) -> Path:
         splitting="V R R R O R R R V",
         constraint_tolerance=1e-6,
     )
+    n_states = args.n_states or len(config.lambda_schedule.values)
     sampler = HybridRepexSampler(mcmc_moves=move, hybrid_factory=htf)
     sampler.setup(
-        n_states=len(config.lambda_schedule.values),
+        n_states=n_states,
         temperature=config.temperature_k * unit.kelvin,
         storage_file=reporter,
         lambda_protocol=LambdaProtocol(functions="default"),
         endstates=False,
+        minimisation_steps=args.minimisation_steps,
     )
     platform = configure_platform(args.platform or utils.get_fastest_platform().getName())
     sampler.energy_context_cache = cache.ContextCache(capacity=None, time_to_live=None, platform=platform)
@@ -51,6 +72,10 @@ def _run_holo_mcmc(htf, run_dir: Path, config: FEPConfig, args) -> Path:
 
 
 def _load_hybrid_factory(config: FEPConfig):
+    _configure_perses_runtime()
+    install_openeye_shim()
+    patch_perses_proline_support()
+
     from openmm import MonteCarloBarostat, app, unit
     from perses.app.relative_point_mutation_setup import PointMutationExecutor
 
@@ -58,7 +83,7 @@ def _load_hybrid_factory(config: FEPConfig):
     return PointMutationExecutor(
         protein_filename=str(input_dir / "wt_receptor_no_ligand.pdb"),
         mutation_chain_id=config.chain_id,
-        mutation_residue_id=config.residue_id,
+        mutation_residue_id=_pdb_residue_id(config),
         proposed_residue=config.mutant_residue,
         old_residue=config.wt_residue,
         ligand_input=str(input_dir / "dor_bound_pose.sdf"),
@@ -118,7 +143,23 @@ def main() -> int:
     parser.add_argument("--timestep-fs", type=float, default=4.0)
     parser.add_argument("--collision-rate", type=float, default=5.0)
     parser.add_argument("--checkpoint-interval", type=int, default=10)
-    parser.add_argument("--platform", default="CUDA")
+    parser.add_argument(
+        "--n-states",
+        type=int,
+        default=None,
+        help="Replica count for setup (default: full lambda schedule)",
+    )
+    parser.add_argument(
+        "--minimisation-steps",
+        type=int,
+        default=100,
+        help="Minimize each lambda state before sampling",
+    )
+    parser.add_argument(
+        "--platform",
+        default="",
+        help="OpenMM platform (default: fastest available; use CPU on Mac)",
+    )
     args = parser.parse_args()
     end_label = args.end_label or args.mutation
     leg = MutationLeg(args.start_label, end_label, args.mutation)

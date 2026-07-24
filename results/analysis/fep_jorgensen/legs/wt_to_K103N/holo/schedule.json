@@ -1,0 +1,24 @@
+{
+  "phase": "holo",
+  "mutation": "K103N",
+  "start_label": "WT",
+  "end_label": "K103N",
+  "leg_id": "wt_to_K103N",
+  "lambda_values": [
+    0.0,
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    1.0
+  ],
+  "lambda_parameter_functions": "perses-default",
+  "thermodynamic_cycle": "protein-side-chain mutation in inhibitor-bound complex only",
+  "prepare_backend": "perses",
+  "input_complex_pdb": "results/md_runs/wt/rep_01/assets/wt_md_rep01_start.pdb"
+}

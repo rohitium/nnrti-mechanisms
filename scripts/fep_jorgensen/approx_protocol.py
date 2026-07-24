@@ -43,7 +43,9 @@ class ApproxJorgensenProtocol:
     equilibration_steps_per_window: int = 250_000
     production_steps_per_window: int = 2_500_000
     energy_interval_steps: int = 2_500
-    thermodynamic_cycle: str = "protein-side-chain mutation in inhibitor-bound complex only"
+    thermodynamic_cycle: str = (
+        "protein-side-chain mutation in holo and apo; ΔΔG_bind = ΔG_holo - ΔG_apo"
+    )
     reference_system: str = "WT"
     manuscript_inhibitor: str = "doravirine"
     exact_protocol_module: str = "scripts.fep_jorgensen.exact_protocol"

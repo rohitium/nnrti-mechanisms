@@ -8,6 +8,8 @@ import shlex
 from .config import FEPConfig
 from .mutations import MANUSCRIPT_TARGETS, Mutation, MutationLeg, unique_manuscript_legs
 
+DEFAULT_PHASES = ("holo", "apo")
+
 
 def legs_for_mutation(mutation: str) -> tuple[MutationLeg, ...]:
     """Return manuscript legs whose single-residue change matches ``mutation``."""
@@ -18,14 +20,20 @@ def legs_for_mutation(mutation: str) -> tuple[MutationLeg, ...]:
     return legs
 
 
-def preparation_commands(output_dir: Path, replicate: int = 1) -> list[str]:
+def preparation_commands(
+    output_dir: Path,
+    replicate: int = 1,
+    phases: tuple[str, ...] = DEFAULT_PHASES,
+) -> list[str]:
     commands = []
+    phase_flag = "all" if set(phases) == set(DEFAULT_PHASES) else phases[0]
     for leg in unique_manuscript_legs():
         commands.append(
             shlex.join(
                 [
                     "python", "-m", "scripts.fep_jorgensen.prepare",
                     "--backend", "perses",
+                    "--phase", phase_flag,
                     "--mutation", leg.mutation,
                     "--start-label", leg.start_label,
                     "--end-label", leg.end_label,
@@ -42,6 +50,7 @@ def write_worker_manifest(
     output_dir: Path,
     config: FEPConfig | None = None,
     legs: tuple[MutationLeg, ...] | None = None,
+    phases: tuple[str, ...] = DEFAULT_PHASES,
 ) -> int:
     settings = config or FEPConfig(output_dir=output_dir)
     selected_legs = legs or unique_manuscript_legs()
@@ -58,29 +67,30 @@ def write_worker_manifest(
         writer.writeheader()
         for leg in selected_legs:
             leg_dir = output_dir / "legs" / leg.leg_id
-            for state_index in range(len(settings.lambda_schedule.values)):
-                writer.writerow(
-                    {
-                        "task_id": task_id,
-                        "leg_id": leg.leg_id,
-                        "start_label": leg.start_label,
-                        "end_label": leg.end_label,
-                        "mutation": leg.mutation,
-                        "phase": "holo",
-                        "state_index": state_index,
-                        "phase_dir": leg_dir / "holo",
-                        "window_dir": leg_dir / "holo" / "windows",
-                        "temperature_k": settings.temperature_k,
-                        "timestep_fs": settings.timestep_fs,
-                        "collision_rate_per_ps": settings.collision_rate_per_ps,
-                        "equilibration_steps": settings.equilibration_steps,
-                        "production_steps": settings.production_steps,
-                        "energy_interval": settings.energy_interval,
-                        "checkpoint_interval": settings.checkpoint_interval,
-                        "platform": settings.platform,
-                    }
-                )
-                task_id += 1
+            for phase in phases:
+                for state_index in range(len(settings.lambda_schedule.values)):
+                    writer.writerow(
+                        {
+                            "task_id": task_id,
+                            "leg_id": leg.leg_id,
+                            "start_label": leg.start_label,
+                            "end_label": leg.end_label,
+                            "mutation": leg.mutation,
+                            "phase": phase,
+                            "state_index": state_index,
+                            "phase_dir": leg_dir / phase,
+                            "window_dir": leg_dir / phase / "windows",
+                            "temperature_k": settings.temperature_k,
+                            "timestep_fs": settings.timestep_fs,
+                            "collision_rate_per_ps": settings.collision_rate_per_ps,
+                            "equilibration_steps": settings.equilibration_steps,
+                            "production_steps": settings.production_steps,
+                            "energy_interval": settings.energy_interval,
+                            "checkpoint_interval": settings.checkpoint_interval,
+                            "platform": settings.platform,
+                        }
+                    )
+                    task_id += 1
     return task_id
 
 
@@ -113,9 +123,10 @@ def main() -> int:
         + "\n"
     )
     preparation_script.chmod(0o755)
+    n_legs = len(legs or unique_manuscript_legs())
     print(f"Targets: {len(MANUSCRIPT_TARGETS)}")
-    print(f"Unique alchemical legs: {len(legs or unique_manuscript_legs())}")
-    print(f"OpenMM holo worker tasks: {count}")
+    print(f"Unique alchemical legs: {n_legs}")
+    print(f"OpenMM worker tasks: {count} ({n_legs} legs x 2 phases x 11 windows)")
     print(f"Preparation script: {preparation_script}")
     print(f"Worker manifest: {manifest}")
     return 0

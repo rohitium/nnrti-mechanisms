@@ -16,6 +16,10 @@ Perses requires `numpy<2.4` for openmmtools/numba compatibility and AmberTools G
 (`openeye_shim.py`) backed by RDKit + OpenFF — no licensed OpenEye install required.
 Endstate validation is skipped because the shim objects are not deep-copyable.
 
+PRO→X mutations (e.g. P225H) require a runtime patch (`perses_patches.py`) because
+Perses omits PRO from its amino-acid registry but still asserts on it during charge
+handling.
+
 If you have a user-site NumPy in `~/.local`, prefix commands with `PYTHONNOUSERSITE=1`:
 
 ```bash
@@ -50,9 +54,34 @@ conda activate nnrti-fep
 | `analyze.py` | `nnrti-prep` (local) |
 | `worker.py` on Sherlock | `module load chemistry py-openmm/8.1.1_py312` |
 
-Perses hybrid prep extracts unsolvated protein+ligand coordinates from your existing MD
-start PDBs, then builds a solvated hybrid system with proper topology changes. It does **not**
-reuse the serialized MD `system.xml` directly — that file is endpoint-specific, not hybrid.
+Perses hybrid prep uses your existing MD assets:
+
+| Phase | Start structure | Endpoint validation |
+| --- | --- | --- |
+| **holo** | `results/md_runs/{start}/.../*_md_rep01_start.pdb` | `{end}` holo start PDB |
+| **apo** | `results/md_runs/apo/{start}/.../*_apo_md_rep01_start.pdb` | `{end}` apo start PDB |
+
+`prepare.py --phase all` (default) builds both Perses hybrids. Analysis reports
+**ΔΔG_bind = ΔG_mut(holo) − ΔG_mut(apo)** when apo windows exist.
+
+## Sampling tiers
+
+| Tier | Sampler | Where | Sherlock deps |
+| --- | --- | --- | --- |
+| **A. Fixed-λ MD windows** | `worker.py` | Sherlock GPU | `module load py-openmm` only ✓ |
+| **B. Replica-exchange MCMC** | `mcmc_sample.py` | **Local Mac** (`nnrti-prep`) | perses + openmmtools — **not** on Sherlock without a custom venv |
+| **C. Exact MCPRO** | licensed MCPRO | N/A | Documented only |
+
+Sherlock policy discourages conda. The validated production path is **Tier A** on Sherlock
+(prep + analyze local, λ windows on GPU). Tier B MCMC requires the full Perses stack; we do
+not currently support running it on Sherlock's `py-openmm` module alone. If you need MCMC
+later, options are: local GPU with `nnrti-prep`, or a `$GROUP_HOME` venv (untested on Sherlock).
+
+Check convergence before trusting MBAR:
+
+```bash
+PYTHONPATH=. python -m scripts.fep_jorgensen.convergence_cli --leg-dir results/analysis/fep_jorgensen/legs/wt_to_V106A
+```
 
 ## Workflow
 
@@ -70,14 +99,13 @@ PYTHONPATH=. python -m scripts.fep_jorgensen.analyze --all-targets
 Single leg (V106A):
 
 ```bash
-PYTHONNOUSERSITE=1 PYTHONPATH=. python -m scripts.fep_jorgensen.prepare --mutation V106A
+PYTHONNOUSERSITE=1 PYTHONPATH=. python -m scripts.fep_jorgensen.prepare --mutation V106A --phase all
 PYTHONNOUSERSITE=1 PYTHONPATH=. python -m scripts.fep_jorgensen.panel --mutation V106A
-# rsync legs/wt_to_V106A/ to Sherlock, then:
-#   bash scripts/sherlock/salloc_fep_jorgensen_gpu.sh
-#   bash scripts/sherlock/run_fep_jorgensen_pilot.sh
-#   ./scripts/sherlock/submit_fep_jorgensen_v106a_single.sh   # one full window first
-#   ./scripts/sherlock/submit_fep_jorgensen_v106a.sh          # all 11 after that validates
-PYTHONPATH=. python -m scripts.fep_jorgensen.analyze --target V106A
+# manifest now has holo + apo tasks (22 windows/leg). rsync full leg dir to Sherlock.
+#   SHERLOCK_USER=rsatija bash scripts/rsync_fep_jorgensen.sh push V106A
+#   ./scripts/sherlock/submit_fep_jorgensen_v106a.sh          # holo tasks 0-10
+#   ./scripts/sherlock/submit_fep_jorgensen_v106a_apo.sh      # apo tasks 11-21
+PYTHONNOUSERSITE=1 PYTHONPATH=. ~/miniconda3/envs/nnrti-prep/bin/python -m scripts.fep_jorgensen.analyze --target V106A
 ```
 
 ## Scaling fallback

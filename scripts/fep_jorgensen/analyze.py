@@ -1,4 +1,4 @@
-"""Local MBAR analysis for holo-only mutation FEP legs."""
+"""Local MBAR analysis for holo/apo mutation FEP legs."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .convergence import diagnose_phase
 from .mutations import MANUSCRIPT_PLANS, canonical_label, safe_label
 
 
@@ -76,35 +77,104 @@ def _analyze_multistate_reporter(reporter_path: Path, temperature_k: float) -> d
     }
 
 
-def analyze_leg(run_dir: Path, temperature_k: float | None = None) -> dict:
+def _phase_result(
+    run_dir: Path,
+    phase: str,
+    temperature: float,
+    *,
+    include_convergence: bool,
+) -> dict:
+    phase_dir = run_dir / phase
+    if not phase_dir.is_dir():
+        raise FileNotFoundError(f"Missing phase directory: {phase_dir}")
+    result = analyze_phase(phase_dir, temperature)
+    schedule = json.loads((phase_dir / "schedule.json").read_text())
+    backend = schedule.get("prepare_backend", "scaling")
+    strategy = schedule.get("alchemical_plan", {}).get("strategy", "annihilate_wt_sidechain")
+    delta_kj = result["delta_g_kj_mol"]
+    uncertainty_kj = result["uncertainty_kj_mol"]
+    if backend == "scaling" and strategy == "annihilate_mutant_sidechain":
+        delta_kj *= -1.0
+    payload = {
+        "phase": phase,
+        "delta_g_kj_mol": delta_kj,
+        "uncertainty_kj_mol": uncertainty_kj,
+        "samples": result["samples"],
+        "minimum_samples_per_state": result["minimum_samples_per_state"],
+        "prepare_backend": backend,
+        "sampling_strategy": strategy if backend == "scaling" else "perses-default",
+    }
+    if include_convergence:
+        try:
+            payload["convergence"] = diagnose_phase(phase_dir)
+        except FileNotFoundError:
+            payload["convergence"] = None
+    return payload
+
+
+def analyze_leg(
+    run_dir: Path,
+    temperature_k: float | None = None,
+    *,
+    include_convergence: bool = True,
+) -> dict:
     config_path = run_dir / "config.json"
     config = json.loads(config_path.read_text()) if config_path.exists() else {}
     temperature = float(temperature_k or config.get("temperature_k", 300.0))
-    holo = analyze_phase(run_dir / "holo", temperature)
-    holo_schedule = json.loads((run_dir / "holo" / "schedule.json").read_text())
-    backend = holo_schedule.get("prepare_backend", "scaling")
-    holo_strategy = holo_schedule.get("alchemical_plan", {}).get(
-        "strategy", "annihilate_wt_sidechain"
-    )
-    delta_kj = holo["delta_g_kj_mol"]
-    uncertainty_kj = holo["uncertainty_kj_mol"]
-    if backend == "scaling" and holo_strategy == "annihilate_mutant_sidechain":
-        delta_kj *= -1.0
+    holo = _phase_result(run_dir, "holo", temperature, include_convergence=include_convergence)
+    apo_dir = run_dir / "apo"
+    apo = None
+    if apo_dir.is_dir():
+        try:
+            apo = _phase_result(run_dir, "apo", temperature, include_convergence=include_convergence)
+        except FileNotFoundError:
+            apo = None
+
+    holo_delta = float(holo["delta_g_kj_mol"])
+    holo_unc = float(holo["uncertainty_kj_mol"])
+    if apo is not None:
+        apo_delta = float(apo["delta_g_kj_mol"])
+        apo_unc = float(apo["uncertainty_kj_mol"])
+        delta_kj = holo_delta - apo_delta
+        uncertainty_kj = math.hypot(holo_unc, apo_unc)
+        primary_quantity = "delta_delta_g_bind"
+        sign_convention = (
+            "positive means the mutation weakens inhibitor binding relative to apo baseline"
+        )
+    else:
+        delta_kj = holo_delta
+        uncertainty_kj = holo_unc
+        primary_quantity = "delta_g_mutation_holo_only"
+        sign_convention = "positive means the end-state mutation is higher in free energy"
+
     summary = {
         "leg_id": config.get("leg_id", run_dir.name),
         "start_label": config.get("start_label"),
         "end_label": config.get("end_label"),
         "mutation": config.get("mutation"),
+        "primary_quantity": primary_quantity,
         "delta_g_mutation_kj_mol": delta_kj,
         "delta_g_mutation_kcal_mol": delta_kj / 4.184,
         "uncertainty_kj_mol": uncertainty_kj,
         "uncertainty_kcal_mol": uncertainty_kj / 4.184,
-        "thermodynamic_cycle": "protein-side-chain mutation in inhibitor-bound complex",
-        "sign_convention": "positive means the end-state mutation is higher in free energy",
-        "prepare_backend": backend,
-        "sampling_strategy": holo_strategy if backend == "scaling" else "perses-default",
+        "thermodynamic_cycle": (
+            "ΔΔG_bind = ΔG_mut(holo) - ΔG_mut(apo)"
+            if apo is not None
+            else "protein-side-chain mutation in inhibitor-bound complex only"
+        ),
+        "sign_convention": sign_convention,
         "holo": holo,
+        "apo": apo,
     }
+    if apo is not None:
+        summary["delta_g_mutation_holo_kj_mol"] = holo_delta
+        summary["delta_g_mutation_holo_unc_kj_mol"] = holo_unc
+        summary["delta_g_mutation_apo_kj_mol"] = apo_delta
+        summary["delta_g_mutation_apo_unc_kj_mol"] = apo_unc
+        summary["delta_delta_g_bind_kj_mol"] = delta_kj
+        summary["delta_delta_g_bind_kcal_mol"] = delta_kj / 4.184
+        summary["delta_delta_g_bind_unc_kj_mol"] = uncertainty_kj
+        summary["delta_delta_g_bind_unc_kcal_mol"] = uncertainty_kj / 4.184
     (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     return summary
 
@@ -129,17 +199,32 @@ def analyze_target(target: str, output_dir: Path) -> dict:
     uncertainty = math.sqrt(
         sum(float(leg["uncertainty_kj_mol"]) ** 2 for leg in leg_summaries)
     )
+    has_binding_cycle = all(leg.get("apo") is not None for leg in leg_summaries)
     result = {
         "reference": "WT",
         "target": target,
+        "primary_quantity": "delta_delta_g_bind" if has_binding_cycle else "delta_g_mutation_holo_only",
         "delta_g_mutation_kj_mol": delta_g,
         "delta_g_mutation_kcal_mol": delta_g / 4.184,
         "uncertainty_kj_mol": uncertainty,
         "uncertainty_kcal_mol": uncertainty / 4.184,
-        "thermodynamic_cycle": "protein-side-chain mutation in inhibitor-bound complex",
-        "sign_convention": "positive means the target mutation costs more free energy than WT",
+        "thermodynamic_cycle": (
+            "sum of leg-wise ΔΔG_bind = ΔG_mut(holo) - ΔG_mut(apo)"
+            if has_binding_cycle
+            else "sum of holo-only mutation free energies"
+        ),
+        "sign_convention": (
+            "positive means the target mutation weakens inhibitor binding relative to WT"
+            if has_binding_cycle
+            else "positive means the target mutation costs more free energy than WT"
+        ),
         "legs": leg_summaries,
     }
+    if has_binding_cycle:
+        result["delta_delta_g_bind_kj_mol"] = delta_g
+        result["delta_delta_g_bind_kcal_mol"] = delta_g / 4.184
+        result["delta_delta_g_bind_unc_kj_mol"] = uncertainty
+        result["delta_delta_g_bind_unc_kcal_mol"] = uncertainty / 4.184
     destination = output_dir / "targets" / safe_label(target) / "summary.json"
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(result, indent=2) + "\n")
@@ -176,7 +261,7 @@ def normalize_to_reference(
 
 def main() -> int:
     p = argparse.ArgumentParser(
-        description="Analyze holo-only Jorgensen-inspired mutation FEP"
+        description="Analyze holo/apo Jorgensen-inspired mutation FEP"
     )
     group = p.add_mutually_exclusive_group(required=True)
     group.add_argument("--leg-dir", "--run-dir", dest="leg_dir", type=Path)
