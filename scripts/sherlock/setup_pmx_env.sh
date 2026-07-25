@@ -46,16 +46,22 @@ fi
 # shellcheck disable=SC1090
 source "${PMX_VENV}/bin/activate"
 
-pip install -U pip setuptools wheel
+pip install -U pip wheel
+# pmx setup.py requires setuptools~=46.0.0 (conflicts with pip's latest setuptools)
+pip install 'setuptools~=46.0.0'
 
 mkdir -p "$(dirname "${PMX_REPO}")"
 if [[ ! -d "${PMX_REPO}/.git" ]]; then
     git clone "${PMX_GIT_URL}" "${PMX_REPO}"
 fi
 
-git -C "${PMX_REPO}" fetch origin
-git -C "${PMX_REPO}" checkout "${PMX_BRANCH}"
-git -C "${PMX_REPO}" pull --ff-only origin "${PMX_BRANCH}" || true
+# git -C requires git >= 1.8.5; Sherlock default git is older
+(
+    cd "${PMX_REPO}"
+    git fetch origin
+    git checkout "${PMX_BRANCH}"
+    git pull --ff-only origin "${PMX_BRANCH}" || true
+)
 
 pip install -U "${PMX_REPO}"
 
