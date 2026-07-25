@@ -82,16 +82,23 @@ for leg in "${LEGS[@]}"; do
                 continue
             fi
             echo "→ ${leg} ${phase} rep${rep}"
-            extra=()
             if [[ "${FORCE}" == "1" ]]; then
-                extra+=(--force)
-            fi
-            if python scripts/fep_pmx/build_solvated_system.py \
+                if python scripts/fep_pmx/build_solvated_system.py \
+                    --leg "${leg}" \
+                    --phase "${phase}" \
+                    --replicate "${rep}" \
+                    --gmxlib "${GMXLIB}" \
+                    --force; then
+                    OK=$((OK + 1))
+                else
+                    echo "FAILED ${leg} ${phase} rep${rep}" >&2
+                    FAIL=$((FAIL + 1))
+                fi
+            elif python scripts/fep_pmx/build_solvated_system.py \
                 --leg "${leg}" \
                 --phase "${phase}" \
                 --replicate "${rep}" \
-                --gmxlib "${GMXLIB}" \
-                "${extra[@]}"; then
+                --gmxlib "${GMXLIB}"; then
                 OK=$((OK + 1))
             else
                 echo "FAILED ${leg} ${phase} rep${rep}" >&2
