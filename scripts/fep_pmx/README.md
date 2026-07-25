@@ -38,10 +38,13 @@ python scripts/fep_pmx/export_dor_itp.py
 # 3) pmx hybrid structures for P0 legs (all reps × holo/apo)
 conda activate pmx
 bash scripts/fep_pmx/prepare_p0_hybrids.sh
-# or single leg:
-python scripts/fep_pmx/prepare_hybrid.py --leg wt_to_V106A --phase holo --replicate 1
 
-# 4) Y188L apo MD (P0 blocker — assets exist, trajectories missing)
+# 4) GROMACS solvated hybrid systems (Sherlock login — needs gmx + GMXLIB)
+source scripts/sherlock/load_gromacs_module.sh
+conda activate pmx
+REPLICATES=1 bash scripts/fep_pmx/build_p0_systems.sh   # smoke: rep01 only
+
+# 5) Y188L apo MD (P0 blocker — assets exist, trajectories missing)
 #    Smoke test on interactive GPU first, then batch:
 bash scripts/fep_pmx/salloc_apo_gpu.sh
 bash scripts/fep_pmx/test_y188l_apo_gpu.sh

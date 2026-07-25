@@ -15,3 +15,9 @@ LIGAND_SDF = Path("data/ligands/dor.sdf")
 LIGAND_RESNAME = "2KW"
 
 P0_LEGS = ("wt_to_V106A", "wt_to_Y188L")
+
+# Match OpenMM MD prep (md_protocol.py / manuscript)
+SOLVENT_PADDING_NM = 1.0
+IONIC_STRENGTH_M = 0.15
+BOX_TYPE = "dodecahedron"
+WATER_MODEL = "tip3p"
