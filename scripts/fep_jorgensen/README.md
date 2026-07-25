@@ -72,10 +72,10 @@ Perses hybrid prep uses your existing MD assets:
 | **B. Replica-exchange MCMC** | `mcmc_sample.py` | **Local Mac** (`nnrti-prep`) | perses + openmmtools — **not** on Sherlock without a custom venv |
 | **C. Exact MCPRO** | licensed MCPRO | N/A | Documented only |
 
-Sherlock policy discourages conda. The validated production path is **Tier A** on Sherlock
-(prep + analyze local, λ windows on GPU). Tier B MCMC requires the full Perses stack; we do
-not currently support running it on Sherlock's `py-openmm` module alone. If you need MCMC
-later, options are: local GPU with `nnrti-prep`, or a `$GROUP_HOME` venv (untested on Sherlock).
+Sherlock policy discourages conda. Tier A completed a V106A pilot but **failed at λ≥0.8**
+(see Pilot findings below). Do not batch the full manifest until the truncated-site protocol
+lands. Tier B MCMC requires the full Perses stack; we do not currently support running it on
+Sherlock's `py-openmm` module alone.
 
 Check convergence before trusting MBAR:
 
@@ -126,3 +126,34 @@ nonbonded interactions. Faster to set up, but ghost-atom bonded artifacts remain
 
 See `exact_protocol.py` and `docs/Jorgensen-FEP-protocol.md`. Do not label OpenMM/Perses
 results as exact MCPRO reproduction.
+
+## Pilot findings (`wt_to_V106A`, Sherlock Tier A)
+
+Full-protein Perses hybrid + fixed-λ windows (11 states × holo/apo, 5 ns/window) completed
+for V106A. **Do not scale this panel without protocol changes.**
+
+| Finding | Detail |
+| --- | --- |
+| Residue numbering | Manuscript **V106A** = PDB **`VAL103`** on chain A (`prepare_backend.json` tracks both). |
+| λ 0–0.7 | Cross-state energies stable; MBAR on states 0–7 gives ΔΔG_bind ≈ +1.4 kcal/mol (bootstrap ±0.02 kcal/mol). |
+| λ 0.8–1.0 | **Endpoint failure:** configs sampled at high λ have Val CG1/CG2 interactions turned off; MBAR re-eval at low λ turns methyls back on → intermittent steric blowups (up to ~10⁶ kJ/mol). Not fixed by longer production. |
+| `convergence.py` drift | Own-state `u_k` drift (~1 MJ/mol) is common-mode box energy; **misleading**. Use cross-state spread / clash fraction instead. |
+| Magnitudes | Full-path ΔG_mut ≈ −18 kcal/mol per leg is non-physical; treat current MBAR as diagnostic only. |
+
+**Root cause:** we ran **full-solvated Perses hybrids** (~200k atoms, PME). Jorgensen/MCPRO used a
+**truncated NNRTI pocket** (~120 residues), **fixed backbone**, ~10 Å flexible side chains, and a
+**22 Å water cap** ([JACS 2000](https://doi.org/10.1021/ja003113r),
+[Smith et al. 2007](https://doi.org/10.1016/j.bmcl.2007.12.033)). That is a different, cheaper
+problem — not Perses AREX ([JCTC 2023](https://doi.org/10.1021/acs.jctc.3c00333)).
+
+## Planned next protocol (separate branch)
+
+**Jorgensen-shaped truncated-site OpenMM FEP:**
+
+1. Extract ~15 Å DOR-bound pocket from existing MD assets.
+2. Fixed backbone; flexible pocket side chains + ligand.
+3. Small explicit solvent (or cap); holo + apo thermodynamic cycle.
+4. ~10 λ windows; pilot V106A / Y188L / K103N vs manuscript fold-change before batching.
+
+Goal: ΔΔG_bind(mut − WT) for Doravirine resistance, comparable in spirit to Jorgensen Table 2,
+without hundreds of full-protein GPU windows.
