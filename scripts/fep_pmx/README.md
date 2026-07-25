@@ -51,4 +51,26 @@ bash scripts/fep_pmx/test_y188l_apo_gpu.sh
 bash scripts/fep_pmx/submit_y188l_apo_md.sh
 ```
 
+## NEQ workflow (Sherlock GPU)
+
+After solvated hybrids exist (`build_p0_systems.sh`):
+
+```bash
+# 1) Generate per-leg NEQ dirs + panel manifest (mdp templates, snapshot schedule)
+NEQ_SNAPSHOTS=10 REPLICATES=1 bash scripts/fep_pmx/prepare_p0_neq.sh   # smoke
+# NEQ_SNAPSHOTS=100 REPLICATES=3 bash scripts/fep_pmx/prepare_p0_neq.sh  # production
+
+# 2) Submit in dependency order (wait each wave to finish)
+STAGE=em      bash scripts/fep_pmx/submit_p0_neq.sh
+STAGE=equil   bash scripts/fep_pmx/submit_p0_neq.sh
+STAGE=extract bash scripts/fep_pmx/submit_p0_neq.sh
+STAGE=switch  bash scripts/fep_pmx/submit_p0_neq.sh
+# Y188L switches are 500 ps — use STAGE=switch SHERLOCK_TIME=03:00:00 if needed
+
+# 3) BAR analysis (Mac or Sherlock login with pmx)
+conda activate pmx
+python scripts/fep_pmx/analyze_neq.py --leg wt_to_V106A --phase holo --replicate 1
+python scripts/fep_pmx/analyze_neq.py --leg wt_to_V106A --phase apo --replicate 1
+# ΔΔG_bind = ΔG_mut(holo) − ΔG_mut(apo)
+
 Outputs land under `results/analysis/fep_pmx/`.
