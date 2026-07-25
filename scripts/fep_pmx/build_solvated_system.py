@@ -120,7 +120,16 @@ def build_solvated_system(
     )
 
     gentop = subprocess.run(
-        ["pmx", "gentop", "-p", "topol.top", "-o", "topol_hybrid.top"],
+        [
+            "pmx",
+            "gentop",
+            "-p",
+            "topol.top",
+            "-o",
+            "topol_hybrid.top",
+            "-ff",
+            force_field,
+        ],
         cwd=out_dir,
         env=env,
         capture_output=True,

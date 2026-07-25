@@ -199,7 +199,16 @@ def prepare_hybrid(
             cwd=out_dir,
         )
         subprocess.run(
-            ["pmx", "gentop", "-p", str(topol_top), "-o", str(out_dir / "hybrid.top")],
+            [
+                "pmx",
+                "gentop",
+                "-p",
+                str(topol_top),
+                "-o",
+                str(out_dir / "hybrid.top"),
+                "-ff",
+                force_field,
+            ],
             check=True,
             env={**os.environ, "GMXLIB": gmxlib} if gmxlib else os.environ,
             cwd=out_dir,
