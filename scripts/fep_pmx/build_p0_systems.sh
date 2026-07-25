@@ -25,15 +25,25 @@ if [[ -f scripts/sherlock/load_gromacs_module.sh ]]; then
     source scripts/sherlock/load_gromacs_module.sh
 fi
 
-# pmx mutff
+# pmx mutff (Sherlock venv or conda)
+PMX_VENV="${PMX_VENV:-$HOME/.venvs/pmx}"
+if ! command -v pmx >/dev/null 2>&1 && [[ -f "${PMX_VENV}/bin/activate" ]]; then
+    # shellcheck disable=SC1090
+    source "${PMX_VENV}/bin/activate"
+fi
 if command -v conda >/dev/null 2>&1; then
     # shellcheck disable=SC1091
     source "$(conda info --base)/etc/profile.d/conda.sh"
     conda activate "${PMX_CONDA_ENV:-pmx}" 2>/dev/null || true
 fi
 
-if [[ -z "${GMXLIB:-}" ]] && command -v python >/dev/null 2>&1; then
-    export GMXLIB="$(python - <<'PY'
+if command -v module >/dev/null 2>&1; then
+    module load python/3.9.0 2>/dev/null || module load python/3.12.1 2>/dev/null || true
+fi
+PYTHON="${PYTHON:-python3}"
+
+if [[ -z "${GMXLIB:-}" ]] && command -v "${PYTHON}" >/dev/null 2>&1; then
+    export GMXLIB="$("${PYTHON}" - <<'PY'
 import os
 try:
     import pmx
@@ -49,7 +59,8 @@ if ! command -v gmx >/dev/null 2>&1; then
     exit 1
 fi
 if ! command -v pmx >/dev/null 2>&1; then
-    echo "ERROR: pmx not found. Run: bash scripts/fep_pmx/setup_pmx_env.sh" >&2
+    echo "ERROR: pmx not found. On Sherlock: source ~/.venvs/pmx/bin/activate" >&2
+    echo "       Or install: bash scripts/sherlock/setup_pmx_env.sh" >&2
     exit 1
 fi
 if [[ -z "${GMXLIB:-}" ]]; then
@@ -83,7 +94,7 @@ for leg in "${LEGS[@]}"; do
             fi
             echo "→ ${leg} ${phase} rep${rep}"
             if [[ "${FORCE}" == "1" ]]; then
-                if python scripts/fep_pmx/build_solvated_system.py \
+                if "${PYTHON}" scripts/fep_pmx/build_solvated_system.py \
                     --leg "${leg}" \
                     --phase "${phase}" \
                     --replicate "${rep}" \
@@ -94,7 +105,7 @@ for leg in "${LEGS[@]}"; do
                     echo "FAILED ${leg} ${phase} rep${rep}" >&2
                     FAIL=$((FAIL + 1))
                 fi
-            elif python scripts/fep_pmx/build_solvated_system.py \
+            elif "${PYTHON}" scripts/fep_pmx/build_solvated_system.py \
                 --leg "${leg}" \
                 --phase "${phase}" \
                 --replicate "${rep}" \
