@@ -47,8 +47,8 @@ fi
 source "${PMX_VENV}/bin/activate"
 
 pip install -U pip wheel
-# pmx setup.py requires setuptools~=46.0.0 (conflicts with pip's latest setuptools)
-pip install 'setuptools~=46.0.0'
+# pmx setup.py requires setuptools~=46.0.0; pip build isolation pulls latest setuptools → conflict
+pip install 'setuptools~=46.0.0' numpy scipy matplotlib future
 
 mkdir -p "$(dirname "${PMX_REPO}")"
 if [[ ! -d "${PMX_REPO}/.git" ]]; then
@@ -63,7 +63,7 @@ fi
     git pull --ff-only origin "${PMX_BRANCH}" || true
 )
 
-pip install -U "${PMX_REPO}"
+pip install --no-build-isolation -U "${PMX_REPO}"
 
 if ! command -v pmx >/dev/null 2>&1; then
     echo "pmx CLI not on PATH after install" >&2
