@@ -119,9 +119,18 @@ def test_complete_manuscript_panel_has_continuous_single_residue_legs() -> None:
 
 def test_v106a_apo_md_assets_exist() -> None:
     leg = MutationLeg("WT", "V106A", "V106A")
+    assert leg.input_apo_pdb().as_posix().endswith("results/md_runs/apo/v106a/rep_01/assets/v106a_apo_md_rep01_start.pdb")
     assert leg.input_apo_pdb().is_file()
     assert leg.endpoint_apo_pdb().is_file()
     assert leg.endpoint_complex_pdb().is_file()
+
+
+def test_y188l_apo_paths_use_lowercase() -> None:
+    leg = MutationLeg("WT", "Y188L", "Y188L")
+    apo = leg.input_apo_pdb()
+    assert "/apo/y188l/" in apo.as_posix()
+    assert apo.name == "wt_apo_md_rep01_start.pdb"
+    assert leg.endpoint_apo_pdb().name == "y188l_apo_md_rep01_start.pdb"
 
 
 def test_panel_prepare_commands_default_to_perses_backend() -> None:

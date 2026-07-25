@@ -23,6 +23,11 @@ def safe_label(label: str) -> str:
     return "wt" if value == "WT" else value.replace("+", "_")
 
 
+def apo_safe_label(label: str) -> str:
+    """Filesystem label for apo MD dirs/files (always lowercase on disk)."""
+    return safe_label(label).lower()
+
+
 def mutation_tokens(label: str) -> tuple[str, ...]:
     value = canonical_label(label)
     if value == "WT":
@@ -94,12 +99,11 @@ class MutationLeg:
 
     def _apo_assets_dir(self, label: str, replicate: int) -> Path:
         return (
-            Path("results/md_runs") / "apo" / safe_label(label) / f"rep_{replicate:02d}" / "assets"
+            Path("results/md_runs") / "apo" / apo_safe_label(label) / f"rep_{replicate:02d}" / "assets"
         )
 
     def input_apo_pdb(self, replicate: int = 1) -> Path:
-        label = safe_label(self.start_label)
-        prefix = "wt" if self.start_label == "WT" else label
+        prefix = apo_safe_label(self.start_label)
         return (
             self._apo_assets_dir(self.start_label, replicate)
             / f"{prefix}_apo_md_rep{replicate:02d}_start.pdb"
@@ -110,10 +114,10 @@ class MutationLeg:
         return pdb.with_name(pdb.name.replace("_start.pdb", "_system.xml"))
 
     def endpoint_apo_pdb(self, replicate: int = 1) -> Path:
-        label = safe_label(self.end_label)
+        prefix = apo_safe_label(self.end_label)
         return (
             self._apo_assets_dir(self.end_label, replicate)
-            / f"{label}_apo_md_rep{replicate:02d}_start.pdb"
+            / f"{prefix}_apo_md_rep{replicate:02d}_start.pdb"
         )
 
 

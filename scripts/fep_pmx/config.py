@@ -1,0 +1,17 @@
+"""Shared configuration for pmx + GROMACS NEQ FEP."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+FEP_PMX_ROOT = Path("results/analysis/fep_pmx")
+LEG_INPUTS = FEP_PMX_ROOT / "inputs"
+DOR_ITP_DIR = LEG_INPUTS / "dor_openff"
+
+PMX_FORCE_FIELD = "amber14sbmut"
+PMX_FORCE_FIELD_LABEL = "amber14sb-star-ildn-mut"  # pdb2gmx -ff name when using mut library
+OPENFF_FORCE_FIELD = "openff-2.0.0.offxml"
+LIGAND_SDF = Path("data/ligands/dor.sdf")
+LIGAND_RESNAME = "2KW"
+
+P0_LEGS = ("wt_to_V106A", "wt_to_Y188L")
