@@ -2,6 +2,10 @@
 
 Reference: Rizzo, R. C., Wang, D. P., Tirado-Rives, J., & Jorgensen, W. L. (2000). Validation of a model for the complex of HIV-1 reverse transcriptase with sustiva through computation of resistance profiles. Journal of the American Chemical Society, 122(51), 12898-12900.
 
+For the merged OpenMM/openmmtools approximation used in this repository, see
+[`docs/Jorgensen-approx-FEP-protocol.md`](Jorgensen-approx-FEP-protocol.md) and
+`scripts/fep_jorgensen/README.md`.
+
 # FEP Protocol for Table 2 Relative Fold Resistance Energies
 
 ## Overview

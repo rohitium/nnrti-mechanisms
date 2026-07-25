@@ -3,14 +3,16 @@ channels:
   - conda-forge
 dependencies:
   - python=3.10
+  - numpy<2.4
   - perses=0.10.3
   - openmmtools
   - openmmforcefields
+  - ambertools
+  # Install OpenEye separately on licensed Linux hosts (see docs/perses_point_mutation_fep.md).
   - openff-toolkit
-  - openeye-toolkits
   - pdbfixer
   - pymbar
   - mdtraj
   - mdanalysis
   - pandas
-  - numpy
+  - rdkit
