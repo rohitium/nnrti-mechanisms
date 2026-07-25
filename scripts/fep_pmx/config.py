@@ -9,7 +9,8 @@ LEG_INPUTS = FEP_PMX_ROOT / "inputs"
 DOR_ITP_DIR = LEG_INPUTS / "dor_openff"
 
 PMX_FORCE_FIELD = "amber14sbmut"
-PMX_FORCE_FIELD_LABEL = "amber14sb-star-ildn-mut"  # pdb2gmx -ff name when using mut library
+# pdb2gmx -ff must match the *.ff directory name under GMXLIB/mutff (not amber14SB label).
+PMX_FORCE_FIELD_LABEL = "amber14sbmut"
 OPENFF_FORCE_FIELD = "openff-2.0.0.offxml"
 LIGAND_SDF = Path("data/ligands/dor.sdf")
 LIGAND_RESNAME = "2KW"
