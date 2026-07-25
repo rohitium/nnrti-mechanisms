@@ -35,8 +35,10 @@ python scripts/fep_pmx/asset_manifest.py
 conda activate nnrti-prep
 python scripts/fep_pmx/export_dor_itp.py
 
-# 3) pmx hybrid structure for first leg
+# 3) pmx hybrid structures for P0 legs (all reps × holo/apo)
 conda activate pmx
+bash scripts/fep_pmx/prepare_p0_hybrids.sh
+# or single leg:
 python scripts/fep_pmx/prepare_hybrid.py --leg wt_to_V106A --phase holo --replicate 1
 
 # 4) Y188L apo MD (P0 blocker — assets exist, trajectories missing)

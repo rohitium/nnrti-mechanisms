@@ -31,3 +31,18 @@ def extract_protein_only(
         raise ValueError(f"No protein atoms found in {source_pdb}")
     protein_pdb.write_text("\n".join(protein_lines + ["END", ""]))
     return protein_pdb
+
+
+def normalize_openmm_for_pmx(protein_pdb: Path) -> None:
+    """Rename OpenMM/CHARMM atom labels to names pmx amber14sbmut expects."""
+    lines = protein_pdb.read_text().splitlines()
+    normalized: list[str] = []
+    for line in lines:
+        if line.startswith(("ATOM", "HETATM")):
+            name = line[12:16].strip()
+            if name == "HB2":
+                line = line[:12] + " HB1" + line[16:]
+            elif name == "HB3":
+                line = line[:12] + " HB2" + line[16:]
+        normalized.append(line)
+    protein_pdb.write_text("\n".join(normalized + ["END", ""]))

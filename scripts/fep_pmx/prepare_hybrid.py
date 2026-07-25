@@ -17,7 +17,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from scripts.fep_jorgensen.alchemical import MutationSite, resolve_mutation_site
 from scripts.fep_jorgensen.mutations import Mutation, MutationLeg, unique_manuscript_legs
-from scripts.fep_jorgensen.structure import extract_protein_only
+from scripts.fep_jorgensen.structure import extract_protein_only, normalize_openmm_for_pmx
 from scripts.fep_pmx.config import FEP_PMX_ROOT, LIGAND_RESNAME, PMX_FORCE_FIELD
 
 
@@ -80,6 +80,7 @@ def _run_pmx_mutate(
     script_path: Path,
     force_field: str,
     gmxlib: str | None,
+    endpoint_pdb: Path | None = None,
 ) -> None:
     env = os.environ.copy()
     if gmxlib:
@@ -97,6 +98,8 @@ def _run_pmx_mutate(
         str(script_path),
         "--keep_resid",
     ]
+    if endpoint_pdb is not None:
+        cmd.extend(["-fB", str(endpoint_pdb)])
     subprocess.run(cmd, check=True, env=env)
 
 
@@ -117,6 +120,7 @@ def prepare_hybrid(
 
     site = _resolve_site(leg, phase, replicate, chain_id)
     source = _source_pdb(leg, phase, replicate)
+    endpoint = _endpoint_pdb(leg, phase, replicate)
     protein_pdb = out_dir / "protein_input.pdb"
     extract_protein_only(
         source,
@@ -124,6 +128,18 @@ def prepare_hybrid(
         ligand_resname=LIGAND_RESNAME,
         output_name=protein_pdb.name,
     )
+    normalize_openmm_for_pmx(protein_pdb)
+
+    endpoint_protein_pdb: Path | None = None
+    if endpoint.is_file():
+        endpoint_protein_pdb = out_dir / "endpoint_protein.pdb"
+        extract_protein_only(
+            endpoint,
+            out_dir,
+            ligand_resname=LIGAND_RESNAME,
+            output_name=endpoint_protein_pdb.name,
+        )
+        normalize_openmm_for_pmx(endpoint_protein_pdb)
 
     script_path = out_dir / "mutation.script"
     _write_mutation_script(script_path, chain_id, site.pdb_residue_id, site.new_residue)
@@ -134,6 +150,7 @@ def prepare_hybrid(
         script_path=script_path,
         force_field=force_field,
         gmxlib=gmxlib,
+        endpoint_pdb=endpoint_protein_pdb,
     )
 
     residue_map = {
@@ -149,6 +166,7 @@ def prepare_hybrid(
         "pmx_force_field": force_field,
         "source_complex_pdb": str(source),
         "protein_input_pdb": str(protein_pdb),
+        "endpoint_protein_pdb": str(endpoint_protein_pdb) if endpoint_protein_pdb else None,
         "hybrid_pdb": str(hybrid_pdb),
     }
     (out_dir / "residue_map.json").write_text(json.dumps(residue_map, indent=2) + "\n")
