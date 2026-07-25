@@ -40,9 +40,10 @@ conda activate pmx
 python scripts/fep_pmx/prepare_hybrid.py --leg wt_to_V106A --phase holo --replicate 1
 
 # 4) Y188L apo MD (P0 blocker — assets exist, trajectories missing)
-conda activate nnrti-openmm   # or GPU env on Sherlock
-python scripts/fep_pmx/run_apo_md.py --mutations Y188L --production-ns 100
-# Sherlock: bash scripts/fep_pmx/submit_y188l_apo_md.sh
+#    Smoke test on interactive GPU first, then batch:
+bash scripts/fep_pmx/salloc_apo_gpu.sh
+bash scripts/fep_pmx/test_y188l_apo_gpu.sh
+bash scripts/fep_pmx/submit_y188l_apo_md.sh
 ```
 
 Outputs land under `results/analysis/fep_pmx/`.
