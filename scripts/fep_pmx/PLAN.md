@@ -260,7 +260,7 @@ SLURM GPU jobs: `#SBATCH -p gpu -G 1`; use `gmx_cuda -nb gpu` (or `-gpu_id 0`).
 
 | Component | Install | Where |
 | --- | --- | --- |
-| **pmx** | `pip install pmx` or **develop** branch (P225H); venv in `$GROUP_HOME` or project | Mac prep + Sherlock login |
+| **pmx** | `bash scripts/sherlock/setup_pmx_env.sh` — [deGrootLab/pmx](https://github.com/deGrootLab/pmx) **`develop`**; **not** `pip install pmx` (wrong PyPI package) | Mac prep + Sherlock login |
 | **pmx analyze** | same venv | Mac or login |
 | **OpenMM / OpenFF DOR `.itp`** | existing Mac env | **Mac** — not mixed into GROMACS GPU jobs |
 | **Schrodinger FEP+** (optional) | `module load chemistry schrodinger/2024-1` | External P0 benchmark only |
@@ -297,6 +297,7 @@ scripts/fep_pmx/
 
 scripts/sherlock/
   load_gromacs_module.sh # chemistry gromacs/2023.1 + gmx_cuda (see PLAN §7.1)
+  setup_pmx_env.sh       # deGrootLab/pmx develop branch (NOT PyPI pmx)
   connect.sh, remote.sh
 
 results/analysis/fep_pmx/
