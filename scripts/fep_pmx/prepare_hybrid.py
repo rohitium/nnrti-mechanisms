@@ -19,6 +19,7 @@ from scripts.fep_jorgensen.alchemical import MutationSite, resolve_mutation_site
 from scripts.fep_jorgensen.mutations import Mutation, MutationLeg, unique_manuscript_legs
 from scripts.fep_jorgensen.structure import extract_protein_only, normalize_openmm_for_pmx
 from scripts.fep_pmx.config import FEP_PMX_ROOT, LIGAND_RESNAME, PMX_FORCE_FIELD
+from scripts.fep_pmx.gromacs_utils import normalize_hybrid_his_for_pdb2gmx
 
 
 def _leg_by_id(leg_id: str) -> MutationLeg:
@@ -152,6 +153,7 @@ def prepare_hybrid(
         gmxlib=gmxlib,
         endpoint_pdb=endpoint_protein_pdb,
     )
+    normalize_hybrid_his_for_pdb2gmx(hybrid_pdb)
 
     residue_map = {
         "leg_id": leg.leg_id,

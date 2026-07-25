@@ -47,6 +47,63 @@ def run_gmx(
     return proc
 
 
+_GENERIC_HIS_RESNAMES = frozenset({"HIS", "HSD", "HSE", "HSP", "HISD", "HISE", "HISH"})
+
+
+def _amber_his_resname(atom_names: set[str]) -> str:
+    """Infer Amber histidine protonation from input hydrogen names."""
+    has_hd1 = "HD1" in atom_names
+    has_he2 = "HE2" in atom_names
+    if has_hd1 and has_he2:
+        return "HIP"
+    if has_hd1:
+        return "HID"
+    if has_he2:
+        return "HIE"
+    return "HIE"
+
+
+def normalize_hybrid_his_for_pdb2gmx(pdb_path: Path) -> int:
+    """Rename generic HIS residues so pdb2gmx uses input protonation.
+
+    OpenMM MD structures export HIS with HD1/HE2 atom names but generic HIS
+    resnames. pdb2gmx then reassigns protonation via its H-bond network and
+    fails when input atoms (e.g. HD1) do not match the chosen state (HIE).
+    """
+    lines = pdb_path.read_text().splitlines()
+    residue_atoms: dict[tuple[str, str, str], set[str]] = {}
+    atom_line_indices: dict[tuple[str, str, str], list[int]] = {}
+
+    for idx, line in enumerate(lines):
+        if not line.startswith(("ATOM", "HETATM")):
+            continue
+        resname = line[17:20].strip()
+        if resname not in _GENERIC_HIS_RESNAMES and resname not in {"HID", "HIE", "HIP"}:
+            continue
+        key = (line[21], line[22:26].strip(), resname)
+        atom_name = line[12:16].strip()
+        residue_atoms.setdefault(key, set()).add(atom_name)
+        atom_line_indices.setdefault(key, []).append(idx)
+
+    renames: dict[tuple[str, str, str], str] = {}
+    for key, atoms in residue_atoms.items():
+        _, _, resname = key
+        if resname in {"HID", "HIE", "HIP"}:
+            continue
+        renames[key] = _amber_his_resname(atoms)
+
+    if not renames:
+        return 0
+
+    for key, new_resname in renames.items():
+        for idx in atom_line_indices[key]:
+            line = lines[idx]
+            lines[idx] = f"{line[:17]}{new_resname:>3s}{line[20:]}"
+
+    pdb_path.write_text("\n".join(lines) + ("\n" if lines else ""))
+    return len(renames)
+
+
 def parse_gro_atom_count(gro_path: Path) -> int:
     lines = gro_path.read_text().splitlines()
     if len(lines) < 2:

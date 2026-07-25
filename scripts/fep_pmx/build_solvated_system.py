@@ -31,6 +31,7 @@ from scripts.fep_pmx.gromacs_utils import (
     count_net_charge_from_top,
     extract_ligand_coords_nm,
     find_gmx,
+    normalize_hybrid_his_for_pdb2gmx,
     parse_dor_atom_names,
     parse_gro_atom_count,
     run_gmx,
@@ -88,6 +89,7 @@ def build_solvated_system(
 
     work_hybrid = out_dir / "hybrid.pdb"
     shutil.copy2(hybrid_pdb, work_hybrid)
+    normalize_hybrid_his_for_pdb2gmx(work_hybrid)
 
     conf_gro = out_dir / "conf.gro"
     topol_top = out_dir / "topol.top"
