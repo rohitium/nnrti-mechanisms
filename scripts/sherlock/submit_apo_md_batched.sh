@@ -52,12 +52,18 @@ MUTATION_ALLOWLIST="${MUTATION_ALLOWLIST:-}"
 
 APO_RUNS_ROOT="${APO_RUNS_ROOT:-results/md_runs/apo}"
 
+# Login-node default python3 may be 3.6; reconcile_md_metadata needs >=3.7
+if command -v module >/dev/null 2>&1; then
+    module load python/3.9.0 2>/dev/null || module load python/3.12.1 2>/dev/null || true
+fi
+PYTHON="${PYTHON:-python3}"
+
 if ! command -v jq >/dev/null 2>&1; then
     echo "ERROR: jq is required for JSON status checks." >&2
     exit 1
 fi
 
-TARGET_STEPS="$(python3 - <<PY
+TARGET_STEPS="$("${PYTHON}" - <<PY
 ns = float("${MD_PRODUCTION_NS}")
 print(max(1, int(round((ns * 1_000_000.0) / 2.0))))
 PY
@@ -83,7 +89,7 @@ if [ -n "${MUTATION_ALLOWLIST}" ]; then
 fi
 echo ""
 
-python3 scripts/sherlock/reconcile_md_metadata.py \
+"${PYTHON}" scripts/sherlock/reconcile_md_metadata.py \
     --root . \
     --include-apo \
     --target-ns "${MD_PRODUCTION_NS}" \
