@@ -31,6 +31,10 @@ SYSTEM_XML="${ASSETS}/${MUTATION}_apo_md_rep${REP}_system.xml"
 TOPOLOGY_PDB="${ASSETS}/${MUTATION}_apo_md_rep${REP}_start.pdb"
 HOLO_REP="results/md_runs/Y188L/rep_${REP}"
 MINIMIZED_PDB="${HOLO_REP}/Y188L_minimized_rep${REP}.pdb"
+if [[ ! -f "$MINIMIZED_PDB" ]]; then
+    # run_prepared_md ignores this; only stored in output JSON metadata
+    MINIMIZED_PDB="$TOPOLOGY_PDB"
+fi
 OUTPUT_JSON="${PARENT}/${MUTATION}_apo_rep${REP}_TEST.json"
 
 echo "=========================================="
@@ -58,7 +62,7 @@ for i in range(Platform.getNumPlatforms()):
 PY
 
 MISSING=0
-for f in "$SYSTEM_XML" "$TOPOLOGY_PDB" "$MINIMIZED_PDB"; do
+for f in "$SYSTEM_XML" "$TOPOLOGY_PDB"; do
     if [[ ! -f "$f" ]]; then
         echo "ERROR: missing $f" >&2
         MISSING=1
@@ -66,6 +70,11 @@ for f in "$SYSTEM_XML" "$TOPOLOGY_PDB" "$MINIMIZED_PDB"; do
         echo "✓ $f"
     fi
 done
+if [[ -f "${HOLO_REP}/Y188L_minimized_rep${REP}.pdb" ]]; then
+    echo "✓ ${HOLO_REP}/Y188L_minimized_rep${REP}.pdb"
+else
+    echo "⚠ holo minimized PDB missing; using apo topology for JSON metadata only"
+fi
 if [[ "$MISSING" -eq 1 ]]; then
     echo ""
     echo "Sync apo assets to Sherlock if needed, e.g.:"
