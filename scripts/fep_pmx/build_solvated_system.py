@@ -35,7 +35,7 @@ from scripts.fep_pmx.gromacs_utils import (
     parse_dor_atom_names,
     parse_gro_atom_count,
     run_gmx,
-    write_dor_molecule_itp,
+    write_dor_ligand_itps,
     write_ligand_gro,
     write_merged_gro,
 )
@@ -147,8 +147,13 @@ def build_solvated_system(
         if not dor_top.is_file():
             raise FileNotFoundError(f"Missing DOR topology: {dor_top}")
 
+        ligand_atomtypes_itp = out_dir / "dor_atomtypes.itp"
         ligand_itp = out_dir / "dor.itp"
-        write_dor_molecule_itp(dor_top, ligand_itp)
+        write_dor_ligand_itps(
+            dor_top,
+            atomtypes_itp=ligand_atomtypes_itp,
+            molecule_itp=ligand_itp,
+        )
         atom_names = parse_dor_atom_names(dor_top, LIGAND_RESNAME)
         source_complex = _source_pdb(leg, phase, replicate)
         coords = extract_ligand_coords_nm(
@@ -176,6 +181,7 @@ def build_solvated_system(
         shutil.copy2(hybrid_top, holo_top)
         append_ligand_to_topology(
             holo_top,
+            ligand_atomtypes_itp=ligand_atomtypes_itp,
             ligand_itp=ligand_itp,
             ligand_name=LIGAND_RESNAME,
             output_top=out_dir / "topol_holo_merged.top",

@@ -214,21 +214,63 @@ def write_ligand_gro(
     output_gro.write_text("".join(lines))
 
 
-def write_dor_molecule_itp(dor_top: Path, output_itp: Path) -> None:
-    """Strip [ system ] / [ molecules ] from exported OpenFF top → molecule .itp."""
+def write_dor_ligand_itps(
+    dor_top: Path,
+    *,
+    atomtypes_itp: Path,
+    molecule_itp: Path,
+) -> None:
+    """Split OpenFF dor.top into atomtypes + molecule itps for protein merge."""
     lines = dor_top.read_text().splitlines(keepends=True)
-    out: list[str] = []
+    atomtypes_lines: list[str] = []
+    molecule_lines: list[str] = []
+    section: str | None = None
+
     for line in lines:
         stripped = line.strip()
-        if stripped.startswith("[ system ]") or stripped.startswith("[ molecules ]"):
+        if stripped.startswith("[") and stripped.endswith("]"):
+            section = stripped[1:-1].strip().lower()
+            if section == "defaults":
+                continue
+            if section in ("system", "molecules"):
+                break
+            if section == "atomtypes":
+                atomtypes_lines.append(line)
+                continue
+            if section == "moleculetype" or molecule_lines:
+                molecule_lines.append(line)
+                continue
+            continue
+        if section == "atomtypes":
+            atomtypes_lines.append(line)
+        elif section not in (None, "defaults") and (section == "moleculetype" or molecule_lines):
+            molecule_lines.append(line)
+
+    if not atomtypes_lines or not molecule_lines:
+        raise ValueError(f"Failed to split ligand topology from {dor_top}")
+
+    atomtypes_itp.write_text("".join(atomtypes_lines))
+    molecule_itp.write_text("".join(molecule_lines))
+
+
+def _ligand_atomtypes_insert_index(lines: list[str]) -> int:
+    """Return index to insert ligand atomtypes after forcefield includes."""
+    last_ff_include = 0
+    first_molecule_include = len(lines)
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("#include") and ".ff/" in stripped:
+            last_ff_include = i + 1
+        elif stripped.startswith("#include"):
+            first_molecule_include = i
             break
-        out.append(line)
-    output_itp.write_text("".join(out))
+    return first_molecule_include if first_molecule_include < len(lines) else last_ff_include
 
 
 def append_ligand_to_topology(
     protein_top: Path,
     *,
+    ligand_atomtypes_itp: Path,
     ligand_itp: Path,
     ligand_name: str,
     output_top: Path,
@@ -245,6 +287,10 @@ def append_ligand_to_topology(
     if molecules_idx is None:
         raise ValueError(f"No [ molecules ] section in {protein_top}")
 
+    atomtypes_idx = _ligand_atomtypes_insert_index(out)
+    out.insert(atomtypes_idx, f'#include "{ligand_atomtypes_itp.name}"\n')
+
+    molecules_idx += 1
     rel_itp = ligand_itp.name
     out.insert(molecules_idx, f'#include "{rel_itp}"\n')
     molecules_idx += 1
