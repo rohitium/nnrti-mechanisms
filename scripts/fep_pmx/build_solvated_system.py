@@ -109,7 +109,6 @@ def build_solvated_system(
             force_field,
             "-water",
             WATER_MODEL,
-            "-ignh",
             "-merge",
             "no",
         ],
