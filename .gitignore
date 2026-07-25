@@ -237,6 +237,14 @@ results/analysis/fep_jorgensen/legs/**/summary.json
 results/analysis/fep_jorgensen/legs/**/mcmc_summary.json
 results/analysis/fep_jorgensen/targets/
 
+# FEP archive: Perses hybrids are large (~100 MB/system); keep locally, not in git
+results/analysis/fep_jorgensen/_archive/**/hybrid_system.xml
+results/analysis/fep_jorgensen/_archive/**/hybrid_topology.pdb
+results/analysis/fep_jorgensen/_archive/**/windows/
+results/analysis/fep_jorgensen/_archive/**/multistate*.nc
+results/analysis/fep_jorgensen/legs/**/hybrid_system.xml
+results/analysis/fep_jorgensen/legs/**/hybrid_topology.pdb
+
 # Operational status scratch files; keep the committed Sherlock reconciliation audit only.
 results/.status/complete_at_target.txt
 results/.status/incomplete_not_running.txt

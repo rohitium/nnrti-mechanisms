@@ -1,0 +1,12 @@
+{
+  "backend": "perses",
+  "replicate": 1,
+  "phases": [
+    "holo"
+  ],
+  "protein_pdb": "results/analysis/fep_jorgensen/legs/V106I_to_V106I_F227C/inputs/wt_receptor_no_ligand.pdb",
+  "ligand_sdf": "results/analysis/fep_jorgensen/legs/V106I_to_V106I_F227C/inputs/dor_bound_pose.sdf",
+  "source_pdb": "results/md_runs/V106I/rep_01/assets/V106I_md_rep01_start.pdb",
+  "auth_residue_id": "227",
+  "pdb_residue_id": "224"
+}
