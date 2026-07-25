@@ -73,8 +73,8 @@ Perses hybrid prep uses your existing MD assets:
 | **C. Exact MCPRO** | licensed MCPRO | N/A | Documented only |
 
 Sherlock policy discourages conda. Tier A completed a V106A pilot but **failed at λ≥0.8**
-(see Pilot findings below). Do not batch the full manifest until the truncated-site protocol
-lands. Tier B MCMC requires the full Perses stack; we do not currently support running it on
+(see Pilot findings below). Do not batch the full Perses manifest — use
+[`scripts/fep_pmx/`](../fep_pmx/) instead. Tier B MCMC requires the full Perses stack; we do not currently support running it on
 Sherlock's `py-openmm` module alone.
 
 Check convergence before trusting MBAR:
@@ -146,14 +146,10 @@ for V106A. **Do not scale this panel without protocol changes.**
 [Smith et al. 2007](https://doi.org/10.1016/j.bmcl.2007.12.033)). That is a different, cheaper
 problem — not Perses AREX ([JCTC 2023](https://doi.org/10.1021/acs.jctc.3c00333)).
 
-## Planned next protocol (separate branch)
+## Planned next protocol
 
-**Jorgensen-shaped truncated-site OpenMM FEP:**
+**pmx + GROMACS NEQ on full solvated systems** — see [`scripts/fep_pmx/PLAN.md`](../fep_pmx/PLAN.md).
 
-1. Extract ~15 Å DOR-bound pocket from existing MD assets.
-2. Fixed backbone; flexible pocket side chains + ligand.
-3. Small explicit solvent (or cap); holo + apo thermodynamic cycle.
-4. ~10 λ windows; pilot V106A / Y188L / K103N vs manuscript fold-change before batching.
-
-Goal: ΔΔG_bind(mut − WT) for Doravirine resistance, comparable in spirit to Jorgensen Table 2,
-without hundreds of full-protein GPU windows.
+Replaces the earlier truncated-sphere OpenMM plan. Method: Aldeghi/Gapsys/de Groot NEQ
+(ACS Cent. Sci. 2018) for ΔΔG_bind upon protein mutation; kinase resistance follow-up 2019.
+P0: V106A + Y188L; full panel ~1,700 GPU-h on Sherlock.
