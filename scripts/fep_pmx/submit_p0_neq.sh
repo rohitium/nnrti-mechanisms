@@ -46,8 +46,13 @@ if ! command -v sbatch >/dev/null 2>&1; then
     exit 1
 fi
 
+if command -v module >/dev/null 2>&1; then
+    module load python/3.9.0 2>/dev/null || module load python/3.12.1 2>/dev/null || true
+fi
+PYTHON="${PYTHON:-python3}"
+
 TASK_IDS="$(
-python - <<PY
+"${PYTHON}" - <<PY
 import csv
 from pathlib import Path
 

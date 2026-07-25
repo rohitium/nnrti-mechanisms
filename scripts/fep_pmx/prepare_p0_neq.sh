@@ -16,9 +16,14 @@ NEQ_SNAPSHOTS="${NEQ_SNAPSHOTS:-100}"
 REPLICATES="${REPLICATES:-1}"
 FORCE="${FORCE:-0}"
 
+if command -v module >/dev/null 2>&1; then
+    module load python/3.9.0 2>/dev/null || module load python/3.12.1 2>/dev/null || true
+fi
+PYTHON="${PYTHON:-python3}"
+
 args=(--replicates "${REPLICATES}" --n-snapshots "${NEQ_SNAPSHOTS}")
 if [[ "${FORCE}" == "1" ]]; then
     args+=(--force)
 fi
 
-python scripts/fep_pmx/prepare_neq.py "${args[@]}"
+"${PYTHON}" scripts/fep_pmx/prepare_neq.py "${args[@]}"
