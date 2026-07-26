@@ -99,6 +99,10 @@ def prepare_neq(
 
     neq = _neq_dir(leg_id, phase, replicate)
     if neq.is_dir() and (neq / "neq_manifest.csv").is_file() and not force:
+        neq.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(gro, neq / "system.gro")
+        shutil.copy2(top, neq / "system.top")
+        _copy_topology_bundle(build, neq, top)
         return neq / "neq_manifest.csv"
 
     if force and neq.is_dir():
