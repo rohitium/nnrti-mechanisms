@@ -226,6 +226,118 @@ def prepare_neq(
     return manifest_path
 
 
+def refresh_switch_schedule(
+    leg_id: str,
+    *,
+    phase: str,
+    replicate: int,
+    n_snapshots: int,
+) -> Path:
+    """Update switch task schedule without rebuilding em/equil/extract (safe mid-pipeline)."""
+    neq = _neq_dir(leg_id, phase, replicate)
+    manifest_path = neq / "neq_manifest.csv"
+    if not manifest_path.is_file():
+        raise FileNotFoundError(f"Missing NEQ manifest: {manifest_path}")
+
+    with manifest_path.open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        fieldnames = reader.fieldnames
+        if not fieldnames:
+            raise ValueError(f"Empty manifest: {manifest_path}")
+        rows = list(reader)
+
+    prefix = [row for row in rows if row["stage"] != "switch"]
+    if not prefix:
+        raise ValueError(f"No em/equil/extract rows in {manifest_path}")
+
+    switch_ps = switch_ps_for_leg(leg_id)
+    snapshot_times = _snapshot_times_ps(n_snapshots)
+    task_id = max(int(row["task_id"]) for row in prefix) + 1
+    direction_by_lambda = {0: "fwd", 1: "rev"}
+
+    for lambda_state in (0, 1):
+        direction = direction_by_lambda[lambda_state]
+        snap_dir = neq / f"snapshots/lambda{lambda_state}"
+        snap_dir.mkdir(parents=True, exist_ok=True)
+        for idx, time_ps in enumerate(snapshot_times):
+            (neq / "switches" / f"{direction}_{idx:03d}").mkdir(parents=True, exist_ok=True)
+            prefix.append(
+                {
+                    "task_id": task_id,
+                    "leg_id": leg_id,
+                    "phase": phase,
+                    "replicate": replicate,
+                    "stage": "switch",
+                    "lambda_state": lambda_state,
+                    "direction": direction,
+                    "snapshot_index": idx,
+                    "snapshot_time_ps": f"{time_ps:.3f}",
+                    "switch_ps": switch_ps,
+                    "run_dir": f"switches/{direction}_{idx:03d}",
+                }
+            )
+            task_id += 1
+
+    with manifest_path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(prefix)
+
+    meta_path = neq / "neq_prepare.json"
+    meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
+    meta.update(
+        {
+            "leg_id": leg_id,
+            "phase": phase,
+            "replicate": replicate,
+            "n_snapshots": n_snapshots,
+            "switch_ps": switch_ps,
+            "equil_ns": NEQ_EQUIL_NS,
+            "snapshot_times_ps": snapshot_times,
+            "manifest": str(manifest_path),
+            "n_tasks": len(prefix),
+        }
+    )
+    meta_path.write_text(json.dumps(meta, indent=2) + "\n")
+    return manifest_path
+
+
+def rebuild_panel_manifest(
+    *,
+    legs: tuple[str, ...],
+    phases: tuple[str, ...],
+    replicates: range,
+    output: Path,
+) -> Path:
+    """Rebuild panel manifest from existing per-leg neq_manifest.csv files."""
+    rows: list[dict[str, str]] = []
+    offset = 0
+    for leg_id in legs:
+        for phase in phases:
+            for replicate in replicates:
+                manifest = _neq_dir(leg_id, phase, replicate) / "neq_manifest.csv"
+                if not manifest.is_file():
+                    raise FileNotFoundError(f"Missing per-leg manifest: {manifest}")
+                with manifest.open(newline="") as handle:
+                    reader = csv.DictReader(handle)
+                    for row in reader:
+                        row = dict(row)
+                        row["panel_task_id"] = str(offset + int(row["task_id"]))
+                        rows.append(row)
+                offset = len(rows)
+
+    if not rows:
+        raise ValueError("No manifest rows found")
+
+    fieldnames = ["panel_task_id", *[k for k in rows[0].keys() if k != "panel_task_id"]]
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+    return output
+
+
 def build_panel_manifest(
     *,
     legs: tuple[str, ...],
@@ -277,6 +389,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--n-snapshots", type=int, default=NEQ_SNAPSHOTS_DEFAULT)
     parser.add_argument("--force", action="store_true")
     parser.add_argument(
+        "--refresh-switch-only",
+        action="store_true",
+        help="Update switch schedule + snapshot times only (keep em/equil/extract; safe while jobs run)",
+    )
+    parser.add_argument(
+        "--rebuild-panel-only",
+        action="store_true",
+        help="Rebuild panel CSV from existing per-leg manifests (after refresh-switch-only)",
+    )
+    parser.add_argument(
         "--panel-manifest",
         type=Path,
         default=FEP_PMX_ROOT / "neq_panel_manifest.csv",
@@ -284,6 +406,41 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--replicates", type=int, default=1, help="Panel mode: reps 1..N")
     args = parser.parse_args(argv)
+
+    if args.rebuild_panel_only:
+        manifest = rebuild_panel_manifest(
+            legs=P0_LEGS,
+            phases=("holo", "apo"),
+            replicates=range(1, args.replicates + 1),
+            output=args.panel_manifest,
+        )
+        print(f"Rebuilt panel NEQ manifest: {manifest}")
+        return 0
+
+    if args.refresh_switch_only:
+        if args.leg:
+            refresh_switch_schedule(
+                args.leg,
+                phase=args.phase,
+                replicate=args.replicate,
+                n_snapshots=args.n_snapshots,
+            )
+            print(f"Refreshed switch schedule: {args.leg} {args.phase} rep{args.replicate}")
+            return 0
+        for leg_id in P0_LEGS:
+            for phase in ("holo", "apo"):
+                for replicate in range(1, args.replicates + 1):
+                    refresh_switch_schedule(
+                        leg_id,
+                        phase=phase,
+                        replicate=replicate,
+                        n_snapshots=args.n_snapshots,
+                    )
+        print(
+            f"Refreshed switch schedule for P0 panel "
+            f"({args.n_snapshots} snapshots / {args.replicates} reps)"
+        )
+        return 0
 
     if args.leg:
         manifest = prepare_neq(
