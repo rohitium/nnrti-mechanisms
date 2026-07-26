@@ -4,7 +4,7 @@
 #
 # Usage:
 #   bash scripts/fep_pmx/prepare_p0_neq.sh
-#   NEQ_SNAPSHOTS=5 REPLICATES=3 FORCE=1 bash scripts/fep_pmx/prepare_p0_neq.sh  # refresh mdps/manifest; keeps outputs
+#   NEQ_SNAPSHOTS=100 REPLICATES=3 FORCE=1 bash scripts/fep_pmx/prepare_p0_neq.sh  # refresh mdps/manifest; keeps outputs
 #   REFRESH_MDPS_ONLY=1 bash scripts/fep_pmx/prepare_p0_neq.sh                 # mdps only, no manifest rewrite
 #
 set -euo pipefail
@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
 
-NEQ_SNAPSHOTS="${NEQ_SNAPSHOTS:-5}"
+NEQ_SNAPSHOTS="${NEQ_SNAPSHOTS:-100}"
 REPLICATES="${REPLICATES:-1}"
 FORCE="${FORCE:-0}"
 REBUILD_PANEL_ONLY="${REBUILD_PANEL_ONLY:-0}"

@@ -28,11 +28,32 @@ NEQ_TEMPERATURE_K = 300.0
 NEQ_DT_PS = 0.002
 NEQ_EQUIL_NS = 5.0
 NEQ_SWITCH_PS_DEFAULT = 100.0
-# P0 panel: 12 systems × 2 λ endpoints × n_snapshots switch tasks (5 → 120 total).
-NEQ_SNAPSHOTS_DEFAULT = 5
+# P0 panel: 12 systems × bundled switch tasks (36 at 100 snapshots; see docs/pmx-neq-fep-plan.md §7.2).
+NEQ_SNAPSHOTS_DEFAULT = 100
 NEQ_EQUIL_SNAPSHOT_START_PS = 100.0  # skip first 100 ps of equil when extracting
 LONG_SWITCH_LEGS = frozenset({"wt_to_Y188L", "wt_to_G190E"})
 LONG_SWITCH_PS = 500.0
+
+# SLURM array bundling: snapshots executed sequentially per GPU job (see docs/pmx-neq-fep-plan.md §7).
+SWITCH_SNAPSHOTS_PER_TASK_DEFAULT = 100
+SWITCH_SNAPSHOTS_PER_TASK_LONG = 50  # 500 ps switches → ~15 h/task at 50 snaps
+
+
+def switch_snapshots_per_task(leg_id: str) -> int:
+    """Max NEQ switches run sequentially in one GPU array element."""
+    if leg_id in LONG_SWITCH_LEGS:
+        return SWITCH_SNAPSHOTS_PER_TASK_LONG
+    return SWITCH_SNAPSHOTS_PER_TASK_DEFAULT
+
+
+def switch_bundle_ranges(n_snapshots: int, leg_id: str) -> list[tuple[int, int]]:
+    """Inclusive (start, end) snapshot index ranges for bundled switch tasks."""
+    chunk = switch_snapshots_per_task(leg_id)
+    ranges: list[tuple[int, int]] = []
+    for start in range(0, n_snapshots, chunk):
+        end = min(start + chunk, n_snapshots) - 1
+        ranges.append((start, end))
+    return ranges
 
 
 def switch_ps_for_leg(leg_id: str) -> float:

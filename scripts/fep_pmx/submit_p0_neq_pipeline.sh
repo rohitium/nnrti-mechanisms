@@ -6,7 +6,7 @@
 # EM/extract use normal partition (CPU); equil/switch use gpu.
 #
 # Usage:
-#   NEQ_SNAPSHOTS=5 REPLICATES=3 FORCE=1 bash scripts/fep_pmx/prepare_p0_neq.sh
+#   NEQ_SNAPSHOTS=100 REPLICATES=3 FORCE=1 bash scripts/fep_pmx/prepare_p0_neq.sh
 #   bash scripts/fep_pmx/submit_p0_neq_pipeline.sh
 #
 # Optional:

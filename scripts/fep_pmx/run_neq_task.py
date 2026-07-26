@@ -50,6 +50,7 @@ def _mdrun(
     deffnm: str,
     env: dict[str, str],
     use_gpu: bool = True,
+    checkpoint_min: float | None = None,
 ) -> None:
     ntmpi, ntomp = _mdrun_threads()
     args = [
@@ -62,6 +63,8 @@ def _mdrun(
         "-ntomp",
         str(ntomp),
     ]
+    if checkpoint_min is not None:
+        args.extend(["-cpt", str(checkpoint_min)])
     if use_gpu:
         args.extend(["-nb", "gpu", "-gpu_id", "0"])
     else:
@@ -128,7 +131,7 @@ def _run_equil(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, gm
         cwd=work,
         env=env,
     )
-    _mdrun(gmx_mdrun, cwd=work, deffnm="equil", env=env, use_gpu=True)
+    _mdrun(gmx_mdrun, cwd=work, deffnm="equil", env=env, use_gpu=True, checkpoint_min=5.0)
     (work / "status.json").write_text(
         json.dumps({"stage": "equil", "lambda_state": lambda_state, "status": "ok"}) + "\n"
     )
@@ -186,7 +189,7 @@ def _run_switch(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, g
     direction = row["direction"]
     snapshot_index = int(row["snapshot_index"])
     lambda_state = int(row["lambda_state"])
-    work = neq / row["run_dir"]
+    work = neq / f"switches/{direction}_{snapshot_index:03d}"
     work.mkdir(parents=True, exist_ok=True)
     if (work / "dgdl.xvg").is_file() and (work / "status.json").is_file():
         return
@@ -195,8 +198,8 @@ def _run_switch(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, g
     if not frame_gro.is_file():
         raise FileNotFoundError(f"Missing snapshot: {frame_gro}")
 
-    frame_rel = Path("..") / "snapshots" / f"lambda{lambda_state}" / f"frame_{snapshot_index:03d}.gro"
-    trr_rel = Path("..") / f"eq_lambda{lambda_state}" / "equil.trr"
+    frame_rel = Path("..") / ".." / "snapshots" / f"lambda{lambda_state}" / f"frame_{snapshot_index:03d}.gro"
+    trr_rel = Path("..") / ".." / f"eq_lambda{lambda_state}" / "equil.trr"
     if not (neq / f"eq_lambda{lambda_state}" / "equil.trr").is_file():
         raise FileNotFoundError(
             f"Missing {neq / f'eq_lambda{lambda_state}' / 'equil.trr'} "
@@ -211,7 +214,7 @@ def _run_switch(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, g
         [
             "grompp",
             "-f",
-            f"../mdp/{mdp_name}",
+            f"../../mdp/{mdp_name}",
             "-c",
             frame_rel.as_posix(),
             "-t",
@@ -219,7 +222,7 @@ def _run_switch(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, g
             "-time",
             str(time_ps),
             "-p",
-            "../system.top",
+            "../../system.top",
             "-o",
             "switch.tpr",
             "-maxwarn",
@@ -228,7 +231,7 @@ def _run_switch(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, g
         cwd=work,
         env=env,
     )
-    _mdrun(gmx_mdrun, cwd=work, deffnm="switch", env=env, use_gpu=True)
+    _mdrun(gmx_mdrun, cwd=work, deffnm="switch", env=env, use_gpu=True, checkpoint_min=5.0)
     dhdl = work / "switch.dhdl.xvg"
     if dhdl.is_file() and not (work / "dgdl.xvg").exists():
         dhdl.rename(work / "dgdl.xvg")
@@ -239,6 +242,45 @@ def _run_switch(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, g
                 "direction": direction,
                 "snapshot_index": snapshot_index,
                 "time_ps": time_ps,
+                "status": "ok",
+            }
+        )
+        + "\n"
+    )
+
+
+def _run_switch_bundle(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, gmx_mdrun: str) -> None:
+    start = int(row["snapshot_index"])
+    end_raw = row.get("snapshot_index_end", "")
+    end = int(end_raw) if end_raw not in ("", None) else start
+    bundle_dir = neq / row["run_dir"]
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    direction = row["direction"]
+    if all(
+        (neq / f"switches/{direction}_{idx:03d}" / "dgdl.xvg").is_file()
+        for idx in range(start, end + 1)
+    ):
+        return
+
+    bundle_marker = bundle_dir / "status.json"
+    completed = 0
+    for idx in range(start, end + 1):
+        sub_row = {
+            **row,
+            "snapshot_index": str(idx),
+            "run_dir": f"switches/{row['direction']}_{idx:03d}",
+        }
+        _run_switch(neq, sub_row, env, gmx, gmx_mdrun)
+        completed += 1
+
+    bundle_marker.write_text(
+        json.dumps(
+            {
+                "stage": "switch_bundle",
+                "direction": row["direction"],
+                "snapshot_index_start": start,
+                "snapshot_index_end": end,
+                "n_switches": completed,
                 "status": "ok",
             }
         )
@@ -261,7 +303,7 @@ def run_task(manifest: Path, task_id: int) -> None:
     elif stage == "extract":
         _run_extract(neq, row, env, gmx)
     elif stage == "switch":
-        _run_switch(neq, row, env, gmx, gmx_mdrun)
+        _run_switch_bundle(neq, row, env, gmx, gmx_mdrun)
     else:
         raise ValueError(f"Unknown stage: {stage}")
 

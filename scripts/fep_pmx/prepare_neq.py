@@ -20,6 +20,7 @@ from scripts.fep_pmx.config import (
     NEQ_EQUIL_SNAPSHOT_START_PS,
     NEQ_SNAPSHOTS_DEFAULT,
     P0_LEGS,
+    switch_bundle_ranges,
     switch_ps_for_leg,
 )
 from scripts.fep_pmx.mdp_utils import render_em_mdp, render_npt_eq_mdp, render_nonequil_mdp
@@ -138,6 +139,7 @@ def prepare_neq(
             "lambda_state": "",
             "direction": "",
             "snapshot_index": "",
+            "snapshot_index_end": "",
             "snapshot_time_ps": "",
             "switch_ps": "",
             "run_dir": "em",
@@ -156,6 +158,7 @@ def prepare_neq(
                 "lambda_state": lambda_state,
                 "direction": "",
                 "snapshot_index": "",
+                "snapshot_index_end": "",
                 "snapshot_time_ps": "",
                 "switch_ps": "",
                 "run_dir": f"eq_lambda{lambda_state}",
@@ -173,6 +176,7 @@ def prepare_neq(
                 "lambda_state": lambda_state,
                 "direction": "",
                 "snapshot_index": "",
+                "snapshot_index_end": "",
                 "snapshot_time_ps": "",
                 "switch_ps": "",
                 "run_dir": f"snapshots/lambda{lambda_state}",
@@ -183,7 +187,7 @@ def prepare_neq(
     direction_by_lambda = {0: "fwd", 1: "rev"}
     for lambda_state in (0, 1):
         direction = direction_by_lambda[lambda_state]
-        for idx, time_ps in enumerate(snapshot_times):
+        for start_idx, end_idx in switch_bundle_ranges(n_snapshots, leg_id):
             manifest_rows.append(
                 {
                     "task_id": task_id,
@@ -193,13 +197,16 @@ def prepare_neq(
                     "stage": "switch",
                     "lambda_state": lambda_state,
                     "direction": direction,
-                    "snapshot_index": idx,
-                    "snapshot_time_ps": f"{time_ps:.3f}",
+                    "snapshot_index": start_idx,
+                    "snapshot_index_end": end_idx,
+                    "snapshot_time_ps": f"{snapshot_times[start_idx]:.3f}",
                     "switch_ps": switch_ps,
-                    "run_dir": f"switches/{direction}_{idx:03d}",
+                    "run_dir": f"switches/{direction}_bundle{start_idx:03d}",
                 }
             )
             task_id += 1
+            for idx in range(start_idx, end_idx + 1):
+                (neq / "switches" / f"{direction}_{idx:03d}").mkdir(parents=True, exist_ok=True)
 
     manifest_path = neq / "neq_manifest.csv"
     fieldnames = list(manifest_rows[0].keys())
@@ -258,8 +265,9 @@ def refresh_switch_schedule(
         direction = direction_by_lambda[lambda_state]
         snap_dir = neq / f"snapshots/lambda{lambda_state}"
         snap_dir.mkdir(parents=True, exist_ok=True)
-        for idx, time_ps in enumerate(snapshot_times):
-            (neq / "switches" / f"{direction}_{idx:03d}").mkdir(parents=True, exist_ok=True)
+        for start_idx, end_idx in switch_bundle_ranges(n_snapshots, leg_id):
+            for idx in range(start_idx, end_idx + 1):
+                (neq / "switches" / f"{direction}_{idx:03d}").mkdir(parents=True, exist_ok=True)
             prefix.append(
                 {
                     "task_id": task_id,
@@ -269,10 +277,11 @@ def refresh_switch_schedule(
                     "stage": "switch",
                     "lambda_state": lambda_state,
                     "direction": direction,
-                    "snapshot_index": idx,
-                    "snapshot_time_ps": f"{time_ps:.3f}",
+                    "snapshot_index": start_idx,
+                    "snapshot_index_end": end_idx,
+                    "snapshot_time_ps": f"{snapshot_times[start_idx]:.3f}",
                     "switch_ps": switch_ps,
-                    "run_dir": f"switches/{direction}_{idx:03d}",
+                    "run_dir": f"switches/{direction}_bundle{start_idx:03d}",
                 }
             )
             task_id += 1

@@ -25,7 +25,7 @@ source scripts/sherlock/activate_pmx_env.sh
 PYTHON="${PYTHON:-python3}"
 
 # Sync topology + mdps (no --force unless FORCE=1; never wipes completed outputs).
-PREP_ARGS=(--leg "${LEG}" --phase "${PHASE}" --replicate "${REP}" --n-snapshots "${NEQ_SNAPSHOTS:-5}")
+PREP_ARGS=(--leg "${LEG}" --phase "${PHASE}" --replicate "${REP}" --n-snapshots "${NEQ_SNAPSHOTS:-100}")
 if [[ "${FORCE:-0}" == "1" ]]; then
     PREP_ARGS+=(--force)
 fi

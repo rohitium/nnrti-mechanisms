@@ -61,11 +61,18 @@ def _task_ok(row: dict[str, str]) -> tuple[bool, str]:
         return True, f"{len(frames)} frames in {snap_dir}"
 
     if stage == "switch":
-        work = neq / row["run_dir"]
-        dgdl = work / "dgdl.xvg"
-        if dgdl.is_file() and (work / "status.json").is_file():
-            return True, str(dgdl)
-        return False, f"missing {dgdl}"
+        start = int(row["snapshot_index"])
+        end_raw = row.get("snapshot_index_end", "")
+        end = int(end_raw) if end_raw not in ("", None) else start
+        direction = row["direction"]
+        missing: list[str] = []
+        for idx in range(start, end + 1):
+            dgdl = neq / f"switches/{direction}_{idx:03d}" / "dgdl.xvg"
+            if not dgdl.is_file():
+                missing.append(str(dgdl))
+        if not missing:
+            return True, f"{end - start + 1} switches {direction} [{start}-{end}]"
+        return False, f"missing {len(missing)}/{end - start + 1} (first: {missing[0]})"
 
     return False, f"unknown stage {stage}"
 
@@ -111,13 +118,22 @@ def audit_manifest(manifest: Path) -> int:
                 )
         print()
 
-    # Per leg-phase-rep rollup for switch (what BAR needs)
-    units: dict[tuple[str, str, int], dict[str, int]] = defaultdict(lambda: {"switch_ok": 0, "switch_total": 0})
-    for ok, row, _ in by_stage.get("switch", []):
+    # Per leg-phase-rep rollup: count individual switches (not bundle tasks)
+    units: dict[tuple[str, str, int], dict[str, int]] = defaultdict(
+        lambda: {"switch_ok": 0, "switch_total": 0}
+    )
+    for _ok, row, _ in by_stage.get("switch", []):
         key = (row["leg_id"], row["phase"], int(row["replicate"]))
-        units[key]["switch_total"] += 1
-        if ok:
-            units[key]["switch_ok"] += 1
+        start = int(row["snapshot_index"])
+        end_raw = row.get("snapshot_index_end", "")
+        end = int(end_raw) if end_raw not in ("", None) else start
+        n = end - start + 1
+        units[key]["switch_total"] += n
+        direction = row["direction"]
+        neq = _neq_root(row)
+        for idx in range(start, end + 1):
+            if (neq / f"switches/{direction}_{idx:03d}" / "dgdl.xvg").is_file():
+                units[key]["switch_ok"] += 1
 
     if units:
         print("=== SWITCH BY SYSTEM (for BAR) ===")
