@@ -1,17 +1,17 @@
 #!/bin/bash
 #
-# Submit pmx NEQ jobs for P0 legs on Sherlock (GPU).
+# Submit pmx NEQ jobs for P0 legs on Sherlock.
 #
-# Run in order:
-#   bash scripts/fep_pmx/prepare_p0_neq.sh
+# Single stage:
 #   STAGE=em      bash scripts/fep_pmx/submit_p0_neq.sh
 #   STAGE=equil   bash scripts/fep_pmx/submit_p0_neq.sh
-#   STAGE=extract bash scripts/fep_pmx/submit_p0_neq.sh
-#   STAGE=switch  bash scripts/fep_pmx/submit_p0_neq.sh
 #
-# Smoke test (few snapshots):
+# Full pipeline (one command, SLURM dependency chain):
+#   bash scripts/fep_pmx/submit_p0_neq_pipeline.sh
+#
+# Smoke test:
 #   NEQ_SNAPSHOTS=10 REPLICATES=1 bash scripts/fep_pmx/prepare_p0_neq.sh
-#   STAGE=switch NEQ_SNAPSHOTS=10 bash scripts/fep_pmx/submit_p0_neq.sh
+#   STAGE=switch bash scripts/fep_pmx/submit_p0_neq.sh
 #
 set -euo pipefail
 
@@ -21,17 +21,36 @@ cd "$PROJECT_ROOT"
 
 STAGE="${STAGE:-${1:-switch}}"
 MANIFEST="${MANIFEST:-results/analysis/fep_pmx/neq_panel_manifest.csv}"
-SHERLOCK_PARTITION="${SHERLOCK_PARTITION:-gpu}"
-SHERLOCK_GRES="${SHERLOCK_GRES:-gpu:1}"
 SHERLOCK_QOS="${SHERLOCK_QOS:-}"
 SHERLOCK_MAX_CONCURRENT="${SHERLOCK_MAX_CONCURRENT:-20}"
 SHERLOCK_CPUS_PER_TASK="${SHERLOCK_CPUS_PER_TASK:-4}"
+DEPENDENCY="${DEPENDENCY:-}"
 
 case "${STAGE}" in
-    em)      SHERLOCK_TIME="${SHERLOCK_TIME:-01:00:00}"; SHERLOCK_MEM="${SHERLOCK_MEM:-16G}" ;;
-    equil)   SHERLOCK_TIME="${SHERLOCK_TIME:-06:00:00}"; SHERLOCK_MEM="${SHERLOCK_MEM:-32G}" ;;
-    extract) SHERLOCK_TIME="${SHERLOCK_TIME:-01:00:00}"; SHERLOCK_MEM="${SHERLOCK_MEM:-16G}" ;;
-    switch)  SHERLOCK_TIME="${SHERLOCK_TIME:-01:00:00}"; SHERLOCK_MEM="${SHERLOCK_MEM:-16G}" ;;
+    em)
+        SHERLOCK_PARTITION="${SHERLOCK_PARTITION:-normal}"
+        SHERLOCK_GRES="${SHERLOCK_GRES:-}"
+        SHERLOCK_TIME="${SHERLOCK_TIME:-02:00:00}"
+        SHERLOCK_MEM="${SHERLOCK_MEM:-16G}"
+        ;;
+    equil)
+        SHERLOCK_PARTITION="${SHERLOCK_PARTITION:-gpu}"
+        SHERLOCK_GRES="${SHERLOCK_GRES:-gpu:1}"
+        SHERLOCK_TIME="${SHERLOCK_TIME:-08:00:00}"
+        SHERLOCK_MEM="${SHERLOCK_MEM:-32G}"
+        ;;
+    extract)
+        SHERLOCK_PARTITION="${SHERLOCK_PARTITION:-normal}"
+        SHERLOCK_GRES="${SHERLOCK_GRES:-}"
+        SHERLOCK_TIME="${SHERLOCK_TIME:-02:00:00}"
+        SHERLOCK_MEM="${SHERLOCK_MEM:-16G}"
+        ;;
+    switch)
+        SHERLOCK_PARTITION="${SHERLOCK_PARTITION:-gpu}"
+        SHERLOCK_GRES="${SHERLOCK_GRES:-gpu:1}"
+        SHERLOCK_TIME="${SHERLOCK_TIME:-02:00:00}"
+        SHERLOCK_MEM="${SHERLOCK_MEM:-16G}"
+        ;;
     *)
         echo "Unknown STAGE=${STAGE}. Use em|equil|extract|switch." >&2
         exit 1
@@ -96,20 +115,34 @@ echo "Manifest:  ${MANIFEST}"
 echo "Stage:     ${STAGE}"
 echo "Tasks:     ${TASK_IDS}"
 echo "GMXLIB:    ${GMXLIB}"
-echo "Partition: ${SHERLOCK_PARTITION}  GRES: ${SHERLOCK_GRES}  TIME: ${SHERLOCK_TIME}"
+echo "Partition: ${SHERLOCK_PARTITION}  GRES: ${SHERLOCK_GRES:-<none>}  TIME: ${SHERLOCK_TIME}"
+if [[ -n "${DEPENDENCY}" ]]; then
+    echo "Depends:   ${DEPENDENCY}"
+fi
 
-sbatch \
-    --job-name="pmx_neq_${STAGE}" \
-    --partition="${SHERLOCK_PARTITION}" \
-    --gres="${SHERLOCK_GRES}" \
-    ${SHERLOCK_QOS:+--qos="${SHERLOCK_QOS}"} \
-    --time="${SHERLOCK_TIME}" \
-    --mem="${SHERLOCK_MEM}" \
-    --cpus-per-task="${SHERLOCK_CPUS_PER_TASK}" \
-    --array="${TASK_IDS}%${SHERLOCK_MAX_CONCURRENT}" \
-    --output="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}.%A_%a.out" \
-    --error="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}.%A_%a.err" \
-    <<SBATCH_EOF
+SBATCH_ARGS=(
+    --parsable
+    --job-name="pmx_neq_${STAGE}"
+    --partition="${SHERLOCK_PARTITION}"
+    --time="${SHERLOCK_TIME}"
+    --mem="${SHERLOCK_MEM}"
+    --cpus-per-task="${SHERLOCK_CPUS_PER_TASK}"
+    --array="${TASK_IDS}%${SHERLOCK_MAX_CONCURRENT}"
+    --output="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}.%A_%a.out"
+    --error="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}.%A_%a.err"
+)
+if [[ -n "${SHERLOCK_GRES}" ]]; then
+    SBATCH_ARGS+=(--gres="${SHERLOCK_GRES}")
+fi
+if [[ -n "${SHERLOCK_QOS}" ]]; then
+    SBATCH_ARGS+=(--qos="${SHERLOCK_QOS}")
+fi
+if [[ -n "${DEPENDENCY}" ]]; then
+    SBATCH_ARGS+=(--dependency="${DEPENDENCY}")
+fi
+
+JOB_ID="$(
+sbatch "${SBATCH_ARGS[@]}" <<SBATCH_EOF
 #!/bin/bash
 set -euo pipefail
 
@@ -118,7 +151,6 @@ export GMXLIB=${GMXLIB}
 
 cd ${PROJECT_ROOT}
 
-# pmx mutff for hybrid topology includes (python only needed if GMXLIB unset)
 module load python/3.9.0 2>/dev/null || true
 if [[ -f "${HOME}/.venvs/pmx/bin/activate" ]]; then
   source "${HOME}/.venvs/pmx/bin/activate"
@@ -128,3 +160,7 @@ python3 scripts/fep_pmx/run_neq_task.py \
     --manifest ${MANIFEST} \
     --task-id \${SLURM_ARRAY_TASK_ID}
 SBATCH_EOF
+)"
+
+echo "Submitted batch job ${JOB_ID}"
+echo "${JOB_ID}"

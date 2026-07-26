@@ -62,20 +62,20 @@ bash scripts/fep_pmx/smoke_neq_em.sh          # V106A holo rep1 EM
 LEG=wt_to_V106A PHASE=apo bash scripts/fep_pmx/smoke_neq_em.sh
 ```
 
-After smoke passes, batch submit:
+After smoke passes, batch submit (one command — SLURM chains em → equil → extract → switch):
 
 ```bash
-# 1) Generate per-leg NEQ dirs + panel manifest (mdp templates, snapshot schedule)
-NEQ_SNAPSHOTS=10 REPLICATES=1 bash scripts/fep_pmx/prepare_p0_neq.sh   # smoke
-# Re-run with FORCE=1 after code fixes to refresh copied topology includes
-FORCE=1 NEQ_SNAPSHOTS=10 REPLICATES=1 bash scripts/fep_pmx/prepare_p0_neq.sh
-# NEQ_SNAPSHOTS=100 REPLICATES=3 bash scripts/fep_pmx/prepare_p0_neq.sh  # production
+NEQ_SNAPSHOTS=100 REPLICATES=3 FORCE=1 bash scripts/fep_pmx/prepare_p0_neq.sh
+bash scripts/fep_pmx/submit_p0_neq_pipeline.sh
+```
 
-# 2) Submit in dependency order (wait each wave to finish)
-STAGE=em      bash scripts/fep_pmx/submit_p0_neq.sh
-STAGE=equil   bash scripts/fep_pmx/submit_p0_neq.sh
-STAGE=extract bash scripts/fep_pmx/submit_p0_neq.sh
-STAGE=switch  bash scripts/fep_pmx/submit_p0_neq.sh
+Or stage-by-stage (manual dependency):
+
+```bash
+STAGE=em      bash scripts/fep_pmx/submit_p0_neq.sh   # normal/CPU
+STAGE=equil   bash scripts/fep_pmx/submit_p0_neq.sh   # gpu
+STAGE=extract bash scripts/fep_pmx/submit_p0_neq.sh   # normal/CPU
+STAGE=switch  bash scripts/fep_pmx/submit_p0_neq.sh   # gpu
 # Y188L switches are 500 ps — use STAGE=switch SHERLOCK_TIME=03:00:00 if needed
 
 # 3) BAR analysis (Mac or Sherlock login with pmx)
