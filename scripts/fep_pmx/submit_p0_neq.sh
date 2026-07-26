@@ -24,6 +24,7 @@ MANIFEST="${MANIFEST:-results/analysis/fep_pmx/neq_panel_manifest.csv}"
 SHERLOCK_QOS="${SHERLOCK_QOS:-}"
 SHERLOCK_MAX_CONCURRENT="${SHERLOCK_MAX_CONCURRENT:-20}"
 SHERLOCK_CPUS_PER_TASK="${SHERLOCK_CPUS_PER_TASK:-4}"
+SHERLOCK_MAX_ARRAY_SIZE="${SHERLOCK_MAX_ARRAY_SIZE:-1000}"
 DEPENDENCY="${DEPENDENCY:-}"
 
 case "${STAGE}" in
@@ -72,14 +73,16 @@ fi
 PYTHON="${PYTHON:-python3}"
 
 TASK_ID_FILE="${PROJECT_ROOT}/results/analysis/fep_pmx/neq_${STAGE}_task_ids.txt"
-TASK_COUNT="$(
+CHUNK_MANIFEST="$(
 "${PYTHON}" - <<PY
 import csv
+import json
 from pathlib import Path
 
 manifest = Path("${MANIFEST}")
 stage = "${STAGE}"
 out = Path("${TASK_ID_FILE}")
+chunk_size = int("${SHERLOCK_MAX_ARRAY_SIZE}")
 ids = []
 with manifest.open(newline="") as handle:
     reader = csv.DictReader(handle)
@@ -91,11 +94,25 @@ if not ids:
     raise SystemExit(f"No tasks for stage={stage} in {manifest}")
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text("\n".join(str(i) for i in ids) + "\n")
-print(len(ids))
+
+chunks = []
+for start in range(0, len(ids), chunk_size):
+    chunk = ids[start : start + chunk_size]
+    chunk_path = out.parent / f"{out.stem}_chunk{len(chunks):03d}{out.suffix}"
+    chunk_path.write_text("\n".join(str(i) for i in chunk) + "\n")
+    chunks.append(
+        {
+            "file": str(chunk_path),
+            "count": len(chunk),
+            "array": f"0-{len(chunk) - 1}",
+        }
+    )
+print(json.dumps({"total": len(ids), "chunks": chunks}))
 PY
 )"
-ARRAY_MAX=$((TASK_COUNT - 1))
-ARRAY_SPEC="0-${ARRAY_MAX}%${SHERLOCK_MAX_CONCURRENT}"
+
+TASK_COUNT="$(echo "${CHUNK_MANIFEST}" | "${PYTHON}" -c "import json,sys; print(json.load(sys.stdin)['total'])")"
+CHUNK_COUNT="$(echo "${CHUNK_MANIFEST}" | "${PYTHON}" -c "import json,sys; print(len(json.load(sys.stdin)['chunks']))")"
 
 PMX_VENV="${PMX_VENV:-$HOME/.venvs/pmx}"
 if [[ -z "${GMXLIB:-}" ]] && [[ -f "${PMX_VENV}/bin/activate" ]]; then
@@ -118,38 +135,47 @@ fi
 
 mkdir -p logs
 echo "Manifest:  ${MANIFEST}"
-echo "Stage:     ${STAGE}  (${TASK_COUNT} tasks)"
+echo "Stage:     ${STAGE}  (${TASK_COUNT} tasks, ${CHUNK_COUNT} array job(s))"
 echo "Task ids:  ${TASK_ID_FILE}"
-echo "Array:     ${ARRAY_SPEC}"
 echo "GMXLIB:    ${GMXLIB}"
 echo "Partition: ${SHERLOCK_PARTITION}  GRES: ${SHERLOCK_GRES:-<none>}  TIME: ${SHERLOCK_TIME}"
 if [[ -n "${DEPENDENCY}" ]]; then
     echo "Depends:   ${DEPENDENCY}"
 fi
 
-SBATCH_ARGS=(
-    --parsable
-    --job-name="pmx_neq_${STAGE}"
-    --partition="${SHERLOCK_PARTITION}"
-    --time="${SHERLOCK_TIME}"
-    --mem="${SHERLOCK_MEM}"
-    --cpus-per-task="${SHERLOCK_CPUS_PER_TASK}"
-    --array="${ARRAY_SPEC}"
-    --output="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}.%A_%a.out"
-    --error="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}.%A_%a.err"
-)
-if [[ -n "${SHERLOCK_GRES}" ]]; then
-    SBATCH_ARGS+=(--gres="${SHERLOCK_GRES}")
-fi
-if [[ -n "${SHERLOCK_QOS}" ]]; then
-    SBATCH_ARGS+=(--qos="${SHERLOCK_QOS}")
-fi
-if [[ -n "${DEPENDENCY}" ]]; then
-    SBATCH_ARGS+=(--dependency="${DEPENDENCY}")
-fi
+JOB_IDS=()
+while IFS= read -r chunk_json; do
+    chunk_file="$(echo "${chunk_json}" | "${PYTHON}" -c "import json,sys; print(json.load(sys.stdin)['file'])")"
+    chunk_array="$(echo "${chunk_json}" | "${PYTHON}" -c "import json,sys; print(json.load(sys.stdin)['array'])")"
+    chunk_n="$(echo "${chunk_json}" | "${PYTHON}" -c "import json,sys; print(json.load(sys.stdin)['count'])")"
+    array_spec="${chunk_array}%${SHERLOCK_MAX_CONCURRENT}"
+    chunk_idx="${#JOB_IDS[@]}"
 
-JOB_ID="$(
-sbatch "${SBATCH_ARGS[@]}" <<SBATCH_EOF
+    echo "Chunk ${chunk_idx}: ${chunk_n} tasks  array=${array_spec}  file=$(basename "${chunk_file}")"
+
+    SBATCH_ARGS=(
+        --parsable
+        --job-name="pmx_neq_${STAGE}"
+        --partition="${SHERLOCK_PARTITION}"
+        --time="${SHERLOCK_TIME}"
+        --mem="${SHERLOCK_MEM}"
+        --cpus-per-task="${SHERLOCK_CPUS_PER_TASK}"
+        --array="${array_spec}"
+        --output="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}_c${chunk_idx}.%A_%a.out"
+        --error="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}_c${chunk_idx}.%A_%a.err"
+    )
+    if [[ -n "${SHERLOCK_GRES}" ]]; then
+        SBATCH_ARGS+=(--gres="${SHERLOCK_GRES}")
+    fi
+    if [[ -n "${SHERLOCK_QOS}" ]]; then
+        SBATCH_ARGS+=(--qos="${SHERLOCK_QOS}")
+    fi
+    if [[ -n "${DEPENDENCY}" ]]; then
+        SBATCH_ARGS+=(--dependency="${DEPENDENCY}")
+    fi
+
+    JOB_ID="$(
+    sbatch "${SBATCH_ARGS[@]}" <<SBATCH_EOF
 #!/bin/bash
 set -euo pipefail
 
@@ -163,9 +189,9 @@ if [[ -f "${HOME}/.venvs/pmx/bin/activate" ]]; then
   source "${HOME}/.venvs/pmx/bin/activate"
 fi
 
-TASK_ID=\$(sed -n "\$((SLURM_ARRAY_TASK_ID + 1))p" ${TASK_ID_FILE})
+TASK_ID=\$(sed -n "\$((SLURM_ARRAY_TASK_ID + 1))p" ${chunk_file})
 if [[ -z "\${TASK_ID}" ]]; then
-  echo "ERROR: no task id for array index \${SLURM_ARRAY_TASK_ID} in ${TASK_ID_FILE}" >&2
+  echo "ERROR: no task id for array index \${SLURM_ARRAY_TASK_ID} in ${chunk_file}" >&2
   exit 1
 fi
 
@@ -173,7 +199,11 @@ python3 scripts/fep_pmx/run_neq_task.py \
     --manifest ${MANIFEST} \
     --task-id \${TASK_ID}
 SBATCH_EOF
-)"
+    )"
+    echo "  submitted ${JOB_ID}"
+    JOB_IDS+=("${JOB_ID}")
+done < <(echo "${CHUNK_MANIFEST}" | "${PYTHON}" -c "import json,sys; print('\n'.join(json.dumps(c) for c in json.load(sys.stdin)['chunks']))")
 
-echo "Submitted batch job ${JOB_ID}"
-echo "${JOB_ID}"
+echo "Submitted ${#JOB_IDS[@]} batch job(s): ${JOB_IDS[*]}"
+# Last line: space-separated job ids (pipeline helper reads with tail -1)
+echo "${JOB_IDS[*]}"
