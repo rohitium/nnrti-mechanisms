@@ -51,8 +51,17 @@ def _snapshot_times_ps(n_snapshots: int) -> list[float]:
     return [start_ps + i * step for i in range(n_snapshots)]
 
 
-def _copy_topology_includes(build_dir: Path, neq_dir: Path, top_path: Path) -> None:
-    """Copy local #include *.itp files referenced by system.top into neq/."""
+def _copy_topology_bundle(build_dir: Path, neq_dir: Path, top_path: Path) -> None:
+    """Copy local topology dependencies from gromacs_build into neq/.
+
+    pmx gentop writes chain itps (pmx_topol_*.itp) referenced transitively from
+    system.top; copying every *.itp from the build dir avoids missing nested includes.
+    """
+    copied: set[str] = set()
+    for src in sorted(build_dir.glob("*.itp")):
+        shutil.copy2(src, neq_dir / src.name)
+        copied.add(src.name)
+
     for line in top_path.read_text().splitlines():
         stripped = line.strip()
         if not stripped.startswith("#include"):
@@ -63,12 +72,15 @@ def _copy_topology_includes(build_dir: Path, neq_dir: Path, top_path: Path) -> N
         include_name = parts[1].strip('"')
         if "/" in include_name or include_name.startswith("."):
             continue
+        if include_name in copied:
+            continue
         src = build_dir / include_name
         if not src.is_file():
             raise FileNotFoundError(
                 f"system.top references missing include {include_name} under {build_dir}"
             )
         shutil.copy2(src, neq_dir / include_name)
+        copied.add(include_name)
 
 
 def prepare_neq(
@@ -107,7 +119,7 @@ def prepare_neq(
 
     shutil.copy2(gro, neq / "system.gro")
     shutil.copy2(top, neq / "system.top")
-    _copy_topology_includes(build, neq, top)
+    _copy_topology_bundle(build, neq, top)
 
     snapshot_times = _snapshot_times_ps(n_snapshots)
     manifest_rows: list[dict[str, str | int | float]] = []
