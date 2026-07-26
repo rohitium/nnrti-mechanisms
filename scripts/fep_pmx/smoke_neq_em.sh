@@ -24,10 +24,12 @@ source scripts/sherlock/activate_pmx_env.sh
 
 PYTHON="${PYTHON:-python3}"
 
-# Refresh neq inputs (copies gromacs_build/*.itp for holo/apo)
-"${PYTHON}" scripts/fep_pmx/prepare_neq.py \
-    --leg "${LEG}" --phase "${PHASE}" --replicate "${REP}" \
-    --n-snapshots "${NEQ_SNAPSHOTS:-3}" --force
+# Sync topology + mdps (no --force unless FORCE=1; never wipes completed outputs).
+PREP_ARGS=(--leg "${LEG}" --phase "${PHASE}" --replicate "${REP}" --n-snapshots "${NEQ_SNAPSHOTS:-5}")
+if [[ "${FORCE:-0}" == "1" ]]; then
+    PREP_ARGS+=(--force)
+fi
+"${PYTHON}" scripts/fep_pmx/prepare_neq.py "${PREP_ARGS[@]}"
 
 if [[ -z "${TASK_ID}" ]]; then
     TASK_ID="$("${PYTHON}" - <<PY

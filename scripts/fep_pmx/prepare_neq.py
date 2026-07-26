@@ -105,8 +105,7 @@ def prepare_neq(
         _copy_topology_bundle(build, neq, top)
         return neq / "neq_manifest.csv"
 
-    if force and neq.is_dir():
-        shutil.rmtree(neq)
+    # force: refresh mdps/manifests only — never delete em/equil/extract/switch outputs.
     neq.mkdir(parents=True, exist_ok=True)
 
     mdp_dir = neq / "mdp"

@@ -4,7 +4,8 @@
 #
 # Usage:
 #   bash scripts/fep_pmx/prepare_p0_neq.sh
-#   NEQ_SNAPSHOTS=5 REPLICATES=3 FORCE=1 bash scripts/fep_pmx/prepare_p0_neq.sh  # 120 switch tasks
+#   NEQ_SNAPSHOTS=5 REPLICATES=3 FORCE=1 bash scripts/fep_pmx/prepare_p0_neq.sh  # refresh mdps/manifest; keeps outputs
+#   REFRESH_MDPS_ONLY=1 bash scripts/fep_pmx/prepare_p0_neq.sh                 # mdps only, no manifest rewrite
 #
 set -euo pipefail
 
