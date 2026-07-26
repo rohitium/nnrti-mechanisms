@@ -12,13 +12,11 @@ set -euo pipefail
 
 SHERLOCK_PARTITION="${SHERLOCK_PARTITION:-gpu}"
 SHERLOCK_GRES="${SHERLOCK_GRES:-gpu:1}"
-# Prefer dev QOS for interactive smoke tests (not production batch queue).
-SHERLOCK_QOS="${SHERLOCK_QOS:-dev}"
-# EM smoke fits in 2h; full equil+extract+switch smoke needs 6–8h.
 SHERLOCK_TIME="${SHERLOCK_TIME:-08:00:00}"
 SHERLOCK_MEM="${SHERLOCK_MEM:-32G}"
 SHERLOCK_CPUS_PER_TASK="${SHERLOCK_CPUS_PER_TASK:-4}"
 SHERLOCK_QOS="${SHERLOCK_QOS:-}"
+# Interactive salloc on gpu partition = smoke workflow (no batch sbatch).
 
 CMD=(
     salloc
