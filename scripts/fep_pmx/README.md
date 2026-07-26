@@ -65,7 +65,7 @@ LEG=wt_to_V106A PHASE=apo bash scripts/fep_pmx/smoke_neq_em.sh
 After smoke passes, batch submit (one command — SLURM chains em → equil → extract → switch):
 
 ```bash
-NEQ_SNAPSHOTS=100 REPLICATES=3 FORCE=1 bash scripts/fep_pmx/prepare_p0_neq.sh
+NEQ_SNAPSHOTS=5 REPLICATES=3 FORCE=1 bash scripts/fep_pmx/prepare_p0_neq.sh
 bash scripts/fep_pmx/submit_p0_neq_pipeline.sh
 ```
 

@@ -4,7 +4,7 @@
 #
 # Usage:
 #   bash scripts/fep_pmx/prepare_p0_neq.sh
-#   NEQ_SNAPSHOTS=10 REPLICATES=1 FORCE=1 bash scripts/fep_pmx/prepare_p0_neq.sh
+#   NEQ_SNAPSHOTS=5 REPLICATES=3 FORCE=1 bash scripts/fep_pmx/prepare_p0_neq.sh  # 120 switch tasks
 #
 set -euo pipefail
 
@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
 
-NEQ_SNAPSHOTS="${NEQ_SNAPSHOTS:-100}"
+NEQ_SNAPSHOTS="${NEQ_SNAPSHOTS:-5}"
 REPLICATES="${REPLICATES:-1}"
 FORCE="${FORCE:-0}"
 

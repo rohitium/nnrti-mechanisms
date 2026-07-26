@@ -28,7 +28,8 @@ NEQ_TEMPERATURE_K = 300.0
 NEQ_DT_PS = 0.002
 NEQ_EQUIL_NS = 5.0
 NEQ_SWITCH_PS_DEFAULT = 100.0
-NEQ_SNAPSHOTS_DEFAULT = 100
+# P0 panel: 12 systems × 2 λ endpoints × n_snapshots switch tasks (5 → 120 total).
+NEQ_SNAPSHOTS_DEFAULT = 5
 NEQ_EQUIL_SNAPSHOT_START_PS = 100.0  # skip first 100 ps of equil when extracting
 LONG_SWITCH_LEGS = frozenset({"wt_to_Y188L", "wt_to_G190E"})
 LONG_SWITCH_PS = 500.0
