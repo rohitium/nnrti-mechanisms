@@ -71,10 +71,30 @@ print(",".join(str(i) for i in ids))
 PY
 )"
 
+PMX_VENV="${PMX_VENV:-$HOME/.venvs/pmx}"
+if [[ -z "${GMXLIB:-}" ]] && [[ -f "${PMX_VENV}/bin/activate" ]]; then
+    # shellcheck disable=SC1090
+    source "${PMX_VENV}/bin/activate"
+fi
+if [[ -z "${GMXLIB:-}" ]]; then
+    GMXLIB="$("${PYTHON}" - <<'PY'
+import os
+import pmx
+print(os.path.join(os.path.dirname(pmx.__file__), "data", "mutff"))
+PY
+)"
+fi
+if [[ -z "${GMXLIB}" || ! -d "${GMXLIB}/amber14sbmut.ff" ]]; then
+    echo "ERROR: GMXLIB not set to pmx mutff (got: ${GMXLIB:-<empty>})" >&2
+    echo "  module load python/3.9.0 && source ~/.venvs/pmx/bin/activate" >&2
+    exit 1
+fi
+
 mkdir -p logs
 echo "Manifest:  ${MANIFEST}"
 echo "Stage:     ${STAGE}"
 echo "Tasks:     ${TASK_IDS}"
+echo "GMXLIB:    ${GMXLIB}"
 echo "Partition: ${SHERLOCK_PARTITION}  GRES: ${SHERLOCK_GRES}  TIME: ${SHERLOCK_TIME}"
 
 sbatch \
@@ -92,8 +112,15 @@ sbatch \
 set -euo pipefail
 
 source ${PROJECT_ROOT}/scripts/sherlock/load_gromacs_module.sh
+export GMXLIB=${GMXLIB}
 
 cd ${PROJECT_ROOT}
+
+# pmx mutff for hybrid topology includes (python only needed if GMXLIB unset)
+module load python/3.9.0 2>/dev/null || true
+if [[ -f "${HOME}/.venvs/pmx/bin/activate" ]]; then
+  source "${HOME}/.venvs/pmx/bin/activate"
+fi
 
 python3 scripts/fep_pmx/run_neq_task.py \
     --manifest ${MANIFEST} \

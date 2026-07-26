@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -18,6 +19,35 @@ def find_gmx() -> str:
             "gmx not found on PATH. On Sherlock: source scripts/sherlock/load_gromacs_module.sh"
         )
     return gmx
+
+
+def resolve_gmxlib(env: dict[str, str] | None = None) -> str:
+    """Return pmx mutff path for hybrid topology includes."""
+    env = env or os.environ
+    existing = env.get("GMXLIB", "").strip()
+    if existing:
+        return existing
+
+    try:
+        import pmx  # type: ignore import-not-found
+    except ImportError as exc:
+        raise GromacsError(
+            "GMXLIB not set and pmx is not importable. "
+            "On Sherlock: module load python/3.9.0 && source ~/.venvs/pmx/bin/activate "
+            "before submitting, or export GMXLIB to pmx/data/mutff."
+        ) from exc
+
+    gmxlib = os.path.join(os.path.dirname(pmx.__file__), "data", "mutff")
+    if not os.path.isdir(gmxlib):
+        raise GromacsError(f"pmx mutff directory not found: {gmxlib}")
+    return gmxlib
+
+
+def gromacs_env(base: dict[str, str] | None = None) -> dict[str, str]:
+    """Copy env and ensure GMXLIB is set for hybrid topologies."""
+    env = dict(base or os.environ)
+    env["GMXLIB"] = resolve_gmxlib(env)
+    return env
 
 
 def run_gmx(

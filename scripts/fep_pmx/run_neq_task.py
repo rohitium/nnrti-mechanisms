@@ -14,7 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.fep_pmx.gromacs_utils import GromacsError, find_gmx, run_gmx
+from scripts.fep_pmx.gromacs_utils import GromacsError, find_gmx, gromacs_env, run_gmx
 
 
 def _neq_root(row: dict[str, str]) -> Path:
@@ -217,7 +217,7 @@ def _run_switch(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, g
 def run_task(manifest: Path, task_id: int) -> None:
     row = _load_manifest_row(manifest, task_id)
     neq = _neq_root(row)
-    env = os.environ.copy()
+    env = gromacs_env()
     gmx = find_gmx()
     gmx_mdrun = env.get("GMX_MDRUN") or gmx
 
