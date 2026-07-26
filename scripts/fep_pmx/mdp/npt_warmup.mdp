@@ -1,19 +1,17 @@
-; Endpoint production at fixed lambda (pmx NEQ), Parrinello-Rahman ensemble.
-; Continues from the C-rescale warmup (npt_warmup.mdp) — do not start this from a
-; bare minimized structure. This is the trajectory snapshots are drawn from.
+; NPT warmup at fixed lambda — C-rescale barostat, stable from a minimized start,
+; run before the Parrinello-Rahman production in npt_eq.mdp. Not used for sampling
+; (no trajectory output); it only relaxes the box + velocities so production does
+; not start Parrinello-Rahman far from equilibrium.
 integrator               = md
 dt                       = 0.002
 nsteps                   = @NSTEPS@
-; trr needed for trjconv snapshot extract + grompp -t velocities at switch time
-nstxout                  = 5000
-nstvout                  = 5000
+nstxout                  = 0
+nstvout                  = 0
 nstfout                  = 0
 nstenergy                = 5000
 nstlog                   = 5000
-nstxout-compressed       = 5000
-compressed-x-grps        = System
-; Continue from the warmup: keep its velocities/box, do not re-generate.
-continuation             = yes
+nstxout-compressed       = 0
+continuation             = no
 constraint-algorithm     = lincs
 constraints              = h-bonds
 lincs-order              = 4
@@ -30,20 +28,17 @@ tcoupl                   = V-rescale
 tc-grps                  = Protein non-Protein
 tau_t                    = 0.1 0.1
 ref_t                    = @REF_T@ @REF_T@
-pcoupl                   = Parrinello-Rahman
+pcoupl                   = C-rescale
 pcoupltype               = isotropic
-tau_p                    = 2.0
+tau_p                    = 5.0
 ref_p                    = 1.0
 compressibility          = 4.5e-5
-refcoord_scaling         = com
 pbc                      = xyz
-gen_vel                  = no
+gen_vel                  = yes
+gen_temp                 = @REF_T@
 free-energy              = yes
 init-lambda              = @INIT_LAMBDA@
 delta-lambda             = 0
-; NOTE: couple-* directives are intentionally omitted — this is hybrid-topology
-; (pmx typeA/typeB) alchemy, not molecule decoupling, so couple-moltype is unset
-; and couple-lambda*/couple-intramol would be silently ignored.
 sc-function              = gapsys
 sc-gapsys-scale-linpoint-q  = 0.3
 sc-gapsys-scale-linpoint-lj = 0.85
@@ -51,4 +46,3 @@ sc-coul                  = yes
 sc-alpha                 = 0.3
 sc-sigma                 = 0.25
 sc-power                 = 1
-nstdhdl                  = 5000

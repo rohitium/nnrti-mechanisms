@@ -62,8 +62,8 @@ Jorgensen MCPRO used ~15 Å binding-site spheres and water caps ([Rizzo et al., 
 | Stage | Engine | What | Setting |
 |-------|--------|------|---------|
 | **Build** | pmx + GROMACS | Hybrid top, solvate, ions; OpenMM energy check | From OpenMM MD start structures |
-| **EM** | GROMACS CPU | Minimize hybrid system | — |
-| **Equil** | GROMACS GPU | NPT, λ fixed at 0 or 1 | **5 ns** / endpoint / rep (2 endpoints × 3 reps) |
+| **EM** | GROMACS CPU | Minimize hybrid system (A-state) | — |
+| **Equil** | GROMACS GPU | Per-λ min → C-rescale warmup → P-R production, λ fixed at 0 or 1 | **5 ns** production / endpoint / rep (2 endpoints × 3 reps) |
 | **Extract** | GROMACS CPU | Decorrelated frames + velocities for switches | **100 snapshots** / endpoint / rep (skip first 100 ps); `.trr` required |
 | **Switch** | GROMACS GPU | NEQ MD, linear λ ramp | 100 ps default; **500 ps** for Y188L, G190E |
 | **Analysis** | pmx BAR | ΔG per leg-phase-rep; then ΔΔG_bind | Crooks overlap QC |
@@ -89,6 +89,16 @@ If P0 must be cheaper: cut **3 → 2 replicates** or **5 → 3 ns equilibration*
 - **Uncertainty:** report spread **across the 3 replicates** (e.g. SEM of replicate ΔG values). Pooling all work into one BAR error **underestimates** uncertainty because replicates share correlated endpoint ensembles.
 
 Plain MD trajectories seed **conformations** only — hybrid topologies require fresh endpoint equilibration ([Aldeghi 2018](https://doi.org/10.1021/acscentsci.8b00717)).
+
+### 3.3 Endpoint relaxation (`_run_equil`)
+
+Each endpoint runs three fixed-λ steps before the 5 ns production trajectory:
+
+1. **Per-λ minimization** (`em_fep.mdp`) with free-energy + gapsys soft-core at the endpoint λ. The global `em` stage minimizes only the A-state; B-state atoms that are dummies in A (the grown sidechain of **G190E at λ=1**, etc.) are unrelaxed until this pass.
+2. **C-rescale warmup** (`npt_warmup.mdp`, 0.5 ns) to relax the box and generate velocities — starting Parrinello–Rahman from a bare minimized structure risks box blow-up on a ~200k-atom system ([Bernetti & Bussi 2020](https://doi.org/10.1063/5.0020514)).
+3. **Parrinello–Rahman production** (`npt_eq.mdp`, 5 ns, `continuation = yes`) — the sampling trajectory.
+
+Temperature coupling uses separate **`Protein` / `non-Protein`** baths (not `System`) in all dynamics stages.
 
 ---
 

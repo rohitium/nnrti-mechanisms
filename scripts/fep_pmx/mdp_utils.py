@@ -8,6 +8,7 @@ from scripts.fep_pmx.config import (
     NEQ_DT_PS,
     NEQ_EQUIL_NS,
     NEQ_TEMPERATURE_K,
+    NEQ_WARMUP_PS,
     delta_lambda_for_switch,
     nsteps_for_time_ps,
 )
@@ -29,6 +30,21 @@ def _write_mdp(path: Path, body: str) -> None:
 
 def render_em_mdp(output: Path) -> None:
     _write_mdp(output, _read_template("em.mdp"))
+
+
+def render_em_fep_mdp(*, output: Path, init_lambda: float) -> None:
+    body = _read_template("em_fep.mdp")
+    body = body.replace("@INIT_LAMBDA@", f"{init_lambda:.6f}")
+    _write_mdp(output, body)
+
+
+def render_npt_warmup_mdp(*, output: Path, init_lambda: float) -> None:
+    nsteps = nsteps_for_time_ps(NEQ_WARMUP_PS)
+    body = _read_template("npt_warmup.mdp")
+    body = body.replace("@NSTEPS@", str(nsteps))
+    body = body.replace("@INIT_LAMBDA@", f"{init_lambda:.6f}")
+    body = body.replace("@REF_T@", f"{NEQ_TEMPERATURE_K:.2f}")
+    _write_mdp(output, body)
 
 
 def render_npt_eq_mdp(*, output: Path, init_lambda: float) -> None:

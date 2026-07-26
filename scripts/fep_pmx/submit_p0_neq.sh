@@ -173,9 +173,11 @@ _submit_chunk() {
     chunk_idx="${3:-0}"
     local array_spec="${chunk_array}%${SHERLOCK_MAX_CONCURRENT}"
 
-    echo "Chunk ${chunk_idx}: ${chunk_n} tasks  array=${array_spec}  file=$(basename "${chunk_file}")"
+    # Diagnostics go to stderr; only sbatch --parsable job id may reach stdout,
+    # which the caller captures into job_id (used for the afterany chain dep).
+    echo "Chunk ${chunk_idx}: ${chunk_n} tasks  array=${array_spec}  file=$(basename "${chunk_file}")" >&2
     if [[ -n "${chunk_dep}" ]]; then
-        echo "  depends: ${chunk_dep}"
+        echo "  depends: ${chunk_dep}" >&2
     fi
 
     local SBATCH_ARGS=(
