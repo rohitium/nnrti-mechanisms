@@ -133,7 +133,9 @@ if [[ -z "${GMXLIB}" || ! -d "${GMXLIB}/amber14sbmut.ff" ]]; then
     exit 1
 fi
 
-mkdir -p logs
+LOG_DIR="${PROJECT_ROOT}/logs/pmx_neq/${STAGE}"
+mkdir -p "${LOG_DIR}"
+echo "Logs:      ${LOG_DIR}/"
 echo "Manifest:  ${MANIFEST}"
 echo "Stage:     ${STAGE}  (${TASK_COUNT} tasks, ${CHUNK_COUNT} array job(s))"
 echo "Task ids:  ${TASK_ID_FILE}"
@@ -161,8 +163,8 @@ while IFS= read -r chunk_json; do
         --mem="${SHERLOCK_MEM}"
         --cpus-per-task="${SHERLOCK_CPUS_PER_TASK}"
         --array="${array_spec}"
-        --output="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}_c${chunk_idx}.%A_%a.out"
-        --error="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}_c${chunk_idx}.%A_%a.err"
+        --output="${LOG_DIR}/pmx_neq_${STAGE}_c${chunk_idx}.%A_%a.out"
+        --error="${LOG_DIR}/pmx_neq_${STAGE}_c${chunk_idx}.%A_%a.err"
     )
     if [[ -n "${SHERLOCK_GRES}" ]]; then
         SBATCH_ARGS+=(--gres="${SHERLOCK_GRES}")

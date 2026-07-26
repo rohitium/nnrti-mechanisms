@@ -31,6 +31,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
 
+LOG_DIR="${PROJECT_ROOT}/logs/holo_md"
+mkdir -p "${LOG_DIR}"
+
 # Configurable parameters
 BATCH_SIZE="${1:-${BATCH_SIZE:-10}}"             # How many to submit per batch
 MAX_CONCURRENT="${2:-${MAX_CONCURRENT:-15}}"     # Max jobs in queue before pausing
@@ -278,7 +281,7 @@ submit_job() {
         --partition="${SHERLOCK_PARTITION}"
         --time="${SHERLOCK_TIME}"
         --mem="${SHERLOCK_MEM}"
-        --output="${PROJECT_ROOT}/logs/md_${MUTATION}_rep${REP}_%j.log"
+        --output="${LOG_DIR}/md_${MUTATION}_rep${REP}_%j.log"
     )
     if [ -n "${SHERLOCK_GRES}" ]; then
         SBATCH_ARGS+=(--gres="${SHERLOCK_GRES}")
@@ -376,7 +379,7 @@ echo ""
 echo "Monitor progress:"
 echo "  squeue -u \$USER"
 echo "  watch -n 30 'squeue -u \$USER'"
-echo "  tail -f logs/md_*.log"
+echo "  tail -f logs/holo_md/md_*.log"
 echo ""
 echo "Check completion:"
 echo "  ls results/md_runs/*/rep_*/*.json | wc -l"

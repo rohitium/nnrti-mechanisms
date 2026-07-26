@@ -30,6 +30,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
 
+LOG_DIR="${PROJECT_ROOT}/logs/apo_md"
+mkdir -p "${LOG_DIR}"
+
 BATCH_SIZE="${1:-${BATCH_SIZE:-10}}"
 MAX_CONCURRENT="${2:-${MAX_CONCURRENT:-15}}"
 POLL_INTERVAL="${POLL_INTERVAL:-300}"
@@ -227,7 +230,7 @@ submit_job() {
         --partition="${SHERLOCK_PARTITION}"
         --time="${SHERLOCK_TIME}"
         --mem="${SHERLOCK_MEM}"
-        --output="${PROJECT_ROOT}/logs/apo_${MUTATION}_rep${REP}_%j.log"
+        --output="${LOG_DIR}/apo_${MUTATION}_rep${REP}_%j.log"
     )
     if [ -n "${SHERLOCK_GRES}" ]; then
         SBATCH_ARGS+=(--gres="${SHERLOCK_GRES}")
