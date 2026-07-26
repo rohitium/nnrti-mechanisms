@@ -21,9 +21,10 @@ coulombtype              = PME
 pme_order                = 4
 fourierspacing           = 0.16
 tcoupl                   = V-rescale
-tc-grps                  = System
-tau_t                    = 0.1
-ref_t                    = @REF_T@
+; Separate solute/solvent baths to avoid the hot-solvent/cold-protein artifact
+tc-grps                  = Protein non-Protein
+tau_t                    = 0.1 0.1
+ref_t                    = @REF_T@ @REF_T@
 pcoupl                   = Parrinello-Rahman
 pcoupltype               = isotropic
 tau_p                    = 2.0
@@ -35,9 +36,9 @@ gen_vel                  = no
 free-energy              = yes
 init-lambda              = @INIT_LAMBDA@
 delta-lambda             = @DELTA_LAMBDA@
-couple-lambda0           = vdw-q
-couple-lambda1           = vdw-q
-couple-intramol          = no
+; NOTE: couple-* directives are intentionally omitted — this is hybrid-topology
+; (pmx typeA/typeB) alchemy, not molecule decoupling, so couple-moltype is unset
+; and couple-lambda*/couple-intramol would be silently ignored.
 sc-function              = gapsys
 sc-gapsys-scale-linpoint-q  = 0.3
 sc-gapsys-scale-linpoint-lj = 0.85

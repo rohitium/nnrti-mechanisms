@@ -305,33 +305,37 @@ def append_ligand_to_topology(
     ligand_name: str,
     output_top: Path,
 ) -> None:
-    text = protein_top.read_text().splitlines()
-    out: list[str] = []
-    molecules_idx: int | None = None
+    out = protein_top.read_text().splitlines()
 
-    for i, line in enumerate(text):
-        if line.strip().startswith("[ molecules ]"):
-            molecules_idx = i
-        out.append(line)
-
-    if molecules_idx is None:
+    def _molecules_header_index() -> int:
+        for i, line in enumerate(out):
+            if line.strip().startswith("[ molecules ]"):
+                return i
         raise ValueError(f"No [ molecules ] section in {protein_top}")
 
+    # Sanity-check the section exists before mutating the buffer.
+    _molecules_header_index()
+
+    # 1) Ligand [ atomtypes ] include: after the forcefield includes, before the
+    #    first molecule-type include.
     atomtypes_idx = _ligand_atomtypes_insert_index(out)
-    out.insert(atomtypes_idx, f'#include "{ligand_atomtypes_itp.name}"\n')
+    out.insert(atomtypes_idx, f'#include "{ligand_atomtypes_itp.name}"')
 
-    molecules_idx += 1
-    rel_itp = ligand_itp.name
-    out.insert(molecules_idx, f'#include "{rel_itp}"\n')
-    molecules_idx += 1
+    # 2) Ligand moleculetype include: immediately before [ molecules ]. Re-find the
+    #    header rather than reusing a pre-insert index (which the atomtypes insert
+    #    above shifts) so this stays correct regardless of how many lines moved.
+    molecules_idx = _molecules_header_index()
+    out.insert(molecules_idx, f'#include "{ligand_itp.name}"')
 
-    # Append ligand after last molecule line
+    # 3) Append the ligand to the [ molecules ] list, after the last molecule row
+    #    (i.e. before the next section header, or at EOF if it is the last section).
+    molecules_idx = _molecules_header_index()
     insert_at = len(out)
     for j in range(molecules_idx + 1, len(out)):
         if out[j].strip().startswith("["):
             insert_at = j
             break
-    out.insert(insert_at, f"{ligand_name:<15} 1\n")
+    out.insert(insert_at, f"{ligand_name:<15} 1")
     output_top.write_text("\n".join(out) + "\n")
 
 
