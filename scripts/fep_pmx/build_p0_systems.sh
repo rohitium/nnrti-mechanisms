@@ -27,18 +27,12 @@ fi
 
 # pmx mutff (Sherlock venv or conda)
 PMX_VENV="${PMX_VENV:-$HOME/.venvs/pmx}"
+if command -v module >/dev/null 2>&1; then
+    module load python/3.9.0 2>/dev/null || module load python/3.12.1 2>/dev/null || true
+fi
 if ! command -v pmx >/dev/null 2>&1 && [[ -f "${PMX_VENV}/bin/activate" ]]; then
     # shellcheck disable=SC1090
     source "${PMX_VENV}/bin/activate"
-fi
-if command -v conda >/dev/null 2>&1; then
-    # shellcheck disable=SC1091
-    source "$(conda info --base)/etc/profile.d/conda.sh"
-    conda activate "${PMX_CONDA_ENV:-pmx}" 2>/dev/null || true
-fi
-
-if command -v module >/dev/null 2>&1; then
-    module load python/3.9.0 2>/dev/null || module load python/3.12.1 2>/dev/null || true
 fi
 PYTHON="${PYTHON:-python3}"
 
