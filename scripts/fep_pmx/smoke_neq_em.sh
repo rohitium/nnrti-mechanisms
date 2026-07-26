@@ -18,20 +18,11 @@ REP="${REP:-1}"
 TASK_ID="${TASK_ID:-}"
 MANIFEST="${MANIFEST:-results/analysis/fep_pmx/neq_panel_manifest.csv}"
 
-if command -v module >/dev/null 2>&1; then
-    module load python/3.9.0 2>/dev/null || true
-fi
-PMX_VENV="${PMX_VENV:-$HOME/.venvs/pmx}"
-if [[ -f "${PMX_VENV}/bin/activate" ]]; then
-    # shellcheck disable=SC1090
-    source "${PMX_VENV}/bin/activate"
-fi
-PYTHON="${PYTHON:-python3}"
-
+# GROMACS first (module purge); pmx python module must load after that.
 source scripts/sherlock/load_gromacs_module.sh
-export GMXLIB="${GMXLIB:-$("${PYTHON}" -c "import pmx, os; print(os.path.join(os.path.dirname(pmx.__file__), 'data', 'mutff'))")}"
+source scripts/sherlock/activate_pmx_env.sh
 
-echo "GMXLIB=${GMXLIB}"
+PYTHON="${PYTHON:-python3}"
 
 # Refresh neq inputs (copies dor*.itp for holo)
 FORCE=1 NEQ_SNAPSHOTS="${NEQ_SNAPSHOTS:-3}" REPLICATES=1 \
