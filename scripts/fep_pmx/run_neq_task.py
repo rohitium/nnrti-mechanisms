@@ -101,7 +101,9 @@ def _run_equil(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, gm
     work = neq / row["run_dir"]
     work.mkdir(parents=True, exist_ok=True)
     if (work / "equil.gro").is_file() and (work / "status.json").is_file():
-        return
+        if (work / "equil.trr").is_file():
+            return
+        # Older runs wrote xtc only; re-equilibrate for velocities needed by switch.
 
     em_gro = neq / "em" / "em.gro"
     if not em_gro.is_file():
@@ -141,10 +143,12 @@ def _run_extract(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str) 
     if marker.is_file():
         return
 
-    trr = eq_dir / "equil.trr"
+    trj = eq_dir / "equil.trr"
+    if not trj.is_file():
+        trj = eq_dir / "equil.xtc"
     tpr = eq_dir / "equil.tpr"
-    if not trr.is_file() or not tpr.is_file():
-        raise FileNotFoundError(f"Missing equil trajectory in {eq_dir}")
+    if not trj.is_file() or not tpr.is_file():
+        raise FileNotFoundError(f"Missing equil trajectory in {eq_dir} (need equil.trr or equil.xtc + equil.tpr)")
 
     meta = json.loads((neq / "neq_prepare.json").read_text())
     for idx, time_ps in enumerate(meta["snapshot_times_ps"]):
@@ -156,7 +160,7 @@ def _run_extract(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str) 
             [
                 "trjconv",
                 "-f",
-                f"../eq_lambda{lambda_state}/equil.trr",
+                f"../eq_lambda{lambda_state}/{trj.name}",
                 "-s",
                 f"../eq_lambda{lambda_state}/equil.tpr",
                 "-dump",
@@ -193,6 +197,11 @@ def _run_switch(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, g
 
     frame_rel = Path("..") / "snapshots" / f"lambda{lambda_state}" / f"frame_{snapshot_index:03d}.gro"
     trr_rel = Path("..") / f"eq_lambda{lambda_state}" / "equil.trr"
+    if not (neq / f"eq_lambda{lambda_state}" / "equil.trr").is_file():
+        raise FileNotFoundError(
+            f"Missing {neq / f'eq_lambda{lambda_state}' / 'equil.trr'} "
+            "(equil must write trr with velocities; re-run equil after git pull + prepare)"
+        )
     mdp_name = "nonequil_fwd.mdp" if direction == "fwd" else "nonequil_rev.mdp"
     sidecar = neq / "snapshots" / f"lambda{lambda_state}" / f"frame_{snapshot_index:03d}.json"
     time_ps = json.loads(sidecar.read_text())["time_ps"]
