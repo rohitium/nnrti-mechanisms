@@ -24,9 +24,10 @@ source scripts/sherlock/activate_pmx_env.sh
 
 PYTHON="${PYTHON:-python3}"
 
-# Refresh neq inputs (copies dor*.itp for holo)
-FORCE=1 NEQ_SNAPSHOTS="${NEQ_SNAPSHOTS:-3}" REPLICATES=1 \
-    "${PYTHON}" scripts/fep_pmx/prepare_neq.py --leg "${LEG}" --phase "${PHASE}" --replicate "${REP}" --n-snapshots 3
+# Refresh neq inputs (copies gromacs_build/*.itp for holo/apo)
+"${PYTHON}" scripts/fep_pmx/prepare_neq.py \
+    --leg "${LEG}" --phase "${PHASE}" --replicate "${REP}" \
+    --n-snapshots "${NEQ_SNAPSHOTS:-3}" --force
 
 if [[ -z "${TASK_ID}" ]]; then
     TASK_ID="$("${PYTHON}" - <<PY
