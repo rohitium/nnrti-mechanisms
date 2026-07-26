@@ -53,11 +53,22 @@ bash scripts/fep_pmx/submit_y188l_apo_md.sh
 
 ## NEQ workflow (Sherlock GPU)
 
-After solvated hybrids exist (`build_p0_systems.sh`):
+**Validate on an interactive GPU node first** (catches path/topology bugs before batch submit):
+
+```bash
+bash scripts/fep_pmx/salloc_neq_gpu.sh
+# inside allocation:
+bash scripts/fep_pmx/smoke_neq_em.sh          # V106A holo rep1 EM
+LEG=wt_to_V106A PHASE=apo bash scripts/fep_pmx/smoke_neq_em.sh
+```
+
+After smoke passes, batch submit:
 
 ```bash
 # 1) Generate per-leg NEQ dirs + panel manifest (mdp templates, snapshot schedule)
 NEQ_SNAPSHOTS=10 REPLICATES=1 bash scripts/fep_pmx/prepare_p0_neq.sh   # smoke
+# Re-run with FORCE=1 after code fixes to refresh copied topology includes
+FORCE=1 NEQ_SNAPSHOTS=10 REPLICATES=1 bash scripts/fep_pmx/prepare_p0_neq.sh
 # NEQ_SNAPSHOTS=100 REPLICATES=3 bash scripts/fep_pmx/prepare_p0_neq.sh  # production
 
 # 2) Submit in dependency order (wait each wave to finish)

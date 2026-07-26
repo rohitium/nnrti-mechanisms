@@ -51,6 +51,26 @@ def _snapshot_times_ps(n_snapshots: int) -> list[float]:
     return [start_ps + i * step for i in range(n_snapshots)]
 
 
+def _copy_topology_includes(build_dir: Path, neq_dir: Path, top_path: Path) -> None:
+    """Copy local #include *.itp files referenced by system.top into neq/."""
+    for line in top_path.read_text().splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("#include"):
+            continue
+        parts = stripped.split()
+        if len(parts) < 2:
+            continue
+        include_name = parts[1].strip('"')
+        if "/" in include_name or include_name.startswith("."):
+            continue
+        src = build_dir / include_name
+        if not src.is_file():
+            raise FileNotFoundError(
+                f"system.top references missing include {include_name} under {build_dir}"
+            )
+        shutil.copy2(src, neq_dir / include_name)
+
+
 def prepare_neq(
     leg_id: str,
     *,
@@ -87,6 +107,7 @@ def prepare_neq(
 
     shutil.copy2(gro, neq / "system.gro")
     shutil.copy2(top, neq / "system.top")
+    _copy_topology_includes(build, neq, top)
 
     snapshot_times = _snapshot_times_ps(n_snapshots)
     manifest_rows: list[dict[str, str | int | float]] = []
