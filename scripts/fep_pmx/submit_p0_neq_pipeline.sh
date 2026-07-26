@@ -22,12 +22,11 @@ cd "$PROJECT_ROOT"
 _submit() {
     local stage="$1"
     local dep="${2:-}"
-    local extra=()
     if [[ -n "${dep}" ]]; then
-        extra+=(DEPENDENCY="${dep}")
+        DEPENDENCY="${dep}" STAGE="${stage}" bash scripts/fep_pmx/submit_p0_neq.sh | tail -1
+    else
+        STAGE="${stage}" bash scripts/fep_pmx/submit_p0_neq.sh | tail -1
     fi
-    # Last line of submit script is bare job id (--parsable)
-    "${extra[@]}" STAGE="${stage}" bash scripts/fep_pmx/submit_p0_neq.sh | tail -1
 }
 
 echo "=========================================="
