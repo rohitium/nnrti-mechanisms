@@ -71,13 +71,15 @@ if command -v module >/dev/null 2>&1; then
 fi
 PYTHON="${PYTHON:-python3}"
 
-TASK_IDS="$(
+TASK_ID_FILE="${PROJECT_ROOT}/results/analysis/fep_pmx/neq_${STAGE}_task_ids.txt"
+TASK_COUNT="$(
 "${PYTHON}" - <<PY
 import csv
 from pathlib import Path
 
 manifest = Path("${MANIFEST}")
 stage = "${STAGE}"
+out = Path("${TASK_ID_FILE}")
 ids = []
 with manifest.open(newline="") as handle:
     reader = csv.DictReader(handle)
@@ -87,9 +89,13 @@ with manifest.open(newline="") as handle:
             ids.append(int(row[key]))
 if not ids:
     raise SystemExit(f"No tasks for stage={stage} in {manifest}")
-print(",".join(str(i) for i in ids))
+out.parent.mkdir(parents=True, exist_ok=True)
+out.write_text("\n".join(str(i) for i in ids) + "\n")
+print(len(ids))
 PY
 )"
+ARRAY_MAX=$((TASK_COUNT - 1))
+ARRAY_SPEC="0-${ARRAY_MAX}%${SHERLOCK_MAX_CONCURRENT}"
 
 PMX_VENV="${PMX_VENV:-$HOME/.venvs/pmx}"
 if [[ -z "${GMXLIB:-}" ]] && [[ -f "${PMX_VENV}/bin/activate" ]]; then
@@ -112,8 +118,9 @@ fi
 
 mkdir -p logs
 echo "Manifest:  ${MANIFEST}"
-echo "Stage:     ${STAGE}"
-echo "Tasks:     ${TASK_IDS}"
+echo "Stage:     ${STAGE}  (${TASK_COUNT} tasks)"
+echo "Task ids:  ${TASK_ID_FILE}"
+echo "Array:     ${ARRAY_SPEC}"
 echo "GMXLIB:    ${GMXLIB}"
 echo "Partition: ${SHERLOCK_PARTITION}  GRES: ${SHERLOCK_GRES:-<none>}  TIME: ${SHERLOCK_TIME}"
 if [[ -n "${DEPENDENCY}" ]]; then
@@ -127,7 +134,7 @@ SBATCH_ARGS=(
     --time="${SHERLOCK_TIME}"
     --mem="${SHERLOCK_MEM}"
     --cpus-per-task="${SHERLOCK_CPUS_PER_TASK}"
-    --array="${TASK_IDS}%${SHERLOCK_MAX_CONCURRENT}"
+    --array="${ARRAY_SPEC}"
     --output="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}.%A_%a.out"
     --error="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}.%A_%a.err"
 )
@@ -156,9 +163,15 @@ if [[ -f "${HOME}/.venvs/pmx/bin/activate" ]]; then
   source "${HOME}/.venvs/pmx/bin/activate"
 fi
 
+TASK_ID=\$(sed -n "\$((SLURM_ARRAY_TASK_ID + 1))p" ${TASK_ID_FILE})
+if [[ -z "\${TASK_ID}" ]]; then
+  echo "ERROR: no task id for array index \${SLURM_ARRAY_TASK_ID} in ${TASK_ID_FILE}" >&2
+  exit 1
+fi
+
 python3 scripts/fep_pmx/run_neq_task.py \
     --manifest ${MANIFEST} \
-    --task-id \${SLURM_ARRAY_TASK_ID}
+    --task-id \${TASK_ID}
 SBATCH_EOF
 )"
 
