@@ -25,6 +25,7 @@ SHERLOCK_PARTITION="${SHERLOCK_PARTITION:-gpu}"
 SHERLOCK_GRES="${SHERLOCK_GRES:-gpu:1}"
 SHERLOCK_QOS="${SHERLOCK_QOS:-}"
 SHERLOCK_MAX_CONCURRENT="${SHERLOCK_MAX_CONCURRENT:-20}"
+SHERLOCK_CPUS_PER_TASK="${SHERLOCK_CPUS_PER_TASK:-4}"
 
 case "${STAGE}" in
     em)      SHERLOCK_TIME="${SHERLOCK_TIME:-01:00:00}"; SHERLOCK_MEM="${SHERLOCK_MEM:-16G}" ;;
@@ -104,6 +105,7 @@ sbatch \
     ${SHERLOCK_QOS:+--qos="${SHERLOCK_QOS}"} \
     --time="${SHERLOCK_TIME}" \
     --mem="${SHERLOCK_MEM}" \
+    --cpus-per-task="${SHERLOCK_CPUS_PER_TASK}" \
     --array="${TASK_IDS}%${SHERLOCK_MAX_CONCURRENT}" \
     --output="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}.%A_%a.out" \
     --error="${PROJECT_ROOT}/logs/pmx_neq_${STAGE}.%A_%a.err" \

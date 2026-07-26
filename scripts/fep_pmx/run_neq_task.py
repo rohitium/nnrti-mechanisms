@@ -37,13 +37,36 @@ def _load_manifest_row(manifest: Path, task_id: int) -> dict[str, str]:
     raise KeyError(f"task_id {task_id} not found in {manifest}")
 
 
-def _mdrun(gmx_mdrun: str, *, cwd: Path, deffnm: str, env: dict[str, str]) -> None:
-    run_gmx(
-        gmx_mdrun,
-        ["mdrun", "-v", "-deffnm", deffnm, "-nb", "gpu", "-gpu_id", "0"],
-        cwd=cwd,
-        env=env,
-    )
+def _mdrun_threads() -> tuple[int, int]:
+    ntmpi = int(os.environ.get("GMX_NTMPI", "1"))
+    ntomp = int(os.environ.get("GMX_NTOMP", os.environ.get("SLURM_CPUS_PER_TASK", "4")))
+    return ntmpi, ntomp
+
+
+def _mdrun(
+    gmx_bin: str,
+    *,
+    cwd: Path,
+    deffnm: str,
+    env: dict[str, str],
+    use_gpu: bool = True,
+) -> None:
+    ntmpi, ntomp = _mdrun_threads()
+    args = [
+        "mdrun",
+        "-v",
+        "-deffnm",
+        deffnm,
+        "-ntmpi",
+        str(ntmpi),
+        "-ntomp",
+        str(ntomp),
+    ]
+    if use_gpu:
+        args.extend(["-nb", "gpu", "-gpu_id", "0"])
+    else:
+        args.extend(["-nb", "cpu"])
+    run_gmx(gmx_bin, args, cwd=cwd, env=env)
 
 
 def _run_em(neq: Path, env: dict[str, str], gmx: str, gmx_mdrun: str) -> None:
@@ -69,7 +92,7 @@ def _run_em(neq: Path, env: dict[str, str], gmx: str, gmx_mdrun: str) -> None:
         cwd=work,
         env=env,
     )
-    _mdrun(gmx_mdrun, cwd=work, deffnm="em", env=env)
+    _mdrun(gmx, cwd=work, deffnm="em", env=env, use_gpu=False)
     (work / "status.json").write_text(json.dumps({"stage": "em", "status": "ok"}) + "\n")
 
 
@@ -103,7 +126,7 @@ def _run_equil(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, gm
         cwd=work,
         env=env,
     )
-    _mdrun(gmx_mdrun, cwd=work, deffnm="equil", env=env)
+    _mdrun(gmx_mdrun, cwd=work, deffnm="equil", env=env, use_gpu=True)
     (work / "status.json").write_text(
         json.dumps({"stage": "equil", "lambda_state": lambda_state, "status": "ok"}) + "\n"
     )
@@ -196,7 +219,7 @@ def _run_switch(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, g
         cwd=work,
         env=env,
     )
-    _mdrun(gmx_mdrun, cwd=work, deffnm="switch", env=env)
+    _mdrun(gmx_mdrun, cwd=work, deffnm="switch", env=env, use_gpu=True)
     dhdl = work / "switch.dhdl.xvg"
     if dhdl.is_file() and not (work / "dgdl.xvg").exists():
         dhdl.rename(work / "dgdl.xvg")
