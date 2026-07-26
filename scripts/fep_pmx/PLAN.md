@@ -138,11 +138,29 @@ Existing plain-MD trajectories **cannot** be used directly (no dummy atoms in hy
 | --- | --- |
 | Replicates | **3** |
 | Seed frames | Decorrelated snapshots from `results/md_runs/{genotype}/rep_*/` (and apo analogues) |
-| Hybrid relaxation | **5 ns** per endpoint per replicate (λ pinned at 0 or 1) |
+| Hybrid relaxation | **5 ns** production per endpoint per replicate (λ pinned at 0 or 1) |
 | Total equil per leg-phase | 3 reps × 2 endpoints × 5 ns = **30 ns** |
 
 Aldeghi 2018 optimal split: ~equal time in equilibrium and switching. Our budget targets ~60 ns
 equil + ~60 ns switching per leg-phase.
+
+Each endpoint runs a **three-step** relaxation at fixed λ before the 5 ns production
+trajectory that snapshots are drawn from (`run_neq_task.py::_run_equil`):
+
+1. **Per-λ minimization** (`em_fep.mdp`, free-energy + gapsys soft-core at the endpoint λ).
+   The global `em` stage minimizes only the A-state, so B-state atoms that are dummies
+   in A — i.e. the *grown* sidechain of a growth mutation such as **G190E at λ=1** — are
+   otherwise never relaxed. This pass relieves those forces before any dynamics.
+2. **C-rescale warmup** (`npt_warmup.mdp`, 0.5 ns). Starting Parrinello–Rahman directly
+   from a minimized structure with generated velocities can blow up a ~200k-atom box;
+   the stochastic-cell-rescaling barostat relaxes the box first and is a valid NPT
+   ensemble ([Bernetti & Bussi, JCP 2020](https://doi.org/10.1063/5.0020514)).
+3. **Parrinello–Rahman production** (`npt_eq.mdp`, 5 ns), `continuation = yes` from the
+   warmup checkpoint. Sampling trajectory.
+
+Temperature coupling uses **separate `Protein` / `non-Protein` baths** (not a single
+`System` group) throughout warmup, production, and switching to avoid the
+hot-solvent/cold-solute artifact.
 
 ### 4.4 Non-equilibrium switching
 

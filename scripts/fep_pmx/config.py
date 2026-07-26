@@ -26,6 +26,10 @@ WATER_MODEL = "tip3p"
 # NEQ protocol (PLAN.md §4.3–4.4; pmx protein_mut tutorial)
 NEQ_TEMPERATURE_K = 300.0
 NEQ_DT_PS = 0.002
+# C-rescale barostat warmup before Parrinello-Rahman production. Starting P-R
+# directly from a minimized structure with generated velocities can blow up a
+# large solvated box; a short C-rescale phase relaxes the box first.
+NEQ_WARMUP_PS = 500.0
 NEQ_EQUIL_NS = 5.0
 NEQ_SWITCH_PS_DEFAULT = 100.0
 # P0 panel: 12 systems × bundled switch tasks (36 at 100 snapshots; see docs/pmx-neq-fep-plan.md §7.2).

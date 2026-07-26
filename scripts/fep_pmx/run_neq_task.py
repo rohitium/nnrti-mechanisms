@@ -112,7 +112,56 @@ def _run_equil(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, gm
     if not em_gro.is_file():
         raise FileNotFoundError(f"Missing minimized structure: {em_gro}")
 
-    mdp = neq / "mdp" / f"npt_eq_lambda{lambda_state}.mdp"
+    # 1) Per-endpoint minimization at this lambda (free-energy + soft-core). The
+    #    global em stage minimizes only the A-state, so B-state atoms that are
+    #    dummies in A (growth mutations, e.g. G190E at lambda=1) are unrelaxed;
+    #    this pass relieves those forces before any dynamics.
+    if not (work / "min.gro").is_file():
+        run_gmx(
+            gmx,
+            [
+                "grompp",
+                "-f",
+                f"../mdp/em_fep_lambda{lambda_state}.mdp",
+                "-c",
+                "../em/em.gro",
+                "-p",
+                "../system.top",
+                "-o",
+                "min.tpr",
+                "-maxwarn",
+                "10",
+            ],
+            cwd=work,
+            env=env,
+        )
+        _mdrun(gmx, cwd=work, deffnm="min", env=env, use_gpu=False)
+
+    # 2) C-rescale warmup — relaxes the box + generates velocities so production
+    #    does not start Parrinello-Rahman from a bare minimized structure.
+    if not (work / "warmup.gro").is_file():
+        run_gmx(
+            gmx,
+            [
+                "grompp",
+                "-f",
+                f"../mdp/npt_warmup_lambda{lambda_state}.mdp",
+                "-c",
+                "min.gro",
+                "-p",
+                "../system.top",
+                "-o",
+                "warmup.tpr",
+                "-maxwarn",
+                "10",
+            ],
+            cwd=work,
+            env=env,
+        )
+        _mdrun(gmx_mdrun, cwd=work, deffnm="warmup", env=env, use_gpu=True, checkpoint_min=5.0)
+
+    # 3) Parrinello-Rahman production; continues from warmup velocities/box (-t).
+    #    This is the trajectory snapshots are extracted from.
     run_gmx(
         gmx,
         [
@@ -120,7 +169,9 @@ def _run_equil(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, gm
             "-f",
             f"../mdp/npt_eq_lambda{lambda_state}.mdp",
             "-c",
-            "../em/em.gro",
+            "warmup.gro",
+            "-t",
+            "warmup.cpt",
             "-p",
             "../system.top",
             "-o",

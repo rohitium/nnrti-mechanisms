@@ -72,8 +72,8 @@ bash scripts/fep_pmx/submit_p0_neq_pipeline.sh
 Or stage-by-stage (manual dependency):
 
 ```bash
-STAGE=em      bash scripts/fep_pmx/submit_p0_neq.sh   # normal/CPU
-STAGE=equil   bash scripts/fep_pmx/submit_p0_neq.sh   # gpu
+STAGE=em      bash scripts/fep_pmx/submit_p0_neq.sh   # normal/CPU (A-state min)
+STAGE=equil   bash scripts/fep_pmx/submit_p0_neq.sh   # gpu: per-λ min → C-rescale warmup → P-R production (PLAN.md §4.3)
 STAGE=extract bash scripts/fep_pmx/submit_p0_neq.sh   # normal/CPU
 STAGE=switch  bash scripts/fep_pmx/submit_p0_neq.sh   # gpu
 # Y188L switches are 500 ps — use STAGE=switch SHERLOCK_TIME=03:00:00 if needed

@@ -23,7 +23,13 @@ from scripts.fep_pmx.config import (
     switch_bundle_ranges,
     switch_ps_for_leg,
 )
-from scripts.fep_pmx.mdp_utils import render_em_mdp, render_npt_eq_mdp, render_nonequil_mdp
+from scripts.fep_pmx.mdp_utils import (
+    render_em_fep_mdp,
+    render_em_mdp,
+    render_nonequil_mdp,
+    render_npt_eq_mdp,
+    render_npt_warmup_mdp,
+)
 
 
 def _leg_dir(leg_id: str, phase: str, replicate: int) -> Path:
@@ -112,8 +118,11 @@ def prepare_neq(
     mdp_dir = neq / "mdp"
     mdp_dir.mkdir(exist_ok=True)
     render_em_mdp(mdp_dir / "em.mdp")
-    render_npt_eq_mdp(output=mdp_dir / "npt_eq_lambda0.mdp", init_lambda=0.0)
-    render_npt_eq_mdp(output=mdp_dir / "npt_eq_lambda1.mdp", init_lambda=1.0)
+    for lambda_state in (0, 1):
+        init_lambda = float(lambda_state)
+        render_em_fep_mdp(output=mdp_dir / f"em_fep_lambda{lambda_state}.mdp", init_lambda=init_lambda)
+        render_npt_warmup_mdp(output=mdp_dir / f"npt_warmup_lambda{lambda_state}.mdp", init_lambda=init_lambda)
+        render_npt_eq_mdp(output=mdp_dir / f"npt_eq_lambda{lambda_state}.mdp", init_lambda=init_lambda)
     switch_ps = switch_ps_for_leg(leg_id)
     render_nonequil_mdp(output=mdp_dir / "nonequil_fwd.mdp", init_lambda=0.0, switch_ps=switch_ps)
     render_nonequil_mdp(output=mdp_dir / "nonequil_rev.mdp", init_lambda=1.0, switch_ps=switch_ps)
