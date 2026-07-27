@@ -236,14 +236,53 @@ def _run_extract(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str) 
     marker.write_text(json.dumps({"stage": "extract", "lambda_state": lambda_state, "status": "ok"}) + "\n")
 
 
+def _switch_dhdl_file(work: Path) -> Path | None:
+    """dH/dλ output from ``mdrun -deffnm switch``.
+
+    GROMACS names it ``switch.xvg`` (``-deffnm`` replaces the ``-dhdl`` default's
+    base name and keeps the ``.xvg`` extension), not ``switch.dhdl.xvg``.
+    """
+    for name in ("switch.xvg", "switch.dhdl.xvg"):
+        candidate = work / name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _write_switch_status(work: Path, direction: str, snapshot_index: int, time_ps: float | None = None) -> None:
+    (work / "status.json").write_text(
+        json.dumps(
+            {
+                "stage": "switch",
+                "direction": direction,
+                "snapshot_index": snapshot_index,
+                "time_ps": time_ps,
+                "status": "ok",
+            }
+        )
+        + "\n"
+    )
+
+
 def _run_switch(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, gmx_mdrun: str) -> None:
     direction = row["direction"]
     snapshot_index = int(row["snapshot_index"])
     lambda_state = int(row["lambda_state"])
     work = neq / f"switches/{direction}_{snapshot_index:03d}"
     work.mkdir(parents=True, exist_ok=True)
-    if (work / "dgdl.xvg").is_file() and (work / "status.json").is_file():
+    dgdl = work / "dgdl.xvg"
+    if dgdl.is_file():
+        if not (work / "status.json").is_file():
+            _write_switch_status(work, direction, snapshot_index)
         return
+    # Self-heal: MD already finished (confout present) but the dH/dλ file is still
+    # under the mdrun deffnm name (switch.xvg). Rename it — do NOT re-run the switch.
+    if (work / "switch.gro").is_file():
+        produced = _switch_dhdl_file(work)
+        if produced is not None:
+            produced.rename(dgdl)
+            _write_switch_status(work, direction, snapshot_index)
+            return
 
     frame_gro = neq / f"snapshots/lambda{lambda_state}" / f"frame_{snapshot_index:03d}.gro"
     if not frame_gro.is_file():
@@ -283,21 +322,12 @@ def _run_switch(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, g
         env=env,
     )
     _mdrun(gmx_mdrun, cwd=work, deffnm="switch", env=env, use_gpu=True, checkpoint_min=5.0)
-    dhdl = work / "switch.dhdl.xvg"
-    if dhdl.is_file() and not (work / "dgdl.xvg").exists():
-        dhdl.rename(work / "dgdl.xvg")
-    (work / "status.json").write_text(
-        json.dumps(
-            {
-                "stage": "switch",
-                "direction": direction,
-                "snapshot_index": snapshot_index,
-                "time_ps": time_ps,
-                "status": "ok",
-            }
-        )
-        + "\n"
-    )
+    produced = _switch_dhdl_file(work)
+    if produced is None:
+        raise GromacsError(f"switch produced no dH/dλ xvg (expected switch.xvg) in {work}")
+    if not dgdl.exists():
+        produced.rename(dgdl)
+    _write_switch_status(work, direction, snapshot_index, time_ps)
 
 
 def _run_switch_bundle(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str, gmx_mdrun: str) -> None:
