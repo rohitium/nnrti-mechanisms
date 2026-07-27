@@ -245,6 +245,21 @@ results/analysis/fep_jorgensen/_archive/**/multistate*.nc
 results/analysis/fep_jorgensen/legs/**/hybrid_system.xml
 results/analysis/fep_jorgensen/legs/**/hybrid_topology.pdb
 
+# FEP pmx NEQ runtime outputs: ignore heavy MD artifacts (trajectories,
+# checkpoints, per-switch dgdl, extracted frames), keep light provenance
+# (manifests, residue_map/analysis/summary JSON, integ_*.dat, panel CSVs, plots).
+# Sync heavy artifacts via rsync, not git.
+results/analysis/fep_pmx/legs/**/*.trr
+results/analysis/fep_pmx/legs/**/*.xtc
+results/analysis/fep_pmx/legs/**/*.tpr
+results/analysis/fep_pmx/legs/**/*.cpt
+results/analysis/fep_pmx/legs/**/*.edr
+results/analysis/fep_pmx/legs/**/*.log
+results/analysis/fep_pmx/legs/**/*.gro
+results/analysis/fep_pmx/legs/**/*.xvg
+results/analysis/fep_pmx/legs/**/snapshots/**
+results/analysis/fep_pmx/legs/**/switches/**
+
 # Operational status scratch files; keep the committed Sherlock reconciliation audit only.
 results/.status/complete_at_target.txt
 results/.status/incomplete_not_running.txt
