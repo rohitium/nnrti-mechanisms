@@ -214,9 +214,9 @@ def _run_extract(neq: Path, row: dict[str, str], env: dict[str, str], gmx: str) 
             [
                 "trjconv",
                 "-f",
-                f"../eq_lambda{lambda_state}/{trj.name}",
+                f"../../eq_lambda{lambda_state}/{trj.name}",
                 "-s",
-                f"../eq_lambda{lambda_state}/equil.tpr",
+                f"../../eq_lambda{lambda_state}/equil.tpr",
                 "-dump",
                 str(time_ps),
                 "-o",

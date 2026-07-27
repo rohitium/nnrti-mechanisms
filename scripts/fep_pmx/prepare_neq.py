@@ -45,7 +45,12 @@ def _neq_dir(leg_id: str, phase: str, replicate: int) -> Path:
 
 
 def _snapshot_times_ps(n_snapshots: int) -> list[float]:
-    """Evenly spaced snapshot times during equil production window."""
+    """Evenly spaced snapshot times during equil production window (ps).
+
+    Times are relative to the production ``equil.trr`` clock. Verify with
+    ``gmx check -f eq_lambda*/equil.trr`` on Sherlock before changing this —
+    if production continues from a warmup checkpoint, frame t0 may not be 0.
+    """
     start_ps = NEQ_EQUIL_SNAPSHOT_START_PS
     end_ps = NEQ_EQUIL_NS * 1000.0
     if n_snapshots < 1:

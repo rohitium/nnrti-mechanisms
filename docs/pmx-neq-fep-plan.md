@@ -98,7 +98,7 @@ Each endpoint runs three fixed-λ steps before the 5 ns production trajectory:
 2. **C-rescale warmup** (`npt_warmup.mdp`, 0.5 ns) to relax the box and generate velocities — starting Parrinello–Rahman from a bare minimized structure risks box blow-up on a ~200k-atom system ([Bernetti & Bussi 2020](https://doi.org/10.1063/5.0020514)).
 3. **Parrinello–Rahman production** (`npt_eq.mdp`, 5 ns, `continuation = yes`) — the sampling trajectory.
 
-Temperature coupling uses separate **`Protein` / `non-Protein`** baths (not `System`) in all dynamics stages.
+Temperature coupling uses separate **`Protein` / `non-Protein`** baths (not `System`) in all dynamics stages. Before batch extract, confirm `equil.trr` time range with `gmx check` (production clock may or may not include the 500 ps warmup offset).
 
 ---
 

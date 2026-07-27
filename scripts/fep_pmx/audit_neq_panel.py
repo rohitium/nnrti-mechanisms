@@ -41,11 +41,14 @@ def _task_ok(row: dict[str, str]) -> tuple[bool, str]:
     if stage == "equil":
         work = neq / row["run_dir"]
         path = work / "equil.gro"
-        if path.is_file() and (work / "status.json").is_file():
-            return True, str(path)
+        trr = work / "equil.trr"
+        if path.is_file() and trr.is_file() and (work / "status.json").is_file():
+            return True, str(trr)
         partial = work / "equil.cpt" if (work / "equil.cpt").is_file() else None
         if partial:
             return False, f"incomplete equil (checkpoint only): {work}"
+        if path.is_file() and (work / "status.json").is_file() and not trr.is_file():
+            return False, f"missing {trr} (status.json present — re-run equil or delete stale marker)"
         return False, f"missing {path}"
 
     if stage == "extract":
