@@ -78,10 +78,25 @@ STAGE=extract bash scripts/fep_pmx/submit_p0_neq.sh   # normal/CPU
 STAGE=switch  bash scripts/fep_pmx/submit_p0_neq.sh   # gpu
 # Y188L switches are 500 ps — use STAGE=switch SHERLOCK_TIME=03:00:00 if needed
 
-# 3) BAR analysis (Mac or Sherlock login with pmx)
+# 3) Analysis (Mac or Sherlock login with pmx)
 conda activate pmx
-python scripts/fep_pmx/analyze_neq.py --leg wt_to_V106A --phase holo --replicate 1
-python scripts/fep_pmx/analyze_neq.py --leg wt_to_V106A --phase apo --replicate 1
-# ΔΔG_bind = ΔG_mut(holo) − ΔG_mut(apo)
 
-Outputs land under `results/analysis/fep_pmx/`.
+# 3a) per leg/phase/rep BAR+CGI+Jarzynski (writes analysis.json + work_dist.png)
+python scripts/fep_pmx/analyze_neq.py --leg wt_to_V106A --phase holo --replicate 1
+
+# 3b) ΔΔG_bind per genotype (= ΔG_holo − ΔG_apo, summed over legs), mean ± SEM
+#     across replicates; correlates vs experiment; runs analyze_neq for any
+#     missing leg automatically.
+python scripts/fep_pmx/combine_neq.py --targets V106A Y188L --replicates 3
+
+# 3c) QC: Crooks forward/reverse overlap, work outliers, BAR-vs-Jarzynski (§4.6)
+python scripts/fep_pmx/qc_neq.py --replicates 3
+```
+
+Outputs land under `results/analysis/fep_pmx/`:
+- `legs/{leg}/{holo,apo}/rep_*/neq/analysis/` — per-unit `analysis.json`, `results.txt`, `work_dist.png`, `integ_{fwd,rev}.dat`
+- `targets/{genotype}/summary.json` — ΔΔG_bind ± SEM + per-replicate table
+- `panel_ddg.csv`, `panel_ddg_vs_experiment.png` — ranking vs experiment (Spearman ρ once ≥3 genotypes)
+- `panel_qc.csv`, `panel_crooks_overlap.png` — QC table + overlap histograms
+
+**Note:** `pmx analyse` needs `numpy < 2.0` (newer numpy breaks pmx's estimators). The Sherlock `~/.venvs/pmx` env is fine; a local Mac `pmx` conda env may need `pip install 'numpy<2'`.
