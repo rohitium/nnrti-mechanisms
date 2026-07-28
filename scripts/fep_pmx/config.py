@@ -28,6 +28,16 @@ LIGAND_RESNAME = "2KW"
 
 P0_LEGS = ("wt_to_V106A", "wt_to_Y188L")
 
+# P1 single-residue legs for the ranking gate (Spearman vs experimental fold).
+# Split by net charge: neutral legs run the standard pipeline now; the two
+# charge-changing legs need the co-alchemical ion / double-box protocol (PLAN
+# §6.2, not yet implemented) and are deferred.
+P1_NEUTRAL_LEGS = (
+    "wt_to_F227C", "wt_to_G190A", "wt_to_V106I",
+    "wt_to_V106M", "wt_to_Y181C", "wt_to_Y318F",
+)
+P1_CHARGE_LEGS = ("wt_to_K103N", "wt_to_G190E")  # deferred until charge protocol lands
+
 # Match OpenMM MD prep (md_protocol.py / manuscript)
 SOLVENT_PADDING_NM = 1.0
 IONIC_STRENGTH_M = 0.15

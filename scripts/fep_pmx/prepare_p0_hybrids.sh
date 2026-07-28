@@ -37,7 +37,8 @@ PY
 )"
 fi
 
-LEGS=(wt_to_V106A wt_to_Y188L)
+# Override with e.g. LEGS="wt_to_F227C wt_to_G190A" for other legs (P1).
+read -r -a LEGS <<< "${LEGS:-wt_to_V106A wt_to_Y188L}"
 PHASES=(holo apo)
 
 echo "=========================================="

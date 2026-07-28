@@ -427,11 +427,19 @@ def main(argv: list[str] | None = None) -> int:
         help="Write combined manifest for P0 legs when --leg is omitted",
     )
     parser.add_argument("--replicates", type=int, default=1, help="Panel mode: reps 1..N")
+    parser.add_argument(
+        "--legs",
+        nargs="+",
+        default=None,
+        help="Panel-mode leg ids (default: P0_LEGS). Use for P1: --legs $(python -c "
+        "'from scripts.fep_pmx.config import P1_NEUTRAL_LEGS; print(*P1_NEUTRAL_LEGS)')",
+    )
     args = parser.parse_args(argv)
+    panel_legs = tuple(args.legs) if args.legs else P0_LEGS
 
     if args.rebuild_panel_only:
         manifest = rebuild_panel_manifest(
-            legs=P0_LEGS,
+            legs=panel_legs,
             phases=("holo", "apo"),
             replicates=range(1, args.replicates + 1),
             output=args.panel_manifest,
@@ -449,7 +457,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(f"Refreshed switch schedule: {args.leg} {args.phase} rep{args.replicate}")
             return 0
-        for leg_id in P0_LEGS:
+        for leg_id in panel_legs:
             for phase in ("holo", "apo"):
                 for replicate in range(1, args.replicates + 1):
                     refresh_switch_schedule(
@@ -459,7 +467,7 @@ def main(argv: list[str] | None = None) -> int:
                         n_snapshots=args.n_snapshots,
                     )
         print(
-            f"Refreshed switch schedule for P0 panel "
+            f"Refreshed switch schedule for {len(panel_legs)} legs "
             f"({args.n_snapshots} snapshots / {args.replicates} reps)"
         )
         return 0
@@ -476,14 +484,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     manifest = build_panel_manifest(
-        legs=P0_LEGS,
+        legs=panel_legs,
         phases=("holo", "apo"),
         replicates=range(1, args.replicates + 1),
         n_snapshots=args.n_snapshots,
         output=args.panel_manifest,
         force=args.force,
     )
-    print(f"Wrote panel NEQ manifest: {manifest}")
+    print(f"Wrote panel NEQ manifest ({len(panel_legs)} legs): {manifest}")
     return 0
 
 
