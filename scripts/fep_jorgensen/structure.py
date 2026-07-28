@@ -34,15 +34,35 @@ def extract_protein_only(
 
 
 def normalize_openmm_for_pmx(protein_pdb: Path) -> None:
-    """Rename OpenMM/CHARMM atom labels to names pmx amber14sbmut expects."""
+    """Rename OpenMM/CHARMM atom labels to names pmx amber14sbmut expects.
+
+    Amber names the second/third methylene hydrogens HB2/HB3 (β) and HA2/HA3
+    (glycine α); pmx wants HB1/HB2 and HA1/HA2. The rename is **idempotent** and
+    **per-residue**: a residue that already carries HB1 (or HA1) is skipped, so
+    re-normalizing an already-converted structure cannot collide HB3→HB2→HB1
+    onto an existing HB1 (which produced duplicate HB1/HB1 atoms pmx could not
+    resolve). HA2/HA3 only occur on glycine, so that rename is glycine-specific.
+    """
     lines = protein_pdb.read_text().splitlines()
+
+    def _residues_with(atom: str) -> set[tuple[str, str]]:
+        return {
+            (line[21], line[22:26].strip())
+            for line in lines
+            if line.startswith(("ATOM", "HETATM")) and line[12:16].strip() == atom
+        }
+
+    have_hb1 = _residues_with("HB1")
+    have_ha1 = _residues_with("HA1")
+    rename = {"HB2": " HB1", "HB3": " HB2", "HA2": " HA1", "HA3": " HA2"}
+
     normalized: list[str] = []
     for line in lines:
         if line.startswith(("ATOM", "HETATM")):
+            key = (line[21], line[22:26].strip())
             name = line[12:16].strip()
-            if name == "HB2":
-                line = line[:12] + " HB1" + line[16:]
-            elif name == "HB3":
-                line = line[:12] + " HB2" + line[16:]
+            already = have_hb1 if name in ("HB2", "HB3") else have_ha1
+            if name in rename and key not in already:
+                line = line[:12] + rename[name] + line[16:]
         normalized.append(line)
     protein_pdb.write_text("\n".join(normalized + ["END", ""]))
