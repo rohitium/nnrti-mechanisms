@@ -100,3 +100,42 @@ Outputs land under `results/analysis/fep_pmx/`:
 - `panel_qc.csv`, `panel_crooks_overlap.png` — QC table + overlap histograms
 
 **Note:** `pmx analyse` needs `numpy < 2.0` (newer numpy breaks pmx's estimators). The Sherlock `~/.venvs/pmx` env is fine; a local Mac `pmx` conda env may need `pip install 'numpy<2'`.
+
+Sync light results (no trajectories) to your Mac to inspect:
+
+```bash
+SHERLOCK_USER=rsatija bash scripts/rsync_fep_pmx.sh pull
+```
+
+## P0 results (first run)
+
+ΔΔG_bind **V106A = +1.69 ± 0.70**, **Y188L = +4.52 ± 0.49** kcal/mol (exp. fold 9.6 / 149).
+Both signs positive (resistance), ranking correct, SEM < 1, BAR/CGI/Jarzynski agree.
+**Caveat:** Crooks overlap is marginal (0.01–0.53), driven by the noisy reverse (λ=1)
+work — see [`PLAN.md`](PLAN.md) §9 and [`docs/pmx-neq-fep-plan.md`](../../docs/pmx-neq-fep-plan.md) §3.4.
+
+### Overlap sensitivity test (V106A: 100 → 500 ps switches, reuses equil/extract)
+
+V106A now defaults to 500 ps switches. Re-run **only its switch stage** (equilibration and
+snapshots are unchanged, so they are reused — cheap):
+
+```bash
+git pull
+# clear V106A's old 100 ps switch outputs so the 500 ps ones regenerate
+rm -rf results/analysis/fep_pmx/legs/wt_to_V106A/*/rep_*/neq/switches/*
+# FORCE re-renders all mdps at the new 500 ps + rebuilds the manifest; it never
+# deletes em/equil/extract outputs, so those (and Y188L's switches) are reused.
+NEQ_SNAPSHOTS=100 REPLICATES=3 FORCE=1 bash scripts/fep_pmx/prepare_p0_neq.sh
+# re-run the switch stage only: V106A regenerates at 500 ps; Y188L keeps its dgdl.xvg → skipped
+STAGE=switch bash scripts/fep_pmx/submit_p0_neq.sh
+# when switches finish: recover dgdl (idempotent), then re-analyze and compare
+find results/analysis/fep_pmx/legs/wt_to_V106A -path '*/switches/*' -name switch.gro -print0 |
+while IFS= read -r -d '' g; do d=$(dirname "$g"); [ -f "$d/dgdl.xvg" ] || cp "$d/switch.xvg" "$d/dgdl.xvg"; done
+python3 scripts/fep_pmx/combine_neq.py --targets V106A Y188L --replicates 3
+python3 scripts/fep_pmx/qc_neq.py --replicates 3
+```
+
+If overlap tightens and ΔΔG stays ~+1.7, adopt for the panel. If the reverse (λ=1) scatter
+persists, add equilibration (full V106A re-run): `NEQ_EQUIL_NS=10 REPLICATES=3 FORCE=1 bash
+scripts/fep_pmx/prepare_p0_neq.sh` then the em→switch pipeline. **Do not raise snapshots for
+overlap** — that only shrinks ΔG error bars, not the fwd/rev gap.

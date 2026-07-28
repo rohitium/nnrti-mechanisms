@@ -2,7 +2,18 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
 
 FEP_PMX_ROOT = Path("results/analysis/fep_pmx")
 LEG_INPUTS = FEP_PMX_ROOT / "inputs"
@@ -30,13 +41,30 @@ NEQ_DT_PS = 0.002
 # directly from a minimized structure with generated velocities can blow up a
 # large solvated box; a short C-rescale phase relaxes the box first.
 NEQ_WARMUP_PS = 500.0
-NEQ_EQUIL_NS = 5.0
-NEQ_SWITCH_PS_DEFAULT = 100.0
-# P0 panel: 12 systems × bundled switch tasks (36 at 100 snapshots; see docs/pmx-neq-fep-plan.md §7.2).
+# Endpoint equilibration (ns), applied to BOTH endpoints. Env-overridable so a
+# longer-equilibration sensitivity test needs no code edit — the P0 pilot showed
+# the reverse (λ=1 / mutant) work distributions are the noisy half, so more
+# equilibration is the second lever after switch length (docs/pmx-neq-fep-plan.md
+# §3.4). Example: NEQ_EQUIL_NS=10 REPLICATES=3 FORCE=1 bash prepare_p0_neq.sh
+NEQ_EQUIL_NS = _env_float("NEQ_EQUIL_NS", 5.0)
+# Snapshots per endpoint per replicate. Increasing this tightens the statistical
+# error of ΔG but does NOT improve Crooks overlap (same distributions) — use
+# switch length / equilibration for overlap, snapshots for error bars.
 NEQ_SNAPSHOTS_DEFAULT = 100
 NEQ_EQUIL_SNAPSHOT_START_PS = 100.0  # skip first 100 ps of equil when extracting
-LONG_SWITCH_LEGS = frozenset({"wt_to_Y188L", "wt_to_G190E"})
-LONG_SWITCH_PS = 500.0
+
+# Legs whose driven switches run LONG_SWITCH_PS instead of NEQ_SWITCH_PS_DEFAULT.
+# V106A was added after the P0 pilot: its 100 ps switches gave marginal Crooks
+# overlap (large reverse-work dissipation, ~1.5–6 kcal fwd/rev gap); 500 ps
+# reduces dissipation and improves overlap. Extend the set for further tests via
+# NEQ_EXTRA_LONG_SWITCH_LEGS (comma-separated leg ids) without editing code.
+_BASE_LONG_SWITCH_LEGS = {"wt_to_V106A", "wt_to_Y188L", "wt_to_G190E"}
+_EXTRA_LONG_SWITCH_LEGS = {
+    leg.strip() for leg in os.environ.get("NEQ_EXTRA_LONG_SWITCH_LEGS", "").split(",") if leg.strip()
+}
+LONG_SWITCH_LEGS = frozenset(_BASE_LONG_SWITCH_LEGS | _EXTRA_LONG_SWITCH_LEGS)
+NEQ_SWITCH_PS_DEFAULT = _env_float("NEQ_SWITCH_PS_DEFAULT", 100.0)
+LONG_SWITCH_PS = _env_float("NEQ_LONG_SWITCH_PS", 500.0)
 
 # SLURM array bundling: snapshots executed sequentially per GPU job (see docs/pmx-neq-fep-plan.md §7).
 SWITCH_SNAPSHOTS_PER_TASK_DEFAULT = 100

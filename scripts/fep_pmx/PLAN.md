@@ -167,13 +167,20 @@ hot-solvent/cold-solute artifact.
 | Setting | Default | Exceptions |
 | --- | --- | --- |
 | Snapshots per endpoint per replicate | **100** | — |
-| Switch length | **100 ps** | **500 ps** for Y188L, G190E |
+| Switch length | **100 ps** | **500 ps** for V106A, Y188L, G190E |
 | Direction | Forward (λ 0→1) + reverse (λ 1→0) from each snapshot | — |
 | Replicates | 3 | — |
 | Soft-core | `sc-function = gapsys` (GROMACS ≥2022) | — |
 | Gapsys defaults | `sc-gapsys-scale-linpoint-q=0.3`, `sc-gapsys-scale-linpoint-lj=0.85` | — |
 
 **Total switching per leg-phase:** 3 × 100 × 100 ps × 2 directions ≈ **60 ns** (600 switches).
+
+> **P0 update (see §9 results):** V106A moved to **500 ps** switches. Its initial
+> 100 ps switches gave marginal Crooks overlap from large reverse-work dissipation.
+> Switch length is env-overridable (`NEQ_LONG_SWITCH_PS`, `NEQ_EXTRA_LONG_SWITCH_LEGS`)
+> and endpoint equilibration via `NEQ_EQUIL_NS`. **Adding snapshots does not improve
+> overlap** — it only tightens ΔG statistical error; switch length / equilibration
+> are the overlap levers.
 
 ### 4.5 Analysis
 
@@ -190,6 +197,12 @@ hot-solvent/cold-solute artifact.
 | BAR vs Jarzynski | Agreement within 1 kcal/mol |
 | Sign check (P0) | V106A, Y188L positive ΔΔG_bind vs CSV |
 | Replicate spread | Per-leg SEM reported |
+
+**Overlap convention:** compare forward `W_f` against reverse `W_r` **directly** —
+pmx stores the reverse work already in the forward frame (`integ_rev` crosses
+`integ_fwd` at ΔG; see `CGI Forward/Reverse Gauss mean` in `results.txt`). Do **not**
+negate `W_r` (`qc_neq.py` did initially, which manufactured false near-zero overlap
+for large-ΔG legs and false-high overlap for ΔG≈0 legs).
 
 ---
 
@@ -331,12 +344,24 @@ Reuse: `scripts/fep_jorgensen/mutations.py`, `results/md_runs/` paths, Sherlock 
 
 ## 9. Validation gates
 
-### P0 (V106A + Y188L)
+### P0 (V106A + Y188L) — first run complete (100 ps V106A / 500 ps Y188L, 3 reps)
 
-- [ ] Crooks overlap clean (forward/reverse)  
-- [ ] BAR/Jarzynski agree  
-- [ ] Sign(ΔΔG_bind) matches CSV (both positive resistance)  
-- [ ] Replicate error bars < 1 kcal/mol (target, not hard fail)
+Result: **ΔΔG_bind V106A = +1.69 ± 0.70**, **Y188L = +4.52 ± 0.49** kcal/mol
+(experimental fold 9.6 / 149).
+
+- [x] **Sign(ΔΔG_bind) matches CSV** — both positive (resistance). ✅
+- [x] **Ranking correct** — Y188L ≫ V106A, matching 149 ≫ 9.6. ✅
+- [x] **Replicate error bars < 1 kcal/mol** (0.70, 0.49). ✅
+- [x] **BAR/Jarzynski agree** — within ~1 kcal/mol; BAR `Conv ≈ 0` (good convergence). ✅
+- [~] **Crooks overlap** — **marginal** (0.01–0.53 across reps, most < 0.3). The forward
+  works are tight/reproducible; the **reverse (λ=1 / mutant) works are broad and scatter
+  across replicates** — that asymmetry is what drags overlap down. Not disqualifying (BAR
+  converges, estimators agree, ΔΔG signs/rank hold) but the absolute per-phase ΔG carries
+  more uncertainty than the SEM implies, especially for apo legs (pocket instability, §6.3).
+
+**Follow-up (in progress):** V106A → 500 ps switches (config default now); optional longer
+`NEQ_EQUIL_NS` for the noisy λ=1 endpoint. Re-run V106A and confirm overlap tightens while
+ΔΔG stays ~+1.7 before batching P1.
 
 ### P1 (11 singles)
 

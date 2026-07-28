@@ -100,6 +100,24 @@ Each endpoint runs three fixed-λ steps before the 5 ns production trajectory:
 
 Temperature coupling uses separate **`Protein` / `non-Protein`** baths (not `System`) in all dynamics stages. Before batch extract, confirm `equil.trr` time range with `gmx check` (production clock may or may not include the 500 ps warmup offset).
 
+### 3.4 P0 pilot results & caveats (first run: 100 ps V106A / 500 ps Y188L, 3 reps)
+
+| genotype | ΔΔG_bind (kcal/mol) | exp. fold | sign | overlap (r1,r2,r3) |
+|---|---|---|---|---|
+| V106A | **+1.69 ± 0.70** | 9.6 | ✅ + | 0.42, 0.06, 0.08 |
+| Y188L | **+4.52 ± 0.49** | 149 | ✅ + | holo 0.49/0.24/0.01 |
+
+**What passed:** both ΔΔG_bind positive (resistance direction); ranking correct (Y188L ≫ V106A, matching 149 ≫ 9.6); replicate SEM < 1 kcal/mol; BAR `Conv ≈ 0` and BAR/CGI/Jarzynski agree within ~1 kcal/mol.
+
+**The caveat — marginal Crooks overlap.** Per-rep forward/reverse overlap is 0.01–0.53 (most < 0.3). Forward works are tight and reproducible; **reverse (λ=1 / mutant) works are broad and their means scatter across replicates** (e.g. V106A reverse mean 15–19 kcal/mol vs a stable forward ~21). That asymmetry drags overlap down. It is not disqualifying — BAR converges and the ΔΔG signs/ranking/SEM hold — but per-phase absolute ΔG is less certain than the SEM alone implies, worst for **apo** legs (pocket instability, §6.3).
+
+**Levers (which actually help overlap):**
+- **Switch length** — primary. Longer switches → less dissipation → tighter fwd/rev gap. V106A moved 100 → 500 ps (`config.py`; `NEQ_LONG_SWITCH_PS`, `NEQ_EXTRA_LONG_SWITCH_LEGS`).
+- **Endpoint equilibration** — secondary, targets the noisy λ=1 ensemble. `NEQ_EQUIL_NS` (env-overridable; applies to both endpoints).
+- **Snapshots do NOT help overlap** — they only shrink ΔG statistical error on the *same* distributions. The P0 SEM is already < 1 kcal/mol, so snapshots are not the bottleneck.
+
+**Overlap-metric note:** compare `W_f` vs `W_r` **directly** — pmx already stores the reverse work in the forward frame (`integ_rev` crosses `integ_fwd` at ΔG). `qc_neq.py` initially negated `W_r`, which produced false near-zero overlap for large-ΔG legs (V106A) and false-high overlap for ΔG≈0 legs (Y188L holo); fixed.
+
 ---
 
 ## 4. Panel rollout
