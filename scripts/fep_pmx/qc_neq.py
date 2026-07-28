@@ -3,7 +3,7 @@
 
 Per leg/phase/replicate, reads the per-switch work values dumped by
 ``analyze_neq.py`` and reports:
-  - forward/reverse Crooks overlap coefficient (P(W_f) vs P(-W_r))
+  - forward/reverse Crooks overlap coefficient (P(W_f) vs P(W_r), pmx frame)
   - work outlier fraction (MAD-based) per direction
   - BAR vs Jarzynski agreement
 
@@ -67,9 +67,10 @@ def qc_unit(leg_id: str, phase: str, replicate: int, *, temperature_k: float, nb
     )
     wf = np.array(read_work_values_kcal(Path(meta["integ_fwd"])))
     wr = np.array(read_work_values_kcal(Path(meta["integ_rev"])))
-    neg_wr = -wr
-
-    overlap = overlap_coefficient(wf, neg_wr)
+    # pmx stores the reverse work already in the forward frame (integ_rev crosses
+    # integ_fwd at ΔG — see CGI Forward/Reverse means in results.txt), so the
+    # Crooks overlap is between W_f and W_r directly. Do NOT negate W_r.
+    overlap = overlap_coefficient(wf, wr)
     of_fwd = outlier_fraction(wf)
     of_rev = outlier_fraction(wr)
     bar_dg = meta.get("bar_dg")
@@ -92,7 +93,7 @@ def qc_unit(leg_id: str, phase: str, replicate: int, *, temperature_k: float, nb
         "overlap": overlap, "outlier_frac_fwd": of_fwd, "outlier_frac_rev": of_rev,
         "bar_dg": bar_dg, "jarz_dg_mean": jarz, "bar_minus_jarz": bar_minus_jarz,
         "flags": ";".join(flags) if flags else "ok",
-        "_wf": wf, "_neg_wr": neg_wr,
+        "_wf": wf, "_wr": wr,
     }
 
 
@@ -120,11 +121,11 @@ def _plot(units: list[dict], output: Path) -> None:
         ax.set_visible(True)
         us = groups[key]
         wf = np.concatenate([u["_wf"] for u in us]) if us else np.array([])
-        neg_wr = np.concatenate([u["_neg_wr"] for u in us]) if us else np.array([])
+        wr = np.concatenate([u["_wr"] for u in us]) if us else np.array([])
         if len(wf):
             ax.hist(wf, bins=25, alpha=0.55, density=True, label="forward $W_f$", color="#2c6fbb")
-        if len(neg_wr):
-            ax.hist(neg_wr, bins=25, alpha=0.55, density=True, label="reverse $-W_r$", color="#d1642f")
+        if len(wr):
+            ax.hist(wr, bins=25, alpha=0.55, density=True, label="reverse $W_r$", color="#d1642f")
         bar_vals = [u["bar_dg"] for u in us if u["bar_dg"] is not None]
         if bar_vals:
             ax.axvline(float(np.mean(bar_vals)), color="0.2", lw=1.2, ls="--",
