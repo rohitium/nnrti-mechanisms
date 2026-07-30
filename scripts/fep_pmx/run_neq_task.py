@@ -53,6 +53,10 @@ def _mdrun(
     checkpoint_min: float | None = None,
 ) -> None:
     ntmpi, ntomp = _mdrun_threads()
+    # GROMACS aborts if OMP_NUM_THREADS is set and disagrees with -ntomp. An
+    # inherited OMP_NUM_THREADS (from the login shell / env modules) otherwise
+    # kills mdrun; pin it to the -ntomp value we actually request.
+    env = {**env, "OMP_NUM_THREADS": str(ntomp)}
     args = [
         "mdrun",
         "-v",
