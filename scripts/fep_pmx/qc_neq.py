@@ -60,10 +60,10 @@ def overlap_coefficient(wf: np.ndarray, neg_wr: np.ndarray, nbins: int = 30) -> 
     return float(np.sum(np.minimum(hf, hr)) * width)
 
 
-def qc_unit(leg_id: str, phase: str, replicate: int, *, temperature_k: float, nboots: int, auto: bool) -> dict:
+def qc_unit(leg_id: str, phase: str, replicate: int, *, temperature_k: float, nboots: int, auto: bool, force: bool = False) -> dict:
     meta = ensure_leg_analysis(
         leg_id, phase=phase, replicate=replicate,
-        temperature_k=temperature_k, nboots=nboots, auto=auto,
+        temperature_k=temperature_k, nboots=nboots, auto=auto, force=force,
     )
     wf = np.array(read_work_values_kcal(Path(meta["integ_fwd"])))
     wr = np.array(read_work_values_kcal(Path(meta["integ_rev"])))
@@ -150,6 +150,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--temperature-k", type=float, default=NEQ_TEMPERATURE_K)
     parser.add_argument("--nboots", type=int, default=100)
     parser.add_argument("--no-auto", action="store_true")
+    parser.add_argument("--force", action="store_true", help="Re-run pmx analyse even if analysis.json exists (use after re-running switches)")
     parser.add_argument("--output-dir", type=Path, default=FEP_PMX_ROOT)
     args = parser.parse_args(argv)
 
@@ -161,6 +162,7 @@ def main(argv: list[str] | None = None) -> int:
                     units.append(qc_unit(
                         leg_id, phase, replicate,
                         temperature_k=args.temperature_k, nboots=args.nboots, auto=not args.no_auto,
+                        force=args.force,
                     ))
                 except (FileNotFoundError, RuntimeError) as exc:
                     print(f"skip {leg_id} {phase} rep{replicate}: {exc}", file=sys.stderr)

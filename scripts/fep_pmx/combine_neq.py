@@ -79,6 +79,7 @@ def target_ddg(
     temperature_k: float,
     nboots: int,
     auto: bool,
+    force: bool = False,
 ) -> dict:
     """Per-replicate and combined ΔΔG_bind for one genotype (sum of its legs)."""
     if genotype not in MANUSCRIPT_PLANS:
@@ -93,11 +94,11 @@ def target_ddg(
         for leg in legs:
             holo = ensure_leg_analysis(
                 leg.leg_id, phase="holo", replicate=replicate,
-                temperature_k=temperature_k, nboots=nboots, auto=auto,
+                temperature_k=temperature_k, nboots=nboots, auto=auto, force=force,
             )
             apo = ensure_leg_analysis(
                 leg.leg_id, phase="apo", replicate=replicate,
-                temperature_k=temperature_k, nboots=nboots, auto=auto,
+                temperature_k=temperature_k, nboots=nboots, auto=auto, force=force,
             )
             if holo.get("bar_dg") is None or apo.get("bar_dg") is None:
                 complete = False
@@ -185,6 +186,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--nboots", type=int, default=100)
     parser.add_argument("--experimental-csv", type=Path, default=EXPERIMENTAL_CSV)
     parser.add_argument("--no-auto", action="store_true", help="Do not run analyze_neq for missing legs")
+    parser.add_argument("--force", action="store_true", help="Re-run pmx analyse even if analysis.json exists (use after re-running switches)")
     parser.add_argument("--strict", action="store_true", help="Exit non-zero if a P0 sign gate fails")
     parser.add_argument("--output-dir", type=Path, default=FEP_PMX_ROOT)
     args = parser.parse_args(argv)
@@ -198,6 +200,7 @@ def main(argv: list[str] | None = None) -> int:
             res = target_ddg(
                 genotype, replicates=replicates,
                 temperature_k=args.temperature_k, nboots=args.nboots, auto=not args.no_auto,
+                force=args.force,
             )
         except (FileNotFoundError, ValueError) as exc:
             print(f"skip {genotype}: {exc}", file=sys.stderr)

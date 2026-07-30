@@ -145,18 +145,24 @@ def ensure_leg_analysis(
     temperature_k: float = NEQ_TEMPERATURE_K,
     nboots: int = 100,
     auto: bool = True,
+    force: bool = False,
 ) -> dict:
-    """Return the parsed analysis dict, running pmx analyse first if needed."""
+    """Return the parsed analysis dict, running pmx analyse first if needed.
+
+    ``force=True`` re-runs pmx even when analysis.json exists — use after the
+    switch data (dgdl.xvg) has changed, e.g. a leg re-run at a new switch length,
+    so a stale cached analysis is not silently reused.
+    """
     analysis_json = _neq_dir(leg_id, phase, replicate) / "analysis" / "analysis.json"
-    if analysis_json.is_file():
+    if analysis_json.is_file() and not force:
         return json.loads(analysis_json.read_text())
-    if not auto:
+    if not auto and not analysis_json.is_file():
         raise FileNotFoundError(
             f"Missing {analysis_json}; run analyze_neq.py for {leg_id} {phase} rep{replicate}"
         )
     return analyze_neq_leg(
         leg_id, phase=phase, replicate=replicate,
-        temperature_k=temperature_k, nboots=nboots,
+        temperature_k=temperature_k, nboots=nboots, force=force,
     )
 
 
