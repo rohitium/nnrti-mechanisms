@@ -112,9 +112,20 @@ Temperature coupling uses separate **`Protein` / `non-Protein`** baths (not `Sys
 **The caveat — marginal Crooks overlap.** Per-rep forward/reverse overlap is 0.01–0.53 (most < 0.3). Forward works are tight and reproducible; **reverse (λ=1 / mutant) works are broad and their means scatter across replicates** (e.g. V106A reverse mean 15–19 kcal/mol vs a stable forward ~21). That asymmetry drags overlap down. It is not disqualifying — BAR converges and the ΔΔG signs/ranking/SEM hold — but per-phase absolute ΔG is less certain than the SEM alone implies, worst for **apo** legs (pocket instability, §6.3).
 
 **Levers (which actually help overlap):**
-- **Switch length** — primary. Longer switches → less dissipation → tighter fwd/rev gap. V106A moved 100 → 500 ps (`config.py`; `NEQ_LONG_SWITCH_PS`, `NEQ_EXTRA_LONG_SWITCH_LEGS`).
-- **Endpoint equilibration** — secondary, targets the noisy λ=1 ensemble. `NEQ_EQUIL_NS` (env-overridable; applies to both endpoints).
+- **Switch length** — longer switches → less dissipation → tighter fwd/rev gap. Env-overridable via `NEQ_LONG_SWITCH_PS` / `NEQ_EXTRA_LONG_SWITCH_LEGS`.
+- **Endpoint equilibration** — targets the noisy λ=1 ensemble. `NEQ_EQUIL_NS` (env-overridable; applies to both endpoints).
 - **Snapshots do NOT help overlap** — they only shrink ΔG statistical error on the *same* distributions. The P0 SEM is already < 1 kcal/mol, so snapshots are not the bottleneck.
+
+### 3.5 Switch-length test — ΔΔG is switch-length-invariant
+
+V106A was re-run at **500 ps** (5× the 100 ps default), 3 reps, to test whether longer switches fix the marginal overlap and/or move ΔΔG:
+
+| | 100 ps | 500 ps |
+|---|---|---|
+| ΔΔG_bind (kcal/mol) | +1.69 ± 0.70 | +1.76 ± 0.51 |
+| overlap (holo r1/r2/r3) | 0.42 / 0.06 / 0.08 | 0.57 / 0.12 / 0.08 |
+
+**ΔΔG is statistically identical**; overlap barely improved. Interpretation: the marginal overlap reflects **intrinsic dissipation of the NNRTI pocket mutation, not under-sampling** — so it does not bias ΔΔG (confirmed by 100 ps ≡ 500 ps, plus BAR/CGI/Jarzynski agreement and replicate agreement). **The panel therefore runs at 100 ps** — longer switches cost 5× for no gain in the ranking quantity (P1 ≈ 450 vs ≈ 2,000 GPU-h). The Crooks-overlap gate is treated as **conservative** here: report it, but marginal overlap with switch-length-invariant, estimator-consistent ΔΔG is acceptable for the ranking POC.
 
 **Overlap-metric note:** compare `W_f` vs `W_r` **directly** — pmx already stores the reverse work in the forward frame (`integ_rev` crosses `integ_fwd` at ΔG). `qc_neq.py` initially negated `W_r`, which produced false near-zero overlap for large-ΔG legs (V106A) and false-high overlap for ΔG≈0 legs (Y188L holo); fixed.
 

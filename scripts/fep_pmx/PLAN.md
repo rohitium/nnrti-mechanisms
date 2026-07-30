@@ -359,9 +359,17 @@ Result: **ΔΔG_bind V106A = +1.69 ± 0.70**, **Y188L = +4.52 ± 0.49** kcal/mol
   converges, estimators agree, ΔΔG signs/rank hold) but the absolute per-phase ΔG carries
   more uncertainty than the SEM implies, especially for apo legs (pocket instability, §6.3).
 
-**Follow-up (in progress):** V106A → 500 ps switches (config default now); optional longer
-`NEQ_EQUIL_NS` for the noisy λ=1 endpoint. Re-run V106A and confirm overlap tightens while
-ΔΔG stays ~+1.7 before batching P1.
+**Switch-length test (V106A re-run at 500 ps, 3 reps):** ΔΔG_bind = **+1.76 ± 0.51**
+vs +1.69 ± 0.70 at 100 ps — **statistically identical**. Overlap barely changed
+(holo r1 0.42→0.57, others still 0.06–0.16), so the marginal overlap is **intrinsic
+dissipation of this pocket, not an under-sampling artifact** that longer switches cure.
+
+**Conclusion — ΔΔG is switch-length-invariant.** The free energy is unchanged by a 5×
+longer switch, BAR/CGI/Jarzynski agree, and replicates agree, so the marginal Crooks
+overlap is a **conservative QC flag, not a bias** on ΔΔG. Therefore the panel runs at
+**100 ps** (5× cheaper: P1 ≈ 450 vs ≈ 2,000 GPU-h) — longer switches buy no accuracy in
+the ranking quantity. `LONG_SWITCH_PS` remains available for legs that later show a
+genuine overlap-vs-ΔΔG dependence.
 
 ### P1 (11 singles)
 
