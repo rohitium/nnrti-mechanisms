@@ -114,8 +114,10 @@ def audit_manifest(manifest: Path) -> int:
             for ok, row, detail in items:
                 if ok:
                     continue
+                # A mid-run stage (equil writing checkpoints) is in progress, not failed.
+                tag = "RUNNING" if "checkpoint only" in detail else "FAIL"
                 print(
-                    f"  FAIL panel={row['_id']} "
+                    f"  {tag} panel={row['_id']} "
                     f"{row['leg_id']} {row['phase']} rep{row['replicate']} "
                     f"→ {detail}"
                 )
@@ -152,6 +154,12 @@ def audit_manifest(manifest: Path) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Exit quietly when piped into `head`/`less` (SIGPIPE) instead of raising BrokenPipeError.
+    try:
+        import signal
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except (ImportError, AttributeError, ValueError):
+        pass
     parser = argparse.ArgumentParser(description="Audit pmx NEQ panel completion.")
     parser.add_argument(
         "--manifest",
