@@ -1,21 +1,37 @@
 # pmx NEQ FEP — current state
 
 **Living snapshot. Update this when state changes.** A fresh agent should read this first, then
-[`OPERATIONS.md`](OPERATIONS.md) for how to act. Last meaningful update: **2026-08-02**.
+[`OPERATIONS.md`](OPERATIONS.md) for how to act. Last meaningful update: **2026-08-03**.
 
 Sherlock repo: `/scratch/users/rsatija/nnrti-mechanisms-git` (account `rshafer`, QOS `long,normal`).
 The human runs everything on Sherlock and pastes output — agents cannot reach it.
 
 ---
 
+## What "success" means here (read this before interpreting any number)
+
+The deliverable is a **reproducible pipeline that produces a high-confidence best estimate of
+ΔΔG_bind** — an equilibrium binding observable. **Confidence is defined internally to the simulation,
+never by agreement with experiment:** replicate reproducibility (SEM across independent reps), estimator
+agreement (BAR/CGI/Jarzynski), switch-length invariance, and endpoint-seeding invariance. Overlap
+matters only as it bounds the *precision* of the estimate.
+
+Whether ΔΔG_bind tracks experimental fold-change is a **downstream scientific question we test, not a
+pass/fail criterion for the pipeline.** In-vitro resistance can arise from mechanisms other than
+equilibrium binding (catalysis, processivity, fitness, conformational effects), so a genotype where a
+confident, reproducible ΔΔG does *not* match its fold is a *finding about binding-vs-phenotype*, not a
+pipeline defect. Do not call such cases "overpredictions" or "false positives."
+
+---
+
 ## Roadmap (P-stages)
 
 - **P0 — pilot (V106A, Y188L): DONE & validated.** ✅
-- **P1 — single mutations → Spearman ranking gate:** in progress.
+- **P1 — single mutations → Spearman ρ vs fold (a scientific *readout*, not a gate):** in progress.
   - `P1_NEUTRAL_LEGS` (config.py): F227C, G190A, V106I, V106M, Y181C, Y318F.
-  - With P0's V106A + Y188L that's the **8 single legs** for the ρ gate.
-  - `P1_CHARGE_LEGS` (K103N, G190E): **deferred** — need the co-alchemical ion / double-box charge
-    protocol (PLAN §6.2), not yet implemented.
+  - With P0's V106A + Y188L that's the **8 single legs** the current pipeline can run.
+  - `P1_CHARGE_LEGS` (K103N, G190E): **excluded from this pipeline** — need the co-alchemical ion /
+    double-box charge protocol (PLAN §6.2), not yet implemented. They are *not* part of the ρ readout.
 - **P2 — compound genotypes → additivity check:** not started.
 - **P3 — full manuscript table + experimental correlation:** not started.
 
@@ -23,66 +39,71 @@ Panels are submitted in **3-leg batches** to stay under the GPU QOS cap (equil 3
 
 ---
 
-## P0 results (validated pilot)
+## Results so far (all 5 ns-seed, the current pipeline)
 
-| genotype | ΔΔG_bind (kcal/mol) | exp. fold | signs/ranking |
-|---|---|---|---|
-| V106A | **+1.76 ± 0.51** | 9.6 | positive (resistance), ranked below Y188L ✓ |
-| Y188L | **+4.52 ± 0.49** | 149 | positive, correctly largest ✓ |
+**P0 (validated pilot):**
+
+| genotype | ΔΔG_bind (kcal/mol) | exp. fold |
+|---|---|---|
+| V106A | +1.76 ± 0.51 | 9.6 |
+| Y188L | +4.52 ± 0.49 | 149 |
 
 Converged: running-BAR plateau, BAR/CGI/Jarzynski agree within ~0.4, replicate SEM < 1, switch-length
-invariant (100 ps ≈ 500 ps). Marginal forward/reverse overlap inflates per-leg error but does not bias
-ΔΔG. (Earlier README quotes V106A +1.69 ± 0.70 from the very first run; +1.76 ± 0.51 is the current number.)
+invariant (100 ps ≈ 500 ps).
+
+**P1a (complete, analyzed 2026-08-03):**
+
+| genotype | ΔΔG_bind (kcal/mol) | exp. fold | notes |
+|---|---|---|---|
+| G190A | +0.27 ± 0.17 | 2.7 | tight, healthy overlap (0.14–0.77) |
+| F227C | −0.21 ± 0.82 | (none) | **least reliable** — holo reps 2&3 have 0.00 overlap; no fold to compare |
+| V106I | +2.27 ± 0.74 | 1.1 | reproducible (rep sd 0.54), overlap in the validated regime |
+
+**The V106I finding (not a bug — a result):** V106I gives a confident, reproducible ΔΔG (~+2.3) whose
+overlap is no worse than the trusted P0 legs, so it is *not* a switching-overlap artifact. The method
+predicts V106I and V106A within ~0.5 kcal of each other (within error) — i.e. it **cannot resolve Ile
+from Ala at position 106** — while experiment separates them strongly (Ile 1.1× vs Ala 9.6×). Two live,
+both-interesting explanations: (a) the ΔΔG estimate could still shift under longer endpoint sampling
+(the seeding test probes this — overlap measures switch dissipation, not endpoint-ensemble adequacy),
+or (b) V106I's near-neutral phenotype is genuinely not binding-mediated. V106I is therefore the **best
+target** for the endpoint-seeding test (better than V106A, which is well-behaved).
 
 ---
 
-## In flight (as of 2026-08-02)
+## In flight (as of 2026-08-03)
 
-**Batch P1a — legs F227C, G190A, V106I** (manifest `results/analysis/fep_pmx/neq_p1a_manifest.csv`):
-just recovered from a bad-GPU-node incident and re-submitted. Live job chain:
+**Batch P1b — legs V106M, Y181C, Y318F** (manifest `results/analysis/fep_pmx/neq_p1b_manifest.csv`).
+Launched after a **GPU-free pre-flight**: ran the CPU `em` stage alone → `EM (18/18 ok)`, confirming
+topology/structure/mdp inputs are valid, *then* chained the GPU stages. Live job chain:
 
-- `37288420` equil (gpu) → `37288421` extract (normal) → `37288424` switch (gpu), chained `afterok`.
+- em `37405830` (done, CPU) → equil `37405873` (gpu) → extract `37405881` (normal) → switch `37405887` (gpu).
 - Watch for `SWITCH (36/36 ok)` via the audit (OPERATIONS §2).
 
-What happened (so the next agent doesn't re-investigate): node **sh03-12n12** had a lost/dead GPU;
-equil array elements 23/24/25 (V106I holo rep1 λ0/λ1, G190A apo rep3 λ1) failed there with
-`0 detected device(s)` / `GPU is lost`. That stalled all 36 extract + 36 switch via whole-array
-`afterok`. Fixed with the standard §4 recovery: cancelled the old extract/switch (`36839194`,
-`36839195`), re-ran equil (33 skipped, 3 recomputed), re-chained. The bad node self-invalidated
-(`inval`), so no manual exclusion was needed. **This is the canonical example of OPERATIONS §4.**
-
-**Batch P1b (and beyond) — HELD.** Remaining neutral legs (V106M, Y181C, Y318F) not yet submitted.
-Hold until (a) P1a's GPUs free up, and (b) the seeding decision below is resolved.
+**P1a is complete** — see results above. Its recovery from a bad-GPU-node stall (node `sh03-12n12`,
+`GPU is lost`) is the canonical worked example in OPERATIONS §4.
 
 ---
 
-## Open decisions / pending work
+## Sequenced next steps (order matters — this is the human's explicit decision)
 
-1. **FEP endpoint seeding (agreed, not yet implemented).** Current pipeline seeds FEP endpoints from
-   `*_start.pdb` + a 5 ns hybrid re-equilibration — **not** from the 100 ns plain-MD end frames the
-   collaborators asked about. Plan: seed switch snapshots from decorrelated frames of the long MD
-   trajectories instead, and run a **sensitivity test** (5 ns-seed vs 100 ns-seed on V106A apo) — same
-   logic as the switch-length test, applied to endpoint sampling. If ΔΔG moves, escalate to enhanced
-   sampling (REST2/HREX/metadynamics). See manuscript §8.2.
+1. **Finish P1b, then compute the full 8-leg ρ** — the deliverable:
+   ```bash
+   # on Sherlock after P1b SWITCH 36/36 (dgdl live there; the Mac rsync excludes them):
+   python3 scripts/fep_pmx/combine_neq.py --targets V106M Y181C Y318F --replicates 3
+   python3 scripts/fep_pmx/combine_neq.py --targets V106A Y188L F227C G190A V106I V106M Y181C Y318F --replicates 3
+   ```
+   This is the complete 5 ns-seed panel + Spearman ρ vs fold. **Do this before touching endpoint seeding.**
 
-2. **Apo WT 100 ns extension (scripted, ready to launch).** WT apo MD only ran to **10 ns** (5M steps ×
-   3 reps; MM/GBSA didn't need more), while holo ran to 100 ns. WT apo is the shared endpoint for every
-   single-mutation leg, so to enable 100 ns-seeded FEP we extend it first. Wrapper committed:
-   [`submit_wt_apo_md.sh`](submit_wt_apo_md.sh) — resumes each rep's checkpoint to 100 ns total (not
-   +100 ns; verified in `src/md/openmm/md_protocol.py`). Needs `MD_FORCE_RERUN=1` (the 10 ns runs are
-   `status=ok` and would otherwise skip) + `SKIP_IF_AT_TARGET=1`, both baked into the wrapper. **Launch
-   after Batch P1a finishes.** Each SLURM job is 12 h and 90 ns won't fit in one — rerun the same
-   command after each batch; it resumes and skips reps already at 100 ns.
+2. **THEN the endpoint-sampling experiment** (deferred until step 1 is in hand). First extend WT apo MD
+   10 ns → 100 ns (`./scripts/fep_pmx/submit_wt_apo_md.sh` — resumes each rep's checkpoint to 100 ns
+   total, verified in `src/md/openmm/md_protocol.py`; the wrapper bakes in `MD_FORCE_RERUN=1` +
+   `SKIP_IF_AT_TARGET=1`; each 12 h SLURM job advances the checkpoint, rerun until at target). Then
+   re-seed switch snapshots from decorrelated 100 ns frames and test whether ΔΔG moves — **on V106I**
+   (and V106A as control). Purpose is *confidence/robustness of the estimate*, not matching fold. If it
+   moves, escalate to enhanced endpoint sampling (REST2/HREX/metadynamics). Manuscript §8.2.
 
-3. **Manuscript:** `manuscript/DorDRM-FEP-07-30-26.docx` (collaborator update; MM/GBSA→FEP pivot
-   rationale, protocol, P0 results, limitations, next steps). To update with real P1 numbers once the
-   ranking gate completes. A draft collaborator email still needs a fact-check fix (separate the
-   switch-length argument from the µs-equilibration argument; keep MM/GBSA comparison claims supported).
-
----
-
-## Definition of done for P1
-
-`combine_neq --targets V106A Y188L F227C G190A V106I V106M Y181C Y318F --replicates 3` yields a
-Spearman ρ vs experimental fold across the 8 single mutations, with QC (`qc_neq`) passing. That ρ is
-the P1 ranking gate; clearing it unlocks P2.
+3. **Manuscript:** `manuscript/DorDRM-FEP-07-30-26.docx` — update with the P1 panel + ρ once step 1
+   lands, framed per "What success means" above (lead with reproducibility/convergence; treat the fold
+   comparison as a hypothesis test, noting mechanism may differ from binding). A draft collaborator
+   email still needs a fact-check fix (separate the switch-length argument from the µs-equilibration
+   argument; keep MM/GBSA comparison claims supported).

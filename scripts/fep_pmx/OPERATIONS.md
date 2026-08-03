@@ -159,13 +159,66 @@ Verification notes:
 
 ---
 
-## 5. When a batch reaches `SWITCH (N/N ok)`
+## 4b. Pre-flighting a fresh batch without a GPU
+
+Before spending GPU-hours on a new panel, validate the inputs on CPU. The `em` stage is the built-in
+GPU-free check: it runs `grompp` (topology/mdp/structure validation) + a CPU minimization on the
+`normal` partition. Submit it alone; if it reaches `EM (N/N ok)` the inputs are sound and the GPU
+stages (which reuse the same topology) will run. Only then chain equil→extract→switch.
 
 ```bash
-# pull light provenance (no trajectories) to the Mac for analysis:
-SHERLOCK_USER=rsatija bash scripts/rsync_fep_pmx.sh pull      # from the Mac
-# ΔΔG_bind per genotype + Spearman vs experiment (auto-runs analyze_neq for missing units):
-python3 scripts/fep_pmx/combine_neq.py --targets <G1> <G2> ... --replicates 3
-python3 scripts/fep_pmx/qc_neq.py --replicates 3
+export MANIFEST=results/analysis/fep_pmx/neq_<batch>_manifest.csv
+STAGE=em bash scripts/fep_pmx/submit_p0_neq.sh                 # CPU only
+python3 scripts/fep_pmx/audit_neq_panel.py --manifest $MANIFEST | grep '==='   # want EM (18/18 ok)
+# then the GPU stages, chained on the validated em:
+EQUIL=$(STAGE=equil   bash scripts/fep_pmx/submit_p0_neq.sh | tail -1)
+EXTRACT=$(STAGE=extract DEPENDENCY=afterok:$EQUIL   bash scripts/fep_pmx/submit_p0_neq.sh | tail -1)
+SWITCH=$(STAGE=switch  DEPENDENCY=afterok:$EXTRACT bash scripts/fep_pmx/submit_p0_neq.sh | tail -1)
 ```
+
+Even cheaper first pass (zero jobs): confirm the manifest shape and that each unit's `system.top` +
+`mdp/` exist on disk — a quick `csv`/`os.path` scan of `neq_<batch>_manifest.csv`. `missing inputs: 0`
+means prep is complete for every leg/phase/rep.
+
+New neutral P1 batch prep (mirrors how P1a/P1b were built):
+```bash
+python3 scripts/fep_pmx/prepare_neq.py --legs wt_to_<A> wt_to_<B> wt_to_<C> \
+  --replicates 3 --n-snapshots 100 \
+  --panel-manifest results/analysis/fep_pmx/neq_<batch>_manifest.csv
+```
+Note the flag is `--panel-manifest` for `prepare_neq.py`, but `MANIFEST=` (env var) for
+`submit_p0_neq.sh`. Neutral single legs use 100 ps switches (not in `LONG_SWITCH_LEGS`).
+
+---
+
+## 5. When a batch reaches `SWITCH (N/N ok)` — analysis
+
+**Run the first analysis pass ON SHERLOCK, not the Mac.** The rsync (`scripts/rsync_fep_pmx.sh`)
+deliberately **excludes `dgdl.xvg`** (light provenance only). `analyze_neq`/`combine_neq` need either the
+`dgdl.xvg` *or* a pre-computed `analysis.json`. So on a freshly-finished batch the Mac has neither and
+`combine_neq` silently **skips** every leg (`skip <G>: No fwd dgdl.xvg files`). The fix: run
+`combine_neq` on Sherlock first — it auto-runs `analyze_neq` (which reads the `dgdl.xvg` and writes
+`analysis.json` + `integ_{fwd,rev}.dat`), *then* rsync those light outputs to the Mac.
+
+```bash
+# 1) ON SHERLOCK (dgdl live here): generate analysis.json + the ΔΔG table.
+python3 scripts/fep_pmx/combine_neq.py --targets <G1> <G2> ... --replicates 3
+python3 scripts/fep_pmx/qc_neq.py --legs wt_to_<G1> wt_to_<G2> ... --replicates 3
+# 2) THEN from the Mac: pull the now-existing light outputs and inspect/re-run locally (no --force).
+SHERLOCK_USER=rsatija bash scripts/rsync_fep_pmx.sh pull
+```
+
+Interface quirks that waste time (verified):
+- **`combine_neq` takes `--targets` (genotypes, `V106I`); `qc_neq` takes `--legs` (leg ids,
+  `wt_to_V106I`).** Different flags for the same set — don't mix them up.
+- **`qc_neq` with no `--legs` defaults to `P0_LEGS`** (prints V106A/Y188L) — if you see the P0 legs when
+  you expected new ones, you forgot `--legs`.
+- **First analysis run is ~1 min *per unit*, not seconds** (it parses 200 switch `dgdl.xvg` per unit —
+  tens of thousands of dH/dλ points each). A 3-leg batch = 18 units ≈ 10–30 min. It writes one
+  `analysis.json` per unit as it goes, so watch progress with
+  `find results/analysis/fep_pmx/legs/wt_to_<G> -name analysis.json | wc -l` (out of `6*n_legs`).
+  Subsequent runs read the cached `analysis.json` and are fast — **unless** you pass `--force`, which
+  re-parses (and, on a Mac with numpy≥2, breaks pmx's estimators; keep `numpy<2` locally, or just don't
+  `--force` on the Mac).
+
 Then free GPUs are available for the next batch (and the apo 100 ns extension — see `STATUS.md`).
