@@ -8,6 +8,10 @@ dodecahedron solvated HIV RT — holo (DOR-bound) and apo (ligand-free) per leg.
 
 **Start here:** [`PLAN.md`](PLAN.md)
 
+**Current state (what's running now, what's next):** [`STATUS.md`](STATUS.md)
+
+**Running/monitoring/recovering a Sherlock panel:** [`OPERATIONS.md`](OPERATIONS.md) — the runbook for failure modes (bad GPU nodes, stalled `afterok` chains, the pmx-env gotcha) and their fixes.
+
 **Why not truncated / Perses:** [`APPROACHES.md`](APPROACHES.md)
 
 Perses full-protein pilot (deprecated path): [`../fep_jorgensen/README.md`](../fep_jorgensen/README.md)
