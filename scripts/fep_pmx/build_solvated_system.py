@@ -17,6 +17,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from scripts.fep_pmx.config import (
     BOX_TYPE,
+    CHARGE_LEG_DELTA_Q,
     DOR_ITP_DIR,
     FEP_PMX_ROOT,
     IONIC_STRENGTH_M,
@@ -25,6 +26,7 @@ from scripts.fep_pmx.config import (
     SOLVENT_PADDING_NM,
     WATER_MODEL,
 )
+from scripts.fep_pmx.coalchemical_ion import add_coalchemical_ion
 from scripts.fep_pmx.gromacs_utils import (
     GromacsError,
     append_ligand_to_topology,
@@ -270,6 +272,14 @@ def build_solvated_system(
     )
     shutil.copy2(solv_top, final_top)
 
+    # Charge-changing legs: convert one bulk counter-ion into a dual-state
+    # co-alchemical ion so the box stays neutral at every lambda (state A here is
+    # the real ion, so the box is still neutral for this A-state grompp check).
+    coalch_info = None
+    delta_q = CHARGE_LEG_DELTA_Q.get(leg_id)
+    if delta_q is not None:
+        coalch_info = add_coalchemical_ion(final_top, final_gro, delta_q=delta_q)
+
     n_atoms = parse_gro_atom_count(final_gro)
     net_charge = count_net_charge_from_top(final_top)
 
@@ -307,6 +317,7 @@ def build_solvated_system(
         "n_atoms": n_atoms,
         "net_charge_before_ions": net_charge,
         "validated_grompp": validate_grompp,
+        "coalchemical_ion": coalch_info,
     }
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     return final_gro

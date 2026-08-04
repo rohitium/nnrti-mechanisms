@@ -36,7 +36,16 @@ P1_NEUTRAL_LEGS = (
     "wt_to_F227C", "wt_to_G190A", "wt_to_V106I",
     "wt_to_V106M", "wt_to_Y181C", "wt_to_Y318F",
 )
-P1_CHARGE_LEGS = ("wt_to_K103N", "wt_to_G190E")  # deferred until charge protocol lands
+P1_CHARGE_LEGS = ("wt_to_K103N", "wt_to_G190E")
+
+# Charge-changing legs: protein net-charge change (A-state -> B-state). Triggers
+# the co-alchemical ion in build_solvated_system (decouple one counter-ion to keep
+# the box neutral at every lambda; see coalchemical_ion.py). Only the WT->charged
+# single legs change net charge — the compound second legs (M230L etc.) are neutral.
+CHARGE_LEG_DELTA_Q = {
+    "wt_to_K103N": -1,   # Lys+ -> Asn0
+    "wt_to_G190E": -1,   # Gly0 -> Glu-
+}
 
 # Match OpenMM MD prep (md_protocol.py / manuscript)
 SOLVENT_PADDING_NM = 1.0
