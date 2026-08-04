@@ -222,3 +222,56 @@ Interface quirks that waste time (verified):
   `--force` on the Mac).
 
 Then free GPUs are available for the next batch (and the apo 100 ns extension — see `STATUS.md`).
+
+---
+
+## 6. Building out the panel — preparing NEW legs (hybrids → systems → neq)
+
+The full manuscript panel is `scripts/fep_jorgensen/mutations.py::MANUSCRIPT_PLANS` (19 genotypes, 19
+unique legs). Experimental folds: `results/analysis/dor_susceptibility_bar_chart/tables/dor_susceptibility_values.csv`.
+Both `prepare_p0_hybrids.sh` and `build_p0_systems.sh` take a `LEGS="..."` override — that's the
+mechanism for any leg, P0/P1/P2. Full prep for a set of legs (Sherlock login, pmx env):
+
+```bash
+LEGS="wt_to_G190S V106A_to_V106A_F227L ..."                                  # leg_ids from MANUSCRIPT_PLANS
+LEGS="$LEGS" bash scripts/fep_pmx/prepare_p0_hybrids.sh                       # pmx hybrids, reps 1-3
+REPLICATES="1 2 3" LEGS="$LEGS" bash scripts/fep_pmx/build_p0_systems.sh      # gmx solvate+ionize
+python3 scripts/fep_pmx/prepare_neq.py --legs $LEGS --replicates 3 --n-snapshots 100 \
+  --panel-manifest results/analysis/fep_pmx/neq_<batch>_manifest.csv
+```
+All three are idempotent (SKIP existing). Then run via §4b (em pre-flight) + the em→…→switch chain.
+
+**Gotchas that will otherwise cost you hours (all hit while preparing the P2 compounds):**
+
+1. **Compound legs seed from an *intermediate* genotype.** `V106A_to_V106A_F227L` needs the MD
+   `_start.pdb` for BOTH V106A (source) and V106A+F227L (endpoint), holo+apo, all reps. Check first:
+   resolve `leg.input_complex_pdb / input_apo_pdb / endpoint_*_pdb` and confirm they exist.
+
+2. **`results/md_runs/**/_start.pdb` live on the Mac, not Sherlock** (never git-committed; single legs
+   didn't need them). Push once, Mac→Sherlock (small, but ~1.9 GB for all — compresses ~5×):
+   ```bash
+   rsync -avz --prune-empty-dirs --include='*/' --include='*_start.pdb' --exclude='*' \
+     results/md_runs/ rsatija@login.sherlock.stanford.edu:/scratch/users/rsatija/nnrti-mechanisms-git/results/md_runs/
+   ```
+
+3. **Legs without a `fep_jorgensen` backend map need openmm in the pmx venv.** `prepare_hybrid` resolves
+   the mutation site from `results/analysis/fep_jorgensen/legs/<leg_id>/prepare_backend.json` if present
+   (the openmm-free path — most singles + A98G+F227C have one); otherwise it falls through to
+   `resolve_mutation_site`, which imports openmm to read the PDBs and **verify** the unique old→new
+   change (do NOT hand-write backend maps to skip this — a wrong residue id silently mutates the wrong
+   site). One-time install into the pmx venv:
+   ```bash
+   pip install --no-deps openmm           # openmm 8.1.1 wheel
+   pip install 'numpy<2'                  # REQUIRED: openmm 8.1.1's xtc module won't import under numpy 2
+   python3 -c "import openmm.app; print('ok')"
+   ```
+   Safe to do mid-panel: the SLURM tasks (`run_neq_task.py`) import no numpy/pmx-python — they shell out
+   to `gmx` — so a venv numpy change can't affect running jobs. (numpy<2 is also what `pmx analyse`
+   wants; the venv had drifted to 2.0.2.)
+
+4. **Proline mutations fail in pmx `mutate`** (`_set_conformation` → `IndexError`). Proline carries
+   `HG2/HG3, HD2/HD3` (pmx wants `HG1/HG2, HD1/HD2`) and lacks the backbone amide H that the target
+   residue needs. `normalize_openmm_for_pmx` only fixes `HB`/`HA`, not proline HG/HD. Known-hard;
+   V106A+P225H is deferred. A real fix needs a mutation-site-scoped HG/HD rename + backbone-H handling,
+   or building that hybrid without `-fB` (rotamer-library target instead of endpoint-matched) — and
+   end-to-end testing (a global proline rename would break `pdb2gmx` for the other prolines).
