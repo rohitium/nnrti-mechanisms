@@ -26,8 +26,6 @@ import argparse
 import sys
 from pathlib import Path
 
-import numpy as np
-
 # Non-protein residue names to exclude when locating "bulk" (protein-distant) ions.
 _NON_PROTEIN = {"SOL", "WAT", "HOH", "CL", "NA", "K", "MG", "CA", "RB", "IB", "2KW"}
 
@@ -65,7 +63,13 @@ def _renumber_gro(atoms: list[str]) -> list[str]:
 
 
 def _pick_bulk_ion(atoms: list[str], ion_resname: str) -> int:
-    """Index (into `atoms`) of the ion of `ion_resname` most distant from protein."""
+    """Index (into `atoms`) of the ion of `ion_resname` most distant from protein.
+
+    "Most distant" = the ion whose minimum distance to any protein atom is largest
+    (the most bulk-solvated), so its decoupling free energy is bulk-like. Pure
+    Python (no numpy) so it runs under whatever interpreter the GROMACS module
+    provides during the system build.
+    """
     protein_xyz, ion_idx, ion_xyz = [], [], []
     for i, line in enumerate(atoms):
         rn = _gro_resname(line)
@@ -78,12 +82,16 @@ def _pick_bulk_ion(atoms: list[str], ion_resname: str) -> int:
         raise ValueError(f"No {ion_resname} ions found in coordinates")
     if not protein_xyz:
         raise ValueError("No protein atoms found in coordinates")
-    P = np.asarray(protein_xyz)
-    I = np.asarray(ion_xyz)
-    # min distance from each ion to any protein atom, then take the farthest ion.
-    d2 = ((I[:, None, :] - P[None, :, :]) ** 2).sum(-1)
-    min_d = np.sqrt(d2.min(axis=1))
-    return ion_idx[int(min_d.argmax())]
+    best_idx, best_min_d2 = ion_idx[0], -1.0
+    for k, (ix, iy, iz) in enumerate(ion_xyz):
+        min_d2 = None
+        for px, py, pz in protein_xyz:
+            d2 = (ix - px) ** 2 + (iy - py) ** 2 + (iz - pz) ** 2
+            if min_d2 is None or d2 < min_d2:
+                min_d2 = d2
+        if min_d2 > best_min_d2:
+            best_min_d2, best_idx = min_d2, ion_idx[k]
+    return best_idx
 
 
 def _split_molecules_line(top_lines: list[str], ion_resname: str, coalch_name: str) -> list[str]:
