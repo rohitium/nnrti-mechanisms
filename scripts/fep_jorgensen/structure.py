@@ -33,24 +33,40 @@ def extract_protein_only(
     return protein_pdb
 
 
+# γ/δ/ε methylene hydrogens follow amber's "2/3" convention (HG2/HG3, HD2/HD3,
+# HE2/HE3); pmx's hybrid residues expect "1/2" (HG1/HG2, ...). These renames are
+# RESIDUE-SCOPED: the same labels denote non-methylene atoms elsewhere (His ring
+# HD1/HD2/HE1, Asn/Gln amide HD2/HE2, aromatic HD/HE, and the branched methyls of
+# Ile/Leu/Thr/Val), which must not be touched. The residue sets below are exactly
+# those whose γ/δ/ε positions are CH2 groups.
+_HG_RESIDUES = frozenset({"ARG", "GLN", "GLU", "LYS", "LYP", "LYN", "MET", "PRO"})
+_HD_RESIDUES = frozenset({"ARG", "LYS", "LYP", "LYN", "PRO"})
+_HE_RESIDUES = frozenset({"LYS", "LYP", "LYN"})
+# atom -> (allowed residue names, new name, first-atom-of-pair for idempotency)
+_METHYLENE_RENAME = {
+    "HG2": (_HG_RESIDUES, " HG1", "HG1"), "HG3": (_HG_RESIDUES, " HG2", "HG1"),
+    "HD2": (_HD_RESIDUES, " HD1", "HD1"), "HD3": (_HD_RESIDUES, " HD2", "HD1"),
+    "HE2": (_HE_RESIDUES, " HE1", "HE1"), "HE3": (_HE_RESIDUES, " HE2", "HE1"),
+}
+
+
 def normalize_openmm_for_pmx(protein_pdb: Path) -> None:
     """Rename OpenMM/CHARMM atom labels to names pmx amber14sbmut expects.
 
-    Amber names the second/third methylene hydrogens HB2/HB3 (β) and HA2/HA3
-    (glycine α); pmx wants HB1/HB2 and HA1/HA2. The rename is **idempotent** and
-    **per-residue**: a residue that already carries HB1 (or HA1) is skipped, so
-    re-normalizing an already-converted structure cannot collide HB3→HB2→HB1
-    onto an existing HB1 (which produced duplicate HB1/HB1 atoms pmx could not
-    resolve). HA2/HA3 only occur on glycine, so that rename is glycine-specific.
+    Amber names methylene hydrogens with a "2/3" convention (β: HB2/HB3; glycine
+    α: HA2/HA3; and the γ/δ/ε methylenes HG2/HG3, HD2/HD3, HE2/HE3); pmx's hybrid
+    residues expect "1/2" (HB1/HB2, HA1/HA2, HG1/HG2, ...). Without this, mutating
+    a residue that has an unconverted methylene crashes pmx ``_set_conformation``
+    (``old_res[name]`` IndexError) while copying the A-state coordinates — seen
+    for proline (P225H) and lysine (K103N).
 
-    Proline additionally carries γ/δ methylenes named HG2/HG3 and HD2/HD3, which
-    pmx's hybrid residues expect as HG1/HG2 and HD1/HD2. Without this, mutating a
-    proline (e.g. P225H) crashes inside pmx ``_set_conformation`` (``old_res[name]``
-    IndexError) while copying the A-state proline coordinates. This rename is
-    **restricted to PRO** because HG2/HG3 and HD2/HD3 denote different atoms in
-    other residues — His ring HD1/HD2, Asn/Gln amide HD2, Arg/Lys methylenes —
-    that must not be touched. Same idempotent per-residue guard (skip if HG1/HD1
-    is already present on that proline).
+    HB is renamed on every residue that has it; HA2/HA3 occur only on glycine.
+    The γ/δ/ε renames are **residue-scoped** (see ``_METHYLENE_RENAME``) because
+    HG/HD/HE "2/3" labels denote different atoms in His (ring), Asn/Gln (amide),
+    aromatics, and branched-methyl residues — those must be left alone. Every
+    rename is **idempotent per-residue**: a residue already carrying the "1"
+    hydrogen (HB1/HG1/HD1/HE1) is skipped, so re-normalizing cannot collide
+    HB3→HB2→HB1 onto an existing HB1.
     """
     lines = protein_pdb.read_text().splitlines()
 
@@ -63,29 +79,22 @@ def normalize_openmm_for_pmx(protein_pdb: Path) -> None:
 
     have_hb1 = _residues_with("HB1")
     have_ha1 = _residues_with("HA1")
-    rename = {"HB2": " HB1", "HB3": " HB2", "HA2": " HA1", "HA3": " HA2"}
-
-    pro_residues = {
-        (line[21], line[22:26].strip())
-        for line in lines
-        if line.startswith(("ATOM", "HETATM")) and line[17:20].strip() == "PRO"
-    }
-    pro_have_hg1 = _residues_with("HG1") & pro_residues
-    pro_have_hd1 = _residues_with("HD1") & pro_residues
-    pro_rename = {"HG2": " HG1", "HG3": " HG2", "HD2": " HD1", "HD3": " HD2"}
+    hb_ha_rename = {"HB2": " HB1", "HB3": " HB2", "HA2": " HA1", "HA3": " HA2"}
+    have_first = {name: _residues_with(name) for name in ("HG1", "HD1", "HE1")}
 
     normalized: list[str] = []
     for line in lines:
         if line.startswith(("ATOM", "HETATM")):
             key = (line[21], line[22:26].strip())
             name = line[12:16].strip()
-            if name in rename:
+            resname = line[17:20].strip()
+            if name in hb_ha_rename:
                 already = have_hb1 if name in ("HB2", "HB3") else have_ha1
                 if key not in already:
-                    line = line[:12] + rename[name] + line[16:]
-            elif key in pro_residues and name in pro_rename:
-                already = pro_have_hg1 if name in ("HG2", "HG3") else pro_have_hd1
-                if key not in already:
-                    line = line[:12] + pro_rename[name] + line[16:]
+                    line = line[:12] + hb_ha_rename[name] + line[16:]
+            elif name in _METHYLENE_RENAME:
+                res_ok, new_name, first_atom = _METHYLENE_RENAME[name]
+                if resname in res_ok and key not in have_first[first_atom]:
+                    line = line[:12] + new_name + line[16:]
         normalized.append(line)
     protein_pdb.write_text("\n".join(normalized + ["END", ""]))
