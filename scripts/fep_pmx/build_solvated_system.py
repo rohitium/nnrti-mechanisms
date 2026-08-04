@@ -278,7 +278,10 @@ def build_solvated_system(
     coalch_info = None
     delta_q = CHARGE_LEG_DELTA_Q.get(leg_id)
     if delta_q is not None:
-        coalch_info = add_coalchemical_ion(final_top, final_gro, delta_q=delta_q)
+        # COALCH_ION_RANK (default 0 = farthest ion) lets the placement-insensitivity
+        # check rebuild a leg using a different bulk ion without editing code.
+        ion_rank = int(os.environ.get("COALCH_ION_RANK", "0"))
+        coalch_info = add_coalchemical_ion(final_top, final_gro, delta_q=delta_q, ion_rank=ion_rank)
 
     n_atoms = parse_gro_atom_count(final_gro)
     net_charge = count_net_charge_from_top(final_top)

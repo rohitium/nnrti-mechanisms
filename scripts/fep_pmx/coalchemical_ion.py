@@ -62,13 +62,14 @@ def _renumber_gro(atoms: list[str]) -> list[str]:
     return out
 
 
-def _pick_bulk_ion(atoms: list[str], ion_resname: str) -> int:
-    """Index (into `atoms`) of the ion of `ion_resname` most distant from protein.
+def _pick_bulk_ion(atoms: list[str], ion_resname: str, rank: int = 0) -> int:
+    """Index (into `atoms`) of the `rank`-th most protein-distant ion of `ion_resname`.
 
-    "Most distant" = the ion whose minimum distance to any protein atom is largest
-    (the most bulk-solvated), so its decoupling free energy is bulk-like. Pure
-    Python (no numpy) so it runs under whatever interpreter the GROMACS module
-    provides during the system build.
+    rank=0 is the ion whose minimum distance to any protein atom is largest (the
+    most bulk-solvated, default); rank=1 the next, etc. The rank knob exists for
+    the placement-insensitivity check: decoupling a *different* bulk ion must give
+    the same DeltaDeltaG if the bulk term is cancelling. Pure Python (no numpy) so
+    it runs under whatever interpreter the GROMACS module provides.
     """
     protein_xyz, ion_idx, ion_xyz = [], [], []
     for i, line in enumerate(atoms):
@@ -82,16 +83,18 @@ def _pick_bulk_ion(atoms: list[str], ion_resname: str) -> int:
         raise ValueError(f"No {ion_resname} ions found in coordinates")
     if not protein_xyz:
         raise ValueError("No protein atoms found in coordinates")
-    best_idx, best_min_d2 = ion_idx[0], -1.0
+    scored = []  # (min_dist^2 to protein, atom index)
     for k, (ix, iy, iz) in enumerate(ion_xyz):
         min_d2 = None
         for px, py, pz in protein_xyz:
             d2 = (ix - px) ** 2 + (iy - py) ** 2 + (iz - pz) ** 2
             if min_d2 is None or d2 < min_d2:
                 min_d2 = d2
-        if min_d2 > best_min_d2:
-            best_min_d2, best_idx = min_d2, ion_idx[k]
-    return best_idx
+        scored.append((min_d2, ion_idx[k]))
+    scored.sort(key=lambda t: t[0], reverse=True)  # farthest-from-protein first
+    if rank < 0 or rank >= len(scored):
+        raise ValueError(f"ion rank {rank} out of range (0..{len(scored) - 1})")
+    return scored[rank][1]
 
 
 def _split_molecules_line(top_lines: list[str], ion_resname: str, coalch_name: str) -> list[str]:
@@ -136,12 +139,15 @@ def _insert_before_system(top_lines: list[str], block: list[str]) -> list[str]:
     raise ValueError("No [ system ] section found in topology")
 
 
-def add_coalchemical_ion(top_path: Path, gro_path: Path, *, delta_q: int) -> dict:
+def add_coalchemical_ion(top_path: Path, gro_path: Path, *, delta_q: int, ion_rank: int = 0) -> dict:
     """Convert one bulk counter-ion into a dual-state (real->dummy) co-alchemical ion.
 
     delta_q: the protein's net-charge change (A->B). For delta_q = -1 we decouple
     a Cl- (compensation +1); for delta_q = +1 we decouple a Na+ (compensation -1).
     Only |delta_q| == 1 is supported here.
+
+    ion_rank: which bulk ion to use (0 = farthest from protein, default). Increase
+    it to decouple a different bulk ion for the placement-insensitivity check.
     """
     if delta_q not in (-1, +1):
         raise ValueError(f"Only delta_q == +/-1 supported, got {delta_q}")
@@ -155,8 +161,8 @@ def add_coalchemical_ion(top_path: Path, gro_path: Path, *, delta_q: int) -> dic
     if coalch_name in "\n".join(top_lines):
         return {"status": "already-present", "coalch_name": coalch_name}
 
-    # 1) pick the most bulk-solvated ion and move it to the end of the coord list.
-    idx = _pick_bulk_ion(atoms, ion_resname)
+    # 1) pick a bulk ion (rank 0 = farthest) and move it to the end of the coord list.
+    idx = _pick_bulk_ion(atoms, ion_resname, rank=ion_rank)
     chosen = atoms[idx]
     reordered = atoms[:idx] + atoms[idx + 1 :] + [chosen]
     reordered = _renumber_gro(reordered)
@@ -189,6 +195,7 @@ def add_coalchemical_ion(top_path: Path, gro_path: Path, *, delta_q: int) -> dic
         "ion_resname": ion_resname,
         "coalch_name": coalch_name,
         "delta_q": delta_q,
+        "ion_rank": ion_rank,
         "chosen_ion_gro_index": idx,
         "chosen_ion_xyz_nm": [ix, iy, iz],
     }
@@ -199,9 +206,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--top", type=Path, required=True)
     p.add_argument("--gro", type=Path, required=True)
     p.add_argument("--delta-q", type=int, required=True, help="Protein net-charge change A->B (+/-1)")
+    p.add_argument("--ion-rank", type=int, default=0, help="Bulk ion to use (0=farthest; raise for placement check)")
     args = p.parse_args(argv)
     try:
-        info = add_coalchemical_ion(args.top, args.gro, delta_q=args.delta_q)
+        info = add_coalchemical_ion(args.top, args.gro, delta_q=args.delta_q, ion_rank=args.ion_rank)
     except (ValueError, FileNotFoundError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
