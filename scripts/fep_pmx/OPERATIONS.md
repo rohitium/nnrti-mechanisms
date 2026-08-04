@@ -269,9 +269,11 @@ All three are idempotent (SKIP existing). Then run via §4b (em pre-flight) + th
    to `gmx` — so a venv numpy change can't affect running jobs. (numpy<2 is also what `pmx analyse`
    wants; the venv had drifted to 2.0.2.)
 
-4. **Proline mutations fail in pmx `mutate`** (`_set_conformation` → `IndexError`). Proline carries
-   `HG2/HG3, HD2/HD3` (pmx wants `HG1/HG2, HD1/HD2`) and lacks the backbone amide H that the target
-   residue needs. `normalize_openmm_for_pmx` only fixes `HB`/`HA`, not proline HG/HD. Known-hard;
-   V106A+P225H is deferred. A real fix needs a mutation-site-scoped HG/HD rename + backbone-H handling,
-   or building that hybrid without `-fB` (rotamer-library target instead of endpoint-matched) — and
-   end-to-end testing (a global proline rename would break `pdb2gmx` for the other prolines).
+4. **Proline mutations — FIXED (commit c21415b).** Mutating a proline (e.g. P225H, Pro→His) used to
+   crash pmx `mutate` (`_set_conformation` → `IndexError`) while copying the A-state coords: proline's
+   `HG2/HG3, HD2/HD3` must be `HG1/HG2, HD1/HD2` for pmx's hybrid, but `normalize_openmm_for_pmx` only
+   fixed `HB`/`HA`. It now also renames proline HG/HD, **PRO-scoped** (His ring `HD1/HD2`, Asn/Gln
+   amide, Arg/Lys methylenes keep their names) and idempotent. Verified end-to-end — mutate builds the
+   P2H hybrid and `pdb2gmx` accepts the rename for all prolines (not just the mutated one). If a future
+   non-proline residue hits the same `old_res[name]` IndexError, it's the same class of OpenMM→pmx
+   methylene-naming gap (`2/3`→`1/2`); extend the rename residue-scoped the same way.

@@ -82,21 +82,22 @@ topology/structure/mdp inputs are valid, *then* chained the GPU stages. Live job
 **P1a is complete** — see results above. Its recovery from a bad-GPU-node stall (node `sh03-12n12`,
 `GPU is lost`) is the canonical worked example in OPERATIONS §4.
 
-**P2 legs PREPARED (staged, not yet submitted), 2026-08-03.** 5 neutral compound/extra legs —
+**P2 legs PREPARED (staged, not yet submitted), 2026-08-04.** 6 neutral compound/extra legs —
 `wt_to_G190S`, `F227C_to_A98G_F227C`, `V106A_to_V106A_F227L`, `V106A_to_V106A_L234I`,
-`V106I_to_V106I_F227C` — now have hybrids + solvated systems + neq inputs
-(`results/analysis/fep_pmx/neq_p2_manifest.csv`). Submit in 3-leg batches (em pre-flight + em→…→switch)
-once P1b frees GPUs. This brings the runnable panel to **12 genotypes** (8 singles with fold + 4 neutral
-compounds). See OPERATIONS §6 for how they were built (and the `_start.pdb` push / openmm / proline
+`V106A_to_V106A_P225H`, `V106I_to_V106I_F227C` — now have hybrids + solvated systems + neq inputs
+(`results/analysis/fep_pmx/neq_p2_manifest.csv`, 6 legs). Submit in 3-leg batches (em pre-flight +
+em→…→switch) once P1b frees GPUs. This brings the runnable panel to **13 genotypes** (8 singles with
+fold + 5 neutral compounds). See OPERATIONS §6 for how they were built (the `_start.pdb` push / openmm
 gotchas). Env note: the Sherlock pmx venv now has **openmm 8.1.1** and was pinned back to **numpy<2**.
 
-**Deferred: `V106A_to_V106A_P225H`** (Pro→His, fold 153, a positive control). pmx `mutate` fails on the
-proline (HG/HD naming + missing backbone amide H). Needs a scoped `normalize_openmm_for_pmx` fix or a
-no-`-fB` build; tracked in OPERATIONS §6. Not blocking the 12-genotype ρ.
+**Proline mutations FIXED (2026-08-04, commit c21415b).** `V106A_to_V106A_P225H` (Pro→His, fold 153, a
+positive control) now builds. Root cause was proline HG/HD naming (`HG2/HG3, HD2/HD3` vs pmx's
+`HG1/HG2, HD1/HD2`); `normalize_openmm_for_pmx` now renames it PRO-scoped + idempotent, verified through
+mutate **and** pdb2gmx. No legs are deferred for proline anymore.
 
 **Still charge-blocked (need the co-alchemical-ion protocol, not built):** K103N, G190E, K103N+M230L,
-K103N+P225H, L100I+K103N — 5 genotypes. These + P225H are the 6 not yet in the runnable panel (of 18
-with fold; standalone F227C has no fold).
+K103N+P225H, L100I+K103N — **5 genotypes**, the only ones not in the runnable panel (of 18 with fold;
+standalone F227C has no fold).
 
 ---
 
