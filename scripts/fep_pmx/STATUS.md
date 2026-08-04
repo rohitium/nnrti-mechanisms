@@ -102,10 +102,17 @@ mutate **and** pdb2gmx. No legs are deferred for proline anymore.
 free-energy grompp passes, and **equil is running under soft-core dynamics** (manifest
 `neq_charge_manifest.csv`; equil `37518457` → extract `37518465` → switch `37518502`). **Still to do:**
 compute K103N/G190E ΔΔG when switch finishes, then the **placement-insensitivity check** (rebuild one
-rep forcing a different bulk Cl⁻; ΔΔG must be invariant) before trusting the numbers. Then the 3 K103N
-compounds' neutral 2nd legs (M230L, P225H, L100I) can be prepped with the standard pipeline → **full
-18-genotype panel**. See OPERATIONS for the charge-leg build (`_start.pdb` push, openmm/numpy<2, the
-methylene fix that also unblocked lysine).
+rep with `COALCH_ION_RANK=1` to decouple a different bulk Cl⁻; ΔΔG must be invariant) before trusting
+the numbers. See OPERATIONS for the charge-leg build (`_start.pdb` push, openmm/numpy<2, the methylene
+fix that also unblocked lysine).
+
+**ALL 18 GENOTYPES NOW PREPARED (2026-08-04).** The 3 K103N-compound 2nd legs
+(`K103N_to_K103N_M230L`, `K103N_to_K103N_P225H`, `K103N_to_L100I_K103N` — manifest
+`neq_kcompound_manifest.csv`) are staged (hybrids + systems + neq), so nothing in the manuscript panel
+remains to *prepare* — only to run + analyze. Run-status: P0/P1a done; P1b in switch tail; charge legs
+(K103N, G190E) running + validating; P2 (6 legs) and the K-compound legs (3 legs) staged, awaiting GPU.
+Submit remaining in 3-leg batches as GPU frees; the K-compound genotypes' ΔΔG also needs the K103N
+charge leg (running).
 
 ---
 
