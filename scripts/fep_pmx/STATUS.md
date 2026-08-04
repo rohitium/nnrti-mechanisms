@@ -95,9 +95,17 @@ positive control) now builds. Root cause was proline HG/HD naming (`HG2/HG3, HD2
 `HG1/HG2, HD1/HD2`); `normalize_openmm_for_pmx` now renames it PRO-scoped + idempotent, verified through
 mutate **and** pdb2gmx. No legs are deferred for proline anymore.
 
-**Still charge-blocked (need the co-alchemical-ion protocol, not built):** K103N, G190E, K103N+M230L,
-K103N+P225H, L100I+K103N — **5 genotypes**, the only ones not in the runnable panel (of 18 with fold;
-standalone F227C has no fold).
+**Charge protocol IMPLEMENTED + running (2026-08-04).** The co-alchemical ion is built
+(`coalchemical_ion.py`; `build_solvated_system` auto-applies it for `config.CHARGE_LEG_DELTA_Q` =
+{K103N, G190E}, both Δq=−1 → decouple one bulk Cl⁻, real→dummy over λ, keeping the box neutral at every
+λ; the bulk term cancels holo−apo). Validated through the hard gate: K103N + G190E systems build,
+free-energy grompp passes, and **equil is running under soft-core dynamics** (manifest
+`neq_charge_manifest.csv`; equil `37518457` → extract `37518465` → switch `37518502`). **Still to do:**
+compute K103N/G190E ΔΔG when switch finishes, then the **placement-insensitivity check** (rebuild one
+rep forcing a different bulk Cl⁻; ΔΔG must be invariant) before trusting the numbers. Then the 3 K103N
+compounds' neutral 2nd legs (M230L, P225H, L100I) can be prepped with the standard pipeline → **full
+18-genotype panel**. See OPERATIONS for the charge-leg build (`_start.pdb` push, openmm/numpy<2, the
+methylene fix that also unblocked lysine).
 
 ---
 
