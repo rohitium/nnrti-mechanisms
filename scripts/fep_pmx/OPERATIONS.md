@@ -277,3 +277,26 @@ All three are idempotent (SKIP existing). Then run via §4b (em pre-flight) + th
    P2H hybrid and `pdb2gmx` accepts the rename for all prolines (not just the mutated one). If a future
    non-proline residue hits the same `old_res[name]` IndexError, it's the same class of OpenMM→pmx
    methylene-naming gap (`2/3`→`1/2`); extend the rename residue-scoped the same way.
+
+## 7. Lesson: validate convergence, not just execution (charge legs)
+
+A protocol that **runs** and is formally **correct** can still be statistically **non-convergent** — and
+that gap cost us a full charge-leg run. The co-alchemical ion (for K103N/G190E) kept the box neutral
+(correct) and passed every execution gate (grompp accepts it, equil integrates, switches finish), so it
+*looked* validated. But it doesn't converge: decoupling a **whole ion** (charge + LJ, a tens-of-kcal
+transformation) in a 100–500 ps switch dissipates **~20–26 kcal/mol**, versus **~1–3** for a neutral
+mutation. That ~10× dissipation drives the forward/reverse work distributions ~20 kcal apart with
+near-zero overlap, so BAR cannot converge (SEM ~1.4; BAR–Jarzynski disagreement up to ~3.7).
+
+The tell that it was the *ion*, not the mutation: dissipation was ~constant (~20 kcal) across K103N and
+G190E even though their ΔGs differ wildly (~9 vs ~36) — the one thing they share is the Cl⁻ decoupling.
+
+**Rules going forward:**
+- The co-alchemical ion **relocates** the charge perturbation (mutation → bulk ion); it does not remove
+  it. Annihilating a full ion is intrinsically dissipative in fast NEQ switching. **Do not use it here.**
+- For charge-changing legs use the **analytical net-charge correction** (Rocklin/Hünenberger): run the
+  leg raw (non-neutral box), then add a closed-form finite-size term — **zero** added simulation
+  perturbation, so switch dissipation stays neutral-like.
+- Before committing GPU to any *new* alchemical protocol, do a 30-second estimate: how large is the
+  alchemical change being added, and can the switch length drive it near-reversibly? Then read the
+  **overlap / dissipation QC** (`qc_neq`, `integ_{fwd,rev}.dat`) — "it finished" is not "it converged."

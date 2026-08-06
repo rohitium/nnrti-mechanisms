@@ -95,16 +95,7 @@ positive control) now builds. Root cause was proline HG/HD naming (`HG2/HG3, HD2
 `HG1/HG2, HD1/HD2`); `normalize_openmm_for_pmx` now renames it PRO-scoped + idempotent, verified through
 mutate **and** pdb2gmx. No legs are deferred for proline anymore.
 
-**Charge protocol IMPLEMENTED + running (2026-08-04).** The co-alchemical ion is built
-(`coalchemical_ion.py`; `build_solvated_system` auto-applies it for `config.CHARGE_LEG_DELTA_Q` =
-{K103N, G190E}, both Δq=−1 → decouple one bulk Cl⁻, real→dummy over λ, keeping the box neutral at every
-λ; the bulk term cancels holo−apo). Validated through the hard gate: K103N + G190E systems build,
-free-energy grompp passes, and **equil is running under soft-core dynamics** (manifest
-`neq_charge_manifest.csv`; equil `37518457` → extract `37518465` → switch `37518502`). **Still to do:**
-compute K103N/G190E ΔΔG when switch finishes, then the **placement-insensitivity check** (rebuild one
-rep with `COALCH_ION_RANK=1` to decouple a different bulk Cl⁻; ΔΔG must be invariant) before trusting
-the numbers. See OPERATIONS for the charge-leg build (`_start.pdb` push, openmm/numpy<2, the methylene
-fix that also unblocked lysine).
+**Charge protocol: co-alchemical ion ABANDONED — analytical correction next (2026-08-05).** The explicit co-alchemical ion (`coalchemical_ion.py`) ran end-to-end but does **not converge**: charge legs dissipate ~20–26 kcal/mol vs ~1–3 for neutral (~10×) → near-zero forward/reverse overlap, SEM ~1.4, BAR–Jarz disagreement up to ~3.7. Diagnostic pinned it to the shared Cl⁻ decoupling (dissipation ~constant across K103N ΔG≈9 and G190E ΔG≈36). **Decision:** skip the co-alchemical ion; run charge legs raw (non-neutral box) + apply the Rocklin/Hünenberger analytical net-charge correction (zero added perturbation). K103N, G190E, and the 3 K103N-compound genotypes await this. `coalchemical_ion.py` kept but not used for production. See OPERATIONS §7 for the lesson. (First co-alchemical numbers, not trusted: K103N −0.72±1.38, G190E +2.50±1.41.)
 
 **ALL 18 GENOTYPES NOW PREPARED (2026-08-04).** The 3 K103N-compound 2nd legs
 (`K103N_to_K103N_M230L`, `K103N_to_K103N_P225H`, `K103N_to_L100I_K103N` — manifest
