@@ -85,7 +85,11 @@ if command -v module >/dev/null 2>&1; then
 fi
 PYTHON="${PYTHON:-python3}"
 
-TASK_ID_FILE="${PROJECT_ROOT}/results/analysis/fep_pmx/neq_${STAGE}_task_ids.txt"
+# TASK_ID_FILE is read at RUNTIME by each array element (sed'd for the task id),
+# so a concurrent submit for a different manifest MUST use a distinct file or it
+# clobbers an in-flight job's mapping. Override it (e.g. an isolated F227C 500 ps
+# switch rerun running alongside a pending panel switch array) via env.
+TASK_ID_FILE="${TASK_ID_FILE:-${PROJECT_ROOT}/results/analysis/fep_pmx/neq_${STAGE}_task_ids.txt}"
 CHUNK_MANIFEST="$(
 "${PYTHON}" - <<PY
 import csv

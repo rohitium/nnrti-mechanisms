@@ -77,7 +77,12 @@ NEQ_EQUIL_SNAPSHOT_START_PS = 100.0  # skip first 100 ps of equil when extractin
 # overlap (large reverse-work dissipation, ~1.5–6 kcal fwd/rev gap); 500 ps
 # reduces dissipation and improves overlap. Extend the set for further tests via
 # NEQ_EXTRA_LONG_SWITCH_LEGS (comma-separated leg ids) without editing code.
-_BASE_LONG_SWITCH_LEGS = {"wt_to_V106A", "wt_to_Y188L", "wt_to_G190E"}
+# F227C (Phe→Cys) added 2026-08-08: at 100 ps its holo reverse switches dissipate
+# erratically (fwd/rev gap 2.3→11.6 across reps, 0.00 overlap on rep 3) because
+# regrowing the aromatic ring into the collapsed Cys pocket catches variable
+# clashes; the ~2 kcal per-rep ΔG spread propagates into the A98G+F227C and
+# V106I+F227C compounds, so 500 ps switches here tighten three genotypes at once.
+_BASE_LONG_SWITCH_LEGS = {"wt_to_V106A", "wt_to_Y188L", "wt_to_G190E", "wt_to_F227C"}
 _EXTRA_LONG_SWITCH_LEGS = {
     leg.strip() for leg in os.environ.get("NEQ_EXTRA_LONG_SWITCH_LEGS", "").split(",") if leg.strip()
 }
