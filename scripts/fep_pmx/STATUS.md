@@ -97,6 +97,24 @@ mutate **and** pdb2gmx. No legs are deferred for proline anymore.
 
 **Charge protocol: co-alchemical ion ABANDONED — analytical correction next (2026-08-05).** The explicit co-alchemical ion (`coalchemical_ion.py`) ran end-to-end but does **not converge**: charge legs dissipate ~20–26 kcal/mol vs ~1–3 for neutral (~10×) → near-zero forward/reverse overlap, SEM ~1.4, BAR–Jarz disagreement up to ~3.7. Diagnostic pinned it to the shared Cl⁻ decoupling (dissipation ~constant across K103N ΔG≈9 and G190E ΔG≈36). **Decision:** skip the co-alchemical ion; run charge legs raw (non-neutral box) + apply the Rocklin/Hünenberger analytical net-charge correction (zero added perturbation). K103N, G190E, and the 3 K103N-compound genotypes await this. `coalchemical_ion.py` kept but not used for production. See OPERATIONS §7 for the lesson. (First co-alchemical numbers, not trusted: K103N −0.72±1.38, G190E +2.50±1.41.)
 
+**F227C 500 ps switch rerun IN FLIGHT (2026-08-08, job `38228510`, array 0-23%16).** F227C's
+100 ps holo reverse switches dissipate erratically (fwd/rev gap 2.3→7.7→11.6 across reps, 0.00
+overlap on rep 3) — regrowing the Phe ring into the collapsed Cys pocket catches variable clashes.
+Its ~2 kcal per-rep ΔG spread is the sole source of the imprecision in the **A98G+F227C** (fold 93)
+and **V106I+F227C** (fold 105) compounds — their own second legs are tight (A98G leg holo SEM 0.22,
+apo 0.16). So `wt_to_F227C` was added to `LONG_SWITCH_LEGS` (commit cf7bd45) and its **switch stage
+only** was rerun at 500 ps from an **isolated** manifest (`neq_f227c500_manifest.csv`) with its own
+`TASK_ID_FILE` (so it can't clobber the concurrently-pending P2b switch array). equil + snapshots
+reused; only `legs/wt_to_F227C/*/rep_*/neq/{switches,analysis}` were deleted before the rerun.
+**When 38228510 finishes** (24 tasks × ~15 h): re-run combine/qc for all three dependents and pull:
+```bash
+source scripts/sherlock/activate_pmx_env.sh
+python3 scripts/fep_pmx/combine_neq.py --targets F227C --replicates 3
+python3 scripts/fep_pmx/combine_neq.py --targets A98G+F227C V106I+F227C --replicates 3
+python3 scripts/fep_pmx/qc_neq.py --targets F227C A98G+F227C V106I+F227C --replicates 3
+# then, on the Mac: SHERLOCK_USER=rsatija bash scripts/rsync_fep_pmx.sh pull
+```
+
 **ALL 18 GENOTYPES NOW PREPARED (2026-08-04).** The 3 K103N-compound 2nd legs
 (`K103N_to_K103N_M230L`, `K103N_to_K103N_P225H`, `K103N_to_L100I_K103N` — manifest
 `neq_kcompound_manifest.csv`) are staged (hybrids + systems + neq), so nothing in the manuscript panel
