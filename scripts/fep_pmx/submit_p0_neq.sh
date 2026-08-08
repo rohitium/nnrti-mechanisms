@@ -202,6 +202,13 @@ _submit_chunk() {
     if [[ -n "${chunk_dep}" ]]; then
         SBATCH_ARGS+=(--dependency="${chunk_dep}")
     fi
+    # Explicit node exclusion. SBATCH_EXCLUDE (the env var) is silently ignored
+    # once we build our own SBATCH_ARGS, so pass --exclude directly. Use this to
+    # avoid a known-bad node, e.g. EXCLUDE_NODES=sh03-12n12 (which hangs equil to
+    # the 12 h wall). Comma-separated node list.
+    if [[ -n "${EXCLUDE_NODES:-}" ]]; then
+        SBATCH_ARGS+=(--exclude="${EXCLUDE_NODES}")
+    fi
 
     sbatch "${SBATCH_ARGS[@]}" <<SBATCH_EOF
 #!/bin/bash

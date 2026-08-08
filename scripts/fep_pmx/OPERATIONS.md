@@ -110,9 +110,10 @@ sacct -j <JOBID> --format=JobID%16,State,NodeList%12 -X   # do all failures shar
 sinfo -n <node> -o "%n %t %E %G"                          # STATE inval/drain/down = out of pool already
 ```
 If all failures share one node and that node is `inval`/`drain`/`down`, it is **already unschedulable**
-— new jobs cannot land there, so no exclusion is needed. (We confirmed `SBATCH_EXCLUDE` and
-`scontrol update ExcNodeList=...` are both silently ignored by this submit path, so **don't rely on
-them** — rely on the node self-invalidating, which it does after a lost-GPU/unkillable event.)
+— new jobs cannot land there, so no exclusion is needed. (`SBATCH_EXCLUDE` the env var and `scontrol update ExcNodeList=...` are both silently ignored by
+this submit path. Use **`EXCLUDE_NODES=sh03-12n12`** instead — `submit_p0_neq.sh` passes it through as
+`--exclude`. Note `sh03-12n12` is a repeat offender: it hangs equil to the 12 h wall and does *not*
+always self-invalidate, so exclude it explicitly on any resubmit.)
 
 An access scare is almost never real: GPU **access** failures stop you at *scheduling* (job rejected,
 or PD with a QOS/Assoc reason). If jobs got `gres/gpu=1` allocated and some **ran**, access is fine —
@@ -132,6 +133,7 @@ equil units skip instantly; only the failures recompute (on healthy nodes).
 cd /scratch/users/rsatija/nnrti-mechanisms-git
 source scripts/sherlock/activate_pmx_env.sh
 export MANIFEST=results/analysis/fep_pmx/neq_p1a_manifest.csv   # the batch's manifest
+export EXCLUDE_NODES=sh03-12n12                                 # avoid the known-bad node (repeat offender)
 
 # 1) cancel the downstream jobs whose afterok can never be met
 scancel <extract_jobid> <switch_jobid>
