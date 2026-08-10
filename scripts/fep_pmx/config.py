@@ -38,14 +38,22 @@ P1_NEUTRAL_LEGS = (
 )
 P1_CHARGE_LEGS = ("wt_to_K103N", "wt_to_G190E")
 
-# Charge-changing legs: protein net-charge change (A-state -> B-state). Triggers
-# the co-alchemical ion in build_solvated_system (decouple one counter-ion to keep
-# the box neutral at every lambda; see coalchemical_ion.py). Only the WT->charged
-# single legs change net charge — the compound second legs (M230L etc.) are neutral.
+# Charge-changing legs: protein net-charge change (A-state -> B-state). Only the
+# WT->charged single legs change net charge — the compound second legs (M230L etc.)
+# are neutral.
 CHARGE_LEG_DELTA_Q = {
     "wt_to_K103N": -1,   # Lys+ -> Asn0
     "wt_to_G190E": -1,   # Gly0 -> Glu-
 }
+
+# Co-alchemical ion ABANDONED 2026-08-05: decoupling one bulk Cl- to keep the box
+# neutral dissipated ~20-26 kcal/mol (vs ~1-3 neutral), near-zero overlap, SEM ~1.4,
+# BAR-Jarz disagreement ~3.7 — it does not converge (see OPERATIONS.md §7). We now
+# run charge legs in a RAW non-neutral box (genion -neutral neutralises the A-state;
+# the B-state carries net charge under PME's uniform background) and apply the
+# Rocklin/Hunenberger analytical net-charge correction post-hoc (zero added
+# perturbation). Set True only to reproduce the abandoned co-alchemical experiment.
+USE_COALCHEMICAL_ION = False
 
 # Match OpenMM MD prep (md_protocol.py / manuscript)
 SOLVENT_PADDING_NM = 1.0

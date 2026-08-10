@@ -24,6 +24,7 @@ from scripts.fep_pmx.config import (
     LIGAND_RESNAME,
     PMX_FORCE_FIELD_LABEL,
     SOLVENT_PADDING_NM,
+    USE_COALCHEMICAL_ION,
     WATER_MODEL,
 )
 from scripts.fep_pmx.coalchemical_ion import add_coalchemical_ion
@@ -272,12 +273,13 @@ def build_solvated_system(
     )
     shutil.copy2(solv_top, final_top)
 
-    # Charge-changing legs: convert one bulk counter-ion into a dual-state
-    # co-alchemical ion so the box stays neutral at every lambda (state A here is
-    # the real ion, so the box is still neutral for this A-state grompp check).
+    # Charge-changing legs: the co-alchemical ion is ABANDONED (does not converge;
+    # see config.USE_COALCHEMICAL_ION). Default is a RAW non-neutral box + analytical
+    # net-charge correction post-hoc. The block below only runs if explicitly
+    # re-enabled to reproduce the abandoned experiment.
     coalch_info = None
     delta_q = CHARGE_LEG_DELTA_Q.get(leg_id)
-    if delta_q is not None:
+    if delta_q is not None and USE_COALCHEMICAL_ION:
         # COALCH_ION_RANK (default 0 = farthest ion) lets the placement-insensitivity
         # check rebuild a leg using a different bulk ion without editing code.
         ion_rank = int(os.environ.get("COALCH_ION_RANK", "0"))
