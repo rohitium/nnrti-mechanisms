@@ -90,3 +90,74 @@ to our charge-leg non-convergence and the F227C 500 ps rerun).
   doi:10.1021/acs.jcim.4c00334 — https://doi.org/10.1021/acs.jcim.4c00334
   Current bar for combining alchemical free energy with mechanism dissection on a
   protease; useful if a reviewer pushes for more mechanism.
+
+## 5. HIV-specific MD / free-energy resistance studies (by target)
+
+### 5a. Reverse transcriptase / NNRTIs — the closest precedents to this work
+The Jorgensen-lineage RT/NNRTI FEP papers computed ΔΔG for the *same* NNRTI-pocket
+residues in our panel (K103N, V106A, Y181C, L100I) with nevirapine/efavirenz, using
+the same core logic (ΔΔG_bind vs observed resistance). These are our nearest
+literature comparison and belong in the Discussion.
+
+- **Energetic effects for observed and unobserved HIV-1 RT mutations of residues
+  L100, V106, and Y181 in the presence of nevirapine and efavirenz.** MC/FEP.
+  https://www.wikidata.org/wiki/Q33982889
+  Key parallel: the clinically-*observed* variant had the more positive ΔΔG than
+  unobserved codon alternatives — i.e. ΔΔG_bind tracked which mutation survives in
+  patients. Direct precedent for our fold-change hypothesis test.
+- **HIV-1 RT variants Y181C, V106A, L100I, K103N with NNRTIs — MC + linear-response
+  (2004).** https://pubmed.ncbi.nlm.nih.gov/15553926/
+  Same four residues we study; linear-response binding estimates per mutation.
+- **Structural and Energetic Analyses of the K103N Mutation on Efavirenz Analogues.**
+  *J. Med. Chem.* 2004. doi:10.1021/jm0303507 — https://doi.org/10.1021/jm0303507
+  and **Activity predictions for efavirenz analogues with K103N (2003)**,
+  https://pubmed.ncbi.nlm.nih.gov/12951121/ — MC/FEP on K103N (a charge-changing
+  mutation, like our K103N/G190E legs); relevant to how they handled it.
+- **Energetics of Mutation-Induced Changes in Potency of Lersivirine against HIV-1
+  RT.** MC/FEP on a later NNRTI.
+  https://www.academia.edu/85831907/ — extends the same framework to a
+  next-generation NNRTI (closer in chemotype to doravirine).
+- **MD of HIV-1 RT–DNA–nevirapine complexes explains NNRTI inhibition and resistance
+  by connection-domain mutations (2013).** https://pubmed.ncbi.nlm.nih.gov/24174331/
+  Resistance from mutations *outside* the pocket — a mechanism our pocket-only ΔΔG
+  cannot capture (useful for the limitations section).
+- **Thermodynamics of HIV-1 RT in Action.** *JACS* 2013.
+  doi:10.1021/ja4018418 — https://doi.org/10.1021/ja4018418
+- **Structural basis for drug resistance mechanisms for NNRTIs of HIV RT (2008).**
+  https://pubmed.ncbi.nlm.nih.gov/18313784/ — structural context for pocket mutations.
+
+### 5b. Protease — the DRV/decomposition lineage (our seed reference's neighbours)
+- **Decomposing the energetic impact of drug-resistant mutations in HIV-1 protease
+  on binding DRV.** https://pmc.ncbi.nlm.nih.gov/articles/PMC2882104/  (the seed paper)
+- **Computational Mutation Scanning and Drug-Resistance Mechanisms of HIV-1 Protease
+  Inhibitors.** https://pmc.ncbi.nlm.nih.gov/articles/PMC2916083/
+  FEP absolute binding of APV and DRV consistent with experiment; decomposition shows
+  mutations distort the active site so lost binding free energy is *not* confined to
+  the mutated residues — a caution for per-residue interpretation.
+- **Structural/dynamic/thermodynamic basis of DRV resistance in a heavily mutated
+  protease (2022).** https://pmc.ncbi.nlm.nih.gov/articles/PMC9420863/
+- **M46I-induced saquinavir resistance — MD + binding-energy (2022).**
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC9031992/
+- **Susceptibility of HIV-1 protease variants to DRV and KNI-1657 — multiple MD +
+  MM-PBSA/SIE.** *Langmuir* 2021. doi:10.1021/acs.langmuir.1c02348 —
+  https://doi.org/10.1021/acs.langmuir.1c02348
+- **FLAP+ / ACT variants vs amprenavir & darunavir — MM-PBSA (2015).**
+  *Sci. Rep.* 5, 10517. https://www.nature.com/articles/srep10517
+
+### 5c. Integrase / INSTIs
+- **Mechanisms of HIV-1 integrase resistance to dolutegravir (2023).**
+  *Sci. Adv.* doi:10.1126/sciadv.adg5953 — https://doi.org/10.1126/sciadv.adg5953
+  All-atom free-energy simulations explain G140A/Q148K resistance via Mg²⁺
+  polarization and weakened chelation — recent, mechanistically rigorous.
+- **HIV-1C integrase E92Q/G140S/Y143R vs dolutegravir — MD binding free energy
+  (2019).** *PLOS ONE.* https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0223464
+- **Cross-resistance to INSTIs — MD + residue interaction network.** *J. Chem. Inf.
+  Model.* https://pubs.acs.org/doi/abs/10.1021/ci300541c
+
+### 5d. Capsid / lenacapavir
+- **MD Free-Energy Simulations Reveal the Mechanism of M66I Capsid Resistance (2021).**
+  *Viruses* 13(5), 920. doi:10.3390/v13050920 — https://doi.org/10.3390/v13050920
+  Striking mechanistic parallel to our F227C reasoning: resistance comes from the
+  *free-energy cost of side-chain reorganization* (I66 steric clash), NOT reduced
+  protein–ligand interaction — exactly the kind of endpoint/reorganization effect that
+  a bound-state-only ΔΔG can miss.
