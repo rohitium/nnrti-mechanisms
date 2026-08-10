@@ -100,9 +100,13 @@ mutate **and** pdb2gmx. No legs are deferred for proline anymore.
 **F227C 500 ps switch rerun IN FLIGHT (2026-08-08, job `38228510`, array 0-23%16).** F227C's
 100 ps holo reverse switches dissipate erratically (fwd/rev gap 2.3→7.7→11.6 across reps, 0.00
 overlap on rep 3) — regrowing the Phe ring into the collapsed Cys pocket catches variable clashes.
-Its ~2 kcal per-rep ΔG spread is the sole source of the imprecision in the **A98G+F227C** (fold 93)
-and **V106I+F227C** (fold 105) compounds — their own second legs are tight (A98G leg holo SEM 0.22,
-apo 0.16). So `wt_to_F227C` was added to `LONG_SWITCH_LEGS` (commit cf7bd45) and its **switch stage
+Its ~2 kcal per-rep ΔG spread is the source of the imprecision in **A98G+F227C** (fold 93), which
+is built on this exact leg (= WT→F227C + F227C→A98G+F227C); the A98G second leg is tight (holo SEM
+0.22, apo 0.16). **Correction (2026-08-10):** V106I+F227C (fold 105) does NOT use this leg — it
+reaches F227C via a separate `V106I_to_V106I_F227C` leg (same Phe→Cys, V106I background) that was
+NOT bumped and likely needs its own 500 ps rerun; check its QC in the panel combine. So this rerun
+tightens **two** genotypes (F227C, A98G+F227C), not three. `wt_to_F227C` was added to
+`LONG_SWITCH_LEGS` (commit cf7bd45) and its **switch stage
 only** was rerun at 500 ps from an **isolated** manifest (`neq_f227c500_manifest.csv`) with its own
 `TASK_ID_FILE` (so it can't clobber the concurrently-pending P2b switch array). equil + snapshots
 reused; only `legs/wt_to_F227C/*/rep_*/neq/{switches,analysis}` were deleted before the rerun.

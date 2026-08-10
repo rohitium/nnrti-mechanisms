@@ -80,8 +80,11 @@ NEQ_EQUIL_SNAPSHOT_START_PS = 100.0  # skip first 100 ps of equil when extractin
 # F227C (Phe→Cys) added 2026-08-08: at 100 ps its holo reverse switches dissipate
 # erratically (fwd/rev gap 2.3→11.6 across reps, 0.00 overlap on rep 3) because
 # regrowing the aromatic ring into the collapsed Cys pocket catches variable
-# clashes; the ~2 kcal per-rep ΔG spread propagates into the A98G+F227C and
-# V106I+F227C compounds, so 500 ps switches here tighten three genotypes at once.
+# clashes. This WT→F227C leg underlies both F227C and A98G+F227C (= WT→F227C +
+# F227C→A98G+F227C), so 500 ps here tightens those two. NOTE: V106I+F227C does
+# NOT use this leg — it reaches F227C via a separate V106I→V106I+F227C leg
+# (V106I_to_V106I_F227C), the same Phe→Cys change on a V106I background, which
+# likely needs the same 500 ps treatment; add it here if its QC shows the flag.
 _BASE_LONG_SWITCH_LEGS = {"wt_to_V106A", "wt_to_Y188L", "wt_to_G190E", "wt_to_F227C"}
 _EXTRA_LONG_SWITCH_LEGS = {
     leg.strip() for leg in os.environ.get("NEQ_EXTRA_LONG_SWITCH_LEGS", "").split(",") if leg.strip()
