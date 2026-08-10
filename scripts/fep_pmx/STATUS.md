@@ -119,6 +119,22 @@ python3 scripts/fep_pmx/qc_neq.py --targets F227C A98G+F227C V106I+F227C --repli
 # then, on the Mac: SHERLOCK_USER=rsatija bash scripts/rsync_fep_pmx.sh pull
 ```
 
+**F227C 500 ps RESULT — noise is endpoint-limited, not switch-limited (2026-08-10).** The rerun
+finished (24/24) and was analysed. Verdict: **switch length is not the lever.** Per-rep ΔG at 500 ps
+is essentially identical to 100 ps (holo −0.18/−1.72/−2.15 vs −0.1/−1.8/−2.2); dissipation gaps shrank
+~20 % (holo r3 11.6→9.2) but BAR already corrects for that, so the estimate didn't move — clean
+switch-length invariance. The imprecision is **across-rep endpoint scatter**: F227C leg ΔΔG per rep =
++0.51, +0.51, −1.93 (reps 1&2 agree; rep 3 is a ~2.4 kcal outlier whose whole work distribution is
+shifted/more dissipative → it equilibrated into a different pocket conformation). QC panel-wide shows
+overlap is **decoupled from precision** (28/30 units low_overlap, yet SEM spans 0.16–1.61; V106M all
+6 reps low_overlap but SEM 0.16, fully converged) — trust replicate SEM + BAR–Jarz agreement, NOT the
+overlap flag. Panel ρ = **0.374 (n=13)**, up from 0.188. V106M (+6.10, fold 3.4, tight) is a genuine
+converged overprediction and the main ρ drag. **Consequences:** (a) do NOT bump `V106I_to_V106I_F227C`
+to 500 ps — same Phe→Cys, same endpoint problem, switch length won't help; (b) the levers for the
+F227C family are MORE REPLICATES (SEM∝1/√n, cheapest at 100 ps since ≈500 ps) and ultimately the
+endpoint-seeding test (the root fix). Mechanistic echo: M66I/lenacapavir capsid paper (side-chain
+reorganization free energy) — see manuscript/fep_resistance_references.md §5d.
+
 **ALL 18 GENOTYPES NOW PREPARED (2026-08-04).** The 3 K103N-compound 2nd legs
 (`K103N_to_K103N_M230L`, `K103N_to_K103N_P225H`, `K103N_to_L100I_K103N` — manifest
 `neq_kcompound_manifest.csv`) are staged (hybrids + systems + neq), so nothing in the manuscript panel
