@@ -85,15 +85,17 @@ NEQ_EQUIL_SNAPSHOT_START_PS = 100.0  # skip first 100 ps of equil when extractin
 # overlap (large reverse-work dissipation, ~1.5–6 kcal fwd/rev gap); 500 ps
 # reduces dissipation and improves overlap. Extend the set for further tests via
 # NEQ_EXTRA_LONG_SWITCH_LEGS (comma-separated leg ids) without editing code.
-# F227C (Phe→Cys) added 2026-08-08: at 100 ps its holo reverse switches dissipate
-# erratically (fwd/rev gap 2.3→11.6 across reps, 0.00 overlap on rep 3) because
-# regrowing the aromatic ring into the collapsed Cys pocket catches variable
-# clashes. This WT→F227C leg underlies both F227C and A98G+F227C (= WT→F227C +
-# F227C→A98G+F227C), so 500 ps here tightens those two. NOTE: V106I+F227C does
-# NOT use this leg — it reaches F227C via a separate V106I→V106I+F227C leg
-# (V106I_to_V106I_F227C), the same Phe→Cys change on a V106I background, which
-# likely needs the same 500 ps treatment; add it here if its QC shows the flag.
-_BASE_LONG_SWITCH_LEGS = {"wt_to_V106A", "wt_to_Y188L", "wt_to_G190E", "wt_to_F227C"}
+# F227C (Phe→Cys) was TESTED at 500 ps (2026-08-08) then REVERTED to 100 ps
+# (2026-08-10): the 500 ps run gave per-rep ΔG identical to 100 ps (holo
+# −0.18/−1.72/−2.15 vs −0.1/−1.8/−2.2) — clean switch-length invariance. Its noise
+# is NOT switch dissipation but across-rep endpoint scatter (fast local pocket
+# repacking around the deleted ring; no slow basin seen in 100 ns MD once PBC
+# artifacts are removed). The fix is more replicates (SEM∝1/√n), not longer
+# switches, so F227C stays at the cheaper 100 ps default. The 3 existing 500 ps
+# reps remain on disk and double as the switch-length-invariance check. Same
+# reasoning applies to the other aromatic→Cys legs (V106I_to_V106I_F227C,
+# wt_to_Y181C): keep them at 100 ps and add replicates.
+_BASE_LONG_SWITCH_LEGS = {"wt_to_V106A", "wt_to_Y188L", "wt_to_G190E"}
 _EXTRA_LONG_SWITCH_LEGS = {
     leg.strip() for leg in os.environ.get("NEQ_EXTRA_LONG_SWITCH_LEGS", "").split(",") if leg.strip()
 }

@@ -135,6 +135,21 @@ F227C family are MORE REPLICATES (SEM∝1/√n, cheapest at 100 ps since ≈500 
 endpoint-seeding test (the root fix). Mechanistic echo: M66I/lenacapavir capsid paper (side-chain
 reorganization free energy) — see manuscript/fep_resistance_references.md §5d.
 
+**CONFIDENCE PLAN for the 4 endpoint-limited genotypes (2026-08-10).** Non-converged (SEM≳0.8):
+F227C, A98G+F227C, V106I+F227C, Y181C — all **aromatic→Cys** (Phe/Tyr→Cys) deletions. 100 ns MD
+check: once PBC artifacts are removed (use mdtraj imaging — the repo timeseries tables are NOT
+PBC-corrected), F227C's bound state is unimodal + WT-like (no slow basin), so the scatter is fast
+local repacking → **more replicates is the correct fix**, not endpoint-seeding or longer switches.
+Two steps: (1) DONE — `combine_neq` now uses **independent-leg error propagation** (per-leg mean +
+SEM in quadrature), which already dropped V106I+F227C 1.61→1.16 and A98G+F227C 1.05→0.87 with zero
+new sampling (rep-index pairing had injected spurious correlation) and lets a noisy leg carry more
+reps than a tight partner. (2) STAGED — add replicates at **100 ps** (F227C reverted out of
+LONG_SWITCH_LEGS; 500 ps proved equivalent) to the noisy legs `wt_to_F227C`,
+`V106I_to_V106I_F227C`, `wt_to_Y181C`, `wt_to_V106I`. Target per-leg SEM ~0.6–0.7 (≈chemical
+accuracy): n≈6 for most (+3 reps), n≈9 for Y181C. NOT 9–12 blanket. Fire once the charge legs free
+the GPUs. Per-leg reps-to-target (SD): F227C 1.41→n5(0.7); V106I_F227C 1.56→n5; Y181C 1.84→n7;
+V106I 1.28→n4.
+
 **ALL 18 GENOTYPES NOW PREPARED (2026-08-04).** The 3 K103N-compound 2nd legs
 (`K103N_to_K103N_M230L`, `K103N_to_K103N_P225H`, `K103N_to_L100I_K103N` — manifest
 `neq_kcompound_manifest.csv`) are staged (hybrids + systems + neq), so nothing in the manuscript panel
