@@ -14,6 +14,17 @@ PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
 
 REPLICATES="${REPLICATES:-1 2 3}"
+# REPLICATES is a LIST of rep INDICES, not a count. Accept "1-3" range syntax, and
+# loudly warn on a bare integer >1 (REPLICATES=3 means rep 3 ONLY, not reps 1-3).
+_orig_reps="${REPLICATES}"
+if [[ "${REPLICATES}" =~ ^[0-9]+-[0-9]+$ ]]; then
+    REPLICATES="$(seq "${REPLICATES%-*}" "${REPLICATES#*-}")"
+fi
+if [[ "${_orig_reps}" =~ ^[0-9]+$ ]] && (( _orig_reps > 1 )); then
+    echo "NOTE: REPLICATES='${_orig_reps}' = rep index ${_orig_reps} ONLY (not reps 1-${_orig_reps})." >&2
+    echo "      For a range use REPLICATES='1-${_orig_reps}' or REPLICATES='1 2 ... ${_orig_reps}'." >&2
+fi
+echo "Reps to process: $(echo ${REPLICATES})"
 FORCE="${FORCE:-0}"
 PMX_CONDA_ENV="${PMX_CONDA_ENV:-pmx}"
 

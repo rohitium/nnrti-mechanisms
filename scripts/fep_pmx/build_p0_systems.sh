@@ -15,6 +15,18 @@ PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
 
 REPLICATES="${REPLICATES:-1}"
+# REPLICATES is a LIST of rep INDICES, not a count. Accept "1-3" range syntax, and
+# loudly warn on a bare integer >1 (the footgun: REPLICATES=3 means rep 3 ONLY, not
+# reps 1-3 — this once rebuilt only rep 3 of the charge legs). See git history.
+_orig_reps="${REPLICATES}"
+if [[ "${REPLICATES}" =~ ^[0-9]+-[0-9]+$ ]]; then
+    REPLICATES="$(seq "${REPLICATES%-*}" "${REPLICATES#*-}")"
+fi
+if [[ "${_orig_reps}" =~ ^[0-9]+$ ]] && (( _orig_reps > 1 )); then
+    echo "NOTE: REPLICATES='${_orig_reps}' = rep index ${_orig_reps} ONLY (not reps 1-${_orig_reps})." >&2
+    echo "      For a range use REPLICATES='1-${_orig_reps}' or REPLICATES='1 2 ... ${_orig_reps}'." >&2
+fi
+echo "Reps to process: $(echo ${REPLICATES})"
 PHASES="${PHASES:-holo apo}"
 FORCE="${FORCE:-0}"
 # Override with e.g. LEGS="wt_to_F227C wt_to_G190A" for other legs (P1).
