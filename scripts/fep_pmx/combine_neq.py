@@ -29,7 +29,28 @@ if str(REPO_ROOT) not in sys.path:
 
 from scripts.fep_jorgensen.mutations import MANUSCRIPT_PLANS
 from scripts.fep_pmx.analyze_neq import ensure_leg_analysis
-from scripts.fep_pmx.config import FEP_PMX_ROOT, NEQ_TEMPERATURE_K
+from scripts.fep_pmx.charge_correction import charge_leg_correction
+from scripts.fep_pmx.config import CHARGE_LEG_DELTA_Q, FEP_PMX_ROOT, NEQ_TEMPERATURE_K
+
+
+def _leg_charge_correction(leg_id: str, replicate: int) -> float:
+    """Analytical net-charge (finite-size) correction to add to a charge leg's ΔΔG.
+
+    Zero for neutral legs. For charge legs (CHARGE_LEG_DELTA_Q) it is the leading
+    Rocklin/Hunenberger periodicity self-energy term, ΔG_holo_self - ΔG_apo_self,
+    read from the leg's built holo/apo boxes. For our ~12 nm boxes it is ~1e-4
+    kcal/mol (the per-phase terms cancel); see charge_correction.py. Falls back to
+    0.0 if the built boxes are not present (e.g. on a machine without gromacs_build).
+    """
+    delta_q = CHARGE_LEG_DELTA_Q.get(leg_id)
+    if delta_q is None:
+        return 0.0
+    leg_dir = FEP_PMX_ROOT / "legs" / leg_id
+    holo_gro = leg_dir / "holo" / f"rep_{replicate:02d}" / "gromacs_build" / "system.gro"
+    apo_gro = leg_dir / "apo" / f"rep_{replicate:02d}" / "gromacs_build" / "system.gro"
+    if not (holo_gro.is_file() and apo_gro.is_file()):
+        return 0.0
+    return charge_leg_correction(holo_gro, apo_gro, delta_q=delta_q)["ddg_correction_kcal"]
 
 DEFAULT_TARGETS = ("V106A", "Y188L")
 EXPERIMENTAL_CSV = Path(
@@ -103,7 +124,9 @@ def target_ddg(
             if holo.get("bar_dg") is None or apo.get("bar_dg") is None:
                 complete = False
                 break
-            leg_ddg = holo["bar_dg"] - apo["bar_dg"]
+            leg_ddg_raw = holo["bar_dg"] - apo["bar_dg"]
+            charge_corr = _leg_charge_correction(leg.leg_id, replicate)
+            leg_ddg = leg_ddg_raw + charge_corr
             rep_ddg += leg_ddg
             legs_detail.append(
                 {
@@ -112,6 +135,8 @@ def target_ddg(
                     "apo_dg": apo["bar_dg"],
                     "holo_err": holo.get("bar_err_analytical"),
                     "apo_err": apo.get("bar_err_analytical"),
+                    "leg_ddg_raw": leg_ddg_raw,
+                    "charge_correction": charge_corr,
                     "leg_ddg": leg_ddg,
                 }
             )
