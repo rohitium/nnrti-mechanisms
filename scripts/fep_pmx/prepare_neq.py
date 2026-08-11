@@ -426,7 +426,10 @@ def main(argv: list[str] | None = None) -> int:
         default=FEP_PMX_ROOT / "neq_panel_manifest.csv",
         help="Write combined manifest for P0 legs when --leg is omitted",
     )
-    parser.add_argument("--replicates", type=int, default=1, help="Panel mode: reps 1..N")
+    parser.add_argument("--replicates", type=int, default=1, help="Panel mode: reps REP_START..N")
+    parser.add_argument("--rep-start", type=int, default=1,
+                        help="First replicate index (default 1). Use e.g. --rep-start 4 --replicates 6 "
+                             "to prepare ONLY new reps 4-6 for a replicate extension.")
     parser.add_argument(
         "--legs",
         nargs="+",
@@ -441,7 +444,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest = rebuild_panel_manifest(
             legs=panel_legs,
             phases=("holo", "apo"),
-            replicates=range(1, args.replicates + 1),
+            replicates=range(args.rep_start, args.replicates + 1),
             output=args.panel_manifest,
         )
         print(f"Rebuilt panel NEQ manifest: {manifest}")
@@ -459,7 +462,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         for leg_id in panel_legs:
             for phase in ("holo", "apo"):
-                for replicate in range(1, args.replicates + 1):
+                for replicate in range(args.rep_start, args.replicates + 1):
                     refresh_switch_schedule(
                         leg_id,
                         phase=phase,
@@ -486,7 +489,7 @@ def main(argv: list[str] | None = None) -> int:
     manifest = build_panel_manifest(
         legs=panel_legs,
         phases=("holo", "apo"),
-        replicates=range(1, args.replicates + 1),
+        replicates=range(args.rep_start, args.replicates + 1),
         n_snapshots=args.n_snapshots,
         output=args.panel_manifest,
         force=args.force,
