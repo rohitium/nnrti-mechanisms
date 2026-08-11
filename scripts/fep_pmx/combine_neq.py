@@ -107,12 +107,16 @@ def target_ddg(
         raise ValueError(f"Unknown genotype {genotype}; not in MANUSCRIPT_PLANS")
     legs = MANUSCRIPT_PLANS[genotype].legs
 
-    per_rep: list[dict] = []
-    for replicate in replicates:
-        legs_detail = []
-        rep_ddg = 0.0
-        complete = True
-        for leg in legs:
+    # Independent-leg propagation: each leg is a separate simulation, so we
+    # aggregate per leg (mean ± SEM over that leg's own replicates) and combine
+    # legs as sum of means with SEM added in quadrature. This (a) is the correct
+    # estimator for physically independent legs — rep-index pairing injects a
+    # spurious per-rep correlation that inflates the SEM at small n — and (b)
+    # lets a noisy leg carry more replicates than an already-tight partner leg.
+    legs_agg: list[dict] = []
+    for leg in legs:
+        rep_vals: list[dict] = []
+        for replicate in replicates:
             holo = ensure_leg_analysis(
                 leg.leg_id, phase="holo", replicate=replicate,
                 temperature_k=temperature_k, nboots=nboots, auto=auto, force=force,
@@ -122,41 +126,45 @@ def target_ddg(
                 temperature_k=temperature_k, nboots=nboots, auto=auto, force=force,
             )
             if holo.get("bar_dg") is None or apo.get("bar_dg") is None:
-                complete = False
-                break
-            leg_ddg_raw = holo["bar_dg"] - apo["bar_dg"]
+                continue
             charge_corr = _leg_charge_correction(leg.leg_id, replicate)
-            leg_ddg = leg_ddg_raw + charge_corr
-            rep_ddg += leg_ddg
-            legs_detail.append(
+            leg_ddg = holo["bar_dg"] - apo["bar_dg"] + charge_corr
+            rep_vals.append(
                 {
-                    "leg_id": leg.leg_id,
+                    "replicate": replicate,
                     "holo_dg": holo["bar_dg"],
                     "apo_dg": apo["bar_dg"],
-                    "holo_err": holo.get("bar_err_analytical"),
-                    "apo_err": apo.get("bar_err_analytical"),
-                    "leg_ddg_raw": leg_ddg_raw,
                     "charge_correction": charge_corr,
                     "leg_ddg": leg_ddg,
                 }
             )
-        if complete:
-            per_rep.append({"replicate": replicate, "ddg_bind": rep_ddg, "legs": legs_detail})
+        if not rep_vals:  # a leg with no complete replicate => genotype incomplete
+            return {"genotype": genotype, "n_reps": 0, "ddg_bind": None, "sem": None,
+                    "legs": legs_agg, "incomplete_leg": leg.leg_id}
+        v = np.array([r["leg_ddg"] for r in rep_vals])
+        nrep = len(v)
+        legs_agg.append(
+            {
+                "leg_id": leg.leg_id,
+                "n_reps": nrep,
+                "leg_ddg_mean": float(v.mean()),
+                "leg_ddg_sd": float(v.std(ddof=1)) if nrep > 1 else None,
+                "leg_ddg_sem": float(v.std(ddof=1) / math.sqrt(nrep)) if nrep > 1 else None,
+                "per_rep": rep_vals,
+            }
+        )
 
-    if not per_rep:
-        return {"genotype": genotype, "n_reps": 0, "ddg_bind": None, "sem": None, "per_rep": []}
-
-    ddgs = np.array([r["ddg_bind"] for r in per_rep])
-    n = len(ddgs)
-    mean = float(ddgs.mean())
-    sem = float(ddgs.std(ddof=1) / math.sqrt(n)) if n > 1 else None
+    mean = float(sum(la["leg_ddg_mean"] for la in legs_agg))
+    leg_sems = [la["leg_ddg_sem"] for la in legs_agg]
+    sem = float(math.sqrt(sum(s * s for s in leg_sems))) if all(s is not None for s in leg_sems) else None
     return {
         "genotype": genotype,
-        "n_reps": n,
+        "n_reps": min(la["n_reps"] for la in legs_agg),
+        "n_reps_per_leg": {la["leg_id"]: la["n_reps"] for la in legs_agg},
         "ddg_bind": mean,
         "sem": sem,
         "units": "kcal/mol",
-        "per_rep": per_rep,
+        "legs": legs_agg,
     }
 
 
