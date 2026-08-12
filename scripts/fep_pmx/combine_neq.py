@@ -168,6 +168,74 @@ def target_ddg(
     }
 
 
+def _repel_labels(ax, fig, xs, ys, labels, *, fontsize=8, n_iter=400) -> None:
+    """Place scatter-point labels with a dependency-free force repel + leader lines.
+
+    Clustered genotypes (e.g. the high-fold V106A compounds) collide with a fixed
+    offset annotation; here labels are pushed apart from each other and off the
+    markers in pixel space, then a thin leader connects each label to its point.
+    """
+    import numpy as np
+
+    xs = np.asarray(xs, float)
+    ys = np.asarray(ys, float)
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    inv = ax.transData.inverted()
+    pts = ax.transData.transform(np.column_stack([xs, ys]))  # marker pixel coords
+    lab = pts + np.array([7.0, 9.0])                          # initial label anchors (px)
+
+    # measure each label's pixel box (left-center anchored)
+    texts, sizes = [], []
+    for s, (lx, ly) in zip(labels, lab):
+        t = ax.text(*inv.transform((lx, ly)), s, fontsize=fontsize, ha="left",
+                    va="center", zorder=6)
+        bb = t.get_window_extent(renderer)
+        texts.append(t)
+        sizes.append((bb.width, bb.height))
+    sizes = np.array(sizes)
+    half = sizes / 2.0
+
+    for _ in range(n_iter):
+        moved = False
+        cen = lab + half * np.array([1.0, 0.0])  # label box centers (anchor is left-center)
+        for i in range(len(texts)):
+            fx = fy = 0.0
+            for j in range(len(texts)):
+                if i == j:
+                    continue
+                dx = cen[i, 0] - cen[j, 0]
+                dy = cen[i, 1] - cen[j, 1]
+                ox = half[i, 0] + half[j, 0] - abs(dx) + 2.0
+                oy = half[i, 1] + half[j, 1] - abs(dy) + 2.0
+                if ox > 0 and oy > 0:  # boxes overlap -> push along cheaper axis
+                    if oy <= ox:
+                        fy += (np.sign(dy) or 1.0) * oy
+                    else:
+                        fx += (np.sign(dx) or 1.0) * ox
+            for p in pts:  # keep labels off the markers
+                dx = cen[i, 0] - p[0]
+                dy = cen[i, 1] - p[1]
+                d2 = dx * dx + dy * dy
+                if 1e-6 < d2 < 20.0 ** 2:
+                    d = np.sqrt(d2)
+                    fx += dx / d * (20.0 - d) * 0.6
+                    fy += dy / d * (20.0 - d) * 0.6
+            if abs(fx) > 0.4 or abs(fy) > 0.4:
+                lab[i] += np.array([fx, fy]) * 0.5
+                moved = True
+        if not moved:
+            break
+
+    for t, (lx, ly), px, py in zip(texts, lab, xs, ys):
+        dx, dy = inv.transform((lx, ly))
+        t.set_position((dx, dy))
+        px_disp, py_disp = ax.transData.transform((px, py))
+        if np.hypot(lx - px_disp, ly - py_disp) > 14.0:  # draw a leader when offset
+            ax.annotate("", xy=(px, py), xytext=(dx, dy), zorder=1,
+                        arrowprops=dict(arrowstyle="-", lw=0.5, color="0.6"))
+
+
 def _plot(rows: list[dict], rho: float | None, output: Path) -> None:
     import matplotlib
     matplotlib.use("Agg")
@@ -186,10 +254,8 @@ def _plot(rows: list[dict], rho: float | None, output: Path) -> None:
         y = np.array([r["ddg_bind"] for r in with_fold])
         yerr = np.array([r["sem"] if r["sem"] is not None else 0.0 for r in with_fold])
         ax.errorbar(x, y, yerr=yerr, fmt="o", capsize=3, color="#2c6fbb", ecolor="#9bbce0", zorder=3)
-        for r in with_fold:
-            ax.annotate(r["genotype"], (math.log10(r["fold"]), r["ddg_bind"]),
-                        textcoords="offset points", xytext=(5, 4), fontsize=8)
         ax.axhline(0.0, color="0.6", lw=0.8, ls="--")
+        _repel_labels(ax, fig, x, y, [r["genotype"] for r in with_fold], fontsize=8)
         fit_label = None
         if len(with_fold) >= 3 and x.std() > 0:
             m, b = np.polyfit(x, y, 1)
