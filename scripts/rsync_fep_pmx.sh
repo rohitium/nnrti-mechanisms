@@ -48,6 +48,8 @@ FILTERS=(
   --include='*/'
   --include='**/analysis/**'
   --include='targets/***'
+  --include='lambda_profiles/***'
+  --include='crooks_overlap/***'
   --include='panel_*.csv'
   --include='panel_*.png'
   --include='neq_panel_manifest.csv'
@@ -56,7 +58,7 @@ FILTERS=(
   --include='**/neq_manifest.csv'
   --exclude='*'
 )
-RSYNC=(rsync -avzm --partial -e "ssh -S ${SSH_CTL}"
+RSYNC=(rsync -avzm --partial --update -e "ssh -S ${SSH_CTL}"
   --exclude='.DS_Store' --exclude='__pycache__'
   "${FILTERS[@]}")
 if [[ -n "${DRY:-}" ]]; then
