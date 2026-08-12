@@ -180,21 +180,33 @@ def _plot(rows: list[dict], rho: float | None, output: Path) -> None:
 
     fig, ax = plt.subplots(figsize=(6, 5))
     if with_fold:
-        # ΔΔG_bind vs experimental fold reduction (the ranking gate)
-        x = [r["ddg_bind"] for r in with_fold]
-        y = [r["fold"] for r in with_fold]
-        xerr = [r["sem"] if r["sem"] is not None else 0.0 for r in with_fold]
-        ax.errorbar(x, y, xerr=xerr, fmt="o", capsize=3, color="#2c6fbb", ecolor="#9bbce0")
+        # log10(experimental fold) on x, computed ΔΔG_bind ± SEM on y, with a
+        # linear fit reporting Pearson R^2 and p (matching the manuscript scatter).
+        x = np.array([math.log10(r["fold"]) for r in with_fold])
+        y = np.array([r["ddg_bind"] for r in with_fold])
+        yerr = np.array([r["sem"] if r["sem"] is not None else 0.0 for r in with_fold])
+        ax.errorbar(x, y, yerr=yerr, fmt="o", capsize=3, color="#2c6fbb", ecolor="#9bbce0", zorder=3)
         for r in with_fold:
-            ax.annotate(r["genotype"], (r["ddg_bind"], r["fold"]),
+            ax.annotate(r["genotype"], (math.log10(r["fold"]), r["ddg_bind"]),
                         textcoords="offset points", xytext=(5, 4), fontsize=8)
-        ax.axvline(0.0, color="0.6", lw=0.8, ls="--")
-        ax.set_yscale("log")
-        ax.set_xlabel(r"Computed $\Delta\Delta G_{\mathrm{bind}}$ (kcal/mol)")
-        ax.set_ylabel("Experimental DOR fold reduction")
-        title = "NEQ ΔΔG_bind vs experiment"
-        if rho is not None:
-            title += f"  (Spearman ρ = {rho:.2f}, n = {len(with_fold)})"
+        ax.axhline(0.0, color="0.6", lw=0.8, ls="--")
+        fit_label = None
+        if len(with_fold) >= 3 and x.std() > 0:
+            m, b = np.polyfit(x, y, 1)
+            xs = np.linspace(x.min(), x.max(), 50)
+            ax.plot(xs, m * xs + b, "-", color="#c0392b", lw=1.6, zorder=2)
+            try:
+                from scipy.stats import pearsonr
+                r_, p_ = pearsonr(x, y)
+                fit_label = f"linear fit: R² = {r_**2:.2f}, p = {p_:.2g}"
+            except Exception:
+                r_ = float(np.corrcoef(x, y)[0, 1])
+                fit_label = f"linear fit: R² = {r_**2:.2f}"
+        ax.set_xlabel(r"$\log_{10}$(experimental DOR fold reduction)")
+        ax.set_ylabel(r"Computed $\Delta\Delta G_{\mathrm{bind}}$ (kcal/mol)")
+        title = f"NEQ ΔΔG_bind vs experiment (n = {len(with_fold)})"
+        if fit_label:
+            title += f"\n{fit_label}"
     else:
         # No experimental values yet (e.g. P0): show ΔΔG_bind ± SEM per genotype
         labels = [r["genotype"] for r in computed]
