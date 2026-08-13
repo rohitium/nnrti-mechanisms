@@ -250,16 +250,18 @@ results/analysis/fep_jorgensen/legs/**/hybrid_topology.pdb
 # and Sherlock in sync. Only the heavy MD artifacts below (trajectories, checkpoints,
 # per-switch dgdl, extracted frames/snapshots) are too large for git -- move those
 # with scripts/rsync_fep_pmx.sh instead.
-results/analysis/fep_pmx/legs/**/*.trr
-results/analysis/fep_pmx/legs/**/*.xtc
-results/analysis/fep_pmx/legs/**/*.tpr
-results/analysis/fep_pmx/legs/**/*.cpt
-results/analysis/fep_pmx/legs/**/*.edr
-results/analysis/fep_pmx/legs/**/*.log
-results/analysis/fep_pmx/legs/**/*.gro
-results/analysis/fep_pmx/legs/**/*.xvg
-results/analysis/fep_pmx/legs/**/snapshots/**
-results/analysis/fep_pmx/legs/**/switches/**
+# Whitelist, not blocklist: under legs/ git tracks ONLY the light analysis
+# provenance below. Everything else -- GROMACS build intermediates (mdp/itp/top/
+# gro), equilibration & switch trajectories, checkpoints, extracted frames, and
+# GROMACS #backup# files (e.g. "#equil.trr.1#", which an extension rule misses) --
+# is heavy or regenerable and moves via scripts/rsync_fep_pmx.sh, not git.
+results/analysis/fep_pmx/legs/**
+!results/analysis/fep_pmx/legs/**/
+!results/analysis/fep_pmx/legs/**/analysis/**
+!results/analysis/fep_pmx/legs/**/neq_manifest.csv
+!results/analysis/fep_pmx/legs/**/neq_prepare.json
+!results/analysis/fep_pmx/legs/**/residue_map.json
+!results/analysis/fep_pmx/legs/**/mutation.script
 
 # Operational status scratch files; keep the committed Sherlock reconciliation audit only.
 results/.status/complete_at_target.txt
