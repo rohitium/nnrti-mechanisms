@@ -1,0 +1,31 @@
+{
+  "total_rows": 114,
+  "trajectory_ready": 102,
+  "start_pdb_only": 12,
+  "missing_start": 0,
+  "p0_legs": [
+    "wt_to_V106A",
+    "wt_to_Y188L"
+  ],
+  "manuscript_targets": [
+    "F227C",
+    "G190A",
+    "G190E",
+    "G190S",
+    "K103N",
+    "V106A",
+    "V106I",
+    "V106M",
+    "Y181C",
+    "Y188L",
+    "Y318F",
+    "A98G+F227C",
+    "K103N+M230L",
+    "K103N+P225H",
+    "L100I+K103N",
+    "V106A+F227L",
+    "V106A+L234I",
+    "V106A+P225H",
+    "V106I+F227C"
+  ]
+}

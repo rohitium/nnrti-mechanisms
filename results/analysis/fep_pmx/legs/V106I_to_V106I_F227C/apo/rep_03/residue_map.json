@@ -1,0 +1,16 @@
+{
+  "leg_id": "V106I_to_V106I_F227C",
+  "phase": "apo",
+  "replicate": 3,
+  "auth_mutation": "F227C",
+  "chain_id": "A",
+  "auth_residue_id": "227",
+  "pdb_residue_id": "224",
+  "old_residue": "PHE",
+  "new_residue": "CYS",
+  "pmx_force_field": "amber14sbmut",
+  "source_complex_pdb": "results/md_runs/apo/v106i/rep_03/assets/v106i_apo_md_rep03_start.pdb",
+  "protein_input_pdb": "results/analysis/fep_pmx/legs/V106I_to_V106I_F227C/apo/rep_03/protein_input.pdb",
+  "endpoint_protein_pdb": "results/analysis/fep_pmx/legs/V106I_to_V106I_F227C/apo/rep_03/endpoint_protein.pdb",
+  "hybrid_pdb": "results/analysis/fep_pmx/legs/V106I_to_V106I_F227C/apo/rep_03/hybrid.pdb"
+}

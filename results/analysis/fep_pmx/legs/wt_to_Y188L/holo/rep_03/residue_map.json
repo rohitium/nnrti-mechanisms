@@ -1,0 +1,16 @@
+{
+  "leg_id": "wt_to_Y188L",
+  "phase": "holo",
+  "replicate": 3,
+  "auth_mutation": "Y188L",
+  "chain_id": "A",
+  "auth_residue_id": "188",
+  "pdb_residue_id": "185",
+  "old_residue": "TYR",
+  "new_residue": "LEU",
+  "pmx_force_field": "amber14sbmut",
+  "source_complex_pdb": "results/md_runs/wt/rep_03/assets/wt_md_rep03_start.pdb",
+  "protein_input_pdb": "results/analysis/fep_pmx/legs/wt_to_Y188L/holo/rep_03/protein_input.pdb",
+  "endpoint_protein_pdb": "results/analysis/fep_pmx/legs/wt_to_Y188L/holo/rep_03/endpoint_protein.pdb",
+  "hybrid_pdb": "results/analysis/fep_pmx/legs/wt_to_Y188L/holo/rep_03/hybrid.pdb"
+}

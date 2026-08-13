@@ -1,0 +1,16 @@
+{
+  "leg_id": "F227C_to_A98G_F227C",
+  "phase": "holo",
+  "replicate": 3,
+  "auth_mutation": "A98G",
+  "chain_id": "A",
+  "auth_residue_id": "98",
+  "pdb_residue_id": "95",
+  "old_residue": "ALA",
+  "new_residue": "GLY",
+  "pmx_force_field": "amber14sbmut",
+  "source_complex_pdb": "results/md_runs/F227C/rep_03/assets/F227C_md_rep03_start.pdb",
+  "protein_input_pdb": "results/analysis/fep_pmx/legs/F227C_to_A98G_F227C/holo/rep_03/protein_input.pdb",
+  "endpoint_protein_pdb": "results/analysis/fep_pmx/legs/F227C_to_A98G_F227C/holo/rep_03/endpoint_protein.pdb",
+  "hybrid_pdb": "results/analysis/fep_pmx/legs/F227C_to_A98G_F227C/holo/rep_03/hybrid.pdb"
+}

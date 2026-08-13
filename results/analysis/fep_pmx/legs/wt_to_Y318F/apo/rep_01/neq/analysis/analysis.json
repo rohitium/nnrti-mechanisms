@@ -1,0 +1,20 @@
+{
+  "leg_id": "wt_to_Y318F",
+  "phase": "apo",
+  "replicate": 1,
+  "temperature_k": 300.0,
+  "units": "kcal/mol",
+  "n_fwd": 56,
+  "n_rev": 100,
+  "nboots": 100,
+  "results_txt": "results/analysis/fep_pmx/legs/wt_to_Y318F/apo/rep_01/neq/analysis/results.txt",
+  "integ_fwd": "results/analysis/fep_pmx/legs/wt_to_Y318F/apo/rep_01/neq/analysis/integ_fwd.dat",
+  "integ_rev": "results/analysis/fep_pmx/legs/wt_to_Y318F/apo/rep_01/neq/analysis/integ_rev.dat",
+  "work_plot": "results/analysis/fep_pmx/legs/wt_to_Y318F/apo/rep_01/neq/analysis/work_dist.png",
+  "bar_dg": 22.86,
+  "bar_err_analytical": 0.06,
+  "bar_err_boot": 0.05,
+  "bar_conv": 0.21,
+  "cgi_dg": 22.89,
+  "jarz_dg_mean": 22.8
+}

@@ -1,0 +1,16 @@
+{
+  "leg_id": "wt_to_G190E",
+  "phase": "holo",
+  "replicate": 3,
+  "auth_mutation": "G190E",
+  "chain_id": "A",
+  "auth_residue_id": "190",
+  "pdb_residue_id": "187",
+  "old_residue": "GLY",
+  "new_residue": "GLU",
+  "pmx_force_field": "amber14sbmut",
+  "source_complex_pdb": "results/md_runs/wt/rep_03/assets/wt_md_rep03_start.pdb",
+  "protein_input_pdb": "results/analysis/fep_pmx/legs/wt_to_G190E/holo/rep_03/protein_input.pdb",
+  "endpoint_protein_pdb": "results/analysis/fep_pmx/legs/wt_to_G190E/holo/rep_03/endpoint_protein.pdb",
+  "hybrid_pdb": "results/analysis/fep_pmx/legs/wt_to_G190E/holo/rep_03/hybrid.pdb"
+}

@@ -1,0 +1,20 @@
+{
+  "leg_id": "F227C_to_A98G_F227C",
+  "phase": "apo",
+  "replicate": 3,
+  "temperature_k": 300.0,
+  "units": "kcal/mol",
+  "n_fwd": 100,
+  "n_rev": 100,
+  "nboots": 100,
+  "results_txt": "results/analysis/fep_pmx/legs/F227C_to_A98G_F227C/apo/rep_03/neq/analysis/results.txt",
+  "integ_fwd": "results/analysis/fep_pmx/legs/F227C_to_A98G_F227C/apo/rep_03/neq/analysis/integ_fwd.dat",
+  "integ_rev": "results/analysis/fep_pmx/legs/F227C_to_A98G_F227C/apo/rep_03/neq/analysis/integ_rev.dat",
+  "work_plot": "results/analysis/fep_pmx/legs/F227C_to_A98G_F227C/apo/rep_03/neq/analysis/work_dist.png",
+  "bar_dg": -7.37,
+  "bar_err_analytical": 0.07,
+  "bar_err_boot": 0.08,
+  "bar_conv": -0.06,
+  "cgi_dg": -7.87,
+  "jarz_dg_mean": -7.21
+}

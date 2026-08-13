@@ -1,0 +1,16 @@
+{
+  "leg_id": "V106A_to_V106A_L234I",
+  "phase": "apo",
+  "replicate": 1,
+  "auth_mutation": "L234I",
+  "chain_id": "A",
+  "auth_residue_id": "234",
+  "pdb_residue_id": "231",
+  "old_residue": "LEU",
+  "new_residue": "ILE",
+  "pmx_force_field": "amber14sbmut",
+  "source_complex_pdb": "results/md_runs/apo/v106a/rep_01/assets/v106a_apo_md_rep01_start.pdb",
+  "protein_input_pdb": "results/analysis/fep_pmx/legs/V106A_to_V106A_L234I/apo/rep_01/protein_input.pdb",
+  "endpoint_protein_pdb": "results/analysis/fep_pmx/legs/V106A_to_V106A_L234I/apo/rep_01/endpoint_protein.pdb",
+  "hybrid_pdb": "results/analysis/fep_pmx/legs/V106A_to_V106A_L234I/apo/rep_01/hybrid.pdb"
+}

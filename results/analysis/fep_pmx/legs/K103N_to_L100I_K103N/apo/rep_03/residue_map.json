@@ -1,0 +1,16 @@
+{
+  "leg_id": "K103N_to_L100I_K103N",
+  "phase": "apo",
+  "replicate": 3,
+  "auth_mutation": "L100I",
+  "chain_id": "A",
+  "auth_residue_id": "100",
+  "pdb_residue_id": "97",
+  "old_residue": "LEU",
+  "new_residue": "ILE",
+  "pmx_force_field": "amber14sbmut",
+  "source_complex_pdb": "results/md_runs/apo/k103n/rep_03/assets/k103n_apo_md_rep03_start.pdb",
+  "protein_input_pdb": "results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_03/protein_input.pdb",
+  "endpoint_protein_pdb": "results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_03/endpoint_protein.pdb",
+  "hybrid_pdb": "results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_03/hybrid.pdb"
+}

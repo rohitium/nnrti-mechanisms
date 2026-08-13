@@ -1,0 +1,16 @@
+{
+  "leg_id": "wt_to_V106I",
+  "phase": "apo",
+  "replicate": 1,
+  "auth_mutation": "V106I",
+  "chain_id": "A",
+  "auth_residue_id": "106",
+  "pdb_residue_id": "103",
+  "old_residue": "VAL",
+  "new_residue": "ILE",
+  "pmx_force_field": "amber14sbmut",
+  "source_complex_pdb": "results/md_runs/apo/wt/rep_01/assets/wt_apo_md_rep01_start.pdb",
+  "protein_input_pdb": "results/analysis/fep_pmx/legs/wt_to_V106I/apo/rep_01/protein_input.pdb",
+  "endpoint_protein_pdb": null,
+  "hybrid_pdb": "results/analysis/fep_pmx/legs/wt_to_V106I/apo/rep_01/hybrid.pdb"
+}

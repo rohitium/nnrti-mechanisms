@@ -1,0 +1,8 @@
+task_id,leg_id,phase,replicate,stage,lambda_state,direction,snapshot_index,snapshot_index_end,snapshot_time_ps,switch_ps,run_dir
+0,V106A_to_V106A_F227L,apo,3,em,,,,,,,em
+1,V106A_to_V106A_F227L,apo,3,equil,0,,,,,,eq_lambda0
+2,V106A_to_V106A_F227L,apo,3,extract,0,,,,,,snapshots/lambda0
+3,V106A_to_V106A_F227L,apo,3,equil,1,,,,,,eq_lambda1
+4,V106A_to_V106A_F227L,apo,3,extract,1,,,,,,snapshots/lambda1
+5,V106A_to_V106A_F227L,apo,3,switch,0,fwd,0,99,100.000,100.0,switches/fwd_bundle000
+6,V106A_to_V106A_F227L,apo,3,switch,1,rev,0,99,100.000,100.0,switches/rev_bundle000

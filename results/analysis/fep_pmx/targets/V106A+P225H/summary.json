@@ -1,0 +1,74 @@
+{
+  "genotype": "V106A+P225H",
+  "n_reps": 3,
+  "n_reps_per_leg": {
+    "wt_to_V106A": 3,
+    "V106A_to_V106A_P225H": 3
+  },
+  "ddg_bind": 3.706666666666667,
+  "sem": 1.1262819856106703,
+  "units": "kcal/mol",
+  "legs": [
+    {
+      "leg_id": "wt_to_V106A",
+      "n_reps": 3,
+      "leg_ddg_mean": 1.7566666666666666,
+      "leg_ddg_sd": 0.8866979944340311,
+      "leg_ddg_sem": 0.5119353257763891,
+      "per_rep": [
+        {
+          "replicate": 1,
+          "holo_dg": 20.16,
+          "apo_dg": 18.34,
+          "charge_correction": 0.0,
+          "leg_ddg": 1.8200000000000003
+        },
+        {
+          "replicate": 2,
+          "holo_dg": 19.88,
+          "apo_dg": 17.27,
+          "charge_correction": 0.0,
+          "leg_ddg": 2.6099999999999994
+        },
+        {
+          "replicate": 3,
+          "holo_dg": 19.08,
+          "apo_dg": 18.24,
+          "charge_correction": 0.0,
+          "leg_ddg": 0.8399999999999999
+        }
+      ]
+    },
+    {
+      "leg_id": "V106A_to_V106A_P225H",
+      "n_reps": 3,
+      "leg_ddg_mean": 1.9500000000000004,
+      "leg_ddg_sd": 1.737613305658083,
+      "leg_ddg_sem": 1.0032115097691696,
+      "per_rep": [
+        {
+          "replicate": 1,
+          "holo_dg": -41.54,
+          "apo_dg": -43.38,
+          "charge_correction": 0.0,
+          "leg_ddg": 1.8400000000000034
+        },
+        {
+          "replicate": 2,
+          "holo_dg": -43.02,
+          "apo_dg": -43.29,
+          "charge_correction": 0.0,
+          "leg_ddg": 0.269999999999996
+        },
+        {
+          "replicate": 3,
+          "holo_dg": -40.21,
+          "apo_dg": -43.95,
+          "charge_correction": 0.0,
+          "leg_ddg": 3.740000000000002
+        }
+      ]
+    }
+  ],
+  "fold": 153.0
+}

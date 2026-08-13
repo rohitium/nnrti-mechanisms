@@ -245,10 +245,11 @@ results/analysis/fep_jorgensen/_archive/**/multistate*.nc
 results/analysis/fep_jorgensen/legs/**/hybrid_system.xml
 results/analysis/fep_jorgensen/legs/**/hybrid_topology.pdb
 
-# FEP pmx NEQ runtime outputs: ignore heavy MD artifacts (trajectories,
-# checkpoints, per-switch dgdl, extracted frames), keep light provenance
-# (manifests, residue_map/analysis/summary JSON, integ_*.dat, panel CSVs, plots).
-# Sync heavy artifacts via rsync, not git.
+# FEP pmx NEQ outputs. Track everything light in git (analysis.json, manifests,
+# panel CSVs/PNGs, per-genotype QC/overlap/lambda figures) so GitHub keeps the Mac
+# and Sherlock in sync. Only the heavy MD artifacts below (trajectories, checkpoints,
+# per-switch dgdl, extracted frames/snapshots) are too large for git -- move those
+# with scripts/rsync_fep_pmx.sh instead.
 results/analysis/fep_pmx/legs/**/*.trr
 results/analysis/fep_pmx/legs/**/*.xtc
 results/analysis/fep_pmx/legs/**/*.tpr

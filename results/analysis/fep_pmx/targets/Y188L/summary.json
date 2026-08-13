@@ -1,0 +1,43 @@
+{
+  "genotype": "Y188L",
+  "n_reps": 3,
+  "n_reps_per_leg": {
+    "wt_to_Y188L": 3
+  },
+  "ddg_bind": 4.5200000000000005,
+  "sem": 0.486449723335653,
+  "units": "kcal/mol",
+  "legs": [
+    {
+      "leg_id": "wt_to_Y188L",
+      "n_reps": 3,
+      "leg_ddg_mean": 4.5200000000000005,
+      "leg_ddg_sd": 0.8425556361451747,
+      "leg_ddg_sem": 0.486449723335653,
+      "per_rep": [
+        {
+          "replicate": 1,
+          "holo_dg": -0.08,
+          "apo_dg": -5.5,
+          "charge_correction": 0.0,
+          "leg_ddg": 5.42
+        },
+        {
+          "replicate": 2,
+          "holo_dg": -0.02,
+          "apo_dg": -4.41,
+          "charge_correction": 0.0,
+          "leg_ddg": 4.390000000000001
+        },
+        {
+          "replicate": 3,
+          "holo_dg": -1.09,
+          "apo_dg": -4.84,
+          "charge_correction": 0.0,
+          "leg_ddg": 3.75
+        }
+      ]
+    }
+  ],
+  "fold": 149.0
+}

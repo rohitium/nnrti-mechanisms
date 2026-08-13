@@ -1,0 +1,43 @@
+{
+  "genotype": "G190S",
+  "n_reps": 3,
+  "n_reps_per_leg": {
+    "wt_to_G190S": 3
+  },
+  "ddg_bind": 2.0133333333333336,
+  "sem": 0.3420688689593239,
+  "units": "kcal/mol",
+  "legs": [
+    {
+      "leg_id": "wt_to_G190S",
+      "n_reps": 3,
+      "leg_ddg_mean": 2.0133333333333336,
+      "leg_ddg_sd": 0.5924806607251695,
+      "leg_ddg_sem": 0.3420688689593239,
+      "per_rep": [
+        {
+          "replicate": 1,
+          "holo_dg": 0.1,
+          "apo_dg": -1.25,
+          "charge_correction": 0.0,
+          "leg_ddg": 1.35
+        },
+        {
+          "replicate": 2,
+          "holo_dg": 6.54,
+          "apo_dg": 4.05,
+          "charge_correction": 0.0,
+          "leg_ddg": 2.49
+        },
+        {
+          "replicate": 3,
+          "holo_dg": -0.5,
+          "apo_dg": -2.7,
+          "charge_correction": 0.0,
+          "leg_ddg": 2.2
+        }
+      ]
+    }
+  ],
+  "fold": 5.2
+}

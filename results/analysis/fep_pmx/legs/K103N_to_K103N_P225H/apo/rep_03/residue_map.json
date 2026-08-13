@@ -1,0 +1,16 @@
+{
+  "leg_id": "K103N_to_K103N_P225H",
+  "phase": "apo",
+  "replicate": 3,
+  "auth_mutation": "P225H",
+  "chain_id": "A",
+  "auth_residue_id": "225",
+  "pdb_residue_id": "222",
+  "old_residue": "PRO",
+  "new_residue": "HIS",
+  "pmx_force_field": "amber14sbmut",
+  "source_complex_pdb": "results/md_runs/apo/k103n/rep_03/assets/k103n_apo_md_rep03_start.pdb",
+  "protein_input_pdb": "results/analysis/fep_pmx/legs/K103N_to_K103N_P225H/apo/rep_03/protein_input.pdb",
+  "endpoint_protein_pdb": "results/analysis/fep_pmx/legs/K103N_to_K103N_P225H/apo/rep_03/endpoint_protein.pdb",
+  "hybrid_pdb": "results/analysis/fep_pmx/legs/K103N_to_K103N_P225H/apo/rep_03/hybrid.pdb"
+}

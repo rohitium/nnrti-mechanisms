@@ -1,0 +1,16 @@
+{
+  "leg_id": "wt_to_V106A",
+  "phase": "holo",
+  "replicate": 2,
+  "auth_mutation": "V106A",
+  "chain_id": "A",
+  "auth_residue_id": "106",
+  "pdb_residue_id": "103",
+  "old_residue": "VAL",
+  "new_residue": "ALA",
+  "pmx_force_field": "amber14sbmut",
+  "source_complex_pdb": "results/md_runs/wt/rep_02/assets/wt_md_rep02_start.pdb",
+  "protein_input_pdb": "results/analysis/fep_pmx/legs/wt_to_V106A/holo/rep_02/protein_input.pdb",
+  "endpoint_protein_pdb": "results/analysis/fep_pmx/legs/wt_to_V106A/holo/rep_02/endpoint_protein.pdb",
+  "hybrid_pdb": "results/analysis/fep_pmx/legs/wt_to_V106A/holo/rep_02/hybrid.pdb"
+}

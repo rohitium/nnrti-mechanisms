@@ -1,0 +1,16 @@
+{
+  "leg_id": "wt_to_G190S",
+  "phase": "apo",
+  "replicate": 2,
+  "auth_mutation": "G190S",
+  "chain_id": "A",
+  "auth_residue_id": "190",
+  "pdb_residue_id": "187",
+  "old_residue": "GLY",
+  "new_residue": "SER",
+  "pmx_force_field": "amber14sbmut",
+  "source_complex_pdb": "results/md_runs/apo/wt/rep_02/assets/wt_apo_md_rep02_start.pdb",
+  "protein_input_pdb": "results/analysis/fep_pmx/legs/wt_to_G190S/apo/rep_02/protein_input.pdb",
+  "endpoint_protein_pdb": "results/analysis/fep_pmx/legs/wt_to_G190S/apo/rep_02/endpoint_protein.pdb",
+  "hybrid_pdb": "results/analysis/fep_pmx/legs/wt_to_G190S/apo/rep_02/hybrid.pdb"
+}

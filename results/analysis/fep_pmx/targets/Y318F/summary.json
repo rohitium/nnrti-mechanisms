@@ -1,0 +1,43 @@
+{
+  "genotype": "Y318F",
+  "n_reps": 3,
+  "n_reps_per_leg": {
+    "wt_to_Y318F": 3
+  },
+  "ddg_bind": 1.4100000000000001,
+  "sem": 0.4450093631973749,
+  "units": "kcal/mol",
+  "legs": [
+    {
+      "leg_id": "wt_to_Y318F",
+      "n_reps": 3,
+      "leg_ddg_mean": 1.4100000000000001,
+      "leg_ddg_sd": 0.770778826901725,
+      "leg_ddg_sem": 0.4450093631973749,
+      "per_rep": [
+        {
+          "replicate": 1,
+          "holo_dg": 24.23,
+          "apo_dg": 22.86,
+          "charge_correction": 0.0,
+          "leg_ddg": 1.370000000000001
+        },
+        {
+          "replicate": 2,
+          "holo_dg": 24.34,
+          "apo_dg": 22.14,
+          "charge_correction": 0.0,
+          "leg_ddg": 2.1999999999999993
+        },
+        {
+          "replicate": 3,
+          "holo_dg": 23.64,
+          "apo_dg": 22.98,
+          "charge_correction": 0.0,
+          "leg_ddg": 0.6600000000000001
+        }
+      ]
+    }
+  ],
+  "fold": 11.0
+}

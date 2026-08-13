@@ -1,0 +1,74 @@
+{
+  "genotype": "A98G+F227C",
+  "n_reps": 3,
+  "n_reps_per_leg": {
+    "wt_to_F227C": 3,
+    "F227C_to_A98G_F227C": 3
+  },
+  "ddg_bind": -1.5266666666666666,
+  "sem": 0.8727287983993398,
+  "units": "kcal/mol",
+  "legs": [
+    {
+      "leg_id": "wt_to_F227C",
+      "n_reps": 3,
+      "leg_ddg_mean": -0.3033333333333333,
+      "leg_ddg_sd": 1.4087346568226868,
+      "leg_ddg_sem": 0.8133333333333334,
+      "per_rep": [
+        {
+          "replicate": 1,
+          "holo_dg": -0.18,
+          "apo_dg": -0.69,
+          "charge_correction": 0.0,
+          "leg_ddg": 0.51
+        },
+        {
+          "replicate": 2,
+          "holo_dg": -1.72,
+          "apo_dg": -2.23,
+          "charge_correction": 0.0,
+          "leg_ddg": 0.51
+        },
+        {
+          "replicate": 3,
+          "holo_dg": -2.15,
+          "apo_dg": -0.22,
+          "charge_correction": 0.0,
+          "leg_ddg": -1.93
+        }
+      ]
+    },
+    {
+      "leg_id": "F227C_to_A98G_F227C",
+      "n_reps": 3,
+      "leg_ddg_mean": -1.2233333333333334,
+      "leg_ddg_sd": 0.5481179921634874,
+      "leg_ddg_sem": 0.31645607032326667,
+      "per_rep": [
+        {
+          "replicate": 1,
+          "holo_dg": -8.49,
+          "apo_dg": -7.89,
+          "charge_correction": 0.0,
+          "leg_ddg": -0.6000000000000005
+        },
+        {
+          "replicate": 2,
+          "holo_dg": -9.43,
+          "apo_dg": -7.99,
+          "charge_correction": 0.0,
+          "leg_ddg": -1.4399999999999995
+        },
+        {
+          "replicate": 3,
+          "holo_dg": -9.0,
+          "apo_dg": -7.37,
+          "charge_correction": 0.0,
+          "leg_ddg": -1.63
+        }
+      ]
+    }
+  ],
+  "fold": 93.0
+}
