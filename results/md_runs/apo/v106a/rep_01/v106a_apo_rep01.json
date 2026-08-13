@@ -16,7 +16,7 @@
   "final_pdb": "results/md_runs/apo/v106a/rep_01/v106a_rep01_md_final.pdb",
   "checkpoint_path": "results/md_runs/apo/v106a/rep_01/v106a_rep01_md.chk",
   "md_heating_steps": 12500,
-  "md_production_steps": 5000000,
+  "md_production_steps": 50000000,
   "md_production_steps_completed": 5000000,
   "md_total_steps": 5012500,
   "resumed_from_checkpoint": false,

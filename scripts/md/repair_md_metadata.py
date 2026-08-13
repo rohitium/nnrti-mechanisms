@@ -39,6 +39,7 @@ from src.paths import MD_RUNS, APO_MD_RUNS, MANIFESTS, REPO_ROOT as ROOT, rel  #
 DT_FS = 2.0
 STALE = "apo_md_runs"
 CANON = "md_runs/apo"
+APO_TARGET_STEPS = 50_000_000  # canonical 100 ns production target for apo runs
 ARCHIVE_DIR = MD_RUNS / "_archive"
 ARCHIVE_LOG = MANIFESTS / "md_archive_log.csv"
 
@@ -134,6 +135,24 @@ class Planner:
             d["metadata_repaired"] = _dt.date.today().isoformat()
             jf.write_text(json.dumps(d, indent=2) + "\n")
 
+    def fix_apo_target(self, jf: Path):
+        """Normalize the apo production *target* to 100 ns.
+
+        The original apo JSONs recorded a 5M-step (10 ns) target, but the runs
+        were intended for 100 ns (config default; matches the manual Sherlock
+        edits). Left uncorrected, a run that reached 18M steps reads as
+        'completed 18M > target 5M', which is nonsensical.
+        """
+        d = json.loads(jf.read_text())
+        old = d.get("md_production_steps")
+        if old is None or old == APO_TARGET_STEPS:
+            return
+        self.n += 1
+        print(f"[apo_target] {rel(jf.parent)}: md_production_steps {old} -> {APO_TARGET_STEPS} (100 ns intent)")
+        if self.apply:
+            d["md_production_steps"] = APO_TARGET_STEPS
+            jf.write_text(json.dumps(d, indent=2) + "\n")
+
     def label_diagnostic(self, rundir: Path, text: str):
         note = rundir / "DIAGNOSTIC.md"
         if note.exists():
@@ -197,6 +216,17 @@ def build_plan(p: Planner):
                 continue
             if d.get("md_production_steps_completed") not in (None, state):
                 p.fix_steps(jf, state)
+
+    # 3b. normalize apo production target to 100 ns (fixes completed > target)
+    for jf in sorted(APO_MD_RUNS.rglob("*.json")):
+        if not jf.exists() or jf.resolve() in p.archived:
+            continue
+        try:
+            d = json.loads(jf.read_text())
+        except Exception:
+            continue
+        if "md_production_steps" in d:
+            p.fix_apo_target(jf)
 
     # 4. label the diagnostic WT rerun
     rerun = MD_RUNS / "wt_sherlock_rerun"
