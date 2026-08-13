@@ -55,9 +55,18 @@ class RunAudit:
     has_chk: bool
     has_system_xml: bool
     status: str | None
+    diagnostic: bool = False
+
+    @property
+    def has_data(self) -> bool:
+        """A run with any actual output (state log or metadata). Empty/reserved
+        placeholder dirs have neither and are not inconsistencies."""
+        return self.state_steps is not None or self.json_files > 0
 
     @property
     def clean(self) -> bool:
+        if not self.has_data or self.diagnostic:
+            return True  # empty/reserved dir, or a labeled non-canonical diagnostic set
         issues = [
             self.json_matches_state is False,
             self.stored_path_ok is False,
@@ -143,6 +152,7 @@ def audit_run(rundir: Path, phase: str, *, timestep_fs: float, check_ckpt: bool)
         has_chk=chk is not None,
         has_system_xml=bool(list((rundir / "assets").glob("*_system.xml"))),
         status=primary.get("status"),
+        diagnostic=(rundir / "DIAGNOSTIC.md").exists() or (rundir.parent / "DIAGNOSTIC.md").exists(),
     )
 
 
