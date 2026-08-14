@@ -1,0 +1,121 @@
+{
+  "replicate_contact_csv": "results/analysis/triplet_story_analyses/contact_story_all_mutations_excluding_f227c/tables/replicate_contact.csv",
+  "permutation_csv": "results/analysis/triplet_story_analyses/contact_occupancy_permutation_null/tables/residue_shift_permutation_results.csv",
+  "highlights": [
+    {
+      "mutation": "V106A",
+      "auth_resid": 105,
+      "residue": "SER105",
+      "rationale": "V106A entrance-shift reporter"
+    },
+    {
+      "mutation": "V106A",
+      "auth_resid": 104,
+      "residue": "LYS104",
+      "rationale": "V106A entrance-shift companion"
+    },
+    {
+      "mutation": "V106A+F227L",
+      "auth_resid": 105,
+      "residue": "SER105",
+      "rationale": "V106A combo Ser105"
+    },
+    {
+      "mutation": "V106A+F227L",
+      "auth_resid": 104,
+      "residue": "LYS104",
+      "rationale": "V106A combo Lys104"
+    },
+    {
+      "mutation": "V106A+L234I",
+      "auth_resid": 105,
+      "residue": "SER105",
+      "rationale": "V106A combo Ser105"
+    },
+    {
+      "mutation": "V106A+L234I",
+      "auth_resid": 104,
+      "residue": "LYS104",
+      "rationale": "V106A combo Lys104"
+    },
+    {
+      "mutation": "V106A+P225H",
+      "auth_resid": 105,
+      "residue": "SER105",
+      "rationale": "V106A combo Ser105"
+    },
+    {
+      "mutation": "V106A+P225H",
+      "auth_resid": 104,
+      "residue": "LYS104",
+      "rationale": "V106A combo Lys104"
+    },
+    {
+      "mutation": "V106I",
+      "auth_resid": 105,
+      "residue": "SER105",
+      "rationale": "negative control vs V106A"
+    },
+    {
+      "mutation": "V106I+F227C",
+      "auth_resid": 227,
+      "residue": "RES227",
+      "rationale": "227-region story"
+    },
+    {
+      "mutation": "V106I+F227C",
+      "auth_resid": 105,
+      "residue": "SER105",
+      "rationale": "contrast vs V106A+F227L"
+    },
+    {
+      "mutation": "V106A+F227L",
+      "auth_resid": 227,
+      "residue": "RES227",
+      "rationale": "contrast vs V106I+F227C"
+    },
+    {
+      "mutation": "Y188L",
+      "auth_resid": 102,
+      "residue": "LYS102",
+      "rationale": "draft-highlighted \u0394occupancy"
+    },
+    {
+      "mutation": "Y188L",
+      "auth_resid": 225,
+      "residue": "PRO225",
+      "rationale": "draft-highlighted \u0394occupancy"
+    },
+    {
+      "mutation": "Y188L",
+      "auth_resid": 188,
+      "residue": "TYR188",
+      "rationale": "direct mutation site packing"
+    },
+    {
+      "mutation": "K103N+P225H",
+      "auth_resid": 225,
+      "residue": "PRO225",
+      "rationale": "draft-highlighted \u0394occupancy"
+    },
+    {
+      "mutation": "G190E",
+      "auth_resid": 179,
+      "residue": "VAL179",
+      "rationale": "G190E hairpin reporter"
+    },
+    {
+      "mutation": "G190A",
+      "auth_resid": 179,
+      "residue": "VAL179",
+      "rationale": "negative control vs G190E"
+    },
+    {
+      "mutation": "G190S",
+      "auth_resid": 179,
+      "residue": "VAL179",
+      "rationale": "intermediate G190 comparison"
+    }
+  ],
+  "n_highlights": 19
+}

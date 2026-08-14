@@ -1,0 +1,40 @@
+{
+  "manifest": "manifests/md_manifest.csv",
+  "n_jobs": 60,
+  "n_ok": 60,
+  "n_failed": 0,
+  "resid_offset": -3,
+  "nnibp_auth": [
+    100,
+    101,
+    103,
+    106,
+    107,
+    108,
+    179,
+    181,
+    188,
+    189,
+    190,
+    227,
+    229,
+    234,
+    318
+  ],
+  "contact_cutoff_angstrom": 4.0,
+  "n_pose_clusters": 4,
+  "pocket_max_frames": 30,
+  "hbond_max_frames": 50,
+  "libraries": [
+    "mdtraj",
+    "MDAnalysis",
+    "numpy",
+    "scipy"
+  ],
+  "notes": [
+    "Uses *_analysis_pbcfix.dcd only.",
+    "sklearn avoided (env pyarrow conflict); pose clusters via scipy kmeans2.",
+    "PCA is SVD on per-replicate mean NNIBP C\u03b1 coordinates.",
+    "Contact occupancy vs DOR is already in the draft; this suite adds H-bonds/RMSF/PCA/DCCM/networks."
+  ]
+}

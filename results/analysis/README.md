@@ -2,6 +2,12 @@
 
 Active analysis folders:
 
+- `modern_md_suite/`
+  NNIBP descriptor suite (H-bonds, ligand RMSF, pose clusters, pocket volume, PCA, DCCM, contact networks)
+- `md_convergence/`
+  100 ns coordinate-vs-time convergence traces (RMSD / COM / reporter distances)
+- `fep_pmx/`
+  NEQ FEP panel, protocol walkthrough figures, discussion tiers
 - `triplet_contact_story_100ns/`
   final triplet-contact figures and supporting trace tables
 - `ligand_pocket_features/`

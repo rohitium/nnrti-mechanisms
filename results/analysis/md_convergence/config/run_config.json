@@ -1,0 +1,44 @@
+{
+  "manifest": "manifests/md_manifest.csv",
+  "resid_offset": -3,
+  "contact_cutoff_angstrom": 4.0,
+  "n_blocks": 5,
+  "reporters_auth": {
+    "ser105": 105,
+    "val179": 179,
+    "res227": 227
+  },
+  "nnibp_auth": [
+    100,
+    101,
+    103,
+    106,
+    107,
+    108,
+    179,
+    181,
+    188,
+    189,
+    190,
+    227,
+    229,
+    234,
+    318
+  ],
+  "n_jobs": 60,
+  "n_success": 60,
+  "n_failed": 0,
+  "libraries": [
+    "mdtraj",
+    "numpy",
+    "matplotlib"
+  ],
+  "notes": [
+    "Convergence figures are raw coordinate-vs-time traces (per-rep + mean), not last-N windows.",
+    "Loads pre-imaged *_analysis_pbcfix.dcd; does not PBC-correct on the fly.",
+    "RMSD is vs frame 0, not a cached table.",
+    "DOR pose RMSD uses NNIBP C\u03b1 superposition then ligand heavy-atom RMSD.",
+    "COM is protein-all vs ligand-all, min-image.",
+    "Time axis uses infer_production_ns() on the raw analysis DCD."
+  ]
+}
