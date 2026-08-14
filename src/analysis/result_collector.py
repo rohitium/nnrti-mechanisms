@@ -125,6 +125,9 @@ def _prepare_profile_jobs(run_df: pd.DataFrame) -> list[dict]:
             _nonempty_path(row.get("analysis_dcd")),
             rep_dir / f"{safe}_rep{rep:02d}_analysis.dcd",
         )
+        pbcfix = _remap_to_local_workspace(rep_dir / f"{safe}_rep{rep:02d}_analysis_pbcfix.dcd")
+        if pbcfix is not None and pbcfix.exists():
+            dcd = pbcfix
         # Fall back to .10ns.bak (original 10 ns DCD backed up when extension job started)
         # when the primary analysis DCD doesn't exist yet (extension still pending/running).
         if dcd is None or not dcd.exists():

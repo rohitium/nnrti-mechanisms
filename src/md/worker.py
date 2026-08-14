@@ -36,12 +36,19 @@ def run_md_task(
     if not force and output_path.exists():
         try:
             existing = json.loads(output_path.read_text())
-            if str(existing.get("status", "")).lower() == "ok":
+            completed = int(existing.get("md_production_steps_completed") or 0)
+            target = int(
+                existing.get("md_production_steps")
+                or max(1, int(round((float(production_ns) * 1_000_000.0) / 2.0)))
+            )
+            if str(existing.get("status", "")).lower() == "ok" and completed >= target:
                 logging.info(
-                    "Task %d already completed (%s rep%d); skipping (use --force to rerun).",
+                    "Task %d already completed (%s rep%d, %d/%d steps); skipping (use --force to rerun).",
                     task.task_id,
                     task.mutation,
                     task.replicate,
+                    completed,
+                    target,
                 )
                 return existing
         except Exception:

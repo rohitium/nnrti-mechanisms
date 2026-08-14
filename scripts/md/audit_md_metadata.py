@@ -14,8 +14,10 @@ and flag every inconsistency class:
   * stale stored paths in the JSON (e.g. old ``results/apo_md_runs/...``),
   * duplicate or stub JSONs in a run directory.
 
-Ground truth is ``state.csv`` (and the checkpoint when ``--check-checkpoints`` is
-given); the JSON is treated as a claim to be verified, never trusted.
+JSON is a claim, never trusted. ``state.csv`` is better but can also be a stale
+mid-slice dump. For analysis time axes, prefer the analysis-DCD fingerprint
+(see ``src.analysis.md_timing``): 180 fr / 34 MB and 360 fr / 68 MB are the
+completed 100 ns products, even when JSON/CSV say 50–70 ns.
 
     python3 scripts/md/audit_md_metadata.py                    # table + summary
     python3 scripts/md/audit_md_metadata.py --check-checkpoints # also read .chk currentStep (needs openmm)

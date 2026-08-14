@@ -17,9 +17,17 @@
   "checkpoint_path": "results/md_runs/K103N_P225H/rep_01/K103N_P225H_rep01_md.chk",
   "md_heating_steps": 0,
   "md_production_steps": 50000000,
-  "md_production_steps_completed": 44240000,
-  "md_total_steps": 44240000,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50000000,
   "resumed_from_checkpoint": true,
   "elapsed_seconds": 19781.365387039026,
-  "status": "ok"
+  "status": "ok",
+  "production_ns_completed": 100.0,
+  "timing_repaired": "2026-08-13",
+  "timing_source": "metadata_100ns",
+  "analysis_n_frames": 301,
+  "analysis_dt_ps": 333.333333,
+  "legacy_json_ns": 100.0,
+  "legacy_state_csv_ns": 88.48,
+  "state_csv_stale": true
 }

@@ -21,5 +21,13 @@
   "md_total_steps": 50000000,
   "resumed_from_checkpoint": true,
   "elapsed_seconds": 25430.33599742502,
-  "status": "ok"
+  "status": "ok",
+  "production_ns_completed": 100.0,
+  "timing_repaired": "2026-08-13",
+  "timing_source": "dcd_fingerprint_100ns",
+  "analysis_n_frames": 180,
+  "analysis_dt_ps": 558.659218,
+  "legacy_json_ns": 100.0,
+  "legacy_state_csv_ns": 100.0,
+  "state_csv_stale": false
 }

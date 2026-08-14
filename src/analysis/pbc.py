@@ -45,10 +45,27 @@ class PBCAuditSummary:
 
 def topology_for_analysis_dcd(dcd_path: Path) -> Path:
     name = dcd_path.name
-    if not name.endswith("_analysis.dcd"):
-        raise ValueError(f"Unexpected DCD name (expected *_analysis.dcd): {dcd_path}")
-    topo_name = name.replace("_analysis.dcd", "_analysis_topology.pdb")
-    return dcd_path.with_name(topo_name)
+    if name.endswith("_analysis_pbcfix.dcd"):
+        return dcd_path.with_name(name.replace("_analysis_pbcfix.dcd", "_analysis_topology.pdb"))
+    if name.endswith("_analysis.dcd"):
+        return dcd_path.with_name(name.replace("_analysis.dcd", "_analysis_topology.pdb"))
+    raise ValueError(f"Unexpected DCD name (expected *_analysis.dcd or *_analysis_pbcfix.dcd): {dcd_path}")
+
+
+def pbcfix_dcd_for(analysis_dcd: Path) -> Path:
+    name = analysis_dcd.name
+    if name.endswith("_analysis_pbcfix.dcd"):
+        return analysis_dcd
+    if name.endswith("_analysis.dcd"):
+        return analysis_dcd.with_name(name.replace("_analysis.dcd", "_analysis_pbcfix.dcd"))
+    return analysis_dcd.with_name(f"{analysis_dcd.stem}_pbcfix.dcd")
+
+
+def raw_analysis_dcd_for(dcd_path: Path) -> Path:
+    name = dcd_path.name
+    if name.endswith("_analysis_pbcfix.dcd"):
+        return dcd_path.with_name(name.replace("_analysis_pbcfix.dcd", "_analysis.dcd"))
+    return dcd_path
 
 
 def load_mdtraj_trajectory(dcd_path: Path, topo_path: Path):

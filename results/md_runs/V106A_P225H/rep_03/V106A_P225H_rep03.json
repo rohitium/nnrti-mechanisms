@@ -17,9 +17,17 @@
   "checkpoint_path": "results/md_runs/V106A_P225H/rep_03/V106A_P225H_rep03_md.chk",
   "md_heating_steps": 0,
   "md_production_steps": 50000000,
-  "md_production_steps_completed": 37334000,
-  "md_total_steps": 37334000,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50000000,
   "resumed_from_checkpoint": true,
   "elapsed_seconds": 5359.2142126589315,
-  "status": "ok"
+  "status": "ok",
+  "production_ns_completed": 100.0,
+  "timing_repaired": "2026-08-13",
+  "timing_source": "metadata_100ns",
+  "analysis_n_frames": 489,
+  "analysis_dt_ps": 204.918033,
+  "legacy_json_ns": 100.0,
+  "legacy_state_csv_ns": 74.668,
+  "state_csv_stale": true
 }

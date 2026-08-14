@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Repair classical-MD run metadata to match ground truth. DRY-RUN by default.
 
-Ground truth is the ``state.csv`` last step; the JSON is a claim to be corrected,
-never trusted. Nothing is written unless ``--apply`` is passed. All actions are
-idempotent (re-running finds nothing left to do).
+WARNING: ``state.csv`` is *not* always ground truth for the holo 100 ns panel.
+Many analysis DCDs match the completed 100 ns fingerprint (180 frames / 34 MB
+or 360 frames / 68 MB) while JSON+CSV still say 50–70 ns — leftover mid-slice
+``status=ok`` dumps. Do not blindly copy those step counts into the JSON.
+Use ``src.analysis.md_timing.infer_production_ns`` (DCD fingerprint) for
+analysis time axes. This script only reconciles JSON↔CSV agreement.
+
+Nothing is written unless ``--apply`` is passed. All actions are idempotent.
 
 Actions:
   1. Archive superseded / stub metadata to ``results/md_runs/_archive/`` and log
