@@ -27,6 +27,14 @@ pipeline defect. Do not call such cases "overpredictions" or "false positives."
 ## Roadmap (P-stages)
 
 - **P0 — pilot (V106A, Y188L): DONE & validated.** ✅
+  - Manuscript protocol walkthrough: `results/analysis/fep_pmx/protocol/<genotype>/`
+    (`01`–`05` for every panel scatter genotype; regen via
+    `scripts/fep_pmx/plot_protocol_figures.py`). V106A also mirrored at `protocol_v106a/`.
+    See README § “V106A / panel protocol figures”.
+  - Panel scatter **without fitted line**: `panel_ddg_vs_experiment.png` (R²≈0.09 is
+    the finding). Main-text / show / omit tiers:
+    `panel_discussion_tiers.csv` + `FEP_SECTION_NOTES.md`. Replot:
+    `python scripts/fep_pmx/combine_neq.py --replot-only`.
 - **P1 — single mutations → Spearman ρ vs fold (a scientific *readout*, not a gate):** in progress.
   - `P1_NEUTRAL_LEGS` (config.py): F227C, G190A, V106I, V106M, Y181C, Y318F.
   - With P0's V106A + Y188L that's the **8 single legs** the current pipeline can run.

@@ -7,9 +7,10 @@ SEM across replicates of the per-replicate target ΔΔG — not the pooled withi
 replicate BAR error, which underestimates it (``pmx-neq-fep-plan.md`` §3.2).
 
 Outputs (under ``results/analysis/fep_pmx/``):
-  targets/{genotype}/summary.json   per-target ΔΔG_bind ± SEM + per-rep table
-  panel_ddg.csv                     one row per genotype, with experimental fold
-  panel_ddg_vs_experiment.png       ΔΔG_bind vs experimental fold (Spearman ρ)
+    targets/{genotype}/summary.json   per-target ΔΔG_bind ± SEM + per-rep table
+    panel_ddg.csv                     one row per genotype, with experimental fold
+    panel_ddg_vs_experiment.png       ΔΔG_bind vs experimental fold (no fitted line)
+    panel_discussion_tiers.csv        main-text / show / omit classification by SEM
 """
 
 from __future__ import annotations
@@ -57,6 +58,11 @@ EXPERIMENTAL_CSV = Path(
     "results/analysis/dor_susceptibility_bar_chart/tables/dor_susceptibility_values.csv"
 )
 P0_SIGN_GATE = ("V106A", "Y188L")
+# Main-text discussion gate (plan §2B). Confidence = SEM + estimator agreement,
+# not experimental match. V106M is included (tight SEM) but framed as a
+# binding-vs-phenotype finding, not a pipeline failure.
+SEM_MAIN_TEXT_MAX_KCAL = 0.6
+OMIT_MAIN_TEXT = frozenset({"K103N", "G190E"})  # charge / huge SEM
 
 
 def load_experimental(csv_path: Path) -> dict[str, float]:
@@ -236,45 +242,57 @@ def _repel_labels(ax, fig, xs, ys, labels, *, fontsize=8, n_iter=400) -> None:
                         arrowprops=dict(arrowstyle="-", lw=0.5, color="0.6"))
 
 
-def _plot(rows: list[dict], rho: float | None, output: Path) -> None:
+def discussion_tier(genotype: str, sem: float | None) -> str:
+    """Classify how a genotype should be used in the manuscript FEP section."""
+    if genotype in OMIT_MAIN_TEXT:
+        return "omit_main"
+    if sem is not None and sem <= SEM_MAIN_TEXT_MAX_KCAL:
+        return "main_text"
+    return "show"
+
+
+def _plot(rows: list[dict], rho: float | None, output: Path) -> dict:
+    """Scatter ΔΔG vs log10(fold). No fitted line — weak correlation is the finding."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     computed = [r for r in rows if r["ddg_bind"] is not None]
+    stats: dict = {"n_with_fold": 0, "pearson_r2": None, "pearson_p": None, "spearman_rho": rho}
     if not computed:
-        return
+        return stats
     with_fold = [r for r in computed if r.get("fold") is not None]
 
     fig, ax = plt.subplots(figsize=(6, 5))
     if with_fold:
-        # log10(experimental fold) on x, computed ΔΔG_bind ± SEM on y, with a
-        # linear fit reporting Pearson R^2 and p (matching the manuscript scatter).
         x = np.array([math.log10(r["fold"]) for r in with_fold])
         y = np.array([r["ddg_bind"] for r in with_fold])
         yerr = np.array([r["sem"] if r["sem"] is not None else 0.0 for r in with_fold])
         ax.errorbar(x, y, yerr=yerr, fmt="o", capsize=3, color="#2c6fbb", ecolor="#9bbce0", zorder=3)
         ax.axhline(0.0, color="0.6", lw=0.8, ls="--")
         _repel_labels(ax, fig, x, y, [r["genotype"] for r in with_fold], fontsize=8)
-        fit_label = None
+        corr_label = None
         if len(with_fold) >= 3 and x.std() > 0:
-            m, b = np.polyfit(x, y, 1)
-            xs = np.linspace(x.min(), x.max(), 50)
-            ax.plot(xs, m * xs + b, "-", color="#c0392b", lw=1.6, zorder=2)
             try:
                 from scipy.stats import pearsonr
                 r_, p_ = pearsonr(x, y)
-                fit_label = f"linear fit: R² = {r_**2:.2f}, p = {p_:.2g}"
+                stats["pearson_r2"] = float(r_ ** 2)
+                stats["pearson_p"] = float(p_)
+                corr_label = f"Pearson R² = {r_**2:.2f}, p = {p_:.2g}  (no fit line)"
             except Exception:
                 r_ = float(np.corrcoef(x, y)[0, 1])
-                fit_label = f"linear fit: R² = {r_**2:.2f}"
+                stats["pearson_r2"] = float(r_ ** 2)
+                corr_label = f"Pearson R² = {r_**2:.2f}  (no fit line)"
+        if rho is not None:
+            spearman_bit = f"Spearman ρ = {rho:.2f}"
+            corr_label = f"{corr_label}  ·  {spearman_bit}" if corr_label else spearman_bit
         ax.set_xlabel(r"$\log_{10}$(experimental DOR fold reduction)")
         ax.set_ylabel(r"Computed $\Delta\Delta G_{\mathrm{bind}}$ (kcal/mol)")
-        title = f"NEQ ΔΔG_bind vs experiment (n = {len(with_fold)})"
-        if fit_label:
-            title += f"\n{fit_label}"
+        title = f"NEQ ΔΔG_bind vs experiment (n = {len(with_fold)}; incomplete panel)"
+        if corr_label:
+            title += f"\n{corr_label}"
+        stats["n_with_fold"] = len(with_fold)
     else:
-        # No experimental values yet (e.g. P0): show ΔΔG_bind ± SEM per genotype
         labels = [r["genotype"] for r in computed]
         vals = [r["ddg_bind"] for r in computed]
         errs = [r["sem"] if r.get("sem") is not None else 0.0 for r in computed]
@@ -287,6 +305,63 @@ def _plot(rows: list[dict], rho: float | None, output: Path) -> None:
     fig.tight_layout()
     fig.savefig(output, dpi=200)
     plt.close(fig)
+    return stats
+
+
+def write_discussion_tiers(rows: list[dict], output: Path) -> None:
+    """Export main-text / show / omit tiers for the FEP Results rewrite."""
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow([
+            "genotype", "ddg_bind_kcal", "sem_kcal", "dor_fold_reduction",
+            "tier", "note",
+        ])
+        for r in rows:
+            if r.get("ddg_bind") is None:
+                continue
+            tier = discussion_tier(r["genotype"], r.get("sem"))
+            note = ""
+            if r["genotype"] == "V106M":
+                note = (
+                    "tight SEM; binding ΔΔG much larger than fold implies — "
+                    "binding-vs-phenotype finding (not a pipeline fail)"
+                )
+            elif tier == "omit_main":
+                note = "charge leg and/or SEM too large for main-text point estimate"
+            elif tier == "main_text":
+                note = f"SEM ≤ {SEM_MAIN_TEXT_MAX_KCAL} kcal/mol; discuss numerically"
+            else:
+                note = "show on scatter; do not over-interpret point estimate"
+            writer.writerow([
+                r["genotype"],
+                f"{r['ddg_bind']:.3f}",
+                f"{r['sem']:.3f}" if r.get("sem") is not None else "",
+                r.get("fold", "") if r.get("fold") is not None else "",
+                tier,
+                note,
+            ])
+
+
+def rows_from_panel_csv(panel_csv: Path) -> list[dict]:
+    """Rebuild plot rows from an existing panel_ddg.csv (no re-analysis)."""
+    rows = []
+    with panel_csv.open(newline="") as handle:
+        for row in csv.DictReader(handle):
+            ddg = row.get("ddg_bind_kcal", "").strip()
+            sem = row.get("sem_kcal", "").strip()
+            fold = row.get("dor_fold_reduction", "").strip()
+            n = row.get("n_reps", "").strip()
+            rows.append(
+                {
+                    "genotype": row["genotype"],
+                    "ddg_bind": float(ddg) if ddg else None,
+                    "sem": float(sem) if sem else None,
+                    "n_reps": int(n) if n else 0,
+                    "fold": float(fold) if fold else None,
+                }
+            )
+    return rows
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -300,7 +375,31 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--force", action="store_true", help="Re-run pmx analyse even if analysis.json exists (use after re-running switches)")
     parser.add_argument("--strict", action="store_true", help="Exit non-zero if a P0 sign gate fails")
     parser.add_argument("--output-dir", type=Path, default=FEP_PMX_ROOT)
+    parser.add_argument(
+        "--replot-only",
+        action="store_true",
+        help="Rebuild panel_ddg_vs_experiment.png + panel_discussion_tiers.csv from existing panel_ddg.csv",
+    )
     args = parser.parse_args(argv)
+
+    if args.replot_only:
+        panel_csv = args.output_dir / "panel_ddg.csv"
+        rows = rows_from_panel_csv(panel_csv)
+        with_fold = [r for r in rows if r.get("ddg_bind") is not None and r.get("fold") is not None]
+        rho = None
+        if len(with_fold) >= 3:
+            rho = spearman_rho(
+                np.array([r["ddg_bind"] for r in with_fold]),
+                np.array([r["fold"] for r in with_fold]),
+            )
+        plot_path = args.output_dir / "panel_ddg_vs_experiment.png"
+        stats = _plot(rows, rho, plot_path)
+        tiers_path = args.output_dir / "panel_discussion_tiers.csv"
+        write_discussion_tiers(rows, tiers_path)
+        print(f"replot n={stats.get('n_with_fold')}  R²={stats.get('pearson_r2')}  "
+              f"p={stats.get('pearson_p')}  Spearman ρ={rho}")
+        print(f"Wrote {plot_path}\nWrote {tiers_path}")
+        return 0
 
     replicates = range(1, args.replicates + 1)
     experimental = load_experimental(args.experimental_csv)
@@ -325,6 +424,7 @@ def main(argv: list[str] | None = None) -> int:
 
     computed = [r for r in rows if r["ddg_bind"] is not None]
     rho = None
+    x = y = np.array([])
     if computed:
         x = np.array([r["ddg_bind"] for r in computed if r.get("fold") is not None])
         y = np.array([r["fold"] for r in computed if r.get("fold") is not None])
@@ -343,22 +443,27 @@ def main(argv: list[str] | None = None) -> int:
                 f"{r['ddg_bind']:.3f}" if r["ddg_bind"] is not None else "",
                 f"{r['sem']:.3f}" if r.get("sem") is not None else "",
                 r["n_reps"],
-                r.get("fold", ""),
+                r.get("fold", "") if r.get("fold") is not None else "",
             ])
 
     plot_path = args.output_dir / "panel_ddg_vs_experiment.png"
-    _plot(rows, rho, plot_path)
+    stats = _plot(rows, rho, plot_path)
+    tiers_path = args.output_dir / "panel_discussion_tiers.csv"
+    write_discussion_tiers(rows, tiers_path)
 
     # Report
-    print(f"{'genotype':<14} {'ddg_bind':>10} {'sem':>7} {'n':>3}  {'fold':>7}")
+    print(f"{'genotype':<14} {'ddg_bind':>10} {'sem':>7} {'n':>3}  {'fold':>7}  tier")
     for r in rows:
         ddg = f"{r['ddg_bind']:+.2f}" if r["ddg_bind"] is not None else "  n/a"
         sem = f"{r['sem']:.2f}" if r.get("sem") is not None else "  - "
         fold = f"{r['fold']:.1f}" if r.get("fold") is not None else "   -"
-        print(f"{r['genotype']:<14} {ddg:>10} {sem:>7} {r['n_reps']:>3}  {fold:>7}")
+        tier = discussion_tier(r["genotype"], r.get("sem")) if r.get("ddg_bind") is not None else "-"
+        print(f"{r['genotype']:<14} {ddg:>10} {sem:>7} {r['n_reps']:>3}  {fold:>7}  {tier}")
     if rho is not None:
         print(f"\nSpearman ρ (ΔΔG_bind vs fold) = {rho:.3f}  (n = {len(x)})")
-    print(f"\nWrote {panel_csv}\nWrote {plot_path}")
+    if stats.get("pearson_r2") is not None:
+        print(f"Pearson R² = {stats['pearson_r2']:.3f}  p = {stats.get('pearson_p')}")
+    print(f"\nWrote {panel_csv}\nWrote {plot_path}\nWrote {tiers_path}")
 
     # P0 sign gate
     gate_fail = False

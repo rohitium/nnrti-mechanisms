@@ -1,0 +1,40 @@
+{
+  "genotype": "Y188L",
+  "leg_ids": [
+    "wt_to_Y188L"
+  ],
+  "ddg_bind": 4.5200000000000005,
+  "sem": 0.486449723335653,
+  "fold": 149.0,
+  "panels": [
+    "01_thermodynamic_cycle.png",
+    "02_hybrid_topology.png",
+    "03_neq_work.png",
+    "04_lambda_profile.png",
+    "05_crooks_overlap.png"
+  ],
+  "hybrid": {
+    "mode": "sticks_generic",
+    "leg_id": "wt_to_Y188L",
+    "hybrid_pdb": "results/analysis/fep_pmx/legs/wt_to_Y188L/holo/rep_01/hybrid.pdb"
+  },
+  "lambda_profile": {
+    "status": "placeholder",
+    "legs": [
+      "wt_to_Y188L"
+    ]
+  },
+  "per_leg_prepare": {
+    "wt_to_Y188L": {
+      "switch_ps": 500.0,
+      "equil_ns": 5.0,
+      "n_snapshots": 100
+    }
+  },
+  "notes": [
+    "Numbered 01\u201305. Same series as the V106A worked example.",
+    "02 uses local hybrid.pdb sticks when present; otherwise a schematic.",
+    "04 is a placeholder unless lambda_profiles/<leg>.csv exists (needs Sherlock dgdl).",
+    "Multi-leg genotypes sum \u0394G_holo/\u0394G_apo across additive legs for the cycle."
+  ]
+}

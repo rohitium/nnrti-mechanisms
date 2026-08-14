@@ -100,8 +100,44 @@ python scripts/fep_pmx/qc_neq.py --replicates 3
 Outputs land under `results/analysis/fep_pmx/`:
 - `legs/{leg}/{holo,apo}/rep_*/neq/analysis/` — per-unit `analysis.json`, `results.txt`, `work_dist.png`, `integ_{fwd,rev}.dat`
 - `targets/{genotype}/summary.json` — ΔΔG_bind ± SEM + per-replicate table
-- `panel_ddg.csv`, `panel_ddg_vs_experiment.png` — ranking vs experiment (Spearman ρ once ≥3 genotypes)
+- `panel_ddg.csv`, `panel_ddg_vs_experiment.png` — ΔΔG vs fold (**no fitted line**; weak Pearson R² stated in the title)
+- `panel_discussion_tiers.csv` — `main_text` (SEM ≤ 0.6) / `show` / `omit_main` for the Results rewrite
 - `panel_qc.csv`, `panel_crooks_overlap.png` — QC table + overlap histograms
+
+Rebuild the scatter + tiers from the existing CSV without re-running pmx:
+
+```bash
+python scripts/fep_pmx/combine_neq.py --replot-only
+```
+
+### V106A / panel protocol figures (manuscript walkthrough)
+
+Per-genotype panels matching the Methods/Results FEP walkthrough (continuous NEQ,
+not discrete λ windows). Defaults to every genotype **shown** on
+`panel_ddg_vs_experiment.png` (panel_ddg.csv rows with an experimental fold):
+
+```bash
+conda activate nnrti-prep
+python scripts/fep_pmx/plot_protocol_figures.py              # all panel genotypes
+python scripts/fep_pmx/plot_protocol_figures.py --targets V106A Y188L
+python scripts/fep_pmx/plot_v106a_protocol.py                # V106A only (compat)
+```
+
+Writes `results/analysis/fep_pmx/protocol/<SAFE>/` (V106A also mirrored to
+`protocol_v106a/`):
+
+| # | file | content |
+|---|---|---|
+| 01 | `01_thermodynamic_cycle.png` | holo/apo cycle + ΔΔG_bind (sums additive legs) |
+| 02 | `02_hybrid_topology.png` | sticks if local `hybrid.pdb` (V106A/Y188L); else schematic |
+| 03 | `03_neq_work.png` | per-rep forward/reverse work; title has equil → snaps → switch |
+| 04 | `04_lambda_profile.png` | ⟨W_f(λ)⟩ / G_f(λ) when `lambda_profiles/<leg>.csv` exists; else placeholder |
+| 05 | `05_crooks_overlap.png` | CGI ∩ / BAR / Jarzynski on pooled Crooks histograms |
+
+`run_config.json` in each folder lists panel order, hybrid mode, and λ status.
+Most legs lack local `hybrid.pdb` / `dgdl.xvg` (rsync excludes them); λ CSVs today
+exist for `wt_to_V106A` and `wt_to_K103N` only — regenerate others on Sherlock with
+`plot_lambda_profile.py`.
 
 **Note:** `pmx analyse` needs `numpy < 2.0` (newer numpy breaks pmx's estimators). The Sherlock `~/.venvs/pmx` env is fine; a local Mac `pmx` conda env may need `pip install 'numpy<2'`.
 
