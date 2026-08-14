@@ -101,3 +101,18 @@ manuscript/Supplementary-Table-3.xlsx
 The previous top-level default plots/tables/config were moved into the
 non-default archive before the last-20-frame plots/tables/config were copied into
 the top-level default locations.
+
+## Manuscript role (Atanu revision)
+
+**Demote MM/GBSA in the main text.** Per the Atanu feedback plan (§2B):
+
+- Collapse the current MM/GBSA Results block (Table 2 + Figure 2 style content) into
+  **one paragraph + SI table** (Supplementary Table 3 / last-20-frame workbook).
+- Do **not** lead the resistance story with MM/GBSA totals.
+- Delete any hybrid-topology / 5 ns endpoint language from the MM/GBSA section —
+  that belongs to the FEP protocol walkthrough, not end-point scoring.
+- FEP (tight-SEM subset) and the modern-MD descriptor suite carry the quantitative
+  claims; MM/GBSA is supporting context only.
+
+This note is the Methods/SI home for how the scores were computed; the draft
+rewrite should cite this path rather than expand MM/GBSA in Results.
