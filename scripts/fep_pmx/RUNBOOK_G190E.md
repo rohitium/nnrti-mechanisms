@@ -92,12 +92,30 @@ PLAN §4.3) — this is expected, not a missing step.
 
 ```bash
 python3 scripts/fep_pmx/prepare_neq.py --legs wt_to_G190E \
-  --replicates 3 --n-snapshots 100 \
+  --replicates 3 --n-snapshots 100 --force \
   --panel-manifest results/analysis/fep_pmx/neq_g190e_manifest.csv
 ```
 
 Note the asymmetry: `--replicates 3` here IS a count (reps 1..3), unlike the
 shell `REPLICATES`. Same word, opposite meaning.
+
+**`--force` is required here, and it is safe.** `prepare_neq` skips any unit that
+already has a `neq_manifest.csv`, and G190E's `neq/` dir survived the archiving of
+the co-alchemical run — only the `analysis/` dirs were moved. Without `--force`
+the run returns in a second having written just the panel manifest, silently
+leaving `switch_ps: 500.0` and the 500 ps `nonequil_{fwd,rev}.mdp` in place. Step
+6 catches this (`switch_ps MISMATCH`, `n_tasks 9` vs `7`), but re-running with
+`--force` is the fix. `--force` re-renders mdps + manifests and **never** deletes
+em/equil/extract/switch outputs (see the comment at `prepare_neq.py:120`).
+
+Also verify the rendered mdp, since that — not the JSON — is what GROMACS reads:
+
+```bash
+grep -E 'nsteps|delta.lambda' results/analysis/fep_pmx/legs/wt_to_G190E/holo/rep_01/neq/mdp/nonequil_fwd.mdp
+```
+
+Want `nsteps = 50000` (100 ps at 2 fs) and `delta-lambda = 2e-05`. `250000` means
+the re-render did not land.
 
 **Verify the protocol actually matched K103N before spending GPU time:**
 

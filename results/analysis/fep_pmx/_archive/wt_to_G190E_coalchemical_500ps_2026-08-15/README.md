@@ -32,6 +32,19 @@ Kept because it is the empirical record of *why* the co-alchemical ion was
 dropped, and it pairs with the K103N co-alchemical data as the before/after for
 that decision.
 
+## What was NOT archived (and the trap it set)
+
+Only the per-unit `neq/analysis/` directories and `targets/G190E/summary.json`
+were moved. The rest of `legs/wt_to_G190E/*/rep_*/neq/` — including
+`neq_prepare.json` (`switch_ps: 500.0`) and the rendered 500 ps
+`mdp/nonequil_{fwd,rev}.mdp` — was left in place on the assumption that a rebuild
+would overwrite it. **It does not.** `prepare_neq.py` skips any unit that already
+has a `neq_manifest.csv`, so the first prep run wrote only the panel manifest and
+kept the 500 ps config. Re-running with `--force` fixes it.
+
+If you archive another leg's results, move or delete the whole `neq/` subtree,
+not just `analysis/`.
+
 ## What replaces it
 
 G190E re-run in a **raw non-neutral box + Rocklin/Hunenberger analytical
