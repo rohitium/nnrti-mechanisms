@@ -1,0 +1,20 @@
+{
+  "leg_id": "K103N_to_K103N_M230L",
+  "phase": "holo",
+  "replicate": 2,
+  "temperature_k": 300.0,
+  "units": "kcal/mol",
+  "n_fwd": 100,
+  "n_rev": 100,
+  "nboots": 100,
+  "results_txt": "results/analysis/fep_pmx/legs/K103N_to_K103N_M230L/holo/rep_02/neq/analysis/results.txt",
+  "integ_fwd": "results/analysis/fep_pmx/legs/K103N_to_K103N_M230L/holo/rep_02/neq/analysis/integ_fwd.dat",
+  "integ_rev": "results/analysis/fep_pmx/legs/K103N_to_K103N_M230L/holo/rep_02/neq/analysis/integ_rev.dat",
+  "work_plot": "results/analysis/fep_pmx/legs/K103N_to_K103N_M230L/holo/rep_02/neq/analysis/work_dist.png",
+  "bar_dg": -12.39,
+  "bar_err_analytical": 0.08,
+  "bar_err_boot": 0.09,
+  "bar_conv": -0.16,
+  "cgi_dg": -11.9,
+  "jarz_dg_mean": -12.46
+}

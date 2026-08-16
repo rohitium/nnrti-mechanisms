@@ -1,0 +1,983 @@
+
+
+ ========================================================
+                   PROCESSING THE DATA
+ ========================================================
+  Forward Data
+    First accepted file: /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_000/dgdl.xvg
+    # data points: 50001
+    Length of trajectory:  100.000 ps
+    Delta lambda:  0.00002
+
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_001/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_002/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_003/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_004/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_005/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_006/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_007/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_008/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_009/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_010/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_011/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_012/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_013/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_014/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_015/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_016/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_017/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_018/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_019/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_020/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_021/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_022/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_023/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_024/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_025/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_026/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_027/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_028/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_029/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_030/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_031/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_032/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_033/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_034/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_035/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_036/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_037/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_038/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_039/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_040/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_041/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_042/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_043/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_044/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_045/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_046/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_047/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_048/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_049/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_050/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_051/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_052/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_053/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_054/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_055/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_056/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_057/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_058/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_059/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_060/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_061/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_062/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_063/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_064/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_065/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_066/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_067/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_068/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_069/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_070/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_071/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_072/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_073/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_074/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_075/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_076/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_077/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_078/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_079/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_080/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_081/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_082/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_083/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_084/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_085/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_086/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_087/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_088/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_089/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_090/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_091/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_092/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_093/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_094/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_095/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_096/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_097/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_098/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/fwd_099/dgdl.xvg
+
+  Reverse Data
+    First accepted file: /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_000/dgdl.xvg
+    # data points: 50001
+    Length of trajectory:  100.000 ps
+    Delta lambda: -0.00002
+
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_001/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_002/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_003/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_004/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_005/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_006/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_007/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_008/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_009/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_010/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_011/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_012/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_013/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_014/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_015/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_016/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_017/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_018/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_019/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_020/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_021/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_022/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_023/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_024/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_025/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_026/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_027/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_028/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_029/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_030/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_031/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_032/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_033/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_034/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_035/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_036/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_037/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_038/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_039/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_040/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_041/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_042/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_043/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_044/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_045/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_046/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_047/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_048/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_049/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_050/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_051/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_052/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_053/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_054/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_055/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_056/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_057/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_058/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_059/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_060/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_061/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_062/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_063/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_064/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_065/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_066/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_067/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_068/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_069/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_070/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_071/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_072/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_073/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_074/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_075/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_076/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_077/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_078/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_079/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_080/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_081/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_082/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_083/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_084/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_085/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_086/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_087/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_088/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_089/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_090/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_091/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_092/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_093/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_094/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_095/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_096/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_097/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_098/dgdl.xvg
+    Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/K103N_to_L100I_K103N/apo/rep_02/neq/switches/rev_099/dgdl.xvg
+
+ ========================================================
+                       ANALYSIS
+ ========================================================
+  Number of forward (0->1) trajectories: 100
+  Number of reverse (1->0) trajectories: 100
+  Temperature : 300.00 K
+
+ --------------------------------------------------------
+             Crooks Gaussian Intersection     
+ --------------------------------------------------------
+  Calculating Intersection...
+
+  Bootstrap (Std Err): iteration 1/100
+  Bootstrap (Std Err): iteration 2/100
+  Bootstrap (Std Err): iteration 3/100
+  Bootstrap (Std Err): iteration 4/100
+  Bootstrap (Std Err): iteration 5/100
+  Bootstrap (Std Err): iteration 6/100
+  Bootstrap (Std Err): iteration 7/100
+  Bootstrap (Std Err): iteration 8/100
+  Bootstrap (Std Err): iteration 9/100
+  Bootstrap (Std Err): iteration 10/100
+  Bootstrap (Std Err): iteration 11/100
+  Bootstrap (Std Err): iteration 12/100
+  Bootstrap (Std Err): iteration 13/100
+  Bootstrap (Std Err): iteration 14/100
+  Bootstrap (Std Err): iteration 15/100
+  Bootstrap (Std Err): iteration 16/100
+  Bootstrap (Std Err): iteration 17/100
+  Bootstrap (Std Err): iteration 18/100
+  Bootstrap (Std Err): iteration 19/100
+  Bootstrap (Std Err): iteration 20/100
+  Bootstrap (Std Err): iteration 21/100
+  Bootstrap (Std Err): iteration 22/100
+  Bootstrap (Std Err): iteration 23/100
+  Bootstrap (Std Err): iteration 24/100
+  Bootstrap (Std Err): iteration 25/100
+  Bootstrap (Std Err): iteration 26/100
+  Bootstrap (Std Err): iteration 27/100
+  Bootstrap (Std Err): iteration 28/100
+  Bootstrap (Std Err): iteration 29/100
+  Bootstrap (Std Err): iteration 30/100
+  Bootstrap (Std Err): iteration 31/100
+  Bootstrap (Std Err): iteration 32/100
+  Bootstrap (Std Err): iteration 33/100
+  Bootstrap (Std Err): iteration 34/100
+  Bootstrap (Std Err): iteration 35/100
+  Bootstrap (Std Err): iteration 36/100
+  Bootstrap (Std Err): iteration 37/100
+  Bootstrap (Std Err): iteration 38/100
+  Bootstrap (Std Err): iteration 39/100
+  Bootstrap (Std Err): iteration 40/100
+  Bootstrap (Std Err): iteration 41/100
+  Bootstrap (Std Err): iteration 42/100
+  Bootstrap (Std Err): iteration 43/100
+  Bootstrap (Std Err): iteration 44/100
+  Bootstrap (Std Err): iteration 45/100
+  Bootstrap (Std Err): iteration 46/100
+  Bootstrap (Std Err): iteration 47/100
+  Bootstrap (Std Err): iteration 48/100
+  Bootstrap (Std Err): iteration 49/100
+  Bootstrap (Std Err): iteration 50/100
+  Bootstrap (Std Err): iteration 51/100
+  Bootstrap (Std Err): iteration 52/100
+  Bootstrap (Std Err): iteration 53/100
+  Bootstrap (Std Err): iteration 54/100
+  Bootstrap (Std Err): iteration 55/100
+  Bootstrap (Std Err): iteration 56/100
+  Bootstrap (Std Err): iteration 57/100
+  Bootstrap (Std Err): iteration 58/100
+  Bootstrap (Std Err): iteration 59/100
+  Bootstrap (Std Err): iteration 60/100
+  Bootstrap (Std Err): iteration 61/100
+  Bootstrap (Std Err): iteration 62/100
+  Bootstrap (Std Err): iteration 63/100
+  Bootstrap (Std Err): iteration 64/100
+  Bootstrap (Std Err): iteration 65/100
+  Bootstrap (Std Err): iteration 66/100
+  Bootstrap (Std Err): iteration 67/100
+  Bootstrap (Std Err): iteration 68/100
+  Bootstrap (Std Err): iteration 69/100
+  Bootstrap (Std Err): iteration 70/100
+  Bootstrap (Std Err): iteration 71/100
+  Bootstrap (Std Err): iteration 72/100
+  Bootstrap (Std Err): iteration 73/100
+  Bootstrap (Std Err): iteration 74/100
+  Bootstrap (Std Err): iteration 75/100
+  Bootstrap (Std Err): iteration 76/100
+  Bootstrap (Std Err): iteration 77/100
+  Bootstrap (Std Err): iteration 78/100
+  Bootstrap (Std Err): iteration 79/100
+  Bootstrap (Std Err): iteration 80/100
+  Bootstrap (Std Err): iteration 81/100
+  Bootstrap (Std Err): iteration 82/100
+  Bootstrap (Std Err): iteration 83/100
+  Bootstrap (Std Err): iteration 84/100
+  Bootstrap (Std Err): iteration 85/100
+  Bootstrap (Std Err): iteration 86/100
+  Bootstrap (Std Err): iteration 87/100
+  Bootstrap (Std Err): iteration 88/100
+  Bootstrap (Std Err): iteration 89/100
+  Bootstrap (Std Err): iteration 90/100
+  Bootstrap (Std Err): iteration 91/100
+  Bootstrap (Std Err): iteration 92/100
+  Bootstrap (Std Err): iteration 93/100
+  Bootstrap (Std Err): iteration 94/100
+  Bootstrap (Std Err): iteration 95/100
+  Bootstrap (Std Err): iteration 96/100
+  Bootstrap (Std Err): iteration 97/100
+  Bootstrap (Std Err): iteration 98/100
+  Bootstrap (Std Err): iteration 99/100
+  Bootstrap (Std Err): iteration 100/100
+  CGI: Forward Gauss mean =    21.91 kcal/mol std =     0.63 kcal/mol
+  CGI: Reverse Gauss mean =    21.33 kcal/mol std =     0.89 kcal/mol
+  CGI: dG =    21.39 kcal/mol
+  CGI: Std Err (bootstrap:parametric) =     0.11 kcal/mol
+  CGI: Std Err (bootstrap) =     0.11 kcal/mol
+
+  Running KS-test...
+    Forward: gaussian quality = 0.99
+             ---> KS-Test Ok
+    Reverse: gaussian quality = 0.09
+             ---> KS-Test Ok
+
+ --------------------------------------------------------
+             Bennett Acceptance Ratio     
+ --------------------------------------------------------
+  Running Nelder-Mead Simplex algorithm... 
+
+  Bootstrap (Std Err): iteration 1/100
+  Bootstrap (Std Err): iteration 2/100
+  Bootstrap (Std Err): iteration 3/100
+  Bootstrap (Std Err): iteration 4/100
+  Bootstrap (Std Err): iteration 5/100
+  Bootstrap (Std Err): iteration 6/100
+  Bootstrap (Std Err): iteration 7/100
+  Bootstrap (Std Err): iteration 8/100
+  Bootstrap (Std Err): iteration 9/100
+  Bootstrap (Std Err): iteration 10/100
+  Bootstrap (Std Err): iteration 11/100
+  Bootstrap (Std Err): iteration 12/100
+  Bootstrap (Std Err): iteration 13/100
+  Bootstrap (Std Err): iteration 14/100
+  Bootstrap (Std Err): iteration 15/100
+  Bootstrap (Std Err): iteration 16/100
+  Bootstrap (Std Err): iteration 17/100
+  Bootstrap (Std Err): iteration 18/100
+  Bootstrap (Std Err): iteration 19/100
+  Bootstrap (Std Err): iteration 20/100
+  Bootstrap (Std Err): iteration 21/100
+  Bootstrap (Std Err): iteration 22/100
+  Bootstrap (Std Err): iteration 23/100
+  Bootstrap (Std Err): iteration 24/100
+  Bootstrap (Std Err): iteration 25/100
+  Bootstrap (Std Err): iteration 26/100
+  Bootstrap (Std Err): iteration 27/100
+  Bootstrap (Std Err): iteration 28/100
+  Bootstrap (Std Err): iteration 29/100
+  Bootstrap (Std Err): iteration 30/100
+  Bootstrap (Std Err): iteration 31/100
+  Bootstrap (Std Err): iteration 32/100
+  Bootstrap (Std Err): iteration 33/100
+  Bootstrap (Std Err): iteration 34/100
+  Bootstrap (Std Err): iteration 35/100
+  Bootstrap (Std Err): iteration 36/100
+  Bootstrap (Std Err): iteration 37/100
+  Bootstrap (Std Err): iteration 38/100
+  Bootstrap (Std Err): iteration 39/100
+  Bootstrap (Std Err): iteration 40/100
+  Bootstrap (Std Err): iteration 41/100
+  Bootstrap (Std Err): iteration 42/100
+  Bootstrap (Std Err): iteration 43/100
+  Bootstrap (Std Err): iteration 44/100
+  Bootstrap (Std Err): iteration 45/100
+  Bootstrap (Std Err): iteration 46/100
+  Bootstrap (Std Err): iteration 47/100
+  Bootstrap (Std Err): iteration 48/100
+  Bootstrap (Std Err): iteration 49/100
+  Bootstrap (Std Err): iteration 50/100
+  Bootstrap (Std Err): iteration 51/100
+  Bootstrap (Std Err): iteration 52/100
+  Bootstrap (Std Err): iteration 53/100
+  Bootstrap (Std Err): iteration 54/100
+  Bootstrap (Std Err): iteration 55/100
+  Bootstrap (Std Err): iteration 56/100
+  Bootstrap (Std Err): iteration 57/100
+  Bootstrap (Std Err): iteration 58/100
+  Bootstrap (Std Err): iteration 59/100
+  Bootstrap (Std Err): iteration 60/100
+  Bootstrap (Std Err): iteration 61/100
+  Bootstrap (Std Err): iteration 62/100
+  Bootstrap (Std Err): iteration 63/100
+  Bootstrap (Std Err): iteration 64/100
+  Bootstrap (Std Err): iteration 65/100
+  Bootstrap (Std Err): iteration 66/100
+  Bootstrap (Std Err): iteration 67/100
+  Bootstrap (Std Err): iteration 68/100
+  Bootstrap (Std Err): iteration 69/100
+  Bootstrap (Std Err): iteration 70/100
+  Bootstrap (Std Err): iteration 71/100
+  Bootstrap (Std Err): iteration 72/100
+  Bootstrap (Std Err): iteration 73/100
+  Bootstrap (Std Err): iteration 74/100
+  Bootstrap (Std Err): iteration 75/100
+  Bootstrap (Std Err): iteration 76/100
+  Bootstrap (Std Err): iteration 77/100
+  Bootstrap (Std Err): iteration 78/100
+  Bootstrap (Std Err): iteration 79/100
+  Bootstrap (Std Err): iteration 80/100
+  Bootstrap (Std Err): iteration 81/100
+  Bootstrap (Std Err): iteration 82/100
+  Bootstrap (Std Err): iteration 83/100
+  Bootstrap (Std Err): iteration 84/100
+  Bootstrap (Std Err): iteration 85/100
+  Bootstrap (Std Err): iteration 86/100
+  Bootstrap (Std Err): iteration 87/100
+  Bootstrap (Std Err): iteration 88/100
+  Bootstrap (Std Err): iteration 89/100
+  Bootstrap (Std Err): iteration 90/100
+  Bootstrap (Std Err): iteration 91/100
+  Bootstrap (Std Err): iteration 92/100
+  Bootstrap (Std Err): iteration 93/100
+  Bootstrap (Std Err): iteration 94/100
+  Bootstrap (Std Err): iteration 95/100
+  Bootstrap (Std Err): iteration 96/100
+  Bootstrap (Std Err): iteration 97/100
+  Bootstrap (Std Err): iteration 98/100
+  Bootstrap (Std Err): iteration 99/100
+  Bootstrap (Std Err): iteration 100/100
+
+  Bootstrap (Conv): iteration 1/100
+  Bootstrap (Conv): iteration 2/100
+  Bootstrap (Conv): iteration 3/100
+  Bootstrap (Conv): iteration 4/100
+  Bootstrap (Conv): iteration 5/100
+  Bootstrap (Conv): iteration 6/100
+  Bootstrap (Conv): iteration 7/100
+  Bootstrap (Conv): iteration 8/100
+  Bootstrap (Conv): iteration 9/100
+  Bootstrap (Conv): iteration 10/100
+  Bootstrap (Conv): iteration 11/100
+  Bootstrap (Conv): iteration 12/100
+  Bootstrap (Conv): iteration 13/100
+  Bootstrap (Conv): iteration 14/100
+  Bootstrap (Conv): iteration 15/100
+  Bootstrap (Conv): iteration 16/100
+  Bootstrap (Conv): iteration 17/100
+  Bootstrap (Conv): iteration 18/100
+  Bootstrap (Conv): iteration 19/100
+  Bootstrap (Conv): iteration 20/100
+  Bootstrap (Conv): iteration 21/100
+  Bootstrap (Conv): iteration 22/100
+  Bootstrap (Conv): iteration 23/100
+  Bootstrap (Conv): iteration 24/100
+  Bootstrap (Conv): iteration 25/100
+  Bootstrap (Conv): iteration 26/100
+  Bootstrap (Conv): iteration 27/100
+  Bootstrap (Conv): iteration 28/100
+  Bootstrap (Conv): iteration 29/100
+  Bootstrap (Conv): iteration 30/100
+  Bootstrap (Conv): iteration 31/100
+  Bootstrap (Conv): iteration 32/100
+  Bootstrap (Conv): iteration 33/100
+  Bootstrap (Conv): iteration 34/100
+  Bootstrap (Conv): iteration 35/100
+  Bootstrap (Conv): iteration 36/100
+  Bootstrap (Conv): iteration 37/100
+  Bootstrap (Conv): iteration 38/100
+  Bootstrap (Conv): iteration 39/100
+  Bootstrap (Conv): iteration 40/100
+  Bootstrap (Conv): iteration 41/100
+  Bootstrap (Conv): iteration 42/100
+  Bootstrap (Conv): iteration 43/100
+  Bootstrap (Conv): iteration 44/100
+  Bootstrap (Conv): iteration 45/100
+  Bootstrap (Conv): iteration 46/100
+  Bootstrap (Conv): iteration 47/100
+  Bootstrap (Conv): iteration 48/100
+  Bootstrap (Conv): iteration 49/100
+  Bootstrap (Conv): iteration 50/100
+  Bootstrap (Conv): iteration 51/100
+  Bootstrap (Conv): iteration 52/100
+  Bootstrap (Conv): iteration 53/100
+  Bootstrap (Conv): iteration 54/100
+  Bootstrap (Conv): iteration 55/100
+  Bootstrap (Conv): iteration 56/100
+  Bootstrap (Conv): iteration 57/100
+  Bootstrap (Conv): iteration 58/100
+  Bootstrap (Conv): iteration 59/100
+  Bootstrap (Conv): iteration 60/100
+  Bootstrap (Conv): iteration 61/100
+  Bootstrap (Conv): iteration 62/100
+  Bootstrap (Conv): iteration 63/100
+  Bootstrap (Conv): iteration 64/100
+  Bootstrap (Conv): iteration 65/100
+  Bootstrap (Conv): iteration 66/100
+  Bootstrap (Conv): iteration 67/100
+  Bootstrap (Conv): iteration 68/100
+  Bootstrap (Conv): iteration 69/100
+  Bootstrap (Conv): iteration 70/100
+  Bootstrap (Conv): iteration 71/100
+  Bootstrap (Conv): iteration 72/100
+  Bootstrap (Conv): iteration 73/100
+  Bootstrap (Conv): iteration 74/100
+  Bootstrap (Conv): iteration 75/100
+  Bootstrap (Conv): iteration 76/100
+  Bootstrap (Conv): iteration 77/100
+  Bootstrap (Conv): iteration 78/100
+  Bootstrap (Conv): iteration 79/100
+  Bootstrap (Conv): iteration 80/100
+  Bootstrap (Conv): iteration 81/100
+  Bootstrap (Conv): iteration 82/100
+  Bootstrap (Conv): iteration 83/100
+  Bootstrap (Conv): iteration 84/100
+  Bootstrap (Conv): iteration 85/100
+  Bootstrap (Conv): iteration 86/100
+  Bootstrap (Conv): iteration 87/100
+  Bootstrap (Conv): iteration 88/100
+  Bootstrap (Conv): iteration 89/100
+  Bootstrap (Conv): iteration 90/100
+  Bootstrap (Conv): iteration 91/100
+  Bootstrap (Conv): iteration 92/100
+  Bootstrap (Conv): iteration 93/100
+  Bootstrap (Conv): iteration 94/100
+  Bootstrap (Conv): iteration 95/100
+  Bootstrap (Conv): iteration 96/100
+  Bootstrap (Conv): iteration 97/100
+  Bootstrap (Conv): iteration 98/100
+  Bootstrap (Conv): iteration 99/100
+  Bootstrap (Conv): iteration 100/100
+  BAR: dG =    21.66 kcal/mol
+  BAR: Std Err (analytical) =     0.05 kcal/mol
+  BAR: Std Err (bootstrap)  =     0.04 kcal/mol
+  BAR: Conv =    -0.07
+  BAR: Conv Std Err (bootstrap) =     0.03
+
+ --------------------------------------------------------
+             Jarzynski estimator     
+ --------------------------------------------------------
+
+  Bootstrap (Std Err): iteration 1/100
+  Bootstrap (Std Err): iteration 2/100
+  Bootstrap (Std Err): iteration 3/100
+  Bootstrap (Std Err): iteration 4/100
+  Bootstrap (Std Err): iteration 5/100
+  Bootstrap (Std Err): iteration 6/100
+  Bootstrap (Std Err): iteration 7/100
+  Bootstrap (Std Err): iteration 8/100
+  Bootstrap (Std Err): iteration 9/100
+  Bootstrap (Std Err): iteration 10/100
+  Bootstrap (Std Err): iteration 11/100
+  Bootstrap (Std Err): iteration 12/100
+  Bootstrap (Std Err): iteration 13/100
+  Bootstrap (Std Err): iteration 14/100
+  Bootstrap (Std Err): iteration 15/100
+  Bootstrap (Std Err): iteration 16/100
+  Bootstrap (Std Err): iteration 17/100
+  Bootstrap (Std Err): iteration 18/100
+  Bootstrap (Std Err): iteration 19/100
+  Bootstrap (Std Err): iteration 20/100
+  Bootstrap (Std Err): iteration 21/100
+  Bootstrap (Std Err): iteration 22/100
+  Bootstrap (Std Err): iteration 23/100
+  Bootstrap (Std Err): iteration 24/100
+  Bootstrap (Std Err): iteration 25/100
+  Bootstrap (Std Err): iteration 26/100
+  Bootstrap (Std Err): iteration 27/100
+  Bootstrap (Std Err): iteration 28/100
+  Bootstrap (Std Err): iteration 29/100
+  Bootstrap (Std Err): iteration 30/100
+  Bootstrap (Std Err): iteration 31/100
+  Bootstrap (Std Err): iteration 32/100
+  Bootstrap (Std Err): iteration 33/100
+  Bootstrap (Std Err): iteration 34/100
+  Bootstrap (Std Err): iteration 35/100
+  Bootstrap (Std Err): iteration 36/100
+  Bootstrap (Std Err): iteration 37/100
+  Bootstrap (Std Err): iteration 38/100
+  Bootstrap (Std Err): iteration 39/100
+  Bootstrap (Std Err): iteration 40/100
+  Bootstrap (Std Err): iteration 41/100
+  Bootstrap (Std Err): iteration 42/100
+  Bootstrap (Std Err): iteration 43/100
+  Bootstrap (Std Err): iteration 44/100
+  Bootstrap (Std Err): iteration 45/100
+  Bootstrap (Std Err): iteration 46/100
+  Bootstrap (Std Err): iteration 47/100
+  Bootstrap (Std Err): iteration 48/100
+  Bootstrap (Std Err): iteration 49/100
+  Bootstrap (Std Err): iteration 50/100
+  Bootstrap (Std Err): iteration 51/100
+  Bootstrap (Std Err): iteration 52/100
+  Bootstrap (Std Err): iteration 53/100
+  Bootstrap (Std Err): iteration 54/100
+  Bootstrap (Std Err): iteration 55/100
+  Bootstrap (Std Err): iteration 56/100
+  Bootstrap (Std Err): iteration 57/100
+  Bootstrap (Std Err): iteration 58/100
+  Bootstrap (Std Err): iteration 59/100
+  Bootstrap (Std Err): iteration 60/100
+  Bootstrap (Std Err): iteration 61/100
+  Bootstrap (Std Err): iteration 62/100
+  Bootstrap (Std Err): iteration 63/100
+  Bootstrap (Std Err): iteration 64/100
+  Bootstrap (Std Err): iteration 65/100
+  Bootstrap (Std Err): iteration 66/100
+  Bootstrap (Std Err): iteration 67/100
+  Bootstrap (Std Err): iteration 68/100
+  Bootstrap (Std Err): iteration 69/100
+  Bootstrap (Std Err): iteration 70/100
+  Bootstrap (Std Err): iteration 71/100
+  Bootstrap (Std Err): iteration 72/100
+  Bootstrap (Std Err): iteration 73/100
+  Bootstrap (Std Err): iteration 74/100
+  Bootstrap (Std Err): iteration 75/100
+  Bootstrap (Std Err): iteration 76/100
+  Bootstrap (Std Err): iteration 77/100
+  Bootstrap (Std Err): iteration 78/100
+  Bootstrap (Std Err): iteration 79/100
+  Bootstrap (Std Err): iteration 80/100
+  Bootstrap (Std Err): iteration 81/100
+  Bootstrap (Std Err): iteration 82/100
+  Bootstrap (Std Err): iteration 83/100
+  Bootstrap (Std Err): iteration 84/100
+  Bootstrap (Std Err): iteration 85/100
+  Bootstrap (Std Err): iteration 86/100
+  Bootstrap (Std Err): iteration 87/100
+  Bootstrap (Std Err): iteration 88/100
+  Bootstrap (Std Err): iteration 89/100
+  Bootstrap (Std Err): iteration 90/100
+  Bootstrap (Std Err): iteration 91/100
+  Bootstrap (Std Err): iteration 92/100
+  Bootstrap (Std Err): iteration 93/100
+  Bootstrap (Std Err): iteration 94/100
+  Bootstrap (Std Err): iteration 95/100
+  Bootstrap (Std Err): iteration 96/100
+  Bootstrap (Std Err): iteration 97/100
+  Bootstrap (Std Err): iteration 98/100
+  Bootstrap (Std Err): iteration 99/100
+  Bootstrap (Std Err): iteration 100/100
+
+  Bootstrap (Std Err): iteration 1/100
+  Bootstrap (Std Err): iteration 2/100
+  Bootstrap (Std Err): iteration 3/100
+  Bootstrap (Std Err): iteration 4/100
+  Bootstrap (Std Err): iteration 5/100
+  Bootstrap (Std Err): iteration 6/100
+  Bootstrap (Std Err): iteration 7/100
+  Bootstrap (Std Err): iteration 8/100
+  Bootstrap (Std Err): iteration 9/100
+  Bootstrap (Std Err): iteration 10/100
+  Bootstrap (Std Err): iteration 11/100
+  Bootstrap (Std Err): iteration 12/100
+  Bootstrap (Std Err): iteration 13/100
+  Bootstrap (Std Err): iteration 14/100
+  Bootstrap (Std Err): iteration 15/100
+  Bootstrap (Std Err): iteration 16/100
+  Bootstrap (Std Err): iteration 17/100
+  Bootstrap (Std Err): iteration 18/100
+  Bootstrap (Std Err): iteration 19/100
+  Bootstrap (Std Err): iteration 20/100
+  Bootstrap (Std Err): iteration 21/100
+  Bootstrap (Std Err): iteration 22/100
+  Bootstrap (Std Err): iteration 23/100
+  Bootstrap (Std Err): iteration 24/100
+  Bootstrap (Std Err): iteration 25/100
+  Bootstrap (Std Err): iteration 26/100
+  Bootstrap (Std Err): iteration 27/100
+  Bootstrap (Std Err): iteration 28/100
+  Bootstrap (Std Err): iteration 29/100
+  Bootstrap (Std Err): iteration 30/100
+  Bootstrap (Std Err): iteration 31/100
+  Bootstrap (Std Err): iteration 32/100
+  Bootstrap (Std Err): iteration 33/100
+  Bootstrap (Std Err): iteration 34/100
+  Bootstrap (Std Err): iteration 35/100
+  Bootstrap (Std Err): iteration 36/100
+  Bootstrap (Std Err): iteration 37/100
+  Bootstrap (Std Err): iteration 38/100
+  Bootstrap (Std Err): iteration 39/100
+  Bootstrap (Std Err): iteration 40/100
+  Bootstrap (Std Err): iteration 41/100
+  Bootstrap (Std Err): iteration 42/100
+  Bootstrap (Std Err): iteration 43/100
+  Bootstrap (Std Err): iteration 44/100
+  Bootstrap (Std Err): iteration 45/100
+  Bootstrap (Std Err): iteration 46/100
+  Bootstrap (Std Err): iteration 47/100
+  Bootstrap (Std Err): iteration 48/100
+  Bootstrap (Std Err): iteration 49/100
+  Bootstrap (Std Err): iteration 50/100
+  Bootstrap (Std Err): iteration 51/100
+  Bootstrap (Std Err): iteration 52/100
+  Bootstrap (Std Err): iteration 53/100
+  Bootstrap (Std Err): iteration 54/100
+  Bootstrap (Std Err): iteration 55/100
+  Bootstrap (Std Err): iteration 56/100
+  Bootstrap (Std Err): iteration 57/100
+  Bootstrap (Std Err): iteration 58/100
+  Bootstrap (Std Err): iteration 59/100
+  Bootstrap (Std Err): iteration 60/100
+  Bootstrap (Std Err): iteration 61/100
+  Bootstrap (Std Err): iteration 62/100
+  Bootstrap (Std Err): iteration 63/100
+  Bootstrap (Std Err): iteration 64/100
+  Bootstrap (Std Err): iteration 65/100
+  Bootstrap (Std Err): iteration 66/100
+  Bootstrap (Std Err): iteration 67/100
+  Bootstrap (Std Err): iteration 68/100
+  Bootstrap (Std Err): iteration 69/100
+  Bootstrap (Std Err): iteration 70/100
+  Bootstrap (Std Err): iteration 71/100
+  Bootstrap (Std Err): iteration 72/100
+  Bootstrap (Std Err): iteration 73/100
+  Bootstrap (Std Err): iteration 74/100
+  Bootstrap (Std Err): iteration 75/100
+  Bootstrap (Std Err): iteration 76/100
+  Bootstrap (Std Err): iteration 77/100
+  Bootstrap (Std Err): iteration 78/100
+  Bootstrap (Std Err): iteration 79/100
+  Bootstrap (Std Err): iteration 80/100
+  Bootstrap (Std Err): iteration 81/100
+  Bootstrap (Std Err): iteration 82/100
+  Bootstrap (Std Err): iteration 83/100
+  Bootstrap (Std Err): iteration 84/100
+  Bootstrap (Std Err): iteration 85/100
+  Bootstrap (Std Err): iteration 86/100
+  Bootstrap (Std Err): iteration 87/100
+  Bootstrap (Std Err): iteration 88/100
+  Bootstrap (Std Err): iteration 89/100
+  Bootstrap (Std Err): iteration 90/100
+  Bootstrap (Std Err): iteration 91/100
+  Bootstrap (Std Err): iteration 92/100
+  Bootstrap (Std Err): iteration 93/100
+  Bootstrap (Std Err): iteration 94/100
+  Bootstrap (Std Err): iteration 95/100
+  Bootstrap (Std Err): iteration 96/100
+  Bootstrap (Std Err): iteration 97/100
+  Bootstrap (Std Err): iteration 98/100
+  Bootstrap (Std Err): iteration 99/100
+  Bootstrap (Std Err): iteration 100/100
+  JARZ: dG Forward =    21.56 kcal/mol
+  JARZ: dG Reverse =    21.85 kcal/mol
+  JARZ: dG Mean    =    21.71 kcal/mol
+  JARZ: Std Err Forward (bootstrap) =     0.08 kcal/mol
+  JARZ: Std Err Reverse (bootstrap) =     0.10 kcal/mol
+
+  Bootstrap (Std Err): iteration 1/100
+  Bootstrap (Std Err): iteration 2/100
+  Bootstrap (Std Err): iteration 3/100
+  Bootstrap (Std Err): iteration 4/100
+  Bootstrap (Std Err): iteration 5/100
+  Bootstrap (Std Err): iteration 6/100
+  Bootstrap (Std Err): iteration 7/100
+  Bootstrap (Std Err): iteration 8/100
+  Bootstrap (Std Err): iteration 9/100
+  Bootstrap (Std Err): iteration 10/100
+  Bootstrap (Std Err): iteration 11/100
+  Bootstrap (Std Err): iteration 12/100
+  Bootstrap (Std Err): iteration 13/100
+  Bootstrap (Std Err): iteration 14/100
+  Bootstrap (Std Err): iteration 15/100
+  Bootstrap (Std Err): iteration 16/100
+  Bootstrap (Std Err): iteration 17/100
+  Bootstrap (Std Err): iteration 18/100
+  Bootstrap (Std Err): iteration 19/100
+  Bootstrap (Std Err): iteration 20/100
+  Bootstrap (Std Err): iteration 21/100
+  Bootstrap (Std Err): iteration 22/100
+  Bootstrap (Std Err): iteration 23/100
+  Bootstrap (Std Err): iteration 24/100
+  Bootstrap (Std Err): iteration 25/100
+  Bootstrap (Std Err): iteration 26/100
+  Bootstrap (Std Err): iteration 27/100
+  Bootstrap (Std Err): iteration 28/100
+  Bootstrap (Std Err): iteration 29/100
+  Bootstrap (Std Err): iteration 30/100
+  Bootstrap (Std Err): iteration 31/100
+  Bootstrap (Std Err): iteration 32/100
+  Bootstrap (Std Err): iteration 33/100
+  Bootstrap (Std Err): iteration 34/100
+  Bootstrap (Std Err): iteration 35/100
+  Bootstrap (Std Err): iteration 36/100
+  Bootstrap (Std Err): iteration 37/100
+  Bootstrap (Std Err): iteration 38/100
+  Bootstrap (Std Err): iteration 39/100
+  Bootstrap (Std Err): iteration 40/100
+  Bootstrap (Std Err): iteration 41/100
+  Bootstrap (Std Err): iteration 42/100
+  Bootstrap (Std Err): iteration 43/100
+  Bootstrap (Std Err): iteration 44/100
+  Bootstrap (Std Err): iteration 45/100
+  Bootstrap (Std Err): iteration 46/100
+  Bootstrap (Std Err): iteration 47/100
+  Bootstrap (Std Err): iteration 48/100
+  Bootstrap (Std Err): iteration 49/100
+  Bootstrap (Std Err): iteration 50/100
+  Bootstrap (Std Err): iteration 51/100
+  Bootstrap (Std Err): iteration 52/100
+  Bootstrap (Std Err): iteration 53/100
+  Bootstrap (Std Err): iteration 54/100
+  Bootstrap (Std Err): iteration 55/100
+  Bootstrap (Std Err): iteration 56/100
+  Bootstrap (Std Err): iteration 57/100
+  Bootstrap (Std Err): iteration 58/100
+  Bootstrap (Std Err): iteration 59/100
+  Bootstrap (Std Err): iteration 60/100
+  Bootstrap (Std Err): iteration 61/100
+  Bootstrap (Std Err): iteration 62/100
+  Bootstrap (Std Err): iteration 63/100
+  Bootstrap (Std Err): iteration 64/100
+  Bootstrap (Std Err): iteration 65/100
+  Bootstrap (Std Err): iteration 66/100
+  Bootstrap (Std Err): iteration 67/100
+  Bootstrap (Std Err): iteration 68/100
+  Bootstrap (Std Err): iteration 69/100
+  Bootstrap (Std Err): iteration 70/100
+  Bootstrap (Std Err): iteration 71/100
+  Bootstrap (Std Err): iteration 72/100
+  Bootstrap (Std Err): iteration 73/100
+  Bootstrap (Std Err): iteration 74/100
+  Bootstrap (Std Err): iteration 75/100
+  Bootstrap (Std Err): iteration 76/100
+  Bootstrap (Std Err): iteration 77/100
+  Bootstrap (Std Err): iteration 78/100
+  Bootstrap (Std Err): iteration 79/100
+  Bootstrap (Std Err): iteration 80/100
+  Bootstrap (Std Err): iteration 81/100
+  Bootstrap (Std Err): iteration 82/100
+  Bootstrap (Std Err): iteration 83/100
+  Bootstrap (Std Err): iteration 84/100
+  Bootstrap (Std Err): iteration 85/100
+  Bootstrap (Std Err): iteration 86/100
+  Bootstrap (Std Err): iteration 87/100
+  Bootstrap (Std Err): iteration 88/100
+  Bootstrap (Std Err): iteration 89/100
+  Bootstrap (Std Err): iteration 90/100
+  Bootstrap (Std Err): iteration 91/100
+  Bootstrap (Std Err): iteration 92/100
+  Bootstrap (Std Err): iteration 93/100
+  Bootstrap (Std Err): iteration 94/100
+  Bootstrap (Std Err): iteration 95/100
+  Bootstrap (Std Err): iteration 96/100
+  Bootstrap (Std Err): iteration 97/100
+  Bootstrap (Std Err): iteration 98/100
+  Bootstrap (Std Err): iteration 99/100
+  Bootstrap (Std Err): iteration 100/100
+
+  Bootstrap (Std Err): iteration 1/100
+  Bootstrap (Std Err): iteration 2/100
+  Bootstrap (Std Err): iteration 3/100
+  Bootstrap (Std Err): iteration 4/100
+  Bootstrap (Std Err): iteration 5/100
+  Bootstrap (Std Err): iteration 6/100
+  Bootstrap (Std Err): iteration 7/100
+  Bootstrap (Std Err): iteration 8/100
+  Bootstrap (Std Err): iteration 9/100
+  Bootstrap (Std Err): iteration 10/100
+  Bootstrap (Std Err): iteration 11/100
+  Bootstrap (Std Err): iteration 12/100
+  Bootstrap (Std Err): iteration 13/100
+  Bootstrap (Std Err): iteration 14/100
+  Bootstrap (Std Err): iteration 15/100
+  Bootstrap (Std Err): iteration 16/100
+  Bootstrap (Std Err): iteration 17/100
+  Bootstrap (Std Err): iteration 18/100
+  Bootstrap (Std Err): iteration 19/100
+  Bootstrap (Std Err): iteration 20/100
+  Bootstrap (Std Err): iteration 21/100
+  Bootstrap (Std Err): iteration 22/100
+  Bootstrap (Std Err): iteration 23/100
+  Bootstrap (Std Err): iteration 24/100
+  Bootstrap (Std Err): iteration 25/100
+  Bootstrap (Std Err): iteration 26/100
+  Bootstrap (Std Err): iteration 27/100
+  Bootstrap (Std Err): iteration 28/100
+  Bootstrap (Std Err): iteration 29/100
+  Bootstrap (Std Err): iteration 30/100
+  Bootstrap (Std Err): iteration 31/100
+  Bootstrap (Std Err): iteration 32/100
+  Bootstrap (Std Err): iteration 33/100
+  Bootstrap (Std Err): iteration 34/100
+  Bootstrap (Std Err): iteration 35/100
+  Bootstrap (Std Err): iteration 36/100
+  Bootstrap (Std Err): iteration 37/100
+  Bootstrap (Std Err): iteration 38/100
+  Bootstrap (Std Err): iteration 39/100
+  Bootstrap (Std Err): iteration 40/100
+  Bootstrap (Std Err): iteration 41/100
+  Bootstrap (Std Err): iteration 42/100
+  Bootstrap (Std Err): iteration 43/100
+  Bootstrap (Std Err): iteration 44/100
+  Bootstrap (Std Err): iteration 45/100
+  Bootstrap (Std Err): iteration 46/100
+  Bootstrap (Std Err): iteration 47/100
+  Bootstrap (Std Err): iteration 48/100
+  Bootstrap (Std Err): iteration 49/100
+  Bootstrap (Std Err): iteration 50/100
+  Bootstrap (Std Err): iteration 51/100
+  Bootstrap (Std Err): iteration 52/100
+  Bootstrap (Std Err): iteration 53/100
+  Bootstrap (Std Err): iteration 54/100
+  Bootstrap (Std Err): iteration 55/100
+  Bootstrap (Std Err): iteration 56/100
+  Bootstrap (Std Err): iteration 57/100
+  Bootstrap (Std Err): iteration 58/100
+  Bootstrap (Std Err): iteration 59/100
+  Bootstrap (Std Err): iteration 60/100
+  Bootstrap (Std Err): iteration 61/100
+  Bootstrap (Std Err): iteration 62/100
+  Bootstrap (Std Err): iteration 63/100
+  Bootstrap (Std Err): iteration 64/100
+  Bootstrap (Std Err): iteration 65/100
+  Bootstrap (Std Err): iteration 66/100
+  Bootstrap (Std Err): iteration 67/100
+  Bootstrap (Std Err): iteration 68/100
+  Bootstrap (Std Err): iteration 69/100
+  Bootstrap (Std Err): iteration 70/100
+  Bootstrap (Std Err): iteration 71/100
+  Bootstrap (Std Err): iteration 72/100
+  Bootstrap (Std Err): iteration 73/100
+  Bootstrap (Std Err): iteration 74/100
+  Bootstrap (Std Err): iteration 75/100
+  Bootstrap (Std Err): iteration 76/100
+  Bootstrap (Std Err): iteration 77/100
+  Bootstrap (Std Err): iteration 78/100
+  Bootstrap (Std Err): iteration 79/100
+  Bootstrap (Std Err): iteration 80/100
+  Bootstrap (Std Err): iteration 81/100
+  Bootstrap (Std Err): iteration 82/100
+  Bootstrap (Std Err): iteration 83/100
+  Bootstrap (Std Err): iteration 84/100
+  Bootstrap (Std Err): iteration 85/100
+  Bootstrap (Std Err): iteration 86/100
+  Bootstrap (Std Err): iteration 87/100
+  Bootstrap (Std Err): iteration 88/100
+  Bootstrap (Std Err): iteration 89/100
+  Bootstrap (Std Err): iteration 90/100
+  Bootstrap (Std Err): iteration 91/100
+  Bootstrap (Std Err): iteration 92/100
+  Bootstrap (Std Err): iteration 93/100
+  Bootstrap (Std Err): iteration 94/100
+  Bootstrap (Std Err): iteration 95/100
+  Bootstrap (Std Err): iteration 96/100
+  Bootstrap (Std Err): iteration 97/100
+  Bootstrap (Std Err): iteration 98/100
+  Bootstrap (Std Err): iteration 99/100
+  Bootstrap (Std Err): iteration 100/100
+  JARZ_Gauss: dG Forward =    21.58 kcal/mol
+  JARZ_Gauss: dG Reverse =    22.00 kcal/mol
+  JARZ_Gauss: dG Mean    =    21.79 kcal/mol
+  JARZ_Gauss: Std Err (analytical) Forward =     0.08 kcal/mol
+  JARZ_Gauss: Std Err (analytical) Reverse =     0.13 kcal/mol
+  JARZ_Gauss: Std Err Forward (bootstrap) =     0.08 kcal/mol
+  JARZ_Gauss: Std Err Reverse (bootstrap) =     0.13 kcal/mol
+ ========================================================
+
+   Plotting histograms......
+
+   ......done...........
+
+   Execution time = 00:00:22
+
+
+---stderr---
+
