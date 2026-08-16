@@ -89,20 +89,58 @@ variance everywhere**: σ_between 0.2–4.7 vs σ_within 0.07–0.96, ratio **2.
   5 ns, env-overridable) to shrink σ_between at the root; **(2) more reps** (SEM = σ_between/√n) — but
   only after (1), because for K103N-family + G190S (σ_between 2.2–4.7) hitting <1 by reps alone needs
   n ≈ 20+.
-- By tier: neutrals (σ_between ~1.2–1.5, SEM 0.7–0.87) ≈ there with a modest equil bump + n = 6; the
-  charge family + **G190S (σ_between 4.3, a clean neutral outlier — good cheap test case)** need longer
-  equilibration (mandatory). This corrects earlier notes that leaned on more-reps / 500 ps switches.
+- By tier: neutrals (σ_between ~1.2–1.5, SEM 0.7–0.87) ≈ there with a modest equil bump + n = 6.
+
+**CORRECTION (2026-08-15, later session) — two errors in the paragraph above.**
+
+1. **G190S is NOT a high-variance case and is a bad test case.** Its σ_between ~4 is *per-phase*;
+   holo and apo move together across reps and cancel in the double difference, so **σ_DDG = 0.59**
+   — already under the < 1 target. Rank genotypes by **σ_DDG** (the spread of the three per-rep
+   ΔΔG values, where SEM = σ_DDG/√n and n needed = σ_DDG²), never by per-phase σ_between: across
+   the 18 legs the two are nearly uncorrelated, because holo/apo cancellation ranges from
+   near-total (G190S, V106M, K103N+M230L) to actively additive (K103N, V106I, Y181C).
+2. **"Switch length will not help" does not hold for the charge leg.** That was measured on
+   neutral legs dissipating 1–4 kcal/mol (V106A, F227C), which had nothing to gain. `wt_to_K103N`
+   dissipates **14–19 kcal/mol** with forward/reverse work distributions **4.2–5.1σ** apart — the
+   regime where BAR is biased, not just noisy — and its per-rep ΔG tracks its per-rep dissipation
+   ~1:1 (hyst 14.19/18.54/19.36 → bar_dg −75.71/−77.99/−79.79), which is the signature of varying
+   residual bias. Longer switches attack exactly that.
+
+**The whole charge-family SEM problem is ONE leg.** All four K103N genotypes inherit their ~2.2 SEM
+from `wt_to_K103N`; `K103N_to_K103N_M230L`'s own σ_DDG is 0.59. Fix that leg → four of the five
+worst panel points improve at once.
+
+Test it on G190E (step 11 of [`RUNBOOK_G190E.md`](RUNBOOK_G190E.md)): re-run **only its switch
+stage** at 500 ps reusing its own equil/extract snapshots — identical endpoint ensembles, so it
+isolates switch length from equilibration in a way the V106A test never did. If σ_DDG drops
+materially, rebuild `wt_to_K103N` the same way; if only hysteresis drops, the lever really is
+`NEQ_EQUIL_NS` + more reps. With n = 3 every σ here carries ~±40%, so only large changes count.
+
+Required reps for SEM < 1 at current σ_DDG: V106M/G190A/G190S/Y318F/Y188L/V106A already there;
+F227C/V106I/A98G+F227C 3–5; V106A+F227L/L234I/P225H, Y181C, V106I+F227C 4–5; **K103N ×4 need 15–17.**
 
 ---
 
 ## Next (human's intent at session end 2026-08-15)
 
-1. **Run G190E** (last panel genotype; charge leg) **with longer equilibration + more reps** so its SEM
-   lands < 1 — at 5 ns / 3-rep it would be > 1 (unacceptable per the human). Build `wt_to_G190E`
-   (source = WT `_start.pdb`), then prepare with a longer `NEQ_EQUIL_NS` and n ≈ 6, then submit.
+1. **Run G190E** (last panel genotype; charge leg) at the **K103N-matched protocol** — 100 ps
+   switches / 100 snapshots / 5 ns equil / 3 reps, raw non-neutral box + analytical charge
+   correction. Full runbook: [`RUNBOOK_G190E.md`](RUNBOOK_G190E.md).
    **(It is G190E, NOT G190S — a session confusion the human corrected.)**
-2. **Panel-wide SEM < 1** via longer equilibration (+ modest extra reps), NOT more switches/snapshots.
-   Validate the equilibration lever on a high-σ_between genotype first, then scale.
+   Two fixes were needed first, both done on the Mac:
+   - `config.py`: `wt_to_G190E` removed from `_BASE_LONG_SWITCH_LEGS` (was 500 ps — a speculative
+     entry from the co-alchemical era; K103N ran at 100 ps). **Must reach Sherlock via `git pull`
+     before prep**, or G190E rebuilds at 500 ps.
+   - Stale co-alchemical G190E artifacts (ΔΔG 2.50 ± 1.41, apo `bar_err` 35.49) archived to
+     `results/analysis/fep_pmx/_archive/wt_to_G190E_coalchemical_500ps_2026-08-15/`. They were
+     git-tracked, so `combine_neq` **without `--force`** (now mandatory) would have reused them
+     and put a non-convergent G190E on the panel silently.
+
+   Expect **SEM > 1** at this configuration — the K103N family sits at 2.19–2.32 under exactly this
+   protocol. That is the honest baseline and the input to step 11, not a failed run.
+2. **Panel-wide SEM < 1.** Rank by σ_DDG (see the CORRECTION above). Test the switch-length lever
+   on G190E via runbook step 11 (switch stage only, reusing its own snapshots) before committing
+   GPU to a `wt_to_K103N` rebuild; if that comes back flat, fall back to `NEQ_EQUIL_NS` + more reps.
 3. **Manuscript**: `manuscript/DorDRM-FEP-08-05-26.docx` (untracked working drafts in `manuscript/`).
    The second-wave analysis is done: protocol figures, `modern_md_suite`, `occupancy_stats` (FWER +
    Welch), the DCD-fingerprint MD-timing correction (`src/analysis/md_timing.py`).

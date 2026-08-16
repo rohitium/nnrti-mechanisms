@@ -95,7 +95,16 @@ NEQ_EQUIL_SNAPSHOT_START_PS = 100.0  # skip first 100 ps of equil when extractin
 # reps remain on disk and double as the switch-length-invariance check. Same
 # reasoning applies to the other aromatic→Cys legs (V106I_to_V106I_F227C,
 # wt_to_Y181C): keep them at 100 ps and add replicates.
-_BASE_LONG_SWITCH_LEGS = {"wt_to_V106A", "wt_to_Y188L", "wt_to_G190E"}
+# G190E was MOVED OUT of the long-switch set (2026-08-15). It was listed here
+# speculatively (charge leg => assumed dissipative) back when charge legs still ran
+# the co-alchemical ion. That ion is abandoned (OPERATIONS.md §7): the ~20-26 kcal
+# dissipation came from annihilating a whole Cl-, not from the Gly->Glu mutation, and
+# the raw-box + analytical-correction protocol has neutral-like dissipation. K103N —
+# the other delta_q = -1 leg — ran the whole panel at 100 ps. G190E now matches it
+# exactly, which also makes it a like-for-like member of the charge family for the
+# SEM work. Switch length is in any case NOT the SEM lever (V106A 100 vs 500 ps:
+# +1.69 +- 0.70 vs +1.76 +- 0.51, invariant); endpoint equilibration is.
+_BASE_LONG_SWITCH_LEGS = {"wt_to_V106A", "wt_to_Y188L"}
 _EXTRA_LONG_SWITCH_LEGS = {
     leg.strip() for leg in os.environ.get("NEQ_EXTRA_LONG_SWITCH_LEGS", "").split(",") if leg.strip()
 }
