@@ -43,8 +43,14 @@ source scripts/sherlock/activate_pmx_env.sh
 `wt_to_G190E` seeds from the **WT** MD start structures (holo + apo, reps 1-3).
 All 12 exist on the Mac; they were never git-committed, so verify before prep.
 
+**Case matters.** The holo WT directory is lowercase `results/md_runs/wt/`
+(`safe_label("WT")` returns `"wt"`), while mutant directories keep their
+uppercase genotype label (`G190E/`) and apo directories are all lowercase
+(`apo/wt/`, `apo/g190e/`). macOS is case-insensitive so a wrong-case path passes
+on the Mac and fails only on Sherlock — always verify with the exact case below.
+
 ```bash
-ls results/md_runs/WT/rep_0*/assets/wt_md_rep0*_start.pdb \
+ls results/md_runs/wt/rep_0*/assets/wt_md_rep0*_start.pdb \
    results/md_runs/apo/wt/rep_0*/assets/wt_apo_md_rep0*_start.pdb \
    results/md_runs/G190E/rep_0*/assets/G190E_md_rep0*_start.pdb \
    results/md_runs/apo/g190e/rep_0*/assets/g190e_apo_md_rep0*_start.pdb
