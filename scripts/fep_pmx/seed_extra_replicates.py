@@ -95,24 +95,38 @@ def _load(pdb: Path) -> dict:
     }
 
 
-def validate(candidate: Path, reference: Path, *, holo: bool) -> list[str]:
-    """Return a list of problems; empty means the candidate is usable."""
+def validate(candidate: Path, reference: Path, *, holo: bool, solute_only: bool = False) -> list[str]:
+    """Return a list of problems; empty means the candidate is usable.
+
+    ``solute_only`` marks a frame extracted from the stripped analysis trajectory:
+    it legitimately lacks solvent, so total atom count cannot be compared against
+    the solvated reference -- the protein atom count is compared instead.
+    """
     import numpy as np
 
     problems: list[str] = []
     cand = _load(candidate)
     ref = _load(reference)
 
-    if cand["n_atoms"] != ref["n_atoms"]:
+    if solute_only:
+        if len(cand["protein"]) != len(ref["protein"]):
+            problems.append(
+                f"protein atom count {len(cand['protein'])} != reference {len(ref['protein'])}"
+            )
+    elif cand["n_atoms"] != ref["n_atoms"]:
         problems.append(f"atom count {cand['n_atoms']} != reference {ref['n_atoms']}")
 
-    if cand["box"] is None:
+    if cand["box"] is None and not solute_only:
         problems.append("no CRYST1 box record")
     elif len(cand["protein"]) and len(ref["protein"]):
         extent = cand["protein"].max(0) - cand["protein"].min(0)
         ref_extent = ref["protein"].max(0) - ref["protein"].min(0)
         grown = extent > ref_extent * SPLIT_GROWTH_TOLERANCE
-        near_box = extent > np.array(cand["box"]) * SPLIT_BOX_FRACTION
+        near_box = (
+            extent > np.array(cand["box"]) * SPLIT_BOX_FRACTION
+            if cand["box"] is not None
+            else np.zeros_like(extent, dtype=bool)
+        )
         if (grown | near_box).any():
             problems.append(
                 f"protein looks PBC-split: extent {np.round(extent, 1).tolist()} "
@@ -146,6 +160,48 @@ def _final_pdb_for(start_pdb: Path) -> Path | None:
     return matches[0] if matches else None
 
 
+def _extract_last_frame(start_pdb: Path, out_pdb: Path) -> Path | None:
+    """Fall back to the last frame of the analysis trajectory.
+
+    ``_md_final.pdb`` is written only AFTER ``prod.step(remaining_steps)`` returns
+    (md_protocol.py), so a job killed by the SLURM wall leaves a checkpoint and an
+    incrementally-written ``*_analysis.dcd`` but no final PDB. Since 100 ns takes
+    several 12 h segments, that would otherwise block seeding for days.
+
+    The analysis DCD is written with ``atom_indices=solute_idx`` -- solute only
+    (protein, plus ligand when holo), which is exactly what the seed needs: the
+    downstream ``extract_protein_only`` discards solvent anyway and
+    ``build_p0_systems`` re-solvates from scratch.
+
+    PBC is corrected with MDTraj ``make_molecules_whole`` -- the repo's
+    authoritative pattern. MDTraj traverses the bond graph, whereas MDAnalysis
+    ``unwrap`` fails when the protein COM sits near a box boundary.
+    """
+    run_dir = start_pdb.parent.parent
+    # Prefer an already-PBC-corrected trajectory when one exists.
+    traj_path = None
+    for pattern in ("*_analysis_pbcfix.dcd", "*_analysis.dcd"):
+        matches = sorted(run_dir.glob(pattern))
+        if matches:
+            traj_path = matches[0]
+            break
+    tops = sorted(run_dir.glob("*_analysis_topology.pdb"))
+    if traj_path is None or not tops:
+        return None
+    top_path = tops[0]
+
+    import mdtraj as md
+
+    traj = md.load(str(traj_path), top=str(top_path))
+    if traj.n_frames == 0:
+        return None
+    frame = traj[-1]
+    frame.make_molecules_whole(inplace=True)
+    out_pdb.parent.mkdir(parents=True, exist_ok=True)
+    frame.save_pdb(str(out_pdb))
+    return out_pdb
+
+
 def _targets_for_leg(leg, source_rep: int, dest_rep: int) -> list[dict]:
     """The four (source/endpoint x holo/apo) copies a leg-replicate needs."""
     return [
@@ -172,7 +228,14 @@ def main(argv: list[str] | None = None) -> int:
                         help="actually write the files (default: dry run)")
     parser.add_argument("--overwrite", action="store_true",
                         help="replace an existing destination start PDB")
+    parser.add_argument("--no-trajectory", action="store_true",
+                        help="require *_md_final.pdb; do not fall back to the last "
+                             "analysis-trajectory frame")
     args = parser.parse_args(argv)
+
+    import tempfile
+    tmpdir_ctx = tempfile.TemporaryDirectory(prefix="seed_reps_")
+    tmpdir = Path(tmpdir_ctx.name)
 
     import mutations as m
 
@@ -196,22 +259,33 @@ def main(argv: list[str] | None = None) -> int:
         leg_actions: list[tuple[Path, Path]] = []
         for t in _targets_for_leg(leg, args.source_rep, args.dest_rep):
             src_start, dst_start = t["src_start"], t["dst_start"]
-            final = _final_pdb_for(src_start) if src_start.is_file() else None
-            if final is None:
-                print(f"  {t['what']:14s} BLOCKED  no *_md_final.pdb beside {src_start.parent.parent}")
-                leg_problems += 1
-                continue
             if dst_start.is_file() and not args.overwrite:
                 print(f"  {t['what']:14s} SKIP     {dst_start} exists (use --overwrite)")
                 continue
-            problems = validate(final, src_start, holo=t["holo"])
-            if problems:
-                for p in problems:
-                    print(f"  {t['what']:14s} REJECT   {final.name}: {p}")
+
+            source = _final_pdb_for(src_start) if src_start.is_file() else None
+            solute_only = False
+            if source is None and src_start.is_file() and not args.no_trajectory:
+                # Run walled out before writing _md_final.pdb: use the last
+                # analysis-trajectory frame instead.
+                tmp = tmpdir / f"{dst_start.stem}.extracted.pdb"
+                source = _extract_last_frame(src_start, tmp)
+                solute_only = source is not None
+            if source is None:
+                print(f"  {t['what']:14s} BLOCKED  no *_md_final.pdb and no usable "
+                      f"analysis trajectory under {src_start.parent.parent}")
                 leg_problems += 1
                 continue
-            print(f"  {t['what']:14s} ok       {final.name} -> {dst_start}")
-            leg_actions.append((final, dst_start))
+
+            problems = validate(source, src_start, holo=t["holo"], solute_only=solute_only)
+            if problems:
+                for p in problems:
+                    print(f"  {t['what']:14s} REJECT   {source.name}: {p}")
+                leg_problems += 1
+                continue
+            origin = "traj frame" if solute_only else "md_final"
+            print(f"  {t['what']:14s} ok [{origin:9s}] {source.name} -> {dst_start}")
+            leg_actions.append((source, dst_start))
         if leg_problems:
             print(f"  -> {lid} NOT seedable ({leg_problems} blocked/rejected); no files written for it\n")
             blocked += 1
