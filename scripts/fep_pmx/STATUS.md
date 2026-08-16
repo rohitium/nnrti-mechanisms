@@ -125,17 +125,33 @@ F227C/V106I/A98G+F227C 3–5; V106A+F227L/L234I/P225H, Y181C, V106I+F227C 4–5;
 
 | batch | manifest | equil | extract | switch |
 |---|---|---|---|---|
-| **G190E, 100 ps** (completes the panel) | `neq_g190e_manifest.csv` | `39256102` | `39256103` | `39256104` (12) |
-| **K103N, 500 ps** (the SEM experiment) | `neq_k103n500_manifest.csv` | `39257456` | `39257460` | `39257464` (24) |
+| **G190E, 100 ps** (completes the panel) | `neq_g190e_manifest.csv` | ~~39256102~~ | ~~39256103~~ | ~~39256104~~ |
+| **K103N, 500 ps** (the SEM experiment) | `neq_k103n500_manifest.csv` | `39257456` done | `39257460` done | `39257464` (24) running |
+| **apo MD** y181c / v106i / v106a_l234i | (globbed, not manifest-driven) | — | — | `39258048`–`39258062`, 9 jobs |
 
-Both passed `EM (6/6 ok)` before the GPU chain was submitted. Runbook:
-[`RUNBOOK_G190E.md`](RUNBOOK_G190E.md).
+Both FEP batches passed `EM (6/6 ok)`. Runbook: [`RUNBOOK_G190E.md`](RUNBOOK_G190E.md).
 
-**Always pass `--manifest` explicitly** to `audit_neq_panel.py` / `submit_p0_neq.sh`.
-Both batches use the exported `MANIFEST` var and a stale export silently audits the
-wrong batch — the tell is the switch count: **G190E = 12, K103N-500 = 24**.
-(The `neq_<stage>_task_ids*.txt` files are also written without a batch suffix, so
-the later submission overwrites the earlier one's array-index → task mapping.)
+### G190E was CANCELLED and must be re-submitted — task-id file collision
+
+`scancel 39256102 39256103 39256104` was run. Cause: `submit_p0_neq.sh` writes task
+ids to a path with **no batch qualifier**, and array elements read it **at runtime**
+— so submitting K103N overwrote the file under G190E's still-queued elements.
+G190E equil 0–6 completed (pre-overwrite); 7–11 died in ~10 s running K103N's task
+ids against G190E's manifest. **Full explanation and the `TASK_ID_FILE` fix:
+[`OPERATIONS.md`](OPERATIONS.md) §4c.** Re-submit with per-batch task-id files —
+stages are idempotent so completed units skip.
+
+**Also always pass `--manifest` explicitly** to `audit_neq_panel.py`; a stale
+exported `MANIFEST` silently audits the wrong batch. The tell is the switch count:
+**G190E = 12, K103N-500 = 24**.
+
+### `$SCRATCH` was DEGRADED (hardware issue) as of the cancel
+
+Login banner reported `- $SCRATCH: Hardware issue`. Filesystem-heavy commands hung
+unkillably (D-state). **Do not re-submit until https://status.sherlock.stanford.edu
+is clear**, and when it is, verify anything that was mid-write — K103N switch
+elements 0–5 and all 9 apo jobs were running through it. A truncated `dgdl.xvg`
+parses into a wrong work value rather than erroring. See [`OPERATIONS.md`](OPERATIONS.md) §4d.
 
 When each finishes, analyse **on Sherlock** (rsync excludes `dgdl.xvg`, so the Mac
 has nothing to analyse until `analysis.json` exists), and **without `--force`**:

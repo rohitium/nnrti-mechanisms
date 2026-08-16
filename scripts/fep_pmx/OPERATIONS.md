@@ -101,6 +101,7 @@ for idx in <failed indices>; do echo "== $idx =="; tail -n 20 logs/pmx_neq/<stag
 | `OMP_NUM_THREADS` disagrees with `-ntomp`, mdrun aborts at min | inherited OMP env | already fixed (`run_neq_task.py` pins `OMP_NUM_THREADS=ntomp`). If it recurs, check that fix is present |
 | extract error `../eq_lambdaN/equil.trr does not exist` | historical path bug | fixed (extract paths use `../../eq_lambda`). Should not recur |
 | switch produced `switch.xvg` but audit wants `dgdl.xvg` | GROMACS `-deffnm switch` names it `switch.xvg` | `run_neq_task.py` self-heals (renames). If reprocessing old runs, copy `switch.xvg`→`dgdl.xvg` |
+| equil job dies in ~10 s with `Missing equil trajectory ... need equil.trr` (an *extract* error) or `task_id NN not found in <manifest>` | **task-id file collision between concurrent batches** — see §4c | cancel + re-submit with a per-batch `TASK_ID_FILE` |
 | `combine_neq`/`qc_neq` reuse stale numbers after a re-run | cached `analysis.json` | pass `--force` to `analyze_neq`/`combine_neq`/`qc_neq` |
 | qc_neq reports ~0.00 overlap / huge dissipation | **artifact** — do not negate reverse work; pmx stores W_R in the forward frame | already fixed in `qc_neq.py`. Overlap uses W_f vs W_r directly |
 
@@ -192,6 +193,75 @@ Note the flag is `--panel-manifest` for `prepare_neq.py`, but `MANIFEST=` (env v
 `submit_p0_neq.sh`. Neutral single legs use 100 ps switches (not in `LONG_SWITCH_LEGS`).
 
 ---
+
+## 4c. Running TWO batches at once — set `TASK_ID_FILE` or you WILL corrupt one
+
+**This bit us on 2026-08-15 and cost a full G190E equil wave.**
+
+`submit_p0_neq.sh` writes the stage's task ids to
+`results/analysis/fep_pmx/neq_<stage>_task_ids.txt` (+ `_chunk000`), a path with
+**no batch qualifier** (`submit_p0_neq.sh:92`). Array elements read that file **at
+runtime, not at submit time**. So submitting the same stage for a second batch
+*overwrites the file out from under the first batch's still-queued elements*, and
+they then execute whatever task id sits on their line — from the other batch.
+
+What it looked like: a G190E equil array whose elements 0–6 completed normally
+(they ran before K103N was submitted) while 7–11 died in ~10 s with either
+`Missing equil trajectory ... need equil.trr` — the *extract* stage's error, in an
+equil job — or `task_id 46 not found in ... neq_g190e_manifest.csv`.
+
+**The dangerous part is what did NOT error.** K103N-500 has 9 tasks/unit (54 ids)
+versus G190E's 7 (42), so ids ≥ 42 fall out of range and fail loudly — but ids
+0–41 resolve *silently against the wrong manifest* and run a valid-but-unintended
+task. We were lucky the failures landed out of range. Equil output is per-unit and
+idempotent so a wrong-but-valid equil task is harmless, but do not count on that
+for other stages.
+
+**Fix — give every batch its own task-id file:**
+
+```bash
+export MANIFEST=results/analysis/fep_pmx/neq_<batch>_manifest.csv
+EQUIL=$(TASK_ID_FILE=$PWD/results/analysis/fep_pmx/neq_equil_<batch>_task_ids.txt \
+        STAGE=equil bash scripts/fep_pmx/submit_p0_neq.sh | tail -1)
+EXTRACT=$(TASK_ID_FILE=$PWD/results/analysis/fep_pmx/neq_extract_<batch>_task_ids.txt \
+        STAGE=extract DEPENDENCY=afterok:$EQUIL bash scripts/fep_pmx/submit_p0_neq.sh | tail -1)
+SWITCH=$(TASK_ID_FILE=$PWD/results/analysis/fep_pmx/neq_switch_<batch>_task_ids.txt \
+        STAGE=switch DEPENDENCY=afterok:$EXTRACT bash scripts/fep_pmx/submit_p0_neq.sh | tail -1)
+```
+
+Verify from the submit output: it must print
+`file=neq_<stage>_<batch>_task_ids_chunk000.txt`. If it prints the bare
+`neq_<stage>_task_ids_chunk000.txt`, the env var did not take — **stop**, or you
+re-corrupt the other batch.
+
+Corollary: `MANIFEST` is an exported shell var reused by both batches, so a stale
+export silently audits/submits the wrong one. Pass `--manifest` explicitly to
+`audit_neq_panel.py`. The switch count distinguishes them (100 ps = 2 switch tasks
+per unit, 500 ps = 4).
+
+**Recovery** is §4's: `scancel` the affected array plus its dependants (`scancel`
+touches no filesystem, so it is safe even during a scratch outage), then re-submit
+with per-batch `TASK_ID_FILE`. Stages are idempotent, so completed units skip.
+
+## 4d. `$SCRATCH` degraded / hardware issue
+
+The login banner reports cluster status; `- $SCRATCH: Hardware issue` means the
+filesystem holding the repo and all job output is sick. Symptoms: commands that
+stat many files hang and are **unkillable** (Ctrl-C cannot interrupt a process in
+uninterruptible I/O wait), and jobs may requeue with `NODE_FAIL`.
+
+- **Do not submit** into a degraded filesystem. Partial writes produce truncated
+  outputs and completion markers that lie — worse than a clean failure, because
+  the idempotency checks then skip a unit that never really finished.
+- `scancel` is safe (SLURM control plane only).
+- Check https://status.sherlock.stanford.edu before resuming.
+- **Afterwards, verify anything that was mid-write.** A truncated `dgdl.xvg`
+  parses into a wrong work value rather than an error:
+  ```bash
+  find results/analysis/fep_pmx/legs/<leg> -name 'dgdl.xvg' -exec wc -l {} + | sort -n | head
+  ```
+  All switches of a given length should have the same line count; short files are
+  suspect. Same for `equil.gro` presence vs `equil.cpt`-only.
 
 ## 5. When a batch reaches `SWITCH (N/N ok)` — analysis
 
