@@ -263,7 +263,7 @@ def _plot(rows: list[dict], rho: float | None, output: Path) -> dict:
         return stats
     with_fold = [r for r in computed if r.get("fold") is not None]
 
-    fig, ax = plt.subplots(figsize=(6, 5))
+    fig, ax = plt.subplots(figsize=(9.5, 6.5))
     if with_fold:
         x = np.array([math.log10(r["fold"]) for r in with_fold])
         y = np.array([r["ddg_bind"] for r in with_fold])
