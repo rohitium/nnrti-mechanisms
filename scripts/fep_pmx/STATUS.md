@@ -121,6 +121,62 @@ F227C/V106I/A98G+F227C 3–5; V106A+F227L/L234I/P225H, Y181C, V106I+F227C 4–5;
 
 ---
 
+## IN FLIGHT (submitted 2026-08-15) — two batches, 60 GPU array elements
+
+| batch | manifest | equil | extract | switch |
+|---|---|---|---|---|
+| **G190E, 100 ps** (completes the panel) | `neq_g190e_manifest.csv` | `39256102` | `39256103` | `39256104` (12) |
+| **K103N, 500 ps** (the SEM experiment) | `neq_k103n500_manifest.csv` | `39257456` | `39257460` | `39257464` (24) |
+
+Both passed `EM (6/6 ok)` before the GPU chain was submitted. Runbook:
+[`RUNBOOK_G190E.md`](RUNBOOK_G190E.md).
+
+**Always pass `--manifest` explicitly** to `audit_neq_panel.py` / `submit_p0_neq.sh`.
+Both batches use the exported `MANIFEST` var and a stale export silently audits the
+wrong batch — the tell is the switch count: **G190E = 12, K103N-500 = 24**.
+(The `neq_<stage>_task_ids*.txt` files are also written without a batch suffix, so
+the later submission overwrites the earlier one's array-index → task mapping.)
+
+When each finishes, analyse **on Sherlock** (rsync excludes `dgdl.xvg`, so the Mac
+has nothing to analyse until `analysis.json` exists), and **without `--force`**:
+
+```bash
+python3 scripts/fep_pmx/combine_neq.py --targets G190E --replicates 3
+python3 scripts/fep_pmx/combine_neq.py --targets K103N --replicates 3
+python3 scripts/fep_pmx/qc_neq.py --legs wt_to_G190E wt_to_K103N --replicates 3
+```
+
+**What to look for in K103N-500** (baseline table in
+`results/analysis/fep_pmx/_archive/wt_to_K103N_100ps_2026-08-15/README.md`):
+σ_DDG 3.80 → under ~1.7 puts SEM < 1 and clears four genotypes at once; hysteresis
+14–19 → ~3–4; separation 4.2–5.1σ → ~2σ. G190E is expected to come in at SEM > 1 —
+that is the K103N-matched baseline, not a failure.
+
+## Replicate work (the other lever) — blocked, partially
+
+Extra reps always work (SEM = σ_DDG/√n) but the leg resolver needs
+`results/md_runs/<label>/rep_{n:02d}/` and **only three MD replicates exist**.
+`scripts/fep_pmx/seed_extra_replicates.py` creates a rep_04 seed from a run's
+`*_md_final.pdb` (validated: atom count, PBC-split, ligand still bound). Dry run by
+default.
+
+- **Seedable now:** `wt_to_V106A` +1, `V106A_to_V106A_P225H` +1 (16 elements) →
+  clears V106A+P225H 1.13 → 0.98 and V106A+F227L 1.00 → 0.97. New seeds live under
+  `results/md_runs/` (rsync territory, not git) so they must be pushed to Sherlock.
+- **Blocked:** `wt_to_Y181C`, `wt_to_V106I`, `V106A_to_V106A_L234I` — their apo MD
+  never ran (`results/md_runs/apo/{y181c,v106i,v106a_l234i}/rep_0*/` hold only
+  `assets/`, on **both** Mac and Sherlock), so there is no 4th apo conformation.
+  Options: run ~180 ns of apo MD; derive from a stripped holo frame (introduces a
+  within-leg treatment asymmetry — PLAN §6.3); or reuse the apo start with fresh
+  velocities (only partially independent, so SEM falls slower than √n).
+  **Deferred pending K103N-500** — these genotypes sit at 1.06–1.16, the least
+  valuable per GPU-hour, and if 500 ps works it may apply here too.
+
+Full cost model (validated: reproduces every panel SEM to 0.000) —
+`SEM_genotype = sqrt(Σ_legs σ_leg²/n_leg)`. All genotypes < 1 by replicates alone
+costs **29 leg-reps, of which 19 are `wt_to_K103N`** (≈152 GPU elements vs ≈36 for
+the 500 ps route). One leg-rep = 8 GPU elements at 100 ps, 12 at 500 ps.
+
 ## Next (human's intent at session end 2026-08-15)
 
 1. **Run G190E** (last panel genotype; charge leg) at the **K103N-matched protocol** — 100 ps
