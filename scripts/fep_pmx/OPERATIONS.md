@@ -111,10 +111,38 @@ sacct -j <JOBID> --format=JobID%16,State,NodeList%12 -X   # do all failures shar
 sinfo -n <node> -o "%n %t %E %G"                          # STATE inval/drain/down = out of pool already
 ```
 If all failures share one node and that node is `inval`/`drain`/`down`, it is **already unschedulable**
-— new jobs cannot land there, so no exclusion is needed. (`SBATCH_EXCLUDE` the env var and `scontrol update ExcNodeList=...` are both silently ignored by
-this submit path. Use **`EXCLUDE_NODES=sh03-12n12`** instead — `submit_p0_neq.sh` passes it through as
-`--exclude`. Note `sh03-12n12` is a repeat offender: it hangs equil to the 12 h wall and does *not*
-always self-invalidate, so exclude it explicitly on any resubmit.)
+— new jobs cannot land there, so no exclusion is needed. Note `sh03-12n12` is a repeat offender: it
+hangs equil to the wall and does *not* always self-invalidate, so exclude it explicitly on any resubmit.
+
+**Node exclusion only works at SUBMIT time, via an EXPORTED `EXCLUDE_NODES`.**
+
+```bash
+export EXCLUDE_NODES=sh03-12n12          # must be exported, see below
+STAGE=equil bash scripts/fep_pmx/submit_p0_neq.sh
+scontrol show job <id> | grep -io 'ExcNodeList=[^ ]*'   # verify: NOT (null)
+```
+
+Three ways this silently fails to apply — all verified 2026-08-15, all leaving
+`ExcNodeList=(null)`:
+
+1. **`scontrol update JobId=... ExcNodeList=...` on a pending job is a silent
+   no-op.** It **returns exit 0**, so a `&&` chain proceeds as if it worked, and
+   the value is simply never set. There is no way to add an exclusion after submit
+   — resubmit or accept the risk.
+2. **`SBATCH_EXCLUDE`** is ignored (the script builds its own `SBATCH_ARGS`).
+3. **Assigning without `export`.** `submit_p0_neq.sh` runs as a child process and
+   reads `EXCLUDE_NODES` from the *environment*, so a plain assignment does not
+   reach it — while `echo $EXCLUDE_NODES` in your shell still shows the value,
+   which makes this look fine. Beware especially of a missing space, as in
+   `exportMANIFEST=x EXCLUDE_NODES=y`: bash parses that as two ordinary
+   assignments (junk var `exportMANIFEST`, plus a NON-exported `EXCLUDE_NODES`),
+   the line exits 0, and the `&&` chain continues with no exclusion applied.
+
+**Always verify with `scontrol show job <id> | grep ExcNodeList` after submitting**
+— it is the only reliable confirmation. And weigh the fix: cancelling a pending
+job to add an exclusion forfeits accrued queue priority, whereas a node hang is
+recoverable via §4. When the queue is the binding constraint, letting it run is
+usually the better trade.
 
 An access scare is almost never real: GPU **access** failures stop you at *scheduling* (job rejected,
 or PD with a QOS/Assoc reason). If jobs got `gres/gpu=1` allocated and some **ran**, access is fine —
