@@ -111,8 +111,22 @@ sacct -j <JOBID> --format=JobID%16,State,NodeList%12 -X   # do all failures shar
 sinfo -n <node> -o "%n %t %E %G"                          # STATE inval/drain/down = out of pool already
 ```
 If all failures share one node and that node is `inval`/`drain`/`down`, it is **already unschedulable**
-— new jobs cannot land there, so no exclusion is needed. Note `sh03-12n12` is a repeat offender: it
-hangs equil to the wall and does *not* always self-invalidate, so exclude it explicitly on any resubmit.
+— new jobs cannot land there, so no exclusion is needed.
+
+**Do not assume a bad node self-invalidates — check `sinfo`.** Known repeat offenders that stay
+schedulable:
+
+| node | symptom | `sinfo` after the failures |
+|---|---|---|
+| `sh03-12n12` | hangs equil to the wall | stays schedulable |
+| `sh03-12n13` | `Device ID 0 did not correspond to any of the 0 detected device(s)` — killed 4 switch elements on 2026-08-16 | `mix none gpu:4` — still advertising 4 GPUs |
+
+Exclude both explicitly on any resubmit.
+
+Note the elapsed time when diagnosing: a GPU-visibility error is an *mdrun startup* failure and would
+be instant, so an element that dies after **hours** lost its GPU **mid-bundle**. Its already-written
+`dgdl.xvg` files are valid and complete — the idempotent resubmit skips them and redoes only the
+remainder, so the loss is much smaller than "N failed elements x bundle size" suggests.
 
 **Node exclusion only works at SUBMIT time, via an EXPORTED `EXCLUDE_NODES`.**
 
