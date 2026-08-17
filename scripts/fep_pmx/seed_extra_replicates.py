@@ -56,14 +56,23 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "fep_jorgensen"))
 
 LIGAND_RESNAME = "2KW"
 SKIP_RESNAMES = {"HOH", "WAT", "SOL", "NA", "CL", "K", "MG", "ZN"}
-# PBC-split detection. NOT an absolute fraction of the box: HIV RT is elongated and
-# its genuine long axis is ~107 A in a ~128 A box (84%), so any fixed fraction below
-# ~0.9 rejects known-good structures -- including the reference _start.pdb itself.
-# A real split wraps the protein across the boundary and inflates the extent toward
-# the full box edge, so compare against the reference extent, which is known good.
-SPLIT_GROWTH_TOLERANCE = 1.25  # reject if any axis exceeds reference extent by >25%
-SPLIT_BOX_FRACTION = 0.95      # ...or approaches the box edge outright
-CONTACT_CUTOFF_A = 5.0         # ligand must be within this of the protein
+# PBC-split detection, two independent tests.
+#
+# (1) Axis-aligned extent vs the BOX. A split wraps atoms to both sides of the
+#     boundary and inflates the extent toward (or past) the box edge. Observed on
+#     apo y181c rep_01: 182.8 A in a 127.6 A box. NOT a fixed fraction below ~0.9,
+#     because HIV RT is elongated -- its genuine long axis is ~107 A in a ~128 A
+#     box (84%), so a tighter threshold rejects known-good structures including
+#     the reference _start.pdb itself.
+#
+# (2) Radius of gyration vs the REFERENCE. Rg is rotation-invariant; axis-aligned
+#     extent is not, so comparing extent against a reference extent flags merely
+#     re-oriented proteins (a rotated apo frame tripped a 1.25 extent ratio while
+#     its Rg was within 1% of the reference). Rg across five known-good apo frames
+#     spans only 34.49-34.88 A, so a 15% tolerance is generous.
+SPLIT_BOX_FRACTION = 0.95   # extent above this fraction of the box edge => split
+RG_TOLERANCE = 1.15         # Rg above this multiple of the reference => not compact
+CONTACT_CUTOFF_A = 5.0      # ligand must be within this of the protein
 
 
 def _load(pdb: Path) -> dict:
@@ -118,19 +127,25 @@ def validate(candidate: Path, reference: Path, *, holo: bool, solute_only: bool 
 
     if cand["box"] is None and not solute_only:
         problems.append("no CRYST1 box record")
-    elif len(cand["protein"]) and len(ref["protein"]):
+
+    if len(cand["protein"]) and len(ref["protein"]):
         extent = cand["protein"].max(0) - cand["protein"].min(0)
-        ref_extent = ref["protein"].max(0) - ref["protein"].min(0)
-        grown = extent > ref_extent * SPLIT_GROWTH_TOLERANCE
-        near_box = (
-            extent > np.array(cand["box"]) * SPLIT_BOX_FRACTION
-            if cand["box"] is not None
-            else np.zeros_like(extent, dtype=bool)
-        )
-        if (grown | near_box).any():
+        if cand["box"] is not None:
+            near_box = extent > np.array(cand["box"]) * SPLIT_BOX_FRACTION
+            if near_box.any():
+                problems.append(
+                    f"protein looks PBC-split: extent {np.round(extent, 1).tolist()} "
+                    f"reaches the box {cand['box']}"
+                )
+
+        def _rg(coords):
+            return float(np.sqrt(((coords - coords.mean(0)) ** 2).sum(1).mean()))
+
+        rg, ref_rg = _rg(cand["protein"]), _rg(ref["protein"])
+        if ref_rg > 0 and rg > ref_rg * RG_TOLERANCE:
             problems.append(
-                f"protein looks PBC-split: extent {np.round(extent, 1).tolist()} "
-                f"vs reference {np.round(ref_extent, 1).tolist()} in box {cand['box']}"
+                f"protein not compact: Rg {rg:.1f} A vs reference {ref_rg:.1f} A "
+                f"(ratio {rg / ref_rg:.2f}) — residual PBC split or unfolded"
             )
 
     if holo:
@@ -173,9 +188,20 @@ def _extract_last_frame(start_pdb: Path, out_pdb: Path) -> Path | None:
     downstream ``extract_protein_only`` discards solvent anyway and
     ``build_p0_systems`` re-solvates from scratch.
 
-    PBC is corrected with MDTraj ``make_molecules_whole`` -- the repo's
-    authoritative pattern. MDTraj traverses the bond graph, whereas MDAnalysis
-    ``unwrap`` fails when the protein COM sits near a box boundary.
+    PBC needs TWO corrections here, not one:
+
+    1. ``make_molecules_whole`` repairs splits *within* a molecule (bond-graph
+       traversal; the repo's authoritative pattern -- MDAnalysis ``unwrap`` fails
+       when the protein COM sits near a box boundary).
+    2. ``image_molecules`` anchored on the **largest** molecule repairs splits
+       *between* molecules. RT is a heterodimer, so p66 and p51 are separate
+       molecules and can sit in different periodic images -- which step 1 cannot
+       fix, because it only ever works within one bond graph.
+
+    Observed on apo y181c rep_01: protein extent 182.8 A in a 127.6 A box (larger
+    than the box, so unambiguously split), unchanged by ``make_molecules_whole``
+    and repaired to 78.9 A by the anchored imaging. Anchoring on the whole protein
+    does NOT work -- an anchor spanning two images cannot repair itself.
     """
     run_dir = start_pdb.parent.parent
     # Prefer an already-PBC-corrected trajectory when one exists.
@@ -197,6 +223,16 @@ def _extract_last_frame(start_pdb: Path, out_pdb: Path) -> Path | None:
         return None
     frame = traj[-1]
     frame.make_molecules_whole(inplace=True)
+    # Re-image the separate chains onto the largest molecule (p66) so the
+    # heterodimer is not split across periodic images.
+    molecules = list(frame.topology.find_molecules())
+    if len(molecules) > 1 and frame.unitcell_lengths is not None:
+        anchor = max(molecules, key=len)
+        try:
+            frame.image_molecules(inplace=True, anchor_molecules=[anchor])
+        except Exception:
+            # Imaging is best-effort; validate() still rejects a split frame.
+            pass
     out_pdb.parent.mkdir(parents=True, exist_ok=True)
     frame.save_pdb(str(out_pdb))
     return out_pdb
