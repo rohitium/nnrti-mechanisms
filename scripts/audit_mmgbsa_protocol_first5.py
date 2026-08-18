@@ -185,7 +185,7 @@ def main() -> int:
         [
             (Path("results/archive/2026-05-13_binding_energy_pre_recompute/mmgbsa_replicate_metrics.csv"), "old_archive"),
             (Path("results/archive/2026-05-13_binding_energy_pre_recompute/checkpoint_mmgbsa_replicate_metrics.csv"), "archived_checkpoint"),
-            (Path("results/mmgbsa_replicate_metrics.csv"), "current_top"),
+            (Path("results/archive/2026-08-18_stale_top_level_100snapshot/mmgbsa_replicate_metrics.csv"), "archived_top_100snapshot"),
         ],
     )
     comparison_path = args.output_dir / f"comparison_first{args.n}_{run_label}.csv"

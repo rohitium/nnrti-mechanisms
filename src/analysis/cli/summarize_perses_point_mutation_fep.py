@@ -10,7 +10,7 @@ import pandas as pd
 def main() -> int:
     parser = argparse.ArgumentParser(description="Summarize Perses point-mutation FEP cycle results.")
     parser.add_argument("--results-dir", type=Path, default=Path("results/analysis/perses_point_mutation_fep"))
-    parser.add_argument("--mmgbsa", type=Path, default=Path("results/ddg_full.csv"))
+    parser.add_argument("--mmgbsa", type=Path, default=Path("results/analysis/binding_energy/tables/ddg_full.csv"))
     parser.add_argument("--output", type=Path, default=Path("results/analysis/perses_point_mutation_fep/perses_fep_vs_mmgbsa.csv"))
     args = parser.parse_args()
 

@@ -1,30 +1,70 @@
 #!/usr/bin/env python3
+"""Plot MM/GBSA component and WT-referenced ddG panels.
+
+Defaults follow the last-20-frame protocol (mmgbsa_snapshots=20), which is the
+manuscript-facing analysis. The superseded 100-snapshot tables that used to sit at
+results/mmgbsa_replicate_metrics.csv are archived under results/archive/.
+
+Note: this script derives ddG in-script from the replicate table (mutant - WT per
+replicate), so it takes no --ddg-csv; results/analysis/binding_energy/tables/ddg_full.csv
+is not read here.
+"""
 from __future__ import annotations
 
+import argparse
 import os
 from pathlib import Path
+
+DEFAULT_REPLICATE_CSV = Path(
+    "results/analysis/binding_energy/last20frames/mmgbsa_replicate_metrics_last20frames.csv"
+)
 
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
 
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Plot MM/GBSA component and WT-referenced ddG panels."
+    )
+    parser.add_argument(
+        "--replicate-csv",
+        type=Path,
+        default=DEFAULT_REPLICATE_CSV,
+        help="Replicate-level MM/GBSA metrics. Relative paths resolve against the repo root.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("results/plots"),
+        help="Directory for the generated PNGs. Relative paths resolve against the repo root.",
+    )
+    return parser.parse_args()
+
+
 def main() -> int:
+    args = _parse_args()
     root = _repo_root()
     os.environ.setdefault("MPLCONFIGDIR", str(root / ".mplconfig"))
 
     import numpy as np
     import pandas as pd
     import matplotlib.pyplot as plt
-    KJ_TO_KCAL = 1.0 / 4.184
 
-    rep_path = root / "results" / "mmgbsa_replicate_metrics.csv"
+    from src.analysis.units import KCAL_UNITS, read_energy_table
+
+    rep_path = args.replicate_csv
+    if not rep_path.is_absolute():
+        rep_path = root / rep_path
     if not rep_path.exists():
         raise FileNotFoundError(rep_path)
 
-    rep = pd.read_csv(rep_path)
+    rep = read_energy_table(rep_path, KCAL_UNITS)
 
-    out_dir = root / "results" / "plots"
+    out_dir = args.output_dir
+    if not out_dir.is_absolute():
+        out_dir = root / out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # --- Plot 1: mutation-level component scatter with replicate SEM error bars.
@@ -61,11 +101,6 @@ def main() -> int:
     for col, _, _ in comp_cols:
         by_mut[f"{col}_sem"] = by_mut[f"{col}_std"] / np.sqrt(by_mut["n_reps"].clip(lower=1))
         by_mut[f"{col}_sem"] = by_mut[f"{col}_sem"].fillna(0.0)
-
-    # Convert from kJ/mol to kcal/mol for plotting.
-    for col, _, _ in comp_cols:
-        by_mut[f"{col}_mean"] = by_mut[f"{col}_mean"] * KJ_TO_KCAL
-        by_mut[f"{col}_sem"] = by_mut[f"{col}_sem"] * KJ_TO_KCAL
 
     x = np.arange(len(by_mut), dtype=float)
     fig, axes = plt.subplots(
@@ -158,12 +193,6 @@ def main() -> int:
                 ddg_sum["n_reps"].clip(lower=1).astype(float)
             )
         ddg_sum = ddg_sum.sort_values(["fold_reduction", "mutation"], ascending=[False, True]).reset_index(drop=True)
-
-        # Convert from kJ/mol to kcal/mol for plotting.
-        for col, _, _ in ddg_comps:
-            ddg_sum[f"ddg_{col}_mean"] = ddg_sum[f"ddg_{col}_mean"] * KJ_TO_KCAL
-            ddg_sum[f"ddg_{col}_sem_rep"] = ddg_sum[f"ddg_{col}_sem_rep"] * KJ_TO_KCAL
-            ddg_sum[f"ddg_{col}_sem_prop"] = ddg_sum[f"ddg_{col}_sem_prop"] * KJ_TO_KCAL
 
         mutations2 = ddg_sum["mutation"].tolist()
         x2 = np.arange(len(mutations2))

@@ -2,7 +2,7 @@
 """Plot global mechanistic signatures vs doravirine fold-reduction.
 
 Inputs:
-  - results/ddg_full.csv (replicate-level MM/GBSA + structural metrics)
+  - results/analysis/binding_energy/tables/ddg_full.csv (replicate-level MM/GBSA + structural metrics)
 
 Outputs:
   - results/plots/manuscript_global_signatures.png (default)
@@ -151,7 +151,7 @@ def plot_global_signatures(ddg_full_csv: Path, output_png: Path, annotate_top_n:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Plot fold-reduction vs MM/GBSA/structural signatures.")
-    parser.add_argument("--ddg-full", type=Path, default=Path("results/ddg_full.csv"))
+    parser.add_argument("--ddg-full", type=Path, default=Path("results/analysis/binding_energy/tables/ddg_full.csv"))
     parser.add_argument("--output", type=Path, default=Path("results/plots/manuscript_global_signatures.png"))
     parser.add_argument("--annotate-top-n", type=int, default=5, help="Annotate top-N highest fold-reduction mutations.")
     args = parser.parse_args()

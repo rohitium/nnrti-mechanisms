@@ -45,7 +45,7 @@ def main() -> int:
     parser.add_argument(
         "--mmgbsa-replicate-csv",
         type=Path,
-        default=Path("results/mmgbsa_replicate_metrics.csv"),
+        default=Path("results/analysis/binding_energy/last20frames/mmgbsa_replicate_metrics_last20frames.csv"),
     )
     parser.add_argument(
         "--susceptibility-xlsx",
