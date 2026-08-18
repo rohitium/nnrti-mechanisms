@@ -165,8 +165,20 @@ Three ways this silently fails to apply — all verified 2026-08-15, all leaving
    assignments (junk var `exportMANIFEST`, plus a NON-exported `EXCLUDE_NODES`),
    the line exits 0, and the `&&` chain continues with no exclusion applied.
 
-**Always verify with `scontrol show job <id> | grep ExcNodeList` after submitting**
-— it is the only reliable confirmation. And weigh the fix: cancelling a pending
+**Verify with `SubmitLine`, NOT `ExcNodeList`.** On this cluster `ExcNodeList` reads `(null)` even
+when `--exclude` is demonstrably on the sbatch command line — it does not reflect `--exclude` at all,
+so treating `(null)` as failure sends you chasing a non-problem (it did, for two days):
+
+```bash
+sacct -j <id> --format=JobID,SubmitLine%250 -X | head -3      # look for --exclude=...
+scontrol show job -d <id> | grep -i SubmitLine                # same, live
+sacct -j <id> --format=JobID%16,State,NodeList%14 -X          # ground truth: no element on a bad node
+```
+
+Confirmed 2026-08-17 on job 39630950: `SubmitLine` carried `--exclude=sh03-12n12,sh03-12n13`,
+`ExcNodeList` still printed `(null)`, and none of the allocated elements landed on either node.
+
+And weigh the fix: cancelling a pending
 job to add an exclusion forfeits accrued queue priority, whereas a node hang is
 recoverable via §4. When the queue is the binding constraint, letting it run is
 usually the better trade.
