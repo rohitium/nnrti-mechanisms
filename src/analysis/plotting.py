@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-# 1 kcal = 4.184 kJ; OpenMM internally reports kJ/mol.
-_KJ_TO_KCAL = 1.0 / 4.184
+# Canonical binding-energy tables are already in kcal/mol; see src/analysis/units.py.
 
 
 def cleanup_legacy_plots(paths) -> None:
@@ -139,12 +138,6 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
         np.nan,
     )
 
-    for energy_col in ("ddg", "binding_dg"):
-        if energy_col in by_mut.columns:
-            by_mut[energy_col] = by_mut[energy_col] * _KJ_TO_KCAL
-            if f"{energy_col}_std" in by_mut.columns:
-                by_mut[f"{energy_col}_std"] = by_mut[f"{energy_col}_std"] * _KJ_TO_KCAL
-
     wt_df = df[df["mutation"] == "WT"].copy()
     wt_summary: dict[str, tuple[float, float]] = {}
     for col, _ in available:
@@ -153,8 +146,6 @@ def plot_all_metrics_vs_fold_reduction(ddg_df: pd.DataFrame, paths) -> None:
         wt_vals = pd.to_numeric(wt_df[col], errors="coerce").dropna().to_numpy(dtype=float)
         if wt_vals.size == 0:
             continue
-        if col in {"ddg", "binding_dg"}:
-            wt_vals = wt_vals * _KJ_TO_KCAL
         wt_mean = float(np.nanmean(wt_vals))
         wt_sem = float(np.nanstd(wt_vals, ddof=1) / np.sqrt(wt_vals.size)) if wt_vals.size > 1 else 0.0
         wt_summary[col] = (wt_mean, wt_sem)

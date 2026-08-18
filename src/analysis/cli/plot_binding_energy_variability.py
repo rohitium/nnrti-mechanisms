@@ -98,7 +98,7 @@ def _plot_ddg_vdw_std_vs_fold_change(summary: pd.DataFrame, output_png: Path) ->
     ax.spines["left"].set_linewidth(1.2)
     ax.spines["bottom"].set_linewidth(1.2)
     ax.set_xlabel("Fold-change", fontsize=AXIS_LABEL_SIZE, fontweight="bold")
-    ax.set_ylabel("SD of vdW \u0394\u0394G (kJ/mol)", fontsize=AXIS_LABEL_SIZE, fontweight="bold")
+    ax.set_ylabel("SD of vdW \u0394\u0394G (kcal/mol)", fontsize=AXIS_LABEL_SIZE, fontweight="bold")
     ax.tick_params(axis="both", labelsize=TICK_LABEL_SIZE)
     ax.legend(
         loc="upper center",

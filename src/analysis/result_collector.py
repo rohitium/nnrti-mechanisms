@@ -877,22 +877,59 @@ def compute_mmgbsa_metrics(
     return pd.DataFrame(rows)
 
 
-def compute_binding_ddg(mmgbsa_df: pd.DataFrame) -> pd.DataFrame:
+BINDING_COMPONENT_COLUMNS = [
+    "binding_dg",
+    "binding_dg_vdw",
+    "binding_dg_electrostatic",
+    "binding_dg_gb",
+    "binding_dg_sa",
+]
+
+
+def compute_binding_ddg(mmgbsa_df: pd.DataFrame, wt_reference: str = "unmatched") -> pd.DataFrame:
+    """WT-reference the per-replicate MM/GBSA components.
+
+    ``wt_reference="unmatched"`` (default) subtracts the WT replicate *mean*
+    from every mutant replicate, so no single WT trajectory can dominate a
+    mutant's shift. ``wt_reference="matched"`` subtracts the WT replicate
+    carrying the same replicate index, the legacy pairing.
+    """
+    if wt_reference not in {"matched", "unmatched"}:
+        raise ValueError(f"wt_reference must be 'matched' or 'unmatched', got {wt_reference!r}")
+
     if mmgbsa_df.empty:
         return pd.DataFrame()
 
     df = mmgbsa_df.copy()
-    wt = df[df["mutation"] == "WT"].set_index(["structure", "replicate"])
-    if wt.empty:
+    wt_rows = df[df["mutation"] == "WT"]
+    if wt_rows.empty:
         df["wt_binding_dg"] = np.nan
         df["ddg"] = np.nan
         return df
 
-    for col in ["binding_dg", "binding_dg_vdw", "binding_dg_electrostatic", "binding_dg_gb", "binding_dg_sa"]:
+    df["wt_reference_mode"] = wt_reference
+    if wt_reference == "unmatched":
+        df["wt_n_replicates"] = df["structure"].map(
+            wt_rows.groupby("structure")["replicate"].nunique()
+        )
+
+    for col in BINDING_COMPONENT_COLUMNS:
         wt_col = f"wt_{col}"
         ddg_col = col.replace("binding_dg", "ddg")
-        lookup = wt[col] if col in wt.columns else pd.Series(dtype=float)
-        df[wt_col] = df.apply(lambda r: lookup.get((r["structure"], r["replicate"]), np.nan), axis=1)
+        if col not in wt_rows.columns:
+            df[wt_col] = np.nan
+            df[ddg_col] = np.nan
+            continue
+        if wt_reference == "matched":
+            lookup = wt_rows.set_index(["structure", "replicate"])[col]
+            df[wt_col] = df.apply(
+                lambda r: lookup.get((r["structure"], r["replicate"]), np.nan), axis=1
+            )
+        else:
+            wt_mean = wt_rows.groupby("structure")[col].mean()
+            wt_sem = wt_rows.groupby("structure")[col].sem()
+            df[wt_col] = df["structure"].map(wt_mean)
+            df[f"{wt_col}_sem"] = df["structure"].map(wt_sem)
         df[ddg_col] = df[col] - df[wt_col]
 
     return df

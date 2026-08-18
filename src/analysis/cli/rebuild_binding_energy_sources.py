@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from ..result_collector import compute_binding_ddg, merge_with_structural_metrics
+from ..units import KCAL_UNITS, KJ_UNITS, convert_energy_columns, frame_energy_units
 
 
 def _parse_args() -> argparse.Namespace:
@@ -26,8 +27,26 @@ def _parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("results/analysis/dor_susceptibility_bar_chart/tables/dor_susceptibility_values.csv"),
     )
-    parser.add_argument("--output-mmgbsa", type=Path, default=Path("results/mmgbsa_replicate_metrics.csv"))
-    parser.add_argument("--output-ddg", type=Path, default=Path("results/ddg_full.csv"))
+    parser.add_argument("--output-mmgbsa", type=Path, default=Path("results/analysis/binding_energy/tables/mmgbsa_replicate_metrics.csv"))
+    parser.add_argument("--output-ddg", type=Path, default=Path("results/analysis/binding_energy/tables/ddg_full.csv"))
+    parser.add_argument(
+        "--energy-units",
+        choices=(KCAL_UNITS, KJ_UNITS),
+        default=KCAL_UNITS,
+        help=(
+            "Units for all energy columns in the canonical outputs. Default kcal/mol, "
+            "matching the pmx FEP outputs. Conversion is idempotent."
+        ),
+    )
+    parser.add_argument(
+        "--wt-reference",
+        choices=("unmatched", "matched"),
+        default="unmatched",
+        help=(
+            "How mutant replicates are referenced to WT. 'unmatched' (default) subtracts the "
+            "WT replicate mean; 'matched' subtracts the same-index WT replicate."
+        ),
+    )
     parser.add_argument(
         "--config-json",
         type=Path,
@@ -79,13 +98,15 @@ def main() -> int:
     mmgbsa = mmgbsa.drop_duplicates(subset=key_cols, keep="last").copy()
     mmgbsa["replicate"] = pd.to_numeric(mmgbsa["replicate"], errors="raise").astype(int)
     mmgbsa = _apply_current_fold_values(mmgbsa, args.susceptibility_csv)
+    source_units = frame_energy_units(mmgbsa)
+    mmgbsa = convert_energy_columns(mmgbsa, args.energy_units)
     mmgbsa = mmgbsa.sort_values(["mutation", "replicate"], kind="stable").reset_index(drop=True)
 
     structural = structural.drop_duplicates(subset=key_cols, keep="last").copy()
     structural["replicate"] = pd.to_numeric(structural["replicate"], errors="raise").astype(int)
     structural = _apply_current_fold_values(structural, args.susceptibility_csv)
 
-    ddg = compute_binding_ddg(mmgbsa)
+    ddg = compute_binding_ddg(mmgbsa, wt_reference=args.wt_reference)
     ddg = merge_with_structural_metrics(ddg, structural)
     ddg = _add_fold_change_alias(ddg)
 
@@ -102,6 +123,9 @@ def main() -> int:
                     "mmgbsa_csv": str(args.mmgbsa_csv),
                     "structural_csv": str(args.structural_csv),
                     "susceptibility_csv": str(args.susceptibility_csv),
+                    "wt_reference": str(args.wt_reference),
+                    "energy_units": str(args.energy_units),
+                    "source_energy_units": str(source_units),
                     "output_mmgbsa": str(args.output_mmgbsa),
                     "output_ddg": str(args.output_ddg),
                     "n_mmgbsa_rows": int(len(mmgbsa)),

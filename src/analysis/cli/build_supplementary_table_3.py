@@ -25,21 +25,21 @@ DETAIL_COLUMNS = [
     ("replicate", "Replicate"),
     ("dor_fold_reduction", "DOR fold reduction"),
     ("mmgbsa_snapshots", "MM/GBSA snapshots"),
-    ("binding_dg", "Mutant total energy (kJ/mol)"),
-    ("wt_binding_dg", "Matched WT total energy (kJ/mol)"),
-    ("ddg", "Total shift (kJ/mol)"),
-    ("binding_dg_vdw", "Mutant van der Waals (kJ/mol)"),
-    ("wt_binding_dg_vdw", "Matched WT van der Waals (kJ/mol)"),
-    ("ddg_vdw", "van der Waals shift (kJ/mol)"),
-    ("binding_dg_electrostatic", "Mutant electrostatic (kJ/mol)"),
-    ("wt_binding_dg_electrostatic", "Matched WT electrostatic (kJ/mol)"),
-    ("ddg_electrostatic", "Electrostatic shift (kJ/mol)"),
-    ("binding_dg_gb", "Mutant GB polar solvation (kJ/mol)"),
-    ("wt_binding_dg_gb", "Matched WT GB polar solvation (kJ/mol)"),
-    ("ddg_gb", "GB polar solvation shift (kJ/mol)"),
-    ("binding_dg_sa", "Mutant nonpolar SA (kJ/mol)"),
-    ("wt_binding_dg_sa", "Matched WT nonpolar SA (kJ/mol)"),
-    ("ddg_sa", "Nonpolar SA shift (kJ/mol)"),
+    ("binding_dg", "Mutant total energy (kcal/mol)"),
+    ("wt_binding_dg", "WT reference total energy (kcal/mol)"),
+    ("ddg", "Total shift (kcal/mol)"),
+    ("binding_dg_vdw", "Mutant van der Waals (kcal/mol)"),
+    ("wt_binding_dg_vdw", "WT reference van der Waals (kcal/mol)"),
+    ("ddg_vdw", "van der Waals shift (kcal/mol)"),
+    ("binding_dg_electrostatic", "Mutant electrostatic (kcal/mol)"),
+    ("wt_binding_dg_electrostatic", "WT reference electrostatic (kcal/mol)"),
+    ("ddg_electrostatic", "Electrostatic shift (kcal/mol)"),
+    ("binding_dg_gb", "Mutant GB polar solvation (kcal/mol)"),
+    ("wt_binding_dg_gb", "WT reference GB polar solvation (kcal/mol)"),
+    ("ddg_gb", "GB polar solvation shift (kcal/mol)"),
+    ("binding_dg_sa", "Mutant nonpolar SA (kcal/mol)"),
+    ("wt_binding_dg_sa", "WT reference nonpolar SA (kcal/mol)"),
+    ("ddg_sa", "Nonpolar SA shift (kcal/mol)"),
 ]
 
 
@@ -135,8 +135,8 @@ def build_summary(details: pd.DataFrame) -> pd.DataFrame:
     ).reset_index()
     summary = summary.rename(columns={"mutation": "Mutation"})
     for column, label in SUMMARY_COMPONENTS:
-        summary[f"{label} mean (kJ/mol)"] = grouped[column].mean().to_numpy(dtype=float)
-        summary[f"{label} SEM (kJ/mol)"] = grouped[column].apply(sem).to_numpy(dtype=float)
+        summary[f"{label} mean (kcal/mol)"] = grouped[column].mean().to_numpy(dtype=float)
+        summary[f"{label} SEM (kcal/mol)"] = grouped[column].apply(sem).to_numpy(dtype=float)
     return summary
 
 
@@ -144,7 +144,36 @@ def build_detail_table(details: pd.DataFrame) -> pd.DataFrame:
     return details[[column for column, _label in DETAIL_COLUMNS]].rename(columns=dict(DETAIL_COLUMNS))
 
 
-def style_workbook(output_xlsx: Path, summary_rows: int, detail_rows: int) -> None:
+def wt_reference_note(details: pd.DataFrame) -> str:
+    """One-line description of the shared WT reference and its uncertainty."""
+    labels = [
+        ("wt_binding_dg", "wt_binding_dg_sem", "total"),
+        ("wt_binding_dg_vdw", "wt_binding_dg_vdw_sem", "van der Waals"),
+        ("wt_binding_dg_electrostatic", "wt_binding_dg_electrostatic_sem", "electrostatic"),
+        ("wt_binding_dg_gb", "wt_binding_dg_gb_sem", "GB polar solvation"),
+        ("wt_binding_dg_sa", "wt_binding_dg_sa_sem", "nonpolar SA"),
+    ]
+    parts = []
+    for value_col, sem_col, label in labels:
+        if value_col not in details.columns:
+            continue
+        value = float(pd.to_numeric(details[value_col], errors="coerce").dropna().iloc[0])
+        if sem_col in details.columns:
+            sem_value = float(pd.to_numeric(details[sem_col], errors="coerce").dropna().iloc[0])
+            parts.append(f"{label} {value:.1f} +/- {sem_value:.1f}")
+        else:
+            parts.append(f"{label} {value:.1f}")
+    if not parts:
+        return ""
+    return (
+        "WT reference (mean +/- SEM over three WT production replicates, kcal/mol): "
+        + "; ".join(parts)
+        + ". These reference uncertainties are common to every row and are not included in the "
+        "per-mutation SEM values above."
+    )
+
+
+def style_workbook(output_xlsx: Path, summary_rows: int, detail_rows: int, wt_note: str = "") -> None:
     from openpyxl import load_workbook
 
     wb = load_workbook(output_xlsx)
@@ -158,8 +187,10 @@ def style_workbook(output_xlsx: Path, summary_rows: int, detail_rows: int) -> No
     ws["A1"] = "Notes"
     ws["A2"] = (
         "Values are WT-referenced MM/GBSA energetic shifts for doravirine-bound RT variants, reported in "
-        "kJ/mol. For each mutant replicate, the energetic component from that replicate was compared with "
-        "the corresponding WT replicate, so shifts are calculated as mutant minus matched WT."
+        "kcal/mol. Each mutant replicate is referenced to the mean of the three WT production replicates, so "
+        "shifts are calculated as mutant replicate minus the WT replicate mean. This unmatched reference "
+        "replaces an earlier replicate-index-matched pairing, under which a single outlying WT trajectory "
+        "propagated a common offset into every mutant."
     )
     ws["A3"] = (
         "The total energy is the MM/GBSA endpoint score from uniformly sampled bound-state trajectory "
@@ -168,10 +199,13 @@ def style_workbook(output_xlsx: Path, summary_rows: int, detail_rows: int) -> No
     )
     ws["A4"] = (
         "Summary values are the mean across three independent production replicates. SEM is the sample "
-        "standard deviation divided by the square root of the number of replicates. Positive shifts indicate "
+        "standard deviation of the mutant replicates divided by the square root of the number of replicates; "
+        "it reflects mutant-replicate spread only. The uncertainty of the WT reference itself is a common "
+        "offset shared by every mutation and is reported separately in the note below. Positive shifts indicate "
         "a less favorable energetic score relative to WT, whereas negative shifts indicate a more favorable score."
     )
-    for row in (2, 3, 4):
+    ws["A5"] = wt_note
+    for row in (2, 3, 4, 5):
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=13)
         ws.cell(row=row, column=1).font = note_font
         ws.cell(row=row, column=1).alignment = Alignment(wrap_text=True, vertical="top")
@@ -189,7 +223,7 @@ def style_workbook(output_xlsx: Path, summary_rows: int, detail_rows: int) -> No
             cell.alignment = Alignment(vertical="top", wrap_text=True)
             cell.border = thin_border
             if cell.column > 1:
-                cell.number_format = "0.000"
+                cell.number_format = "0.0000"
         row[2].number_format = "0"
     ws.freeze_panes = "A8"
     summary_widths = {
@@ -231,13 +265,15 @@ def style_workbook(output_xlsx: Path, summary_rows: int, detail_rows: int) -> No
     wb.save(output_xlsx)
 
 
-def write_workbook(summary: pd.DataFrame, details: pd.DataFrame, output_xlsx: Path) -> None:
+def write_workbook(
+    summary: pd.DataFrame, details: pd.DataFrame, output_xlsx: Path, wt_note: str = ""
+) -> None:
     output_xlsx.parent.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(output_xlsx, engine="openpyxl") as writer:
         pd.DataFrame({"Notes": ["", "", ""]}).to_excel(writer, sheet_name="Summary", index=False, startrow=0)
         summary.to_excel(writer, sheet_name="Summary", index=False, startrow=6)
         details.to_excel(writer, sheet_name="Details", index=False)
-    style_workbook(output_xlsx, summary_rows=len(summary), detail_rows=len(details))
+    style_workbook(output_xlsx, summary_rows=len(summary), detail_rows=len(details), wt_note=wt_note)
 
 
 def main() -> int:
@@ -246,7 +282,9 @@ def main() -> int:
     details_source = load_details(args.ddg_csv, panel, args.expected_replicates)
     summary = build_summary(details_source)
     details = build_detail_table(details_source)
-    write_workbook(summary, details, args.output_xlsx)
+    write_workbook(
+        summary, details, args.output_xlsx, wt_note=wt_reference_note(details_source)
+    )
     print(f"Wrote {args.output_xlsx}")
     return 0
 

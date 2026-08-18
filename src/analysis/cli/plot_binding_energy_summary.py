@@ -217,7 +217,7 @@ def _plot_ddg_bar_chart(summary: pd.DataFrame, specs: list[tuple[str, str, str]]
         ax.errorbar(x, y, yerr=yerr, fmt="none", ecolor="#333333", elinewidth=1.1, capsize=2.5, alpha=0.95, zorder=3)
         ax.grid(axis="y", linestyle=":", alpha=0.32)
         ax.set_ylabel(
-            f"{label}\n(kJ/mol)",
+            f"{label}\n(kcal/mol)",
             fontsize=BAR_AXIS_LABEL_SIZE,
             fontweight="bold" if is_highlight else "normal",
             color="#1f6f66" if is_highlight else "#222222",
@@ -350,7 +350,7 @@ def _plot_component_vs_fold_change(
     if column != "ddg_electrostatic":
         ax.set_title(f"{label} vs Fold-change", fontsize=TITLE_SIZE, fontweight="bold")
     ax.set_xlabel("Fold-change", fontsize=AXIS_LABEL_SIZE, fontweight="bold")
-    y_label = f"{label} (kJ/mol)" if label.startswith("ΔΔG") else f"MM/GBSA {label} (kJ/mol)"
+    y_label = f"{label} (kcal/mol)" if label.startswith("ΔΔG") else f"MM/GBSA {label} (kcal/mol)"
     ax.set_ylabel(y_label, fontsize=AXIS_LABEL_SIZE, fontweight="bold")
     ax.tick_params(axis="both", labelsize=TICK_LABEL_SIZE)
     if column in {"binding_dg_electrostatic", "ddg_electrostatic"}:
@@ -400,8 +400,8 @@ def _plot_component_vs_fold_change(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Create consolidated MM/GBSA binding-energy summaries.")
-    parser.add_argument("--replicate-csv", type=Path, default=Path("results/mmgbsa_replicate_metrics.csv"))
-    parser.add_argument("--ddg-csv", type=Path, default=Path("results/ddg_full.csv"))
+    parser.add_argument("--replicate-csv", type=Path, default=Path("results/analysis/binding_energy/last20frames/mmgbsa_replicate_metrics_last20frames.csv"))
+    parser.add_argument("--ddg-csv", type=Path, default=Path("results/analysis/binding_energy/tables/ddg_full.csv"))
     parser.add_argument("--output-dir", type=Path, default=Path("results/analysis/binding_energy"))
     args = parser.parse_args()
 
