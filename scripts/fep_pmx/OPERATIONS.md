@@ -116,12 +116,25 @@ If all failures share one node and that node is `inval`/`drain`/`down`, it is **
 **Do not assume a bad node self-invalidates — check `sinfo`.** Known repeat offenders that stay
 schedulable:
 
-| node | symptom | `sinfo` after the failures |
+| node | observed | `sinfo` after the failures |
 |---|---|---|
-| `sh03-12n12` | hangs equil to the wall | stays schedulable |
-| `sh03-12n13` | `Device ID 0 did not correspond to any of the 0 detected device(s)` — killed 4 switch elements on 2026-08-16 | `mix none gpu:4` — still advertising 4 GPUs |
+| `sh03-12n12` | hangs equil to the wall; **also** fails switch in ~15 min with the device error | stays schedulable |
+| `sh03-12n13` | fails switch with the device error (9 s to 4.5 h) — killed 4 K103N elements 2026-08-16 | `mix none gpu:4` — still advertising 4 GPUs |
 
 Exclude both explicitly on any resubmit.
+
+**The "hang to the wall" and "Device ID 0 ... 0 detected device(s)" symptoms are the SAME node
+fault.** When a node's GPUs vanish, a job *already running* blocks forever on a dead device and burns
+to the wall clock, while a job *starting afterwards* aborts at once because CUDA reports zero devices.
+The symptom is decided by timing, not by a different defect — so treat either as "this node's GPUs
+are gone" and exclude it. Consequence for a bundled switch task: it can also die **mid-bundle** after
+hours, having written valid `dgdl.xvg` for the switches it already finished.
+
+Nodes with `gpu:4` can be *partially* broken — on 2026-08-16 `sh03-12n13` failed one element in 9 s
+while two others ran on it for 4.5 h. So a node is not exonerated by other elements succeeding there.
+SLURM does requeue elements off such a node on its own (G190E elements 2 and 3 moved and completed
+elsewhere without intervention), which is why letting an array drain before topping up is usually
+better than cancelling.
 
 Note the elapsed time when diagnosing: a GPU-visibility error is an *mdrun startup* failure and would
 be instant, so an element that dies after **hours** lost its GPU **mid-bundle**. Its already-written
