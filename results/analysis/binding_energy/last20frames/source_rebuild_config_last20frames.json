@@ -4,7 +4,7 @@
   "susceptibility_csv": "results/analysis/dor_susceptibility_bar_chart/tables/dor_susceptibility_values.csv",
   "wt_reference": "unmatched",
   "energy_units": "kcal/mol",
-  "source_energy_units": "kcal/mol",
+  "source_energy_units": "kJ/mol",
   "output_mmgbsa": "results/analysis/binding_energy/last20frames/mmgbsa_replicate_metrics_last20frames.csv",
   "output_ddg": "results/analysis/binding_energy/last20frames/ddg_full_last20frames.csv",
   "n_mmgbsa_rows": 60,
