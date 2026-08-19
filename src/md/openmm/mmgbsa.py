@@ -232,6 +232,60 @@ def _build_h_relax_context(topology, forcefield, k_kj_per_nm2: float = 10_000.0)
     return context, restraint, heavy_particles
 
 
+def _build_min_context(topology, forcefield):
+    """Plain context for unrestrained snapshot minimisation.
+
+    Unlike the H-relax context this adds no positional restraint, so the local
+    environment relaxes with the hydrogens. Relieving a steric overlap requires
+    the surrounding heavy atoms to move; holding them fixed leaves a large
+    residual repulsion that a hydrogen-only relaxation cannot remove.
+    """
+    app = require_module("openmm.app")
+    openmm = require_module("openmm")
+    unit = require_module("openmm.unit")
+
+    system = forcefield.createSystem(
+        topology,
+        nonbondedMethod=app.NoCutoff,
+        constraints=None,
+    )
+    integrator = openmm.VerletIntegrator(0.001 * unit.picoseconds)
+    platform_name = os.environ.get("OPENMM_PLATFORM", "CPU").strip() or "CPU"
+    try:
+        platform = openmm.Platform.getPlatformByName(platform_name)
+        properties = {"Threads": os.environ.get("OPENMM_CPU_THREADS", "1")} if platform_name == "CPU" else {}
+        return openmm.Context(system, integrator, platform, properties)
+    except Exception:
+        return openmm.Context(system, integrator)
+
+
+def _apply_unrestrained_min(
+    context,
+    positions_nm: np.ndarray,
+    max_iters: int = 100,
+    tolerance_kj_per_nm: float = 10.0,
+) -> np.ndarray:
+    """Minimise a snapshot with every atom free, capped at ``max_iters``.
+
+    The cap is the protocol: minimisation is not run to convergence, which would
+    drift ~1.1 A from the sampled geometry. It is run just far enough to relieve
+    steric overlap. See MMGBSA_METHOD_AND_RECOMPUTE.md for the iteration sweep.
+    """
+    openmm = require_module("openmm")
+    unit = require_module("openmm.unit")
+
+    pos = [
+        openmm.Vec3(float(x), float(y), float(z)) * unit.nanometer
+        for x, y, z in positions_nm
+    ]
+    context.setPositions(pos)
+    openmm.LocalEnergyMinimizer.minimize(
+        context, tolerance=tolerance_kj_per_nm, maxIterations=int(max_iters)
+    )
+    state = context.getState(getPositions=True)
+    return np.array(state.getPositions().value_in_unit(unit.nanometer))
+
+
 def _apply_h_relax(
     context,
     restraint,
@@ -409,6 +463,8 @@ def compute_mmgbsa_from_trajectory(
     sample_last_frames: int | None = None,
     analysis_topology_pdb_path: Path | None = None,
     allowed_frames: Iterable[int] | None = None,
+    snapshot_relaxation: str = "unrestrained",
+    relaxation_iterations: int = 100,
 ) -> MMGBSAResult:
     """Compute MM/GBSA-style decomposition from explicit-MD snapshots.
 
@@ -461,8 +517,18 @@ def compute_mmgbsa_from_trajectory(
     }
     contexts = {k: _make_context(v) for k, v in systems.items()}
 
-    # Build a single reusable H-relax context (avoids rebuilding per snapshot).
-    h_relax_ctx, h_relax_force, h_relax_heavy = _build_h_relax_context(complex_top, forcefield)
+    # One reusable relaxation context, rebuilt per snapshot would be wasteful.
+    if snapshot_relaxation == "unrestrained":
+        relax_ctx = _build_min_context(complex_top, forcefield)
+        h_relax_force = h_relax_heavy = None
+    elif snapshot_relaxation == "h_relax":
+        relax_ctx, h_relax_force, h_relax_heavy = _build_h_relax_context(complex_top, forcefield)
+    elif snapshot_relaxation == "none":
+        relax_ctx = h_relax_force = h_relax_heavy = None
+    else:
+        raise ValueError(
+            f"snapshot_relaxation must be 'unrestrained', 'h_relax' or 'none', got {snapshot_relaxation!r}"
+        )
 
     # Load trajectory with the same topology used for force field setup
     u = mda.Universe(str(topology_pdb_path), str(trajectory_dcd_path))
@@ -502,10 +568,17 @@ def compute_mmgbsa_from_trajectory(
                 f"Trajectory has {pos_a.shape[0]} atoms but expected {complex_n}."
             )
         solute_nm = pos_a / 10.0
-        # Relax H-atom positions to remove finite-timestep Langevin artifacts
-        # (e.g., sub-Å inter-molecular H–H overlaps from SHAKE-constrained MD).
-        # Only H atoms move; heavy atoms are restrained to their MD coordinates.
-        solute_nm = _apply_h_relax(h_relax_ctx, h_relax_force, h_relax_heavy, solute_nm)
+        # Relieve steric overlap before scoring. Trajectory frames contain
+        # contacts -- hydrogen positions from constrained dynamics, and in some
+        # frames heavy-atom overlaps -- that produce enormous spurious r^-12
+        # terms. A capped unrestrained minimisation removes them while staying
+        # close to the sampled geometry.
+        if snapshot_relaxation == "unrestrained":
+            solute_nm = _apply_unrestrained_min(relax_ctx, solute_nm, max_iters=relaxation_iterations)
+        elif snapshot_relaxation == "h_relax":
+            solute_nm = _apply_h_relax(
+                relax_ctx, h_relax_force, h_relax_heavy, solute_nm, max_iters=relaxation_iterations
+            )
         rec_nm = _subset_positions(solute_nm, receptor_idx)
         lig_nm = _subset_positions(solute_nm, ligand_idx)
 
@@ -563,7 +636,7 @@ def compute_mmgbsa_from_trajectory(
     t_m, t_s, t_se = _stats(d_tot)
 
     # Explicitly clean up OpenMM contexts to prevent memory leaks and segfaults
-    del h_relax_ctx
+    del relax_ctx
     for ctx in contexts.values():
         del ctx
     contexts.clear()

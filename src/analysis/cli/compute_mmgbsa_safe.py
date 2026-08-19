@@ -156,6 +156,8 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
             sample_last_frames=task["sample_last_frames"],
             analysis_topology_pdb_path=Path(task["analysis_topo"]),
             allowed_frames=task.get("allowed_frames"),
+            snapshot_relaxation=task["snapshot_relaxation"],
+            relaxation_iterations=int(task["relaxation_iterations"]),
         )
         row = {
             "structure": task["structure"],
@@ -196,6 +198,8 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
                 for key, stats in getattr(mm, "absolute_terms", ())
                 for stat, value in zip(("mean", "std", "sem"), stats)
             },
+            "mmgbsa_snapshot_relaxation": task["snapshot_relaxation"],
+            "mmgbsa_relaxation_iterations": int(task["relaxation_iterations"]),
             "mmgbsa_contact_screened": bool(task.get("allowed_frames") is not None),
             "mmgbsa_clean_frames_available": (
                 int(len(task["allowed_frames"])) if task.get("allowed_frames") is not None else float("nan")
@@ -231,6 +235,22 @@ def main() -> int:
         type=int,
         default=0,
         help="If > 0, sample the last N saved trajectory frames. Overrides --sample-window-ns.",
+    )
+    parser.add_argument(
+        "--snapshot-relaxation",
+        choices=("unrestrained", "h_relax", "none"),
+        default="unrestrained",
+        help=(
+            "How each snapshot is relaxed before scoring. 'unrestrained' (default) minimises with all "
+            "atoms free, which relieves both hydrogen and heavy-atom overlaps; 'h_relax' is the legacy "
+            "hydrogen-only relaxation with heavy atoms restrained."
+        ),
+    )
+    parser.add_argument(
+        "--relaxation-iterations",
+        type=int,
+        default=100,
+        help="Minimisation iteration cap. Deliberately not run to convergence; see the method note.",
     )
     parser.add_argument(
         "--contact-screen-csv",
@@ -385,6 +405,8 @@ def main() -> int:
         tasks.append(
             {
                 "allowed_frames": allowed,
+                "snapshot_relaxation": args.snapshot_relaxation,
+                "relaxation_iterations": args.relaxation_iterations,
                 "structure": row["structure"],
                 "mutation": mutation,
                 "safe_label": safe,
