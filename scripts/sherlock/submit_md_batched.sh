@@ -95,10 +95,12 @@ if [ -n "${MUTATION_SUBMIT_ORDER}" ]; then
 fi
 echo ""
 
+# Read-only by design -- see the note in submit_apo_md_batched.sh. This used to
+# pass --write, which rewrote run JSONs from stale state.csv files and halved
+# md_production_steps_completed (and so every analysis time axis built from it).
 "${PYTHON}" scripts/sherlock/reconcile_md_metadata.py \
     --root . \
-    --target-ns "${MD_PRODUCTION_NS}" \
-    --write >/dev/null
+    --target-ns "${MD_PRODUCTION_NS}" >/dev/null
 
 # Build submission list
 SYSTEMS_TO_RUN=()
