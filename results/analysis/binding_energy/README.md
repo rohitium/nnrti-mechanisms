@@ -47,16 +47,23 @@ Earlier stale cached binding-energy outputs remain archived under:
 results/archive/2026-05-13_binding_energy_pre_recompute/
 ```
 
-The total MM/GBSA signal remains weak against susceptibility in the last-20-frame
-analysis:
+After contact screening and the GB parameterisation fix (both 2026-08-18), every
+component is null against susceptibility, and now with enough precision for that
+to be an informative result rather than an inability to resolve one:
 
-- total `binding_dg` vs fold change: `R^2 = 0.010`, `p = 0.697`
-- total `ddg` vs fold change: `R^2 = 0.010`, `p = 0.697`
+- total `ddg` vs fold change: `R^2 = 0.005`, `p = 0.77`
+- `ddg_vdw`: `R^2 = 0.012`, `p = 0.67`
+- `ddg_electrostatic`: `R^2 = 0.026`, `p = 0.52`
+- `ddg_gb`: `R^2 = 0.0001`, `p = 0.97`
+- `ddg_sa`: `R^2 = 0.005`, `p = 0.79`
 
-Among the components, the electrostatic term is still the largest association,
-but it remains weak:
+Mean SEM on the total shift is 0.92 kcal/mol, and no component dominates: mean
+|ddG| is vdW 1.33, GB 1.42, elec 1.11, SA 0.04 kcal/mol.
 
-- `binding_dg_electrostatic` vs fold change: `R^2 = 0.106`, `p = 0.187`
-- `ddg_electrostatic` vs fold change: `R^2 = 0.106`, `p = 0.187`
+Earlier readouts from this folder are superseded. In particular the electrostatic
+term was once reported as the largest association (`R^2 = 0.106`, `p = 0.187`);
+that signal did not survive contact screening. The GB term's former dominance did
+not survive the screening-factor fix. See `MMGBSA_METHOD_AND_RECOMPUTE.md`.
 
-So this folder is best treated as a mechanistic comparison package, not a standalone predictive explanation of susceptibility.
+So this folder is best treated as a mechanistic comparison package, not a
+standalone predictive explanation of susceptibility.

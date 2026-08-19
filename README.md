@@ -73,7 +73,8 @@ Clinical categorization follows Stanford HIVDB (Shafer et al.):
 
 Workflow aligned to Shao et al., PNAS (2009) DOI: `10.1073/pnas.0907304107`:
 - staged minimization → heating (0→300 K) → NPT production (10 ns, 2 fs timestep)
-- ensemble averaging over 100 snapshots from the post-equilibration trajectory region for MM/GBSA
+- ensemble averaging for MM/GBSA over the 20 most recent trajectory frames that pass the
+  ligand-contact screen (see `results/analysis/binding_energy/MMGBSA_METHOD_AND_RECOMPUTE.md`)
 - decomposition into ΔG_VDW + ΔG_Elec + ΔG_GB + ΔG_SA
 
 ## Workflow

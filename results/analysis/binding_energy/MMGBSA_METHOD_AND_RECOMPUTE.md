@@ -65,7 +65,11 @@ that earlier runs relied on; openff-2.0.0 reproduces the ligand parameters in
 the production system XMLs exactly, 2.0.0-2.2.1 are equivalent for doravirine,
 and 2.3.0 is not.
 
-The GB polar-solvation term is evaluated with OpenMM `GBSAOBCForce`, solvent dielectric 80, solute dielectric 2, charges from the nonbonded force, generic element-based radii, and surface-area energy disabled for the polar-only term.
+The GB polar-solvation term is evaluated with OpenMM `GBSAOBCForce`: solvent
+dielectric 80, **solute dielectric 1.0**, charges from the nonbonded force,
+element-based radii, **element-specific OBC screening factors**, and surface-area
+energy disabled for the polar-only term. Both GB settings changed on 2026-08-18;
+see "GB parameterisation" below.
 
 ## Units
 
@@ -134,6 +138,73 @@ is unreachable at 300 K, so these are not sampled equilibrium structures.
 The same analysis DCDs feed the contact-occupancy, pocket-volume, tunnel and
 DCCM analyses, which have not been screened.
 
+## GB parameterisation (corrected 2026-08-18)
+
+Two defects in the GB term, found while asking why `ddG_GB` dominated the totals.
+
+**Screening factors.** `GBSAOBCForce.addParticle` takes (charge, radius,
+scaleFactor), and the scale factor is element-specific in the OBC model. The code
+passed a literal `1.0` for every atom. OpenMM's own reference values are H 0.85,
+C 0.72, N 0.79, O 0.85, F 0.88, P 0.86, S 0.96 (elements outside that table, such
+as Cl, now use OpenMM's own 0.8 default). A constant scale factor distorts every
+Born radius in a burial-dependent way -- precisely what the GB term measures.
+Correcting it cut the WT desolvation penalty by 4.3x.
+
+**Interior dielectric.** The MM electrostatics are evaluated in vacuum (NoCutoff
+`NonbondedForce`, eps = 1), so the GB term describes a vacuum -> water transfer
+and eps_in = 1.0 is the internally consistent choice; it also matches the
+AmberTools MMPBSA.py default. The previous 2.0 damped the polar term by roughly
+half relative to the Coulomb term it is meant to balance. Set via
+`GB_SOLUTE_DIELECTRIC` in `src/md/openmm/mmgbsa.py`.
+
+The two corrections act in opposite directions (measured on WT/K103N rep 1,
+screened frames, kcal/mol):
+
+| configuration | WT dG_GB | ddG_GB (K103N) | WT total |
+| --- | --- | --- | --- |
+| scale 1.0, eps_in 2 (old) | 32.90 | 10.20 | -37.00 |
+| scale fixed, eps_in 2 | 7.67 | 1.89 | -69.47 |
+| scale fixed, eps_in 1 (current) | 15.53 | 3.83 | -61.61 |
+
+### Effect on the panel
+
+Before the fix, GB dominated: mean |ddG| was 3.95 kcal/mol for GB against 1.33
+for vdW. After, no component dominates -- vdW 1.33, GB 1.42, elec 1.11, SA 0.04.
+Mean SEM on the total shift fell from 1.96 to 0.92 kcal/mol.
+
+The old GB column also carried a spurious signal: `ddG_GB` correlated with the
+mutation's net-charge change at R^2 = 0.49 (p = 0.0008), the five charge-changing
+genotypes (K103N and its combinations, G190E) averaging +7.72 kcal/mol against
++1.42 for the fourteen neutral ones. That was the largest relationship anywhere
+in the panel, and it was an artifact of the wrong screening factors. After the
+fix `ddG_GB` vs fold change is R^2 = 0.0001 (p = 0.97).
+
+## Decomposition audit (2026-08-18)
+
+Checked while fixing the above; recorded so it does not need redoing.
+
+- **vdW / elec split is exact.** Only a `NonbondedForce` carries nonbonded terms
+  (no `CustomNonbondedForce`), and vdW + elec reproduces the full nonbonded
+  energy to 0.000000 kJ/mol on the double-precision Reference platform.
+- **Subsystem construction is sound.** Receptor and ligand subtopology atom
+  orders match their index arrays; subsystem charges are identical to the parent
+  complex (max delta 0.0); the ligand is neutral and contiguous, so no net-charge
+  artifact enters the binding term.
+- **SA parameter is correct**: 2.25936 kJ/mol/nm^2, OpenMM's default. SA values
+  nonetheless changed with the fix, because the ACE surface term is computed from
+  Born radii.
+
+Two limitations left in place:
+
+- **Single precision.** The CPU platform gives a 0.068 kcal/mol residual on the
+  vdW + elec = full check (exactly zero on Reference). That is the current noise
+  floor, roughly 3% of a typical 2 kcal/mol ddG. Reference is far too slow for a
+  15793-atom solute.
+- **H relaxation moves heavy atoms slightly.** Mean 0.054 A, max 0.327 A, despite
+  the restraint. At k = 10000 kJ/mol/nm^2 a 0.33 A displacement costs only about
+  11 kJ/mol. The `_apply_h_relax` docstring claims heavy-atom geometry is
+  unchanged; that is very nearly, but not exactly, true.
+
 ## WT-Referenced Shifts
 
 **Current default (2026-08-18): unmatched WT reference.** Every mutant replicate
@@ -174,9 +245,8 @@ Switching to the WT replicate mean leaves every reported mean **exactly
 unchanged** — the mean of `mut_i - WT_i` and the mean of `mut_i - mean(WT)` are
 algebraically identical for balanced replicate counts — and it leaves all
 fold-change correlation statistics unchanged. What changes is the error bars:
-mean SEM on the total shift dropped from 26 to 12 kcal/mol. (Contact screening
-later took it to 1.96; most of what remained at this stage was still artifact,
-not sampling.)
+mean SEM on the total shift dropped from 26 to 12 kcal/mol. (Contact screening later took it to 1.96, and the GB fix to
+0.92; most of what remained at this stage was still artifact, not sampling.)
 
 SEMs do not shrink uniformly. They rise for mutations whose own replicate 2 was
 being incidentally cancelled by WT replicate 2 (K103N+M230L 9.7 -> 30.7 kcal/mol,
@@ -190,15 +260,15 @@ The WT reference carries its own uncertainty, which is a **common offset shared
 by every mutation** and is therefore excluded from the per-mutation SEM:
 
 ```text
-total              -35.7 +/-  2.4 kcal/mol
-van der Waals      -64.8 +/-  0.4 kcal/mol
-electrostatic       -5.2 +/-  0.9 kcal/mol
-GB polar solvation  34.7 +/-  1.5 kcal/mol
-nonpolar SA         -0.5 +/-  0.0 kcal/mol
+total              -61.30 +/- 0.64 kcal/mol
+van der Waals      -64.75 +/- 0.36 kcal/mol
+electrostatic       -5.16 +/- 0.88 kcal/mol
+GB polar solvation  16.39 +/- 0.64 kcal/mol
+nonpolar SA         -7.78 +/- 0.03 kcal/mol
 ```
 
-(Post-screening. The pre-screening reference was -15.9 +/- 22.0 total,
--45.1 +/- 19.8 vdW.)
+(Contact-screened, corrected GB. Earlier values: -35.7 +/- 2.4 total after
+screening but before the GB fix; -15.9 +/- 22.0 before either.)
 
 Because it is common to all rows it does not affect *comparisons between*
 genotypes, but it does mean the absolute zero of the total and vdW columns is
