@@ -20,8 +20,8 @@ The calculation is run in the `nnrti-prep` conda environment with `PYTHONPATH=.`
 
 ## Snapshot Sampling
 
-The current default analysis uses the final 20 saved trajectory frames from each
-replicate. This terminal-frame protocol is stored under:
+The current default analysis uses the 20 most recent trajectory frames that
+survive the contact screen described under "Contact screening" below. This terminal-frame protocol is stored under:
 
 ```text
 results/analysis/binding_energy/last20frames/
@@ -59,6 +59,12 @@ SA nonpolar term = G_SA(complex) - G_SA(receptor) - G_SA(ligand)
 total MM/GBSA score = vdW + electrostatic + GB polar + SA
 ```
 
+The ligand is parameterised with SMIRNOFF `openff-2.0.0`, pinned explicitly in
+`src/md/openmm/ligand.py`. openmmforcefields 0.16 removed the implicit default
+that earlier runs relied on; openff-2.0.0 reproduces the ligand parameters in
+the production system XMLs exactly, 2.0.0-2.2.1 are equivalent for doravirine,
+and 2.3.0 is not.
+
 The GB polar-solvation term is evaluated with OpenMM `GBSAOBCForce`, solvent dielectric 80, solute dielectric 2, charges from the nonbonded force, generic element-based radii, and surface-area energy disabled for the polar-only term.
 
 ## Units
@@ -83,6 +89,50 @@ Conversion happens once, at the canonical-table rebuild boundary, via
 
 Select with `--energy-units {kcal/mol,kJ/mol}` on `rebuild_binding_energy_sources`;
 the source and target units are both recorded in the rebuild config JSON.
+
+## Contact screening (2026-08-18)
+
+23 of the 60 analysis trajectories contain frames in which doravirine and the
+NNIBP are placed impossibly close -- heavy-atom separations as short as 0.87 A.
+In those frames both molecules are internally intact (DOR bond lengths 1.32 A,
+protein heavy-atom bonds 1.45 A, indistinguishable from clean frames); only
+their relative placement is wrong. Scoring one produces an enormous positive
+r^-12 Lennard-Jones term, and the number of sub-2.2 A frames in a run predicts
+its van der Waals result with r = 0.981.
+
+`src/analysis/cli/screen_ligand_contact_artifacts.py` records the minimum
+ligand-protein heavy-atom distance for every frame. The distribution is strongly
+bimodal -- artifact frames below ~2.4 A, physical contacts above ~2.6 A, the
+band between essentially unpopulated -- so the 2.5 A default threshold sits in
+empty space. 12% of 14769 frames are flagged; every run retains at least 57
+clean frames, so no genotype is dropped even though two (Y181C, V106I+F227C)
+had no clean frames in the unscreened terminal window.
+
+`compute_mmgbsa_safe --contact-screen-csv` feeds the whitelist to the engine.
+
+### Effect
+
+| quantity | unscreened | screened |
+| --- | --- | --- |
+| vdW, all 60 runs | -47.9 +/- 27.5 | -63.6 +/- 1.7 |
+| vdW range | -66.1 .. +33.9 | -66.4 .. -59.0 |
+| mean SEM, total shift | 26 | 1.96 |
+
+(kcal/mol.) 37 of 60 runs moved by under 1 kcal/mol.
+
+### What is not known
+
+The mechanism is unresolved. Ruled out: chain mis-imaging (all close contacts
+are chain 0, at genuine NNIBP residues); coordinate corruption (internal
+geometry is normal); and checkpoint-resume append (the clash rate is ~38%
+whether or not a run resumed). The production state CSVs do not settle it
+either -- a 1.49 A O...O contact costs roughly 14000 kJ/mol, which is within the
+observed energy range, so the logged energies neither confirm nor exclude these
+configurations. The thermodynamic argument does: ~3300 kcal/mol above baseline
+is unreachable at 300 K, so these are not sampled equilibrium structures.
+
+The same analysis DCDs feed the contact-occupancy, pocket-volume, tunnel and
+DCCM analyses, which have not been screened.
 
 ## WT-Referenced Shifts
 
@@ -109,19 +159,24 @@ The previous default paired mutant and WT by replicate index:
 shift(mutant, replicate i) = component(mutant, replicate i) - component(WT, replicate i)
 ```
 
-WT replicate 2 is a large outlier in the van der Waals term (-5.6 kcal/mol, versus
--64.9 and -64.9 kcal/mol for replicates 1 and 3; total -15.9 +/- 22.0 kcal/mol
-across the three). Under index matching, that single trajectory injected a common
-~-60 kcal/mol offset into the replicate-2 shift of *every* mutation, and the
-resulting between-replicate spread was reported as per-mutation uncertainty.
-Mean SEM on the total shift was 26 kcal/mol.
+WT replicate 2 was a large outlier in the van der Waals term, and under index
+matching that single trajectory injected a common offset into the replicate-2
+shift of *every* mutation.
+
+Note (2026-08-18): WT replicate 2 is one of the 23 contact-screen failures above
+-- 15 of its last 20 frames carry a sub-2.2 A contact. So the outlier was an
+artifact, not a sampling excursion, and the switch to a WT-mean reference was
+stopping a corrupted trajectory from contaminating the whole panel. After
+screening, WT replicate 2 scores -64.0 kcal/mol in vdW, in line with replicates
+1 and 3, and the reference is no longer dominated by it.
 
 Switching to the WT replicate mean leaves every reported mean **exactly
 unchanged** — the mean of `mut_i - WT_i` and the mean of `mut_i - mean(WT)` are
 algebraically identical for balanced replicate counts — and it leaves all
 fold-change correlation statistics unchanged. What changes is the error bars:
-mean SEM on the total shift drops from 26 to 12 kcal/mol, and the spread now
-reflects mutant-replicate variability rather than one WT trajectory.
+mean SEM on the total shift dropped from 26 to 12 kcal/mol. (Contact screening
+later took it to 1.96; most of what remained at this stage was still artifact,
+not sampling.)
 
 SEMs do not shrink uniformly. They rise for mutations whose own replicate 2 was
 being incidentally cancelled by WT replicate 2 (K103N+M230L 9.7 -> 30.7 kcal/mol,
@@ -135,12 +190,15 @@ The WT reference carries its own uncertainty, which is a **common offset shared
 by every mutation** and is therefore excluded from the per-mutation SEM:
 
 ```text
-total              -15.9 +/- 22.0 kcal/mol
-van der Waals      -45.1 +/- 19.8 kcal/mol
-electrostatic       -5.4 +/-  0.8 kcal/mol
-GB polar solvation  35.2 +/-  1.8 kcal/mol
+total              -35.7 +/-  2.4 kcal/mol
+van der Waals      -64.8 +/-  0.4 kcal/mol
+electrostatic       -5.2 +/-  0.9 kcal/mol
+GB polar solvation  34.7 +/-  1.5 kcal/mol
 nonpolar SA         -0.5 +/-  0.0 kcal/mol
 ```
+
+(Post-screening. The pre-screening reference was -15.9 +/- 22.0 total,
+-45.1 +/- 19.8 vdW.)
 
 Because it is common to all rows it does not affect *comparisons between*
 genotypes, but it does mean the absolute zero of the total and vdW columns is
