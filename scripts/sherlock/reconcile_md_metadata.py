@@ -39,6 +39,16 @@ def main() -> int:
     parser.add_argument("--include-apo", action="store_true")
     parser.add_argument("--target-ns", type=float, default=None)
     parser.add_argument("--write", action="store_true", help="Rewrite stale JSON files in place")
+    parser.add_argument(
+        "--allow-downgrade",
+        action="store_true",
+        help=(
+            "Permit LOWERING md_production_steps_completed from state.csv. Off by "
+            "default: state.csv is often a stale mid-slice dump, and a downgrade "
+            "silently compresses every analysis time axis. Prefer the analysis-DCD "
+            "fingerprint (src.analysis.md_timing) before using this."
+        ),
+    )
     parser.add_argument("--csv-out", type=Path, default=None)
     args = parser.parse_args()
 
@@ -60,6 +70,7 @@ def main() -> int:
             json_path,
             state_csv_path=state_csv_path,
             write=args.write,
+            allow_downgrade=args.allow_downgrade,
             target_steps=target_steps,
         )
         if not before.consistent:

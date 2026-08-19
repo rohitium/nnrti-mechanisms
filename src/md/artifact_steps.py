@@ -136,7 +136,26 @@ def reconcile_json_with_state_csv(
     *,
     write: bool = False,
     target_steps: int | None = None,
+    allow_downgrade: bool = False,
 ) -> ConsistencyStatus:
+    """Reconcile a run JSON against its state.csv.
+
+    ``allow_downgrade`` guards the destructive direction. ``state.csv`` is often a
+    **stale mid-slice dump** -- a resumed run can leave a file whose last Step is
+    far below what the run actually completed -- so using it to LOWER
+    ``md_production_steps_completed`` silently corrupts every time axis derived
+    from that field (``result_collector`` builds frame timestamps from it).
+
+    Observed 2026-08-17: an unconditional rewrite halved 25 run JSONs
+    (e.g. G190A rep_01 50,000,000 -> 25,218,000) from state.csv files that the
+    same tool had flagged ``state_csv_stale: true``. The analysis DCDs for those
+    runs carry the canonical completed-100 ns fingerprint (180 fr / 34 MB), which
+    ``scripts/md/audit_md_metadata.py`` documents as authoritative over both JSON
+    and state.csv.
+
+    Raising the count is safe and still automatic; lowering now requires an
+    explicit opt-in.
+    """
     payload = read_json_payload(json_path)
     if state_csv_path is None:
         state_csv_path = infer_state_csv_path(json_path)
@@ -157,7 +176,14 @@ def reconcile_json_with_state_csv(
         updated = dict(payload)
         if target_steps is not None:
             updated["md_production_steps"] = int(target_steps)
-        if state_csv_steps > 0:
+        # Never LOWER the completion count from state.csv unless explicitly asked:
+        # state.csv can be a stale mid-slice dump, and a downgrade silently
+        # compresses every time axis derived from md_production_steps_completed.
+        would_downgrade = 0 < state_csv_steps < json_steps
+        if would_downgrade and not allow_downgrade:
+            updated["state_csv_steps_observed"] = int(state_csv_steps)
+            updated["state_csv_stale"] = True
+        elif state_csv_steps > 0:
             updated["md_production_steps_completed"] = int(state_csv_steps)
             heating_steps = updated.get("md_heating_steps", 0)
             try:

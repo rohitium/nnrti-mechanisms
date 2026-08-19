@@ -92,11 +92,14 @@ if [ -n "${MUTATION_ALLOWLIST}" ]; then
 fi
 echo ""
 
+# Read-only by design. This used to pass --write, which rewrote 25 run JSONs from
+# stale state.csv files on 2026-08-17 (halving md_production_steps_completed and so
+# every analysis time axis derived from it). A submission must never mutate run
+# metadata as a side effect; run reconcile deliberately if you want it to write.
 "${PYTHON}" scripts/sherlock/reconcile_md_metadata.py \
     --root . \
     --include-apo \
-    --target-ns "${MD_PRODUCTION_NS}" \
-    --write >/dev/null
+    --target-ns "${MD_PRODUCTION_NS}" >/dev/null
 
 SYSTEMS_TO_RUN=()
 SKIPPED_DONE=0
