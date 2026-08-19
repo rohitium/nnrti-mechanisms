@@ -15,6 +15,18 @@ def _env_float(name: str, default: float) -> float:
     except ValueError:
         return default
 
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
 FEP_PMX_ROOT = Path("results/analysis/fep_pmx")
 LEG_INPUTS = FEP_PMX_ROOT / "inputs"
 DOR_ITP_DIR = LEG_INPUTS / "dor_openff"
@@ -113,8 +125,19 @@ NEQ_SWITCH_PS_DEFAULT = _env_float("NEQ_SWITCH_PS_DEFAULT", 100.0)
 LONG_SWITCH_PS = _env_float("NEQ_LONG_SWITCH_PS", 500.0)
 
 # SLURM array bundling: snapshots executed sequentially per GPU job (see docs/pmx-neq-fep-plan.md §7).
-SWITCH_SNAPSHOTS_PER_TASK_DEFAULT = 100
-SWITCH_SNAPSHOTS_PER_TASK_LONG = 50  # 500 ps switches → ~15 h/task at 50 snaps
+#
+# Switches are embarrassingly parallel -- each is an independent run from its own
+# snapshot -- so this constant, not GPU availability, sets the wall clock. A leg is
+# 1200 switches; at 50/task that is 24 elements and ~15 h each. Lowering it trades
+# more array elements (against the MaxSubmitPU=100 cap) for a shorter critical path.
+#
+# Both are env-overridable so a tail-end top-up can be re-bundled small and finish in
+# hours instead of a day: on 2026-08-17 G190E's last 96 switches sat in 2 elements at
+# ~21 h; re-bundled at 6/task they spread over 16 GPUs (~3 h). Re-bundling is SAFE --
+# run_neq_task skips per-switch on an existing dgdl.xvg, not per-task, so completed
+# work is never redone. Rebuild the manifest with prepare_neq --force afterwards.
+SWITCH_SNAPSHOTS_PER_TASK_DEFAULT = _env_int("NEQ_SNAPSHOTS_PER_TASK", 100)
+SWITCH_SNAPSHOTS_PER_TASK_LONG = _env_int("NEQ_SNAPSHOTS_PER_TASK_LONG", 50)
 
 
 def switch_snapshots_per_task(leg_id: str) -> int:
