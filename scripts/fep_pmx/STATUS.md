@@ -121,6 +121,51 @@ F227C/V106I/A98G+F227C 3–5; V106A+F227L/L234I/P225H, Y181C, V106I+F227C 4–5;
 
 ---
 
+## RESULT (2026-08-17): K103N at 500 ps fixed the panel's four worst points
+
+| genotype | 100 ps | 500 ps |
+|---|---|---|
+| K103N | +0.92 ± **2.19** | +0.54 ± **0.23** |
+| K103N+M230L | +0.96 ± **2.22** | +0.59 ± **0.41** |
+| K103N+P225H | +2.13 ± **2.32** | +1.76 ± **0.79** |
+| L100I+K103N | +0.57 ± **2.28** | +0.19 ± **0.68** |
+
+All four now under SEM 1. σ_DDG on `wt_to_K103N` fell **3.80 → 0.40** (per-rep ΔΔG
++5.09/−0.01/−2.33 → +0.09/+0.82/+0.71). Cost: 36 GPU elements, versus the ~152 the
+replicate route needed. Full write-up, including the corrected mechanism:
+`results/analysis/fep_pmx/_archive/wt_to_K103N_100ps_2026-08-15/README.md`.
+
+**The mechanism is holo/apo cancellation, NOT better overlap.** Dissipation fell
+only ~35% and Crooks separation did not improve at all (3.65–5.07 → 3.83–5.35 σ);
+overlap is still ~0 with all six units flagged. What changed is that the residual
+dissipation bias became *correlated between holo and apo*, so it cancels in the
+double difference — per-rep holo−apo hysteresis spread fell 3.00 → 0.62. Across 14
+legs, sd(holo−apo hysteresis) predicts σ_DDG at r = 0.61.
+
+**Panel is now protocol-mixed** — two charge legs at 500 ps, sixteen neutral legs at
+100 ps. State this in the Methods. Panel after the rebuild: Spearman ρ = 0.365,
+R² = 0.095, p = 0.23 (n = 17 with fold) — essentially unchanged; only the error bars
+moved.
+
+⚠️ **`combine_neq --targets X` REWRITES `panel_ddg.csv` with only those targets.**
+Running it for the 4 K103N genotypes cut the panel to 4 rows. Always rebuild with
+the full genotype list afterwards.
+
+⚠️ **K103N still tiers as `omit_main`** on a hardcoded charge-leg rule written when
+its SEM was 2.19. At 0.23 it is the tightest number in the family — revisit the rule.
+
+### Remaining work: replicates, not 500 ps
+
+Five genotypes are still above SEM 1: Y181C (1.06), V106A+F227L (1.00),
+V106A+L234I (1.10), V106A+P225H (1.13), V106I+F227C (1.16). They need **7 leg-reps
+≈ 56 GPU elements**. A 500 ps rebuild of their 5 legs would cost ~180 elements
+(no surviving equil ⇒ full rebuild at ~36/leg) and rests on an r = 0.61 predictor,
+whereas SEM = σ_DDG/√n is certain. **Use replicates.**
+
+Seeding for those is validated and ready (`seed_extra_replicates.py`, 24 files,
+all six legs) — pending only the decision on whether to use the ~20 ns apo frames
+or extend those apo runs to 100 ns first.
+
 ## IN FLIGHT (submitted 2026-08-15) — two batches, 60 GPU array elements
 
 | batch | manifest | equil | extract | switch |
