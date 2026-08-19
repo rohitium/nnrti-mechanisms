@@ -5,9 +5,9 @@
  ========================================================
   Forward Data
     First accepted file: /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/wt_to_K103N/holo/rep_03/neq/switches/fwd_000/dgdl.xvg
-    # data points: 50001
-    Length of trajectory:  100.000 ps
-    Delta lambda:  0.00002
+    # data points: 250001
+    Length of trajectory:  500.000 ps
+    Delta lambda:  0.00000
 
     Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/wt_to_K103N/holo/rep_03/neq/switches/fwd_001/dgdl.xvg
     Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/wt_to_K103N/holo/rep_03/neq/switches/fwd_002/dgdl.xvg
@@ -111,9 +111,9 @@
 
   Reverse Data
     First accepted file: /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/wt_to_K103N/holo/rep_03/neq/switches/rev_000/dgdl.xvg
-    # data points: 50001
-    Length of trajectory:  100.000 ps
-    Delta lambda: -0.00002
+    # data points: 250001
+    Length of trajectory:  500.000 ps
+    Delta lambda: -0.00000
 
     Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/wt_to_K103N/holo/rep_03/neq/switches/rev_001/dgdl.xvg
     Reading /scratch/users/rsatija/nnrti-mechanisms-git/results/analysis/fep_pmx/legs/wt_to_K103N/holo/rep_03/neq/switches/rev_002/dgdl.xvg
@@ -327,16 +327,16 @@
   Bootstrap (Std Err): iteration 98/100
   Bootstrap (Std Err): iteration 99/100
   Bootstrap (Std Err): iteration 100/100
-  CGI: Forward Gauss mean =   -70.50 kcal/mol std =     2.78 kcal/mol
-  CGI: Reverse Gauss mean =   -89.87 kcal/mol std =     4.60 kcal/mol
-  CGI: dG =   -78.12 kcal/mol
-  CGI: Std Err (bootstrap:parametric) =     0.48 kcal/mol
-  CGI: Std Err (bootstrap) =     0.51 kcal/mol
+  CGI: Forward Gauss mean =   -71.97 kcal/mol std =     2.53 kcal/mol
+  CGI: Reverse Gauss mean =   -80.66 kcal/mol std =     1.81 kcal/mol
+  CGI: dG =   -76.86 kcal/mol
+  CGI: Std Err (bootstrap:parametric) =     0.21 kcal/mol
+  CGI: Std Err (bootstrap) =     0.22 kcal/mol
 
   Running KS-test...
-    Forward: gaussian quality = 0.80
+    Forward: gaussian quality = 0.92
              ---> KS-Test Ok
-    Reverse: gaussian quality = 0.16
+    Reverse: gaussian quality = 0.97
              ---> KS-Test Ok
 
  --------------------------------------------------------
@@ -545,11 +545,11 @@
   Bootstrap (Conv): iteration 98/100
   Bootstrap (Conv): iteration 99/100
   Bootstrap (Conv): iteration 100/100
-  BAR: dG =   -79.79 kcal/mol
-  BAR: Std Err (analytical) =     1.64 kcal/mol
-  BAR: Std Err (bootstrap)  =     0.37 kcal/mol
-  BAR: Conv =     0.93
-  BAR: Conv Std Err (bootstrap) =     0.02
+  BAR: dG =   -77.10 kcal/mol
+  BAR: Std Err (analytical) =     0.28 kcal/mol
+  BAR: Std Err (bootstrap)  =     0.28 kcal/mol
+  BAR: Conv =     0.04
+  BAR: Conv Std Err (bootstrap) =     0.17
 
  --------------------------------------------------------
              Jarzynski estimator     
@@ -756,11 +756,11 @@
   Bootstrap (Std Err): iteration 98/100
   Bootstrap (Std Err): iteration 99/100
   Bootstrap (Std Err): iteration 100/100
-  JARZ: dG Forward =   -75.48 kcal/mol
-  JARZ: dG Reverse =   -84.12 kcal/mol
-  JARZ: dG Mean    =   -79.80 kcal/mol
-  JARZ: Std Err Forward (bootstrap) =     0.66 kcal/mol
-  JARZ: Std Err Reverse (bootstrap) =     0.37 kcal/mol
+  JARZ: dG Forward =   -76.92 kcal/mol
+  JARZ: dG Reverse =   -78.68 kcal/mol
+  JARZ: dG Mean    =   -77.80 kcal/mol
+  JARZ: Std Err Forward (bootstrap) =     0.73 kcal/mol
+  JARZ: Std Err Reverse (bootstrap) =     0.26 kcal/mol
 
   Bootstrap (Std Err): iteration 1/100
   Bootstrap (Std Err): iteration 2/100
@@ -963,20 +963,20 @@
   Bootstrap (Std Err): iteration 98/100
   Bootstrap (Std Err): iteration 99/100
   Bootstrap (Std Err): iteration 100/100
-  JARZ_Gauss: dG Forward =   -77.04 kcal/mol
-  JARZ_Gauss: dG Reverse =   -71.95 kcal/mol
-  JARZ_Gauss: dG Mean    =   -74.49 kcal/mol
-  JARZ_Gauss: Std Err (analytical) Forward =     0.97 kcal/mol
-  JARZ_Gauss: Std Err (analytical) Reverse =     2.59 kcal/mol
-  JARZ_Gauss: Std Err Forward (bootstrap) =     0.87 kcal/mol
-  JARZ_Gauss: Std Err Reverse (bootstrap) =     4.04 kcal/mol
+  JARZ_Gauss: dG Forward =   -77.41 kcal/mol
+  JARZ_Gauss: dG Reverse =   -77.89 kcal/mol
+  JARZ_Gauss: dG Mean    =   -77.65 kcal/mol
+  JARZ_Gauss: Std Err (analytical) Forward =     0.81 kcal/mol
+  JARZ_Gauss: Std Err (analytical) Reverse =     0.43 kcal/mol
+  JARZ_Gauss: Std Err Forward (bootstrap) =     0.88 kcal/mol
+  JARZ_Gauss: Std Err Reverse (bootstrap) =     0.44 kcal/mol
  ========================================================
 
    Plotting histograms......
 
    ......done...........
 
-   Execution time = 00:00:21
+   Execution time = 00:01:14
 
 
 ---stderr---

@@ -3,7 +3,7 @@
   "phase": "holo",
   "replicate": 2,
   "n_snapshots": 100,
-  "switch_ps": 100.0,
+  "switch_ps": 500.0,
   "equil_ns": 5.0,
   "snapshot_times_ps": [
     100.0,
@@ -110,5 +110,5 @@
   "system_gro": "results/analysis/fep_pmx/legs/wt_to_K103N/holo/rep_02/gromacs_build/system.gro",
   "system_top": "results/analysis/fep_pmx/legs/wt_to_K103N/holo/rep_02/gromacs_build/system.top",
   "manifest": "results/analysis/fep_pmx/legs/wt_to_K103N/holo/rep_02/neq/neq_manifest.csv",
-  "n_tasks": 7
+  "n_tasks": 9
 }
