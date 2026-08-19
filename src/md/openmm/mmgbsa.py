@@ -96,6 +96,40 @@ def _build_component_system(topology, forcefield, mode: str):
     return system
 
 
+def _obc_scale_factors() -> dict[str, float]:
+    """Element -> OBC screening factor, from OpenMM's own reference table.
+
+    ``GBSAOBCForce.addParticle`` takes (charge, radius, scaleFactor). The scale
+    factor is element-specific in the OBC model (C 0.72, H 0.85, N 0.79, ...);
+    passing a constant distorts every Born radius in a burial-dependent way,
+    which is exactly what the GB term measures. Elements absent from OpenMM's
+    table (e.g. Cl) fall back to the same default OpenMM itself uses.
+    """
+    from openmm.app.internal.customgbforces import _SCREEN_PARAMETERS
+
+    table: dict[str, float] = {}
+    default = _OBC_DEFAULT_SCALE
+    for element, values in _SCREEN_PARAMETERS.items():
+        if element is None:
+            default = float(values[0])
+            continue
+        table[element.symbol.upper()] = float(values[0])
+    table.setdefault("_default", default)
+    return table
+
+
+#: Fallback screening factor for elements OpenMM does not tabulate.
+_OBC_DEFAULT_SCALE = 0.8
+
+#: Interior dielectric for the GB term. The MM electrostatics are evaluated in
+#: vacuum (NoCutoff NonbondedForce, eps = 1), so the GB term describes a
+#: vacuum -> water transfer and eps_in = 1.0 is the internally consistent
+#: choice; it also matches the AmberTools MMPBSA.py default. A value of 2.0 was
+#: used before 2026-08-18, which damped the polar term by roughly half relative
+#: to the Coulomb term it is meant to balance.
+GB_SOLUTE_DIELECTRIC = 1.0
+
+
 def _build_gb_system(topology, forcefield, include_sa: bool):
     app = require_module("openmm.app")
     openmm = require_module("openmm")
@@ -118,16 +152,22 @@ def _build_gb_system(topology, forcefield, include_sa: bool):
 
     gb = openmm.GBSAOBCForce()
     gb.setSolventDielectric(80.0)
-    gb.setSoluteDielectric(2.0)
+    gb.setSoluteDielectric(float(GB_SOLUTE_DIELECTRIC))
     if include_sa:
         gb.setSurfaceAreaEnergy(2.25936)  # kJ/mol/nm^2
     else:
         gb.setSurfaceAreaEnergy(0.0)
 
+    scales = _obc_scale_factors()
+    fallback = scales["_default"]
     for atom in topology.atoms():
         q, _sigma, _eps = nb.getParticleParameters(atom.index)
         symbol = atom.element.symbol if atom.element is not None else atom.name[0]
-        gb.addParticle(q, _radius_from_symbol(symbol), 1.0)
+        gb.addParticle(
+            q,
+            _radius_from_symbol(symbol),
+            scales.get(symbol.upper(), fallback),
+        )
 
     gb.setForceGroup(2)
     system.addForce(gb)
