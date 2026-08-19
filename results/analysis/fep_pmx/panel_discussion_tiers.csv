@@ -13,7 +13,7 @@ V106A+F227L,4.393,1.003,106.0,show,show on scatter; do not over-interpret point 
 V106A+L234I,3.723,1.099,161.0,show,show on scatter; do not over-interpret point estimate
 V106A+P225H,3.707,1.126,153.0,show,show on scatter; do not over-interpret point estimate
 V106I+F227C,1.753,1.162,105.0,show,show on scatter; do not over-interpret point estimate
-K103N,0.917,2.192,1.2,omit_main,charge leg and/or SEM too large for main-text point estimate
-K103N+M230L,0.963,2.217,36.0,show,show on scatter; do not over-interpret point estimate
-K103N+P225H,2.133,2.318,7.8,show,show on scatter; do not over-interpret point estimate
-L100I+K103N,0.570,2.284,6.8,show,show on scatter; do not over-interpret point estimate
+K103N,0.540,0.227,1.2,omit_main,charge leg and/or SEM too large for main-text point estimate
+K103N+M230L,0.587,0.407,36.0,main_text,SEM ≤ 0.6 kcal/mol; discuss numerically
+K103N+P225H,1.757,0.788,7.8,show,show on scatter; do not over-interpret point estimate
+L100I+K103N,0.193,0.681,6.8,show,show on scatter; do not over-interpret point estimate
