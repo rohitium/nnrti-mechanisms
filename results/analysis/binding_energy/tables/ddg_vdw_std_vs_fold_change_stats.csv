@@ -1,2 +1,2 @@
 feature,label,n_mutations,pearson_r,pearson_pvalue,r_squared,slope_per_log10_fold,intercept,stderr,output_png
-ddg_vdw_std,SD of vdW ΔΔG,13,0.2254245745592631,0.4589985371153241,0.05081623881522477,0.18376370122787133,0.9495358829150435,0.2394623708524856,results/analysis/binding_energy/plots/mmgbsa_ddg_vdw_std_vs_fold_change.png
+ddg_vdw_std,SD of vdW ΔΔG,13,0.5092897663265619,0.07546115646166957,0.259376066084964,0.4903189895418093,0.9370176513511154,0.24981372341987196,results/analysis/binding_energy/plots/mmgbsa_ddg_vdw_std_vs_fold_change.png
