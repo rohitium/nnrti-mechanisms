@@ -30,6 +30,12 @@ class MMGBSAResult:
     binding_dg_mean: float
     binding_dg_std: float
     binding_dg_sem: float
+    #: Absolute (unsubtracted) energies keyed "<phase>_<term>" for phase in
+    #: complex/receptor/ligand and term in vdw/elec/gb/sa/total, each mapping to
+    #: (mean, std, sem) over the sampled snapshots. The binding terms above are
+    #: complex - receptor - ligand of these; kept separately so the raw phase
+    #: energies can be inspected without recomputing.
+    absolute_terms: tuple[tuple[str, tuple[float, float, float]], ...] = ()
 
 
 def _radius_from_symbol(symbol: str) -> float:
@@ -442,6 +448,11 @@ def compute_mmgbsa_from_trajectory(
     d_gb: list[float] = []
     d_sa: list[float] = []
     d_tot: list[float] = []
+    absolute: dict[str, list[float]] = {
+        f"{phase}_{term}": []
+        for phase in ("complex", "receptor", "ligand")
+        for term in ("vdw", "elec", "gb", "sa", "total")
+    }
 
     for frame in snap_idx:
         u.trajectory[int(frame)]
@@ -473,6 +484,18 @@ def compute_mmgbsa_from_trajectory(
         gb_p_c = _energy_of(contexts["complex_gb_polar"], solute_nm, 2)
         gb_p_r = _energy_of(contexts["receptor_gb_polar"], rec_nm, 2)
         gb_p_l = _energy_of(contexts["ligand_gb_polar"], lig_nm, 2)
+
+        for phase, (ev, ee, gp, gt) in (
+            ("complex", (e_vdw_c, e_elec_c, gb_p_c, gb_t_c)),
+            ("receptor", (e_vdw_r, e_elec_r, gb_p_r, gb_t_r)),
+            ("ligand", (e_vdw_l, e_elec_l, gb_p_l, gb_t_l)),
+        ):
+            sa_term = gt - gp
+            absolute[f"{phase}_vdw"].append(float(ev))
+            absolute[f"{phase}_elec"].append(float(ee))
+            absolute[f"{phase}_gb"].append(float(gp))
+            absolute[f"{phase}_sa"].append(float(sa_term))
+            absolute[f"{phase}_total"].append(float(ev + ee + gp + sa_term))
 
         dv = e_vdw_c - e_vdw_r - e_vdw_l
         de = e_elec_c - e_elec_r - e_elec_l
@@ -508,6 +531,8 @@ def compute_mmgbsa_from_trajectory(
         del sys
     systems.clear()
 
+    absolute_summary = tuple((key, _stats(values)) for key, values in absolute.items())
+
     return MMGBSAResult(
         n_snapshots=len(d_tot),
         snapshot_indices=tuple(int(x) for x in snap_idx.tolist()),
@@ -526,4 +551,5 @@ def compute_mmgbsa_from_trajectory(
         binding_dg_mean=t_m,
         binding_dg_std=t_s,
         binding_dg_sem=t_se,
+        absolute_terms=absolute_summary,
     )

@@ -191,6 +191,11 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
                 else float("nan")
             ),
             "mmgbsa_time_source": task["time_source"],
+            **{
+                f"abs_{key}_{stat}": value
+                for key, stats in getattr(mm, "absolute_terms", ())
+                for stat, value in zip(("mean", "std", "sem"), stats)
+            },
             "mmgbsa_contact_screened": bool(task.get("allowed_frames") is not None),
             "mmgbsa_clean_frames_available": (
                 int(len(task["allowed_frames"])) if task.get("allowed_frames") is not None else float("nan")
