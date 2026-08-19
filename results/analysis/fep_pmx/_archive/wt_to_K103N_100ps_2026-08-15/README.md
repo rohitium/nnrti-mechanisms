@@ -59,6 +59,61 @@ Note this contradicts the panel's earlier switch-length-invariance finding — t
 was measured on **neutral** legs (V106A, F227C) dissipating 1–4 kcal/mol, which had
 nothing to gain. This leg dissipates 14–19.
 
+## OUTCOME (2026-08-17): the 500 ps re-run worked
+
+| | 100 ps (this archive) | 500 ps |
+|---|---|---|
+| ddG_bind | +0.92 +- 2.19 | **+0.54 +- 0.23** |
+| per-rep ddG | +5.09, -0.01, -2.33 | +0.09, +0.82, +0.71 |
+| sigma_DDG | 3.80 | **0.40** |
+| hysteresis holo | 14.19 / 18.54 / 19.36 | 12.04 / 12.01 / 8.68 |
+| hysteresis apo | 15.38 / 14.71 / 15.21 | 11.47 / 12.63 / 9.01 |
+| separation | 3.65-5.07 sigma | 3.83-5.35 sigma |
+| Crooks overlap | ~0 | ~0 (all 6 units still flagged) |
+
+All four K103N genotypes dropped below SEM 1: K103N 2.19 -> 0.23,
+K103N+M230L 2.22 -> 0.41, K103N+P225H 2.32 -> 0.79, L100I+K103N 2.28 -> 0.68.
+
+### The predicted mechanism was WRONG; the real one is holo/apo cancellation
+
+The prediction was that dissipation would fall ~5x and separation improve by
+~sqrt(5) to ~2 sigma. Hysteresis fell only ~35% and **separation did not improve
+at all** (marginally higher). The work distributions narrowed roughly *in
+proportion* to the hysteresis, so their width is not dissipation-driven -- that
+would give sigma ~ sqrt(W_diss) and a visible separation gain. It is set by
+conformational heterogeneity of the endpoint ensembles, which longer switches do
+not touch. Hence overlap stayed ~0.
+
+What actually changed is that the residual dissipation bias became **correlated
+between holo and apo**, so it cancels in the double difference:
+
+```
+holo - apo hysteresis, per replicate
+100 ps:  -1.20, +3.83, +4.16   -> sd 3.00
+500 ps:  +0.57, -0.61, -0.33   -> sd 0.62
+```
+
+That difference-spread fell 4.8x; sigma_DDG fell 9.6x. Same effect seen in G190S,
+where per-phase variance is large (~4) but ddG variance is tiny (0.59).
+
+**So the lever is holo/apo correlation, not overlap or dissipation magnitude.**
+Across 14 legs, sd(holo-apo hysteresis) correlates with sigma_DDG at r = 0.61.
+
+Also validated: the Rocklin/Hunenberger charge correction came out at ~1e-5
+kcal/mol per replicate, exactly as `charge_correction.py` argues it should -- the
+finite-size terms cancel between holo and apo in matched boxes.
+
+### Where 500 ps is worth it (and where it is not)
+
+The `git clean` left these legs with no surviving equil, so a 500 ps re-run means
+a full rebuild: ~36 GPU array elements per leg. Compare against replicates
+(8 elements per leg-rep, SEM = sigma_DDG/sqrt(n)):
+
+- **K103N family** needed 19 leg-reps (~152 elements) -- 500 ps at 36 was a bargain.
+- **The remaining 5 genotypes** need only 7 leg-reps (~56 elements); 500 ps on
+  their 5 legs would cost ~180. Use replicates there, which are also *certain*
+  rather than resting on an r = 0.61 predictor.
+
 ## What the re-run cannot tell us
 
 The `git clean -fd` of 2026-08-13 destroyed this leg's equil snapshots, so the
