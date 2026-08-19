@@ -170,10 +170,15 @@ when `--exclude` is demonstrably on the sbatch command line — it does not refl
 so treating `(null)` as failure sends you chasing a non-problem (it did, for two days):
 
 ```bash
-sacct -j <id> --format=JobID,SubmitLine%250 -X | head -3      # look for --exclude=...
-scontrol show job -d <id> | grep -i SubmitLine                # same, live
-sacct -j <id> --format=JobID%16,State,NodeList%14 -X          # ground truth: no element on a bad node
+scontrol show job -d <id> | grep -o 'SubmitLine=.*' | head -1  # THE reliable check
+sacct -j <id> --format=JobID%16,State,NodeList%14 -X           # ground truth: no element on a bad node
 ```
+
+**Use `scontrol`, not `sacct`, for this.** `--exclude` is appended LAST to the sbatch
+command line, and `sacct --format=SubmitLine%250` truncates before reaching it (the
+tell is a trailing `+` on the printed line) -- so it prints nothing and the exclusion
+looks missing when it is actually present. `sacct ... SubmitLine%600` also works if
+you prefer sacct.
 
 Confirmed 2026-08-17 on job 39630950: `SubmitLine` carried `--exclude=sh03-12n12,sh03-12n13`,
 `ExcNodeList` still printed `(null)`, and none of the allocated elements landed on either node.
