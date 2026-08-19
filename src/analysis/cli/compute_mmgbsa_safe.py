@@ -155,6 +155,7 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
             total_time_ns=task["total_time_ns"],
             sample_last_frames=task["sample_last_frames"],
             analysis_topology_pdb_path=Path(task["analysis_topo"]),
+            allowed_frames=task.get("allowed_frames"),
         )
         row = {
             "structure": task["structure"],
@@ -190,6 +191,10 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
                 else float("nan")
             ),
             "mmgbsa_time_source": task["time_source"],
+            "mmgbsa_contact_screened": bool(task.get("allowed_frames") is not None),
+            "mmgbsa_clean_frames_available": (
+                int(len(task["allowed_frames"])) if task.get("allowed_frames") is not None else float("nan")
+            ),
             "mmgbsa_sample_last_frames": (
                 int(task["sample_last_frames"])
                 if task["sample_last_frames"] is not None and int(task["sample_last_frames"]) > 0
@@ -221,6 +226,21 @@ def main() -> int:
         type=int,
         default=0,
         help="If > 0, sample the last N saved trajectory frames. Overrides --sample-window-ns.",
+    )
+    parser.add_argument(
+        "--contact-screen-csv",
+        type=Path,
+        default=None,
+        help=(
+            "Per-frame contact screen from screen_ligand_contact_artifacts. When given, frames "
+            "flagged as artifacts are excluded and the most recent surviving frames are scored."
+        ),
+    )
+    parser.add_argument(
+        "--min-clean-frames",
+        type=int,
+        default=5,
+        help="Fail a replicate rather than score it if the screen leaves fewer clean frames than this.",
     )
     parser.add_argument("--timestep-fs", type=float, default=2.0)
     parser.add_argument("--ligand-resname", type=str, default="2KW")
@@ -266,6 +286,18 @@ def main() -> int:
             logging.info(f"Loaded {len(existing_results)} existing MM/GBSA results from {output_path}")
         except Exception as exc:
             logging.warning(f"Could not load existing results: {exc}")
+
+    clean_frames: dict[tuple[str, int], list[int]] = {}
+    if args.contact_screen_csv is not None:
+        if not args.contact_screen_csv.exists():
+            raise FileNotFoundError(args.contact_screen_csv)
+        screen = pd.read_csv(args.contact_screen_csv)
+        screen = screen[(screen["status"] == "ok") & screen["is_clean"].astype(bool)]
+        for (mut, rep), grp in screen.groupby(["mutation", "replicate"]):
+            clean_frames[(str(mut), int(rep))] = sorted(int(f) for f in grp["frame"])
+        logging.info(
+            "Loaded contact screen for %d runs from %s", len(clean_frames), args.contact_screen_csv
+        )
 
     # Build runnable task list
     tasks: list[dict] = []
@@ -332,8 +364,22 @@ def main() -> int:
                     f"using discard_fraction={discard_fraction:.4f} fallback"
                 )
 
+        allowed = None
+        if args.contact_screen_csv is not None:
+            allowed = clean_frames.get((mutation, replicate))
+            if allowed is None:
+                logging.warning("  No screen rows for %s rep%d; skipping", mutation, replicate)
+                continue
+            if len(allowed) < int(args.min_clean_frames):
+                logging.error(
+                    "  %s rep%d has only %d clean frames (min %d); skipping",
+                    mutation, replicate, len(allowed), args.min_clean_frames,
+                )
+                continue
+
         tasks.append(
             {
+                "allowed_frames": allowed,
                 "structure": row["structure"],
                 "mutation": mutation,
                 "safe_label": safe,

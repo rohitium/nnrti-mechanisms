@@ -243,7 +243,22 @@ def _select_snapshot_indices(
     sample_window_ns: float | None = None,
     total_time_ns: float | None = None,
     sample_last_frames: int | None = None,
+    allowed_frames: Iterable[int] | None = None,
 ) -> np.ndarray:
+    if allowed_frames is not None:
+        allowed = np.asarray(sorted({int(f) for f in allowed_frames if 0 <= int(f) < n_frames}), dtype=int)
+        if allowed.size == 0:
+            raise ValueError(
+                "No usable frames remain after screening; widen the sampling window "
+                "or relax the contact threshold."
+            )
+        # Take the most recent frames, matching the terminal-window convention
+        # used by the unscreened paths.
+        take = min(max(1, int(n_snapshots)), allowed.size)
+        if sample_last_frames is not None and int(sample_last_frames) > 0:
+            take = min(take, int(sample_last_frames))
+        return allowed[-take:]
+
     if sample_last_frames is not None and int(sample_last_frames) > 0:
         start = max(0, int(n_frames) - int(sample_last_frames))
         available = n_frames - start
@@ -347,12 +362,19 @@ def compute_mmgbsa_from_trajectory(
     total_time_ns: float | None = None,
     sample_last_frames: int | None = None,
     analysis_topology_pdb_path: Path | None = None,
+    allowed_frames: Iterable[int] | None = None,
 ) -> MMGBSAResult:
     """Compute MM/GBSA-style decomposition from explicit-MD snapshots.
 
     Note: If analysis_topology_pdb_path is provided (solute-only topology),
     it will be used for BOTH force field setup AND trajectory loading.
     The minimized_pdb_path is ignored in this case.
+
+    ``allowed_frames`` restricts sampling to a whitelist of frame indices --
+    used to exclude frames carrying unphysical ligand-protein contacts, which
+    would otherwise contribute a huge spurious repulsive term. When given it
+    overrides the window-based selection and the most recent allowed frames are
+    taken.
     """
     import MDAnalysis as mda
 
@@ -412,6 +434,7 @@ def compute_mmgbsa_from_trajectory(
         sample_window_ns=sample_window_ns,
         total_time_ns=total_time_ns,
         sample_last_frames=sample_last_frames,
+        allowed_frames=allowed_frames,
     )
 
     d_vdw: list[float] = []
