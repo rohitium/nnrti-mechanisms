@@ -66,6 +66,7 @@ LABEL_OVERRIDES = {
     "V106A+P225H": (-16, -4),
 }
 AXIS_LABEL_FONTSIZE = 20  # 2x the matplotlib default
+TICK_LABEL_FONTSIZE = 15  # scaled to stay proportionate to the axis labels
 
 
 def _load_repel():
@@ -213,6 +214,7 @@ def main(argv: list[str] | None = None) -> int:
                   fontsize=AXIS_LABEL_FONTSIZE)
     ax.set_ylabel(r"Computed $\Delta\Delta G_{\mathrm{bind}}$ (kcal/mol)",
                   fontsize=AXIS_LABEL_FONTSIZE)
+    ax.tick_params(axis="both", labelsize=TICK_LABEL_FONTSIZE)
     ax.legend(loc="upper left", fontsize=8, frameon=True)
     fig.tight_layout()
     fig.savefig(args.out_png, dpi=200)
