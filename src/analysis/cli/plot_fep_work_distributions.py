@@ -101,7 +101,7 @@ def main() -> int:
 
     ncols = max(2, args.ncols)
     nrows = int(np.ceil(len(panels) / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(3.05 * ncols, 1.75 * nrows))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.05 * ncols, 1.95 * nrows))
     axes = np.atleast_1d(axes).ravel()
 
     for ax, key in zip(axes, panels):
@@ -111,9 +111,16 @@ def main() -> int:
         hi = max(e["fwd"].max(), e["rev"].max())
         bins = np.linspace(lo, hi, args.bins)
         ax.hist(e["fwd"], bins=bins, color=FWD_COLOUR, alpha=0.55, density=True, lw=0)
+
         ax.hist(e["rev"], bins=bins, color=REV_COLOUR, alpha=0.55, density=True, lw=0)
         for dg in e["bar"]:
-            ax.axvline(dg, color="0.25", lw=0.9, ls="--", zorder=4)
+            # Stop short of the annotation band at the top of the panel.
+            ax.axvline(dg, ymin=0.0, ymax=0.70, color="0.25", lw=0.9, ls="--", zorder=4)
+        # Fixed headroom above the tallest bar so the two-line annotation always
+        # sits in clear space rather than over the data.
+        peak = max(np.histogram(e["fwd"], bins=bins, density=True)[0].max(),
+                   np.histogram(e["rev"], bins=bins, density=True)[0].max())
+        ax.set_ylim(0, peak * 1.62)
         hyst = float(e["fwd"].mean() - e["rev"].mean())
         # Same overlap coefficient qc_neq uses, averaged over replicates as its own
         # panel figure does, so this agrees with panel_qc.csv. 0 = disjoint,
@@ -122,8 +129,11 @@ def main() -> int:
         colour = "#B2182B" if ov < OVERLAP_MIN else ("#B35806" if ov < 0.5 else "0.35")
         label = leg.replace("wt_to_", "WT→").replace("_to_", "→").replace("_", "+")
         ax.set_title(f"{label}  ({phase})", fontsize=8.5, pad=2.5)
-        ax.text(0.03, 0.93, f"overlap {ov:.2f}  ·  {hyst:.1f} kcal",
-                transform=ax.transAxes, fontsize=7, va="top", color=colour,
+        ax.text(0.03, 0.94,
+                f"overlap coefficient = {ov:.2f}\n"
+                r"$\langle W_f \rangle - \langle W_r \rangle$ = " + f"{hyst:.1f} kcal/mol",
+                transform=ax.transAxes, fontsize=7, va="top", ha="left",
+                linespacing=1.5, color=colour,
                 fontweight="bold" if ov < OVERLAP_MIN else "normal")
         ax.tick_params(labelsize=7, length=2.5, pad=1.5)
         ax.set_yticks([])
