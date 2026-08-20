@@ -94,7 +94,10 @@ def main() -> int:
 
     table = pd.DataFrame(records)
     args.output_csv.parent.mkdir(parents=True, exist_ok=True)
-    table.to_csv(args.output_csv, index=False)
+    # utf-8-sig: Excel reads a BOM-less UTF-8 .csv as the legacy codepage, which
+    # turns the delta and plus-minus characters into mojibake. The BOM makes it
+    # detect UTF-8. Harmless to pandas, R and Numbers, which all skip it.
+    table.to_csv(args.output_csv, index=False, encoding="utf-8-sig")
     print(table.to_string(index=False))
     print(f"\nWrote {args.output_csv}")
     return 0

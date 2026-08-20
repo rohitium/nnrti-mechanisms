@@ -1,4 +1,4 @@
-Mutation category,Mutation,∆∆E_Total (kcal/mol),∆∆E_vdW (kcal/mol),∆∆E_elec (kcal/mol),∆∆E_GB (kcal/mol),∆∆E_SA (kcal/mol),∆∆G_bind (kcal/mol)
+﻿Mutation category,Mutation,∆∆E_Total (kcal/mol),∆∆E_vdW (kcal/mol),∆∆E_elec (kcal/mol),∆∆E_GB (kcal/mol),∆∆E_SA (kcal/mol),∆∆G_bind (kcal/mol)
 Susceptible,V106I,2.44 ± 1.23,1.75 ± 1.22,0.41 ± 0.25,0.30 ± 0.09,-0.025 ± 0.063,2.27 ± 0.74
 Susceptible,K103N,-0.47 ± 0.39,-0.65 ± 0.36,-2.27 ± 0.29,2.49 ± 0.41,-0.051 ± 0.014,0.54 ± 0.23
 Susceptible,Y181C,1.81 ± 0.51,1.02 ± 0.48,-0.78 ± 0.29,1.55 ± 0.24,0.019 ± 0.025,-0.66 ± 1.06
