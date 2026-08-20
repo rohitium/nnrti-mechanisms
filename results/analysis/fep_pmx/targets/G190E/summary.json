@@ -4,37 +4,37 @@
   "n_reps_per_leg": {
     "wt_to_G190E": 3
   },
-  "ddg_bind": 1.9999591601326452,
-  "sem": 1.7672528214290013,
+  "ddg_bind": 2.0,
+  "sem": 1.7672294701028504,
   "units": "kcal/mol",
   "legs": [
     {
       "leg_id": "wt_to_G190E",
       "n_reps": 3,
-      "leg_ddg_mean": 1.9999591601326452,
-      "leg_ddg_sd": 3.0609716765344785,
-      "leg_ddg_sem": 1.7672528214290013,
+      "leg_ddg_mean": 2.0,
+      "leg_ddg_sd": 3.060931230851161,
+      "leg_ddg_sem": 1.7672294701028504,
       "per_rep": [
         {
           "replicate": 1,
           "holo_dg": -60.32,
           "apo_dg": -59.61,
-          "charge_correction": -9.392945834158645e-05,
-          "leg_ddg": -0.7100939294583425
+          "charge_correction": 0.0,
+          "leg_ddg": -0.7100000000000009
         },
         {
           "replicate": 2,
           "holo_dg": -49.65,
           "apo_dg": -51.04,
-          "charge_correction": -2.2384939446243313e-05,
-          "leg_ddg": 1.3899776150605543
+          "charge_correction": 0.0,
+          "leg_ddg": 1.3900000000000006
         },
         {
           "replicate": 3,
           "holo_dg": -47.69,
           "apo_dg": -53.01,
-          "charge_correction": -6.205204276438225e-06,
-          "leg_ddg": 5.319993794795724
+          "charge_correction": 0.0,
+          "leg_ddg": 5.32
         }
       ]
     }

@@ -103,6 +103,47 @@ Also validated: the Rocklin/Hunenberger charge correction came out at ~1e-5
 kcal/mol per replicate, exactly as `charge_correction.py` argues it should -- the
 finite-size terms cancel between holo and apo in matched boxes.
 
+### OUT-OF-SAMPLE TEST (2026-08-17): G190E, and the mechanism predicted it
+
+G190E is the panel's other delta_q = -1 leg. Run at the SAME 500 ps protocol, it did
+**not** reproduce the collapse: **+2.00 +- 1.77**, sigma_DDG = 3.06.
+
+That is a genuine negative result, and an important one: **the 500 ps benefit is
+leg-specific, not a property of charge legs.** Do not generalize it.
+
+The holo/apo-correlation mechanism predicted the failure:
+
+| leg / protocol | sd(holo-apo hysteresis) | sigma_DDG |
+|---|---|---|
+| K103N @ 100 ps | 3.00 | 3.80 |
+| K103N @ 500 ps | **0.62** | **0.40** |
+| G190E @ 500 ps | **7.39** | **3.06** |
+
+G190E's phases do not track at all, so nothing cancels. And the bias propagates
+into the answer monotonically:
+
+| rep | holo-apo hysteresis | ddG |
+|---|---|---|
+| 1 | +9.13 | -0.71 |
+| 2 | -1.27 | +1.39 |
+| 3 | -5.18 | +5.32 |
+
+More apo dissipation relative to holo => higher ddG, with ~42% of the asymmetry
+transmitted. This is residual dissipation bias, not conformational noise.
+
+**Why 500 ps was not enough here.** G190E still dissipates **16-22 kcal/mol** at
+500 ps, where K103N fell to 9-12. Chemistry explains it: Gly->Glu *builds* a charged
+carboxylate out of dummy atoms, a much larger perturbation than Lys+ -> Asn0, which
+shrinks one. G190E never reached the regime where the phases track. The proximate
+culprit is apo rep1 at hysteresis 10.20 vs 21.64 / 21.80 for reps 2-3.
+
+**Predictive rule that now has one confirmation and one counter-case:**
+sd(holo-apo hysteresis) is the quantity to check before spending GPU on a switch-
+length increase. Low (<1) => already cancelling, nothing to gain. High (>5) => the
+phases are decoupled and longer switches may not be enough. Across 14 legs it
+correlates with sigma_DDG at r = 0.61 -- useful for triage, not deterministic
+(V106I_to_V106I_F227C sits at sd 7.80 with sigma_DDG only 1.56).
+
 ### Where 500 ps is worth it (and where it is not)
 
 The `git clean` left these legs with no surviving equil, so a 500 ps re-run means
