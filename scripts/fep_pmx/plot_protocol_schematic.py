@@ -193,7 +193,7 @@ def plot_work_distributions(out_path: Path) -> None:
     illustrative: holo is drawn with more forward/reverse overlap than apo, which is
     the qualitative pattern in the real data, but no values are implied.
     """
-    fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.6), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(8.4, 4.1), sharey=True)
     specs = [
         # Titles sit at the OUTER top corner of each panel so the centred legend
         # cannot cover them.
@@ -204,7 +204,7 @@ def plot_work_distributions(out_path: Path) -> None:
          "dg": r"$\Delta G_{\mathrm{apo}}$",
          "mu_f": 1.5, "mu_r": -1.5, "sig": 0.95},
     ]
-    x = np.linspace(-6, 6, 800)
+    x = np.linspace(-4.6, 4.6, 800)
     for sp in specs:
         ax = sp["ax"]
         yf = _gauss(x, sp["mu_f"], sp["sig"])
@@ -223,7 +223,7 @@ def plot_work_distributions(out_path: Path) -> None:
                     color="0.2", fontweight="bold")
         # Headroom so the centred legend clears the curves instead of needing a
         # whitespace band under the figure.
-        ax.set_ylim(0, _gauss(sp["mu_f"], sp["mu_f"], sp["sig"]) * 1.85)
+        ax.set_ylim(0, _gauss(sp["mu_f"], sp["mu_f"], sp["sig"]) * 1.72)
         ax.text(sp["tx"], 0.97, sp["title"], transform=ax.transAxes,
                 ha=sp["ha"], va="top", fontweight="bold", fontsize=15)
         ax.set_xlabel("work $W$", fontsize=14)
@@ -237,7 +237,7 @@ def plot_work_distributions(out_path: Path) -> None:
     handles += [blank, blank, blank]
     labels += [EST_CGI, EST_BAR, EST_JARZ]
     fig.legend(handles, labels, loc="upper center", ncol=1, frameon=True,
-               fontsize=11, bbox_to_anchor=(0.5, 0.995))
+               fontsize=8.5, bbox_to_anchor=(0.5, 0.995))
     fig.tight_layout()
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
