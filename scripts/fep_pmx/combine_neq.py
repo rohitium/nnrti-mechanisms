@@ -34,6 +34,11 @@ from scripts.fep_pmx.charge_correction import charge_leg_correction
 from scripts.fep_pmx.config import CHARGE_LEG_DELTA_Q, FEP_PMX_ROOT, NEQ_TEMPERATURE_K
 
 
+# Genotypes in the manuscript panel that carry an experimental DOR fold reduction.
+# 19 legs total; F227C has no clinical fold, so 18 points appear on the scatter.
+MANUSCRIPT_PANEL_N_WITH_FOLD = 18
+
+
 def _leg_charge_correction(leg_id: str, replicate: int) -> float:
     """Analytical net-charge (finite-size) correction to add to a charge leg's ΔΔG.
 
@@ -288,7 +293,13 @@ def _plot(rows: list[dict], rho: float | None, output: Path) -> dict:
             corr_label = f"{corr_label}  ·  {spearman_bit}" if corr_label else spearman_bit
         ax.set_xlabel(r"$\log_{10}$(experimental DOR fold reduction)")
         ax.set_ylabel(r"Computed $\Delta\Delta G_{\mathrm{bind}}$ (kcal/mol)")
-        title = f"NEQ ΔΔG_bind vs experiment (n = {len(with_fold)}; incomplete panel)"
+        # "incomplete panel" was hardcoded while genotypes were still missing. The
+        # panel completed with G190E on 2026-08-17, so derive the label instead of
+        # asserting it: MANUSCRIPT_PANEL_N_WITH_FOLD is how many of the 19 legs carry
+        # an experimental fold (F227C has none).
+        n_done = len(with_fold)
+        completeness = "" if n_done >= MANUSCRIPT_PANEL_N_WITH_FOLD else "; incomplete panel"
+        title = f"NEQ ΔΔG_bind vs experiment (n = {n_done}{completeness})"
         if corr_label:
             title += f"\n{corr_label}"
         stats["n_with_fold"] = len(with_fold)

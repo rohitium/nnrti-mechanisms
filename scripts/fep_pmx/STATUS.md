@@ -121,6 +121,37 @@ F227C/V106I/A98G+F227C 3–5; V106A+F227L/L234I/P225H, Y181C, V106I+F227C 4–5;
 
 ---
 
+## PANEL COMPLETE (2026-08-17): 19 legs, 18 genotypes with an experimental fold
+
+`panel_ddg_vs_experiment.png` — **no fit line; the weak correlation IS the finding**:
+Spearman ρ = 0.356, R² = 0.095, p = 0.213 (n = 18). G190E was the last leg.
+
+**Regenerate the figure with the FULL target list, not `--replot-only`** — replot
+drops the V106A and K103N+P225H labels and leaves their leader lines running off the
+top edge. `--targets <all 19>` places them correctly.
+
+⚠️ **`combine_neq --targets X` REWRITES `panel_ddg.csv` with only those targets.**
+Always pass the full genotype list, or rebuild afterwards.
+
+### G190E: +2.00 ± 1.77 — the 500 ps fix did NOT generalize
+
+Same protocol as K103N, no collapse: σ_DDG = 3.06. **500 ps is leg-specific, not a
+charge-leg property** — do not generalize it. The mechanism predicted this:
+sd(holo−apo hysteresis) is **7.39** for G190E vs **0.62** for K103N at 500 ps, so
+nothing cancels in the double difference. G190E still dissipates 16–22 kcal/mol at
+500 ps (K103N fell to 9–12) — Gly→Glu builds a charged carboxylate from dummies, a
+bigger perturbation than Lys⁺→Asn⁰. Full write-up:
+`results/analysis/fep_pmx/_archive/wt_to_K103N_100ps_2026-08-15/README.md`.
+
+**Triage rule before spending GPU on switch length:** compute
+sd(holo−apo hysteresis). < 1 → already cancelling, nothing to gain. > 5 → phases
+decoupled, longer switches may not be enough. r = 0.61 vs σ_DDG across 14 legs —
+useful for triage, not deterministic.
+
+Reporting G190E as-is (`show` tier) is defensible: the point estimate agrees with
+the archived co-alchemical run (+2.50 ± 1.41) within error, and getting SEM < 1 by
+replicates needs n ≈ 10 (7 more reps, multiple days).
+
 ## RESULT (2026-08-17): K103N at 500 ps fixed the panel's four worst points
 
 | genotype | 100 ps | 500 ps |
