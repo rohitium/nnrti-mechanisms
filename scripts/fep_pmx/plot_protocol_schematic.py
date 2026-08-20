@@ -192,8 +192,12 @@ def plot_work_distributions(out_path: Path) -> None:
     """
     fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.6), sharey=True)
     specs = [
-        {"ax": axes[0], "title": "holo", "mu_f": 1.05, "mu_r": -1.05, "sig": 1.05},
-        {"ax": axes[1], "title": "apo", "mu_f": 1.5, "mu_r": -1.5, "sig": 0.95},
+        # Titles sit at the OUTER top corner of each panel so the centred legend
+        # cannot cover them.
+        {"ax": axes[0], "title": "holo", "tx": 0.02, "ha": "left",
+         "mu_f": 1.05, "mu_r": -1.05, "sig": 1.05},
+        {"ax": axes[1], "title": "apo", "tx": 0.98, "ha": "right",
+         "mu_f": 1.5, "mu_r": -1.5, "sig": 0.95},
     ]
     x = np.linspace(-6, 6, 800)
     for sp in specs:
@@ -212,7 +216,11 @@ def plot_work_distributions(out_path: Path) -> None:
         ax.annotate(r"$\Delta G$", (0.0, _gauss(0.0, sp["mu_f"], sp["sig"])),
                     textcoords="offset points", xytext=(8, 12), fontsize=14,
                     color="0.2", fontweight="bold")
-        ax.set_title(sp["title"], fontweight="bold", fontsize=15)
+        # Headroom so the centred legend clears the curves instead of needing a
+        # whitespace band under the figure.
+        ax.set_ylim(0, _gauss(sp["mu_f"], sp["mu_f"], sp["sig"]) * 1.85)
+        ax.text(sp["tx"], 0.97, sp["title"], transform=ax.transAxes,
+                ha=sp["ha"], va="top", fontweight="bold", fontsize=15)
         ax.set_xlabel("work $W$", fontsize=14)
         ax.set_xticks([]); ax.set_yticks([])
         for side in ("top", "right"):
@@ -223,8 +231,8 @@ def plot_work_distributions(out_path: Path) -> None:
     blank = plt.Line2D([], [], linestyle="none")
     handles += [blank, blank, blank]
     labels += [EST_CGI, EST_BAR, EST_JARZ]
-    fig.legend(handles, labels, loc="lower center", ncol=1, frameon=True,
-               fontsize=12, bbox_to_anchor=(0.5, -0.30))
+    fig.legend(handles, labels, loc="upper center", ncol=1, frameon=True,
+               fontsize=11, bbox_to_anchor=(0.5, 0.995))
     fig.tight_layout()
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
