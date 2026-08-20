@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Single-panel Calpha RMSD convergence figure for the whole genotype panel.
+"""Single-panel convergence figures for the whole genotype panel.
 
 One mean trace per genotype with a shaded across-replicate SEM band, coloured by
-DOR fold reduction so the reader can see that structural drift carries no
-resistance ordering. Fold values come from the authoritative susceptibility
-spreadsheet, never from the manifest.
+DOR fold reduction so the reader can see that the metric carries no resistance
+ordering. Fold values come from the authoritative susceptibility spreadsheet,
+never from the manifest.
+
+``--metric`` selects the quantity: backbone RMSD, ligand RMSD, or the
+ligand-pocket centre-of-mass separation. The first two start at zero by
+construction; the COM distance is an absolute separation and does not.
 
 Replicates run to slightly different lengths, so each genotype's trace stops at
 its shortest replicate: the mean is always over n = 3, never a changing
@@ -18,6 +22,36 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+
+#: Per-metric presentation. The inset gets a compact label so it cannot overhang
+#: into the main panel.
+METRICS = {
+    "ca_rmsd": {
+        "column": "ca_rmsd_angstrom",
+        "ylabel": "C\u03b1 RMSD (\u00c5)",
+        "inset_ylabel": "C\u03b1 RMSD (\u00c5)",
+        "title": "RT\u2013DOR backbone convergence across the genotype panel",
+        "stem": "rmsd_convergence",
+        "inset_rect": (0.575, 0.045, 0.40, 0.30),
+    },
+    "dor_rmsd": {
+        "column": "dor_rmsd_angstrom",
+        "ylabel": "DOR RMSD (\u00c5)",
+        "inset_ylabel": "DOR RMSD (\u00c5)",
+        "title": "Doravirine pose convergence across the genotype panel",
+        "stem": "dor_rmsd_convergence",
+        "inset_rect": (0.575, 0.045, 0.40, 0.30),
+    },
+    "com_distance": {
+        "column": "com_distance_angstrom",
+        "ylabel": "DOR\u2013pocket COM distance (\u00c5)",
+        "inset_ylabel": "COM dist. (\u00c5)",
+        "title": "Doravirine\u2013pocket separation across the genotype panel",
+        "stem": "com_distance_convergence",
+        "inset_rect": (0.585, 0.045, 0.39, 0.30),
+    },
+}
 
 
 def repo_root() -> Path:
@@ -39,8 +73,17 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--susceptibility-xlsx", type=Path,
                    default=root / "data/DRM-susceptibilities.csv.xlsx")
-    p.add_argument("--output", type=Path,
-                   default=root / "results/analysis/md_convergence/plots/rmsd_convergence.png")
+    p.add_argument("--metric", choices=sorted(METRICS), default="ca_rmsd")
+    p.add_argument("--output", type=Path, default=None,
+                   help="Defaults to the metric's conventional filename under md_convergence/plots.")
+    p.add_argument("--inset-headroom", type=float, default=0.42,
+                   help=(
+                       "Blank vertical space added below the data, as a fraction of the data "
+                       "range, so the inset does not overlap the traces. 0 disables it."
+                   ))
+    p.add_argument("--inset-rect", type=float, nargs=4, default=None,
+                   metavar=("X0", "Y0", "W", "H"),
+                   help="Inset position in axes fractions; defaults per metric.")
     p.add_argument("--scoring-window-ns", type=float, default=10.0,
                    help="Width of the terminal window used for MM/GBSA scoring, shaded on the figure.")
     p.add_argument(
@@ -68,7 +111,7 @@ def load_fold_map(xlsx: Path) -> dict[str, float]:
     return dict(zip(keys, table["dor_fold"].astype(float)))
 
 
-def genotype_traces(rmsd: pd.DataFrame, grid_points: int):
+def genotype_traces(rmsd: pd.DataFrame, grid_points: int, column: str):
     """Mean and SEM on a common grid, truncated to each genotype's shortest replicate."""
     out = {}
     if "time_ns" not in rmsd.columns:
@@ -80,7 +123,7 @@ def genotype_traces(rmsd: pd.DataFrame, grid_points: int):
         t_end = min(r["time_ns"].max() for _rep, r in reps)
         grid = np.linspace(0.0, t_end, grid_points)
         curves = np.vstack([
-            np.interp(grid, r["time_ns"].to_numpy(), r["ca_rmsd_angstrom"].to_numpy())
+            np.interp(grid, r["time_ns"].to_numpy(), r[column].to_numpy())
             for _rep, r in reps
         ])
         n = curves.shape[0]
@@ -96,12 +139,22 @@ def main() -> int:
     from matplotlib.cm import ScalarMappable
 
     args = parse_args()
+    spec = METRICS[args.metric]
+    column, ylabel, title = spec["column"], spec["ylabel"], spec["title"]
+    stem, default_rect = spec["stem"], spec["inset_rect"]
+    output = args.output or (
+        repo_root() / "results/analysis/md_convergence/plots" / f"{stem}.png"
+    )
+    inset_rect = tuple(args.inset_rect) if args.inset_rect else default_rect
+
     rmsd = pd.read_csv(args.rmsd_csv)
+    if column not in rmsd.columns:
+        raise ValueError(f"{args.rmsd_csv} has no column {column!r}")
     if args.exclude:
         rmsd = rmsd[~rmsd["mutation"].isin(args.exclude)]
         print(f"excluded: {', '.join(args.exclude)}")
     folds = load_fold_map(args.susceptibility_xlsx)
-    traces = genotype_traces(rmsd, args.grid_points)
+    traces = genotype_traces(rmsd, args.grid_points, column)
 
     mutants = sorted((m for m in traces if m != "WT"), key=lambda m: folds.get(m, np.nan))
     values = np.array([folds[m] for m in mutants if m in folds], dtype=float)
@@ -127,14 +180,19 @@ def main() -> int:
         ax.plot(grid, mean, color="#B2182B", lw=2.6, zorder=5, label="WT")
 
     ax.set_xlabel("Time (ns)", fontsize=14)
-    ax.set_ylabel(r"C$\alpha$ RMSD ($\mathrm{\AA}$)", fontsize=14)
-    ax.set_title("RT–DOR backbone convergence across the genotype panel", fontsize=15, pad=12)
+    ax.set_ylabel(ylabel, fontsize=14)
+    ax.set_title(title, fontsize=15, pad=12)
     ax.tick_params(labelsize=12)
     ax.set_xlim(0, t_max)
     lo = min(float((m - e).min()) for _g, m, e, _n, _t in traces.values())
     hi = max(float((m + e).max()) for _g, m, e, _n, _t in traces.values())
     pad = 0.08 * (hi - lo)
-    ax.set_ylim(max(0.0, lo - pad), hi + pad)
+    data_floor = lo - pad
+    # Extra room below the data so the inset sits in blank space instead of over
+    # the traces. Ticks are not drawn into that band -- for RMSD it lies below
+    # zero, where a label would imply a negative distance.
+    ax.set_ylim(data_floor - args.inset_headroom * (hi - lo), hi + pad)
+    ax.set_yticks([t for t in ax.get_yticks() if t >= data_floor])
     ax.grid(alpha=0.25, lw=0.6)
     ax.set_axisbelow(True)
     for side in ("top", "right"):
@@ -143,7 +201,7 @@ def main() -> int:
 
     # Inset: the equilibration rise, which is compressed against the y-axis in the
     # main panel. Same series, same colours, no legend -- it is a magnification.
-    inset = ax.inset_axes([0.575, 0.105, 0.40, 0.295])
+    inset = ax.inset_axes(list(inset_rect))
     for mutation in mutants:
         grid, mean, sem, _n, _end = traces[mutation]
         keep = grid <= args.inset_ns
@@ -159,7 +217,7 @@ def main() -> int:
     inset.set_xlim(0, args.inset_ns)
     inset.tick_params(labelsize=8, length=2.5, pad=1.5, colors="black")
     inset.set_xlabel("Time (ns)", fontsize=8.5, labelpad=1.0)
-    inset.set_ylabel(r"C$\alpha$ RMSD ($\mathrm{\AA}$)", fontsize=8.5, labelpad=1.0)
+    inset.set_ylabel(spec["inset_ylabel"], fontsize=8.5, labelpad=1.0)
     inset.set_xticks([0, 1, 2, 3, 4, 5])
     inset.locator_params(axis="y", nbins=4)
     # Label inside the frame so it cannot collide with the main panel.
@@ -186,9 +244,9 @@ def main() -> int:
     cbar.solids.set_alpha(1.0)
 
     n_mut = len(mutants)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(args.output, dpi=args.dpi, bbox_inches="tight")
-    print(f"Wrote {args.output}  ({n_mut} mutants + WT)")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=args.dpi, bbox_inches="tight")
+    print(f"Wrote {output}  ({n_mut} mutants + WT)")
     trunc = {m: round(v[4], 1) for m, v in traces.items() if v[4] < 95}
     if trunc:
         print(f"truncated below 95 ns: {trunc}")
