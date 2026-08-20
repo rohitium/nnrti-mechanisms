@@ -39,7 +39,7 @@ OUT_DIR = Path("results/analysis/fep_pmx/protocol_schematic")
 # Gaussian to each work distribution and takes dG as their crossing, which follows
 # from the Crooks relation being unity at W = dG.
 EST_CGI = r"CGI (Crooks Gaussian Intersection): $P(W_f) \cap P(W_r)$"
-EST_BAR = r"BAR: $P(W_f)/P(W_r) = e^{\beta(W - \Delta G)}$"
+EST_BAR = r"BAR (Bennett Acceptance Ratio): $P(W_f)/P(W_r) = e^{\beta(W - \Delta G)}$"
 EST_JARZ = r"Jarzynski: $\Delta G = -kT\ln\langle e^{-\beta W_f}\rangle$"
 
 
@@ -198,8 +198,10 @@ def plot_work_distributions(out_path: Path) -> None:
         # Titles sit at the OUTER top corner of each panel so the centred legend
         # cannot cover them.
         {"ax": axes[0], "title": "holo", "tx": 0.02, "ha": "left",
+         "dg": r"$\Delta G_{\mathrm{holo}}$",
          "mu_f": 1.05, "mu_r": -1.05, "sig": 1.05},
         {"ax": axes[1], "title": "apo", "tx": 0.98, "ha": "right",
+         "dg": r"$\Delta G_{\mathrm{apo}}$",
          "mu_f": 1.5, "mu_r": -1.5, "sig": 0.95},
     ]
     x = np.linspace(-6, 6, 800)
@@ -207,8 +209,8 @@ def plot_work_distributions(out_path: Path) -> None:
         ax = sp["ax"]
         yf = _gauss(x, sp["mu_f"], sp["sig"])
         yr = _gauss(x, sp["mu_r"], sp["sig"])
-        ax.fill_between(x, yr, color="#e8a87c", alpha=0.55, lw=0, label=r"Reverse Work  $P(W_r)$")
-        ax.fill_between(x, yf, color="#8fb8de", alpha=0.65, lw=0, label=r"Forward Work  $P(W_f)$")
+        ax.fill_between(x, yr, color="#e8a87c", alpha=0.55, lw=0, label=r"Reverse Work  $P(W_r)$,   $\lambda: 1 \rightarrow 0$")
+        ax.fill_between(x, yf, color="#8fb8de", alpha=0.65, lw=0, label=r"Forward Work  $P(W_f)$,   $\lambda: 0 \rightarrow 1$")
         ax.plot(x, yr, color="#d1651a", lw=2.0)
         ax.plot(x, yf, color="#1f6fb2", lw=2.0)
         # The three estimators coincide at the crossing when the work is Gaussian;
@@ -216,7 +218,7 @@ def plot_work_distributions(out_path: Path) -> None:
         ax.axvline(0.0, color="0.25", lw=1.6, ls="--")
         ax.plot([0.0], [_gauss(0.0, sp["mu_f"], sp["sig"])], "o", color="#5b2d8e",
                 markersize=8, zorder=5)
-        ax.annotate(r"$\Delta G$", (0.0, _gauss(0.0, sp["mu_f"], sp["sig"])),
+        ax.annotate(sp["dg"], (0.0, _gauss(0.0, sp["mu_f"], sp["sig"])),
                     textcoords="offset points", xytext=(8, 12), fontsize=14,
                     color="0.2", fontweight="bold")
         # Headroom so the centred legend clears the curves instead of needing a
