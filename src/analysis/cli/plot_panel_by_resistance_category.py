@@ -56,6 +56,17 @@ FEP_ROOT = Path("results/analysis/fep_pmx")
 COLORS = {"Susceptible": "#2E7D32", "Resistant": "#C62828", "Uncertain": "#9E9E9E"}
 MARKERS = {"Susceptible": "o", "Resistant": "s", "Uncertain": "^"}
 
+# Genotypes whose label the automatic repel places poorly. Offsets are in points
+# relative to the marker; these are annotated by hand (right-aligned, with a leader)
+# and withheld from _repel_labels so it does not fight the manual placement.
+LABEL_OVERRIDES = {
+    "K103N+P225H": (-14, -16),   # left and down, clear of G190S
+    "V106A+F227L": (-14, 6),
+    "Y188L": (-14, 10),
+    "V106A+P225H": (-16, -4),
+}
+AXIS_LABEL_FONTSIZE = 20  # 2x the matplotlib default
+
 
 def _load_repel():
     """Import ``_repel_labels`` from scripts/fep_pmx/combine_neq (not a package)."""
@@ -175,25 +186,33 @@ def main(argv: list[str] | None = None) -> int:
                     label=f"{cat} (n={len(sub)})")
     ax.axhline(0.0, color="grey", linestyle="--", linewidth=0.8)
 
+    auto = [r for r in rows if r["genotype"] not in LABEL_OVERRIDES]
     _repel_labels(
         ax, fig,
-        [math.log10(r["fold"]) for r in rows],
-        [r["ddg"] for r in rows],
-        [r["genotype"] for r in rows],
+        [math.log10(r["fold"]) for r in auto],
+        [r["ddg"] for r in auto],
+        [r["genotype"] for r in auto],
         fontsize=7,
     )
+    for r in rows:
+        off = LABEL_OVERRIDES.get(r["genotype"])
+        if off is None:
+            continue
+        ax.annotate(
+            r["genotype"],
+            xy=(math.log10(r["fold"]), r["ddg"]),
+            xytext=off, textcoords="offset points",
+            fontsize=7, ha="right", va="center",
+            arrowprops=dict(arrowstyle="-", linewidth=0.5, color="0.5",
+                            shrinkA=0.0, shrinkB=3.0),
+        )
 
-    ks = next(s for s in stats_rows if s["subset"] == "susceptible_plus_resistant")
-    al = next(s for s in stats_rows if s["subset"] == "all")
-    ax.set_title(
-        "NEQ ΔΔG_bind vs experiment, by clinical resistance category  (no fit line)\n"
-        f"Susceptible+Resistant (n={ks['n']}): R² = {ks['r2']:.2f}, p = {ks['p']:.3f}, "
-        f"Spearman ρ = {ks['spearman_rho']:.2f} (p = {ks['spearman_p']:.3f})   ·   "
-        f"all (n={al['n']}): R² = {al['r2']:.2f}, ρ = {al['spearman_rho']:.2f}",
-        fontsize=9,
-    )
-    ax.set_xlabel(r"$\log_{10}$(experimental DOR fold reduction)")
-    ax.set_ylabel(r"Computed $\Delta\Delta G_{\mathrm{bind}}$ (kcal/mol)")
+    # No title: the statistics live in panel_category_subset_stats.csv and belong in
+    # the figure caption, not baked into the image.
+    ax.set_xlabel(r"$\log_{10}$(experimental DOR fold reduction)",
+                  fontsize=AXIS_LABEL_FONTSIZE)
+    ax.set_ylabel(r"Computed $\Delta\Delta G_{\mathrm{bind}}$ (kcal/mol)",
+                  fontsize=AXIS_LABEL_FONTSIZE)
     ax.legend(loc="upper left", fontsize=8, frameon=True)
     fig.tight_layout()
     fig.savefig(args.out_png, dpi=200)
