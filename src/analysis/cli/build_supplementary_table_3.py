@@ -33,19 +33,30 @@ SUMMARY_COMPONENTS = [
     ("ddg_sa", "ddE nonpolar SA"),
 ]
 
-#: FEP sheet. One row per genotype x leg x replicate. Compound genotypes are
-#: built from two sequential legs and the pipeline sums the two leg MEANS, so a
-#: per-replicate genotype ddG does not exist for them -- replicate i of one leg
-#: and replicate i of the other are independent simulations of different
-#: transformations. Reporting the legs separately keeps every number in the
-#: sheet one the pipeline actually computed.
+#: FEP sheet. One row per genotype x leg x replicate, giving each phase's dG
+#: under all three estimators pmx reports (BAR, Crooks Gaussian intersection,
+#: Jarzynski) and the resulting leg ddG. Agreement between the three is one of
+#: the pipeline's confidence criteria, so all are shown rather than BAR alone;
+#: BAR is what the manuscript quotes.
+#:
+#: Compound genotypes are built from two sequential legs and the pipeline sums
+#: the two leg MEANS, so a per-replicate genotype ddG does not exist for them --
+#: replicate i of one leg and replicate i of the other are independent
+#: simulations of different transformations. Reporting the legs separately keeps
+#: every number in the sheet one the pipeline actually computed.
 FEP_COLUMNS = [
     ("mutation", "Mutation"),
     ("leg_id", "Alchemical leg"),
     ("replicate", "Replicate"),
-    ("dg_holo", "dG holo (kcal/mol)"),
-    ("dg_apo", "dG apo (kcal/mol)"),
-    ("leg_ddg", "Leg ddG bind (kcal/mol)"),
+    ("dg_holo_bar", "dG holo, BAR (kcal/mol)"),
+    ("dg_apo_bar", "dG apo, BAR (kcal/mol)"),
+    ("leg_ddg_bar", "Leg ddG bind, BAR (kcal/mol)"),
+    ("dg_holo_cgi", "dG holo, CGI (kcal/mol)"),
+    ("dg_apo_cgi", "dG apo, CGI (kcal/mol)"),
+    ("leg_ddg_cgi", "Leg ddG bind, CGI (kcal/mol)"),
+    ("dg_holo_jarz", "dG holo, Jarzynski (kcal/mol)"),
+    ("dg_apo_jarz", "dG apo, Jarzynski (kcal/mol)"),
+    ("leg_ddg_jarz", "Leg ddG bind, Jarzynski (kcal/mol)"),
 ]
 
 #: MMGBSA sheet. Raw per-replicate energies only. The SEM over each replicate's
@@ -151,7 +162,11 @@ def load_fep(fep_csv: Path) -> pd.DataFrame:
         if payload.get("bar_dg") is None:
             continue
         key = (str(payload["leg_id"]), int(payload["replicate"]))
-        records.setdefault(key, {})[str(payload["phase"])] = float(payload["bar_dg"])
+        records.setdefault(key, {})[str(payload["phase"])] = {
+            "bar": payload.get("bar_dg"),
+            "cgi": payload.get("cgi_dg"),
+            "jarz": payload.get("jarz_dg_mean"),
+        }
 
     try:
         from scripts.fep_jorgensen.mutations import MANUSCRIPT_PLANS
@@ -164,14 +179,15 @@ def load_fep(fep_csv: Path) -> pd.DataFrame:
             for (leg_id, replicate), phases in sorted(records.items()):
                 if leg_id != leg.leg_id or "holo" not in phases or "apo" not in phases:
                     continue
-                rows.append({
-                    "mutation": str(genotype),
-                    "leg_id": leg_id,
-                    "replicate": replicate,
-                    "dg_holo": phases["holo"],
-                    "dg_apo": phases["apo"],
-                    "leg_ddg": phases["holo"] - phases["apo"],
-                })
+                row = {"mutation": str(genotype), "leg_id": leg_id, "replicate": replicate}
+                for est in ("bar", "cgi", "jarz"):
+                    holo, apo = phases["holo"].get(est), phases["apo"].get(est)
+                    row[f"dg_holo_{est}"] = holo
+                    row[f"dg_apo_{est}"] = apo
+                    row[f"leg_ddg_{est}"] = (
+                        None if holo is None or apo is None else float(holo) - float(apo)
+                    )
+                rows.append(row)
     return pd.DataFrame(rows)
 
 
@@ -287,6 +303,13 @@ NOTES = [
         "ddE (MMGBSA sheet)",
         "MM/GBSA endpoint score: an interaction ENERGY from fixed trajectory snapshots, with no "
         "configurational entropy and an implicit-solvent polar term. Not a free energy.",
+    ),
+    (
+        "ddG estimators",
+        "pmx reports three free-energy estimators from the same switching work: BAR (Bennett "
+        "acceptance ratio), CGI (Crooks Gaussian intersection) and Jarzynski. All three are given; "
+        "the manuscript quotes BAR. Their agreement is one of the pipeline's confidence criteria -- "
+        "here BAR and the other two differ by a median of ~0.2 kcal/mol per leg and replicate.",
     ),
     (
         "ddG (FEP sheet)",
