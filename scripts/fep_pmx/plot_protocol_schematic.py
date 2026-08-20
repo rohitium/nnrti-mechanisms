@@ -38,6 +38,11 @@ OUT_DIR = Path("results/analysis/fep_pmx/protocol_schematic")
 # CGI is spelled out: pmx reports it as "Crooks Gaussian Intersection" -- it fits a
 # Gaussian to each work distribution and takes dG as their crossing, which follows
 # from the Crooks relation being unity at W = dG.
+# Shared canvas size: the protocol figures are shown together, so they are sized
+# from one constant rather than tuned independently (they had drifted to 8.6x5.6
+# and 7.2x3.9, i.e. visibly different aspect ratios).
+FIGSIZE = (8.6, 5.6)
+
 EST_CGI = r"CGI (Crooks Gaussian Intersection): $P(W_f) \cap P(W_r)$"
 EST_BAR = r"BAR (Bennett Acceptance Ratio): $P(W_f)/P(W_r) = e^{\beta(W - \Delta G)}$"
 EST_JARZ = r"Jarzynski: $\Delta G = -kT\ln\langle e^{-\beta W_f}\rangle$"
@@ -70,7 +75,7 @@ def plot_cycle(out_path: Path) -> None:
     rearranges to exactly that difference. Stating the cycle form first would imply
     the holo/apo route is the definition rather than the computational strategy.
     """
-    fig, ax = plt.subplots(figsize=(8.6, 5.6))
+    fig, ax = plt.subplots(figsize=FIGSIZE)
     ax.set_xlim(0, 10)
     ax.set_ylim(0, 7)
     ax.axis("off")
@@ -206,7 +211,7 @@ def plot_work_distributions(out_path: Path) -> None:
     shows what a NEQ leg looks like generically; figure 01 is where the holo and apo
     legs are combined into ddG_bind. Shapes are illustrative -- no values implied.
     """
-    fig, ax = plt.subplots(figsize=(7.2, 3.9))
+    fig, ax = plt.subplots(figsize=FIGSIZE)
     mu_f, mu_r, sig = 1.2, -1.2, 1.0
     x = np.linspace(-4.6, 4.6, 800)
     yf = _gauss(x, mu_f, sig)
@@ -226,7 +231,7 @@ def plot_work_distributions(out_path: Path) -> None:
                 textcoords="offset points", xytext=(9, 12), fontsize=15,
                 color="0.2", fontweight="bold")
 
-    ax.set_ylim(0, _gauss(mu_f, mu_f, sig) * 1.75)
+    ax.set_ylim(0, _gauss(mu_f, mu_f, sig) * 1.55)
     ax.set_xlabel("work $W$", fontsize=14)
     ax.set_ylabel("Probability density $P(W)$", fontsize=14)
     ax.set_xticks([]); ax.set_yticks([])
@@ -237,8 +242,7 @@ def plot_work_distributions(out_path: Path) -> None:
     blank = plt.Line2D([], [], linestyle="none")
     handles += [blank, blank, blank]
     labels += [EST_CGI, EST_BAR, EST_JARZ]
-    ax.legend(handles, labels, loc="upper center", frameon=True, fontsize=8.5,
-              bbox_to_anchor=(0.5, 1.02))
+    ax.legend(handles, labels, loc="upper left", frameon=True, fontsize=8.5)
     fig.tight_layout()
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
