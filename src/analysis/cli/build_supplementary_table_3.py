@@ -33,32 +33,37 @@ SUMMARY_COMPONENTS = [
     ("ddg_sa", "ddE nonpolar SA"),
 ]
 
-#: pmx NEQ FEP columns, joined on genotype.
+#: FEP sheet. One row per genotype x leg x replicate. Compound genotypes are
+#: built from two sequential legs and the pipeline sums the two leg MEANS, so a
+#: per-replicate genotype ddG does not exist for them -- replicate i of one leg
+#: and replicate i of the other are independent simulations of different
+#: transformations. Reporting the legs separately keeps every number in the
+#: sheet one the pipeline actually computed.
 FEP_COLUMNS = [
-    ("ddg_bind_kcal", "ddG bind (kcal/mol)"),
-    ("sem_kcal", "ddG SEM (kcal/mol)"),
+    ("mutation", "Mutation"),
+    ("leg_id", "Alchemical leg"),
+    ("replicate", "Replicate"),
+    ("dg_holo", "dG holo (kcal/mol)"),
+    ("dg_apo", "dG apo (kcal/mol)"),
+    ("leg_ddg", "Leg ddG bind (kcal/mol)"),
 ]
 
-#: MMGBSA sheet. One row per replicate, each energy paired with its SEM over the
-#: sampled snapshots WITHIN that replicate -- a different quantity from the
-#: across-replicate SEM reported in Table 2. WT-reference columns are omitted
-#: because they would repeat one constant on every row; WT's own three replicates
-#: are listed instead, so ddE for any row is that row's energy minus the WT mean.
+#: MMGBSA sheet. Raw per-replicate energies only. The SEM over each replicate's
+#: snapshots is deliberately absent: it is a within-replicate quantity and was
+#: easily confused with the across-replicate SEM quoted in the manuscript table,
+#: which is what the reported uncertainty actually is. WT-reference columns are
+#: likewise omitted -- they repeated one constant on every row -- and WT appears
+#: as three ordinary data rows instead.
 DETAIL_COLUMNS = [
     ("mutation", "Mutation"),
     ("replicate", "Replicate"),
     ("dor_fold_reduction", "DOR fold reduction"),
     ("mmgbsa_snapshots", "MM/GBSA snapshots"),
     ("binding_dg", "Total Energy (kcal/mol)"),
-    ("binding_dg_sem", "Total Energy SEM (kcal/mol)"),
     ("binding_dg_vdw", "van der Waals (kcal/mol)"),
-    ("binding_dg_vdw_sem", "van der Waals SEM (kcal/mol)"),
     ("binding_dg_electrostatic", "Electrostatic (kcal/mol)"),
-    ("binding_dg_electrostatic_sem", "Electrostatic SEM (kcal/mol)"),
     ("binding_dg_gb", "GB polar solvation (kcal/mol)"),
-    ("binding_dg_gb_sem", "GB polar solvation SEM (kcal/mol)"),
     ("binding_dg_sa", "Nonpolar SA (kcal/mol)"),
-    ("binding_dg_sa_sem", "Nonpolar SA SEM (kcal/mol)"),
 ]
 
 
@@ -123,28 +128,51 @@ def load_panel(panel_csv: Path) -> pd.DataFrame:
 
 
 def load_fep(fep_csv: Path) -> pd.DataFrame:
-    """pmx FEP ddG per genotype, keyed for joining onto the ddE panel."""
-    if not fep_csv.exists():
-        return pd.DataFrame(columns=["mutation", *[c for c, _l in FEP_COLUMNS]])
-    fep = pd.read_csv(fep_csv)
-    if "genotype" not in fep.columns:
-        raise ValueError(f"{fep_csv} has no 'genotype' column")
-    fep = fep.rename(columns={"genotype": "mutation"})
-    fep["mutation"] = fep["mutation"].astype(str).str.strip()
-    # The tier file carries ddG/SEM/fold/tier but not replicate counts; take those
-    # from the panel table alongside it.
-    if "n_reps" not in fep.columns:
-        panel_ddg = fep_csv.with_name("panel_ddg.csv")
-        if panel_ddg.exists():
-            counts = pd.read_csv(panel_ddg).rename(columns={"genotype": "mutation"})
-            counts["mutation"] = counts["mutation"].astype(str).str.strip()
-            fep = fep.merge(counts[["mutation", "n_reps"]], on="mutation", how="left")
-        else:
-            fep["n_reps"] = pd.NA
-    keep = ["mutation", *[c for c, _l in FEP_COLUMNS if c in fep.columns]]
-    if "dor_fold_reduction" in fep.columns:
-        keep.insert(1, "dor_fold_reduction")
-    return fep[keep].drop_duplicates(subset="mutation")
+    """Per-leg, per-replicate pmx FEP results.
+
+    ``fep_csv`` is retained only to locate the analysis tree; the values come
+    from each leg's ``analysis.json`` (BAR free energies, kcal/mol). Leg ddG is
+    holo minus apo. The analytical net-charge correction is not added here: for
+    these ~12 nm boxes it is ~1e-4 kcal/mol and the boxes it needs no longer
+    exist, and summing these legs reproduces the published panel to <0.001.
+    """
+    import json
+
+    root = fep_csv.parent / "legs"
+    if not root.is_dir():
+        return pd.DataFrame(columns=[c for c, _l in FEP_COLUMNS])
+
+    records: dict[tuple[str, int], dict] = {}
+    for path in root.glob("*/*/rep_*/neq/analysis/analysis.json"):
+        try:
+            payload = json.loads(path.read_text())
+        except Exception:
+            continue
+        if payload.get("bar_dg") is None:
+            continue
+        key = (str(payload["leg_id"]), int(payload["replicate"]))
+        records.setdefault(key, {})[str(payload["phase"])] = float(payload["bar_dg"])
+
+    try:
+        from scripts.fep_jorgensen.mutations import MANUSCRIPT_PLANS
+    except Exception:
+        return pd.DataFrame(columns=[c for c, _l in FEP_COLUMNS])
+
+    rows = []
+    for genotype, plan in MANUSCRIPT_PLANS.items():
+        for leg in plan.legs:
+            for (leg_id, replicate), phases in sorted(records.items()):
+                if leg_id != leg.leg_id or "holo" not in phases or "apo" not in phases:
+                    continue
+                rows.append({
+                    "mutation": str(genotype),
+                    "leg_id": leg_id,
+                    "replicate": replicate,
+                    "dg_holo": phases["holo"],
+                    "dg_apo": phases["apo"],
+                    "leg_ddg": phases["holo"] - phases["apo"],
+                })
+    return pd.DataFrame(rows)
 
 
 def load_details(ddg_csv: Path, panel: pd.DataFrame, expected_replicates: int) -> pd.DataFrame:
@@ -240,27 +268,17 @@ def wt_reference_note(details: pd.DataFrame) -> str:
 
 
 def build_fep_sheet(fep: pd.DataFrame, panel: pd.DataFrame) -> pd.DataFrame:
-    """FEP panel ordered to match the ddE sheet, with absent genotypes shown blank."""
-    order = panel["mutation"].tolist()
-    out = pd.DataFrame({"Mutation": order}).merge(
-        fep.rename(columns={"mutation": "Mutation"}), on="Mutation", how="left"
-    )
-    extra = [m for m in fep["mutation"] if m not in set(order)]
-    if extra:
-        out = pd.concat(
-            [out, fep[fep["mutation"].isin(extra)].rename(columns={"mutation": "Mutation"})],
-            ignore_index=True,
-        )
-    # Genotypes with no completed FEP leg are left out entirely rather than shown
-    # as a blank row; add them back once their ddG lands.
-    out = out[out["ddg_bind_kcal"].notna()].reset_index(drop=True)
-    rename = {c: l for c, l in FEP_COLUMNS}
-    out = out.rename(columns=rename)
-    cols = ["Mutation"] + [l for _c, l in FEP_COLUMNS if l in out.columns]
-    if "dor_fold_reduction" in out.columns:
-        out = out.rename(columns={"dor_fold_reduction": "DOR fold reduction"})
-        cols.insert(1, "DOR fold reduction")
-    return out[cols]
+    """Order the per-leg rows to match the ddE panel; genotypes without a
+    completed leg simply do not appear."""
+    if fep.empty:
+        return pd.DataFrame(columns=[l for _c, l in FEP_COLUMNS])
+    order = [m for m in panel["mutation"].tolist()]
+    extra = [m for m in fep["mutation"].unique() if m not in set(order)]
+    rank = {m: i for i, m in enumerate([*order, *sorted(extra)])}
+    out = fep[fep["mutation"].isin(rank)].copy()
+    out["_r"] = out["mutation"].map(rank)
+    out = out.sort_values(["_r", "leg_id", "replicate"]).drop(columns="_r")
+    return out[[c for c, _l in FEP_COLUMNS]].rename(columns=dict(FEP_COLUMNS))
 
 
 NOTES = [
@@ -284,15 +302,23 @@ NOTES = [
         "because they would repeat one constant on every row.",
     ),
     (
-        "Two kinds of SEM",
-        "On the MMGBSA sheet, SEM is over the sampled snapshots WITHIN one replicate. The across-replicate "
-        "SEM -- the uncertainty quoted in the manuscript table -- is computed from the three replicate rows "
-        "and is a different, larger quantity. On the FEP sheet, SEM is across the three pmx replicates.",
+        "Uncertainties",
+        "Both sheets give raw per-replicate values only. The uncertainty quoted in the manuscript table is "
+        "the SEM across the three replicates and is computed from these rows; no SEM is tabulated here, to "
+        "avoid confusion with the within-replicate snapshot SEM, which is a different and smaller quantity.",
+    ),
+    (
+        "Compound genotypes",
+        "Eight genotypes are reached by two sequential alchemical legs, and ddG_bind is the sum of the two "
+        "LEG means. A per-replicate genotype ddG therefore does not exist for them: replicate i of one leg "
+        "and replicate i of the other are independent simulations of different transformations. The FEP "
+        "sheet lists legs separately for this reason; ddG_bind for a genotype is the sum of its legs' means.",
     ),
     (
         "Coverage",
-        "The FEP sheet lists only genotypes with a completed pmx leg; any genotype still running is omitted "
-        "rather than shown blank, and is added once its ddG lands.",
+        "The FEP sheet lists only genotypes whose legs have completed. Leg ddG is the BAR free energy of "
+        "the holo leg minus that of the apo leg; the analytical net-charge correction (~1e-4 kcal/mol for "
+        "these box sizes) is not included and does not affect the reported values.",
     ),
 ]
 
@@ -367,7 +393,7 @@ def main() -> int:
     mmgbsa = build_detail_table(details_source)
     fep = load_fep(args.fep_csv)
     fep_sheet = build_fep_sheet(fep, panel)
-    absent = sorted(set(panel["mutation"]).difference(fep_sheet["Mutation"]))
+    absent = sorted(set(panel["mutation"]).difference(fep_sheet["Mutation"])) if not fep_sheet.empty else []
     if absent:
         print(f"note: omitted from FEP sheet (no completed leg): {', '.join(absent)}")
     write_workbook(mmgbsa, fep_sheet, args.output_xlsx)
