@@ -43,6 +43,12 @@ OUT_DIR = Path("results/analysis/fep_pmx/protocol_schematic")
 # and 7.2x3.9, i.e. visibly different aspect ratios).
 FIGSIZE = (8.6, 5.6)
 
+# These are schematics meant to be read at a glance, so type is sized generously.
+# The legend was 8.5pt only because it once had to span a narrow two-panel layout.
+AXIS_LABEL_FONTSIZE = 18
+LEGEND_FONTSIZE = 13
+ANNOT_FONTSIZE = 20
+
 EST_CGI = r"CGI (Crooks Gaussian Intersection): $P(W_f) \cap P(W_r)$"
 EST_BAR = r"BAR (Bennett Acceptance Ratio): $P(W_f)/P(W_r) = e^{\beta(W - \Delta G)}$"
 EST_JARZ = r"Jarzynski: $\Delta G = -kT\ln\langle e^{-\beta W_f}\rangle$"
@@ -228,12 +234,12 @@ def plot_work_distributions(out_path: Path) -> None:
     ax.axvline(0.0, color="0.25", lw=1.6, ls="--")
     ax.plot([0.0], [_gauss(0.0, mu_f, sig)], "o", color="#5b2d8e", markersize=8, zorder=5)
     ax.annotate(r"$\Delta G$", (0.0, _gauss(0.0, mu_f, sig)),
-                textcoords="offset points", xytext=(9, 12), fontsize=15,
+                textcoords="offset points", xytext=(10, 14), fontsize=ANNOT_FONTSIZE,
                 color="0.2", fontweight="bold")
 
     ax.set_ylim(0, _gauss(mu_f, mu_f, sig) * 1.55)
-    ax.set_xlabel("work $W$", fontsize=14)
-    ax.set_ylabel("Probability density $P(W)$", fontsize=14)
+    ax.set_xlabel("work $W$", fontsize=AXIS_LABEL_FONTSIZE)
+    ax.set_ylabel("Probability density $P(W)$", fontsize=AXIS_LABEL_FONTSIZE)
     ax.set_xticks([]); ax.set_yticks([])
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
@@ -242,7 +248,7 @@ def plot_work_distributions(out_path: Path) -> None:
     blank = plt.Line2D([], [], linestyle="none")
     handles += [blank, blank, blank]
     labels += [EST_CGI, EST_BAR, EST_JARZ]
-    ax.legend(handles, labels, loc="upper left", frameon=True, fontsize=8.5)
+    ax.legend(handles, labels, loc="upper left", frameon=True, fontsize=LEGEND_FONTSIZE)
     fig.tight_layout()
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
