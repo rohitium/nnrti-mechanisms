@@ -8,9 +8,14 @@ justifies BAR: well-overlapped, similarly-shaped distributions mean the estimate
 is limited by statistics, whereas widely separated ones mean dissipation is
 large and BAR is biased as well as noisy.
 
+Each panel is annotated with the forward/reverse overlap coefficient -- the same
+one ``qc_neq`` computes, in [0, 1], where 0 is disjoint and 1 identical -- and
+the hysteresis between the two means. Panels below the pipeline's OVERLAP_MIN
+are marked red.
+
 pmx writes the reverse work already sign-flipped, so both directions share an
-axis and dG falls between the two means; their separation is the hysteresis.
-Work values are stored in kJ/mol and converted here to kcal/mol.
+axis and dG falls between the two means. Work is stored in kJ/mol and converted
+here to kcal/mol.
 """
 
 from __future__ import annotations
@@ -20,6 +25,8 @@ import json
 from pathlib import Path
 
 import numpy as np
+
+from scripts.fep_pmx.qc_neq import OVERLAP_MIN, overlap_coefficient
 
 KJ_PER_KCAL = 4.184
 FWD_COLOUR = "#2166AC"
@@ -52,9 +59,12 @@ def collect(legs_dir: Path) -> dict[tuple[str, str], dict]:
             continue
         payload = json.loads(meta.read_text())
         key = (str(payload["leg_id"]), str(payload["phase"]))
-        entry = out.setdefault(key, {"fwd": [], "rev": [], "bar": [], "reps": []})
-        entry["fwd"].append(np.loadtxt(fwd, usecols=1) / KJ_PER_KCAL)
-        entry["rev"].append(np.loadtxt(rev, usecols=1) / KJ_PER_KCAL)
+        entry = out.setdefault(key, {"fwd": [], "rev": [], "bar": [], "reps": [], "per_rep": []})
+        wf = np.loadtxt(fwd, usecols=1) / KJ_PER_KCAL
+        wr = np.loadtxt(rev, usecols=1) / KJ_PER_KCAL
+        entry["fwd"].append(wf)
+        entry["rev"].append(wr)
+        entry["per_rep"].append((wf, wr))
         if payload.get("bar_dg") is not None:
             entry["bar"].append(float(payload["bar_dg"]))
             entry["reps"].append(int(payload["replicate"]))
@@ -105,17 +115,16 @@ def main() -> int:
         for dg in e["bar"]:
             ax.axvline(dg, color="0.25", lw=0.9, ls="--", zorder=4)
         hyst = float(e["fwd"].mean() - e["rev"].mean())
-        # Standardised separation of the two work distributions. STATUS.md treats
-        # ~4-5 sigma as the regime where BAR is biased rather than merely noisy,
-        # so the annotation is coloured on that scale.
-        pooled = float(np.sqrt((e["fwd"].var(ddof=1) + e["rev"].var(ddof=1)) / 2.0))
-        sep = hyst / pooled if pooled > 0 else float("nan")
-        colour = "0.35" if sep < 2 else ("#B35806" if sep < 3.5 else "#B2182B")
+        # Same overlap coefficient qc_neq uses, averaged over replicates as its own
+        # panel figure does, so this agrees with panel_qc.csv. 0 = disjoint,
+        # 1 = identical; the pipeline flags anything below OVERLAP_MIN.
+        ov = float(np.mean([overlap_coefficient(wf, wr) for wf, wr in e["per_rep"]]))
+        colour = "#B2182B" if ov < OVERLAP_MIN else ("#B35806" if ov < 0.5 else "0.35")
         label = leg.replace("wt_to_", "WT→").replace("_to_", "→").replace("_", "+")
         ax.set_title(f"{label}  ({phase})", fontsize=8.5, pad=2.5)
-        ax.text(0.03, 0.93, f"{hyst:.1f} kcal · {sep:.1f}σ", transform=ax.transAxes,
-                fontsize=7, va="top", color=colour,
-                fontweight="bold" if sep >= 3.5 else "normal")
+        ax.text(0.03, 0.93, f"overlap {ov:.2f}  ·  {hyst:.1f} kcal",
+                transform=ax.transAxes, fontsize=7, va="top", color=colour,
+                fontweight="bold" if ov < OVERLAP_MIN else "normal")
         ax.tick_params(labelsize=7, length=2.5, pad=1.5)
         ax.set_yticks([])
         for side in ("top", "right", "left"):
@@ -131,15 +140,8 @@ def main() -> int:
     fig.legend(handles, ["forward (0→1)", "reverse (1→0)", "BAR ΔG, per replicate"],
                loc="upper center", ncol=3, frameon=False, fontsize=10,
                bbox_to_anchor=(0.5, 1.0))
-    fig.text(0.5, 0.9955,
-             "Each panel is annotated with the forward−reverse hysteresis and its separation in "
-             "pooled standard deviations; amber ≥ 2σ, red ≥ 3.5σ, where BAR becomes biased "
-             "rather than merely noisy.",
-             ha="center", fontsize=8.5, color="0.3")
     fig.supxlabel("Switching work (kcal/mol)", fontsize=12, y=0.004)
-    fig.suptitle("Non-equilibrium switching work distributions, all alchemical legs",
-                 fontsize=13, y=1.013)
-    fig.tight_layout(rect=(0, 0.012, 1, 0.985))
+    fig.tight_layout(rect=(0, 0.012, 1, 0.988))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(args.output, dpi=args.dpi, bbox_inches="tight")
     print(f"Wrote {args.output}  ({len(panels)} panels, "
