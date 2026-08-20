@@ -33,7 +33,7 @@ METRICS = {
         "inset_ylabel": "C\u03b1 RMSD (\u00c5)",
         "title": "RT\u2013DOR backbone convergence across the genotype panel",
         "stem": "rmsd_convergence",
-        "inset_rect": (0.575, 0.045, 0.40, 0.30),
+        "inset_rect": (0.575, 0.125, 0.40, 0.285),
     },
     "dor_rmsd": {
         "column": "dor_rmsd_angstrom",
@@ -41,7 +41,7 @@ METRICS = {
         "inset_ylabel": "DOR RMSD (\u00c5)",
         "title": "Doravirine pose convergence across the genotype panel",
         "stem": "dor_rmsd_convergence",
-        "inset_rect": (0.575, 0.045, 0.40, 0.30),
+        "inset_rect": (0.575, 0.125, 0.40, 0.285),
     },
     "com_distance": {
         "column": "com_distance_angstrom",
@@ -49,7 +49,7 @@ METRICS = {
         "inset_ylabel": "COM dist. (\u00c5)",
         "title": "Doravirine\u2013pocket separation across the genotype panel",
         "stem": "com_distance_convergence",
-        "inset_rect": (0.585, 0.045, 0.39, 0.30),
+        "inset_rect": (0.585, 0.125, 0.39, 0.285),
     },
 }
 
@@ -76,7 +76,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--metric", choices=sorted(METRICS), default="ca_rmsd")
     p.add_argument("--output", type=Path, default=None,
                    help="Defaults to the metric's conventional filename under md_convergence/plots.")
-    p.add_argument("--inset-headroom", type=float, default=0.42,
+    p.add_argument("--inset-headroom", type=float, default=0.62,
                    help=(
                        "Blank vertical space added below the data, as a fraction of the data "
                        "range, so the inset does not overlap the traces. 0 disables it."
