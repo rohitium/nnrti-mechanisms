@@ -56,10 +56,19 @@ def _load_protocol_module():
 def plot_cycle(out_path: Path) -> None:
     """WT -> Mut cycle with no numbers, closing on the standard relation.
 
-    Cycle closure, read around the square:
+    The equation is written definition-first:
+
+        ddG_bind = dG_bind^Mut - dG_bind^WT = dG_holo - dG_apo
+
+    The left equality is what ddG_bind *is* -- the change in binding free energy on
+    mutation, the physical quantity of interest. The right equality is what the
+    thermodynamic cycle *buys*: absolute binding free energies are not directly
+    accessible, but the two alchemical legs are, and reading around the square
+
         dG_bind^WT + dG_holo = dG_apo + dG_bind^Mut
-    hence
-        ddG_bind = dG_holo - dG_apo = dG_bind^Mut - dG_bind^WT
+
+    rearranges to exactly that difference. Stating the cycle form first would imply
+    the holo/apo route is the definition rather than the computational strategy.
     """
     fig, ax = plt.subplots(figsize=(8.6, 5.6))
     ax.set_xlim(0, 10)
@@ -101,8 +110,9 @@ def plot_cycle(out_path: Path) -> None:
     ax.set_title("Thermodynamic cycle", fontweight="bold", fontsize=15)
     ax.text(
         5.0, 0.3,
-        r"$\Delta\Delta G_{\mathrm{bind}} = \Delta G_{\mathrm{holo}} - \Delta G_{\mathrm{apo}}"
-        r" = \Delta G_{\mathrm{bind}}^{\mathrm{Mut}} - \Delta G_{\mathrm{bind}}^{\mathrm{WT}}$",
+        r"$\Delta\Delta G_{\mathrm{bind}} = \Delta G_{\mathrm{bind}}^{\mathrm{Mut}}"
+        r" - \Delta G_{\mathrm{bind}}^{\mathrm{WT}}"
+        r" = \Delta G_{\mathrm{holo}} - \Delta G_{\mathrm{apo}}$",
         ha="center", va="center", fontsize=14,
         bbox=dict(boxstyle="round,pad=0.4", facecolor="#fff6e5", edgecolor="#c47b16"),
     )
