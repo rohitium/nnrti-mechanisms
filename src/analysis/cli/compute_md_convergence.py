@@ -153,9 +153,13 @@ def _process_job(job: dict, resid_offset: int, contact_cutoff: float) -> tuple[p
     traj.superpose(traj, frame=0, atom_indices=ca_idx)
     ca_rmsd = md.rmsd(traj, traj, frame=0, atom_indices=ca_idx) * 10.0
 
-    pose = traj[:]
-    pose.superpose(pose, frame=0, atom_indices=nnibp_ca)
-    dor_rmsd = md.rmsd(pose, pose, frame=0, atom_indices=lig_idx) * 10.0
+    # md.rmsd superposes on atom_indices itself, so this is the ligand's INTERNAL
+    # conformational RMSD: rigid-body motion is removed by construction and only
+    # torsional change about the ether, methylene and triazolone linkers remains.
+    # It is not pose drift within the pocket. A preceding superposition on the
+    # NNIBP Calpha atoms used to sit here and was silently discarded by md.rmsd
+    # (removing it changes the result by ~1e-5 A).
+    dor_rmsd = md.rmsd(traj, traj, frame=0, atom_indices=lig_idx) * 10.0
     nnibp_rg = md.compute_rg(traj.atom_slice(nnibp_ca)) * 10.0
 
     rows = []

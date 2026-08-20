@@ -6,9 +6,11 @@ DOR fold reduction so the reader can see that the metric carries no resistance
 ordering. Fold values come from the authoritative susceptibility spreadsheet,
 never from the manifest.
 
-``--metric`` selects the quantity: backbone RMSD, ligand RMSD, or the
-ligand-pocket centre-of-mass separation. The first two start at zero by
-construction; the COM distance is an absolute separation and does not.
+``--metric`` selects the quantity: backbone RMSD, ligand internal RMSD, or the
+ligand-to-whole-protein centre-of-mass separation. The first two start at zero
+by construction; the COM distance is an absolute separation and does not. Note
+the COM reference is the centre of the entire RT heterodimer, not the pocket,
+which is why the baseline sits near 31 A.
 
 Replicates run to slightly different lengths, so each genotype's trace stops at
 its shortest replicate: the mean is always over n = 3, never a changing
@@ -39,15 +41,15 @@ METRICS = {
         "column": "dor_rmsd_angstrom",
         "ylabel": "DOR RMSD (\u00c5)",
         "inset_ylabel": "DOR RMSD (\u00c5)",
-        "title": "Doravirine pose convergence across the genotype panel",
+        "title": "Doravirine internal conformational stability across the genotype panel",
         "stem": "dor_rmsd_convergence",
         "inset_rect": (0.575, 0.125, 0.40, 0.285),
     },
     "com_distance": {
         "column": "com_distance_angstrom",
-        "ylabel": "DOR\u2013pocket COM distance (\u00c5)",
+        "ylabel": "DOR\u2013RT COM distance (\u00c5)",
         "inset_ylabel": "COM dist. (\u00c5)",
-        "title": "Doravirine\u2013pocket separation across the genotype panel",
+        "title": "Doravirine\u2013RT centre-of-mass separation across the genotype panel",
         "stem": "com_distance_convergence",
         "inset_rect": (0.585, 0.125, 0.39, 0.285),
     },
