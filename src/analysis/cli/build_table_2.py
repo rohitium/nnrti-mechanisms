@@ -81,12 +81,15 @@ def main() -> int:
         for col, header, dp in DDE_COLUMNS:
             mean, sem = stats[col]
             rec[header] = f"{mean[key]:.{dp}f} ± {sem[key]:.{dp}f}" if key in mean.index else ""
+        # No tier column: the SEM is already shown next to every value, so a reader
+        # can judge confidence directly. The tier string also encodes a stale rule
+        # (charge legs are forced to omit_main regardless of their SEM, which since
+        # the 500 ps re-run marks K103N -- the panel's tightest value at +-0.23 --
+        # as omit_main). Tiers remain in panel_discussion_tiers.csv for triage.
         if key in fep.index and pd.notna(fep.loc[key, "ddg_bind_kcal"]):
             rec["∆∆G_bind (kcal/mol)"] = f"{fep.loc[key,'ddg_bind_kcal']:.2f} ± {fep.loc[key,'sem_kcal']:.2f}"
-            rec["∆∆G tier"] = fep.loc[key, "tier"]
         else:
             rec["∆∆G_bind (kcal/mol)"] = "not determined"
-            rec["∆∆G tier"] = ""
         records.append(rec)
 
     table = pd.DataFrame(records)
