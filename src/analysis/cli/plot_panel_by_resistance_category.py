@@ -67,6 +67,8 @@ LABEL_OVERRIDES = {
 }
 AXIS_LABEL_FONTSIZE = 20  # 2x the matplotlib default
 TICK_LABEL_FONTSIZE = 15  # scaled to stay proportionate to the axis labels
+POINT_LABEL_FONTSIZE = 11  # genotype labels on the scatter
+LEGEND_FONTSIZE = 13
 
 
 def _load_repel():
@@ -193,7 +195,7 @@ def main(argv: list[str] | None = None) -> int:
         [math.log10(r["fold"]) for r in auto],
         [r["ddg"] for r in auto],
         [r["genotype"] for r in auto],
-        fontsize=7,
+        fontsize=POINT_LABEL_FONTSIZE,
     )
     for r in rows:
         off = LABEL_OVERRIDES.get(r["genotype"])
@@ -203,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
             r["genotype"],
             xy=(math.log10(r["fold"]), r["ddg"]),
             xytext=off, textcoords="offset points",
-            fontsize=7, ha="right", va="center",
+            fontsize=POINT_LABEL_FONTSIZE, ha="right", va="center",
             arrowprops=dict(arrowstyle="-", linewidth=0.5, color="0.5",
                             shrinkA=0.0, shrinkB=3.0),
         )
@@ -215,7 +217,11 @@ def main(argv: list[str] | None = None) -> int:
     ax.set_ylabel(r"Computed $\Delta\Delta G_{\mathrm{bind}}$ (kcal/mol)",
                   fontsize=AXIS_LABEL_FONTSIZE)
     ax.tick_params(axis="both", labelsize=TICK_LABEL_FONTSIZE)
-    ax.legend(loc="upper left", fontsize=8, frameon=True)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    # Lower centre: upper left collided with V106M (the highest point), and the
+    # mid/low-ddG band is the emptiest region of the panel.
+    ax.legend(loc="lower center", fontsize=LEGEND_FONTSIZE, frameon=True)
     fig.tight_layout()
     fig.savefig(args.out_png, dpi=200)
     print(f"\nWrote {args.out_png}\nWrote {args.out_csv}")
