@@ -110,5 +110,5 @@
   "system_gro": "results/analysis/fep_pmx/legs/wt_to_G190E/apo/rep_03/gromacs_build/system.gro",
   "system_top": "results/analysis/fep_pmx/legs/wt_to_G190E/apo/rep_03/gromacs_build/system.top",
   "manifest": "results/analysis/fep_pmx/legs/wt_to_G190E/apo/rep_03/neq/neq_manifest.csv",
-  "n_tasks": 9
+  "n_tasks": 19
 }
