@@ -35,7 +35,10 @@ HERE = Path(__file__).resolve().parent
 OUT_DIR = Path("results/analysis/fep_pmx/protocol_schematic")
 
 # Estimator definitions, shown in the legend of figure 03 instead of fitted values.
-EST_CGI = r"CGI: Gaussian $\cap$ of $P(W_f)$, $P(W_r)$"
+# CGI is spelled out: pmx reports it as "Crooks Gaussian Intersection" -- it fits a
+# Gaussian to each work distribution and takes dG as their crossing, which follows
+# from the Crooks relation being unity at W = dG.
+EST_CGI = r"CGI (Crooks Gaussian Intersection): $P(W_f) \cap P(W_r)$"
 EST_BAR = r"BAR: $P(W_f)/P(W_r) = e^{\beta(W - \Delta G)}$"
 EST_JARZ = r"Jarzynski: $\Delta G = -kT\ln\langle e^{-\beta W_f}\rangle$"
 
@@ -204,8 +207,8 @@ def plot_work_distributions(out_path: Path) -> None:
         ax = sp["ax"]
         yf = _gauss(x, sp["mu_f"], sp["sig"])
         yr = _gauss(x, sp["mu_r"], sp["sig"])
-        ax.fill_between(x, yr, color="#e8a87c", alpha=0.55, lw=0, label=r"$P(W_r)$  reverse")
-        ax.fill_between(x, yf, color="#8fb8de", alpha=0.65, lw=0, label=r"$P(W_f)$  forward")
+        ax.fill_between(x, yr, color="#e8a87c", alpha=0.55, lw=0, label=r"Reverse Work  $P(W_r)$")
+        ax.fill_between(x, yf, color="#8fb8de", alpha=0.65, lw=0, label=r"Forward Work  $P(W_f)$")
         ax.plot(x, yr, color="#d1651a", lw=2.0)
         ax.plot(x, yf, color="#1f6fb2", lw=2.0)
         # The three estimators coincide at the crossing when the work is Gaussian;
@@ -225,7 +228,7 @@ def plot_work_distributions(out_path: Path) -> None:
         ax.set_xticks([]); ax.set_yticks([])
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
-    axes[0].set_ylabel("density", fontsize=14)
+    axes[0].set_ylabel("Probability density $P(W)$", fontsize=14)
 
     handles, labels = axes[0].get_legend_handles_labels()
     blank = plt.Line2D([], [], linestyle="none")
