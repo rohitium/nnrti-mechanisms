@@ -197,57 +197,48 @@ def _gauss(x, mu, sigma):
 
 
 def plot_work_distributions(out_path: Path) -> None:
-    """Schematic Crooks histograms for holo and apo; estimators as equations.
+    """Schematic Crooks work distributions with the three estimators as equations.
 
-    Replaces the per-genotype 03_neq_work and 05_crooks_overlap figures. Shapes are
-    illustrative: holo is drawn with more forward/reverse overlap than apo, which is
-    the qualitative pattern in the real data, but no values are implied.
+    Replaces the per-genotype 03_neq_work and 05_crooks_overlap figures.
+
+    A SINGLE panel: holo and apo produce the same picture, so drawing both was
+    redundant once the panel titles and the dG subscripts were dropped. The figure
+    shows what a NEQ leg looks like generically; figure 01 is where the holo and apo
+    legs are combined into ddG_bind. Shapes are illustrative -- no values implied.
     """
-    fig, axes = plt.subplots(1, 2, figsize=(8.4, 4.1), sharey=True)
-    specs = [
-        # Titles sit at the OUTER top corner of each panel so the centred legend
-        # cannot cover them.
-        {"ax": axes[0], "title": "holo", "tx": 0.02, "ha": "left",
-         "dg": r"$\Delta G_{\mathrm{holo}}$",
-         "mu_f": 1.05, "mu_r": -1.05, "sig": 1.05},
-        {"ax": axes[1], "title": "apo", "tx": 0.98, "ha": "right",
-         "dg": r"$\Delta G_{\mathrm{apo}}$",
-         "mu_f": 1.5, "mu_r": -1.5, "sig": 0.95},
-    ]
+    fig, ax = plt.subplots(figsize=(7.2, 3.9))
+    mu_f, mu_r, sig = 1.2, -1.2, 1.0
     x = np.linspace(-4.6, 4.6, 800)
-    for sp in specs:
-        ax = sp["ax"]
-        yf = _gauss(x, sp["mu_f"], sp["sig"])
-        yr = _gauss(x, sp["mu_r"], sp["sig"])
-        ax.fill_between(x, yr, color="#e8a87c", alpha=0.55, lw=0, label=r"Reverse Work  $P(W_r)$,   $\lambda: 1 \rightarrow 0$")
-        ax.fill_between(x, yf, color="#8fb8de", alpha=0.65, lw=0, label=r"Forward Work  $P(W_f)$,   $\lambda: 0 \rightarrow 1$")
-        ax.plot(x, yr, color="#d1651a", lw=2.0)
-        ax.plot(x, yf, color="#1f6fb2", lw=2.0)
-        # The three estimators coincide at the crossing when the work is Gaussian;
-        # a single marker keeps the schematic honest rather than implying a spread.
-        ax.axvline(0.0, color="0.25", lw=1.6, ls="--")
-        ax.plot([0.0], [_gauss(0.0, sp["mu_f"], sp["sig"])], "o", color="#5b2d8e",
-                markersize=8, zorder=5)
-        ax.annotate(sp["dg"], (0.0, _gauss(0.0, sp["mu_f"], sp["sig"])),
-                    textcoords="offset points", xytext=(8, 12), fontsize=14,
-                    color="0.2", fontweight="bold")
-        # Headroom so the centred legend clears the curves instead of needing a
-        # whitespace band under the figure.
-        ax.set_ylim(0, _gauss(sp["mu_f"], sp["mu_f"], sp["sig"]) * 1.72)
-        ax.text(sp["tx"], 0.97, sp["title"], transform=ax.transAxes,
-                ha=sp["ha"], va="top", fontweight="bold", fontsize=15)
-        ax.set_xlabel("work $W$", fontsize=14)
-        ax.set_xticks([]); ax.set_yticks([])
-        for side in ("top", "right"):
-            ax.spines[side].set_visible(False)
-    axes[0].set_ylabel("Probability density $P(W)$", fontsize=14)
+    yf = _gauss(x, mu_f, sig)
+    yr = _gauss(x, mu_r, sig)
+    ax.fill_between(x, yr, color="#e8a87c", alpha=0.55, lw=0,
+                    label=r"Reverse Work  $P(W_r)$,   $\lambda: 1 \rightarrow 0$")
+    ax.fill_between(x, yf, color="#8fb8de", alpha=0.65, lw=0,
+                    label=r"Forward Work  $P(W_f)$,   $\lambda: 0 \rightarrow 1$")
+    ax.plot(x, yr, color="#d1651a", lw=2.0)
+    ax.plot(x, yf, color="#1f6fb2", lw=2.0)
 
-    handles, labels = axes[0].get_legend_handles_labels()
+    # The three estimators coincide at the crossing when the work is Gaussian; one
+    # marker keeps the schematic honest rather than implying a spread.
+    ax.axvline(0.0, color="0.25", lw=1.6, ls="--")
+    ax.plot([0.0], [_gauss(0.0, mu_f, sig)], "o", color="#5b2d8e", markersize=8, zorder=5)
+    ax.annotate(r"$\Delta G$", (0.0, _gauss(0.0, mu_f, sig)),
+                textcoords="offset points", xytext=(9, 12), fontsize=15,
+                color="0.2", fontweight="bold")
+
+    ax.set_ylim(0, _gauss(mu_f, mu_f, sig) * 1.75)
+    ax.set_xlabel("work $W$", fontsize=14)
+    ax.set_ylabel("Probability density $P(W)$", fontsize=14)
+    ax.set_xticks([]); ax.set_yticks([])
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+
+    handles, labels = ax.get_legend_handles_labels()
     blank = plt.Line2D([], [], linestyle="none")
     handles += [blank, blank, blank]
     labels += [EST_CGI, EST_BAR, EST_JARZ]
-    fig.legend(handles, labels, loc="upper center", ncol=1, frameon=True,
-               fontsize=8.5, bbox_to_anchor=(0.5, 0.995))
+    ax.legend(handles, labels, loc="upper center", frameon=True, fontsize=8.5,
+              bbox_to_anchor=(0.5, 1.02))
     fig.tight_layout()
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
