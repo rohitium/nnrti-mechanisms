@@ -279,3 +279,7 @@ logistic_regression_drop_residue/
 logistic_regression_including_energy/
 logistic_regression_including_energy_lasso/
 logistic_regression_only_residue/
+
+# macOS / Word lock files
+.DS_Store
+~$*
