@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 360" width="660" height="360" font-family="Times New Roman, Times, serif">
+  <defs>
+    <marker id="arw" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#000000"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="660" height="360" fill="#ffffff"/>
+
+  <!-- ===== top row : holo ===== -->
+  <text x="34" y="56" font-size="22" fill="#000">WT RT &#183; DOR</text>
+
+  <line x1="188" y1="50" x2="392" y2="50" stroke="#000" stroke-width="1.7" marker-end="url(#arw)"/>
+  <text x="290" y="36" font-size="20" fill="#000" text-anchor="middle">&#916;G<tspan font-size="13.5" dy="5">holo</tspan></text>
+
+  <text x="412" y="56" font-size="22" fill="#000">Mutant RT &#183; DOR</text>
+
+  <!-- ===== vertical binding legs, pointing up ===== -->
+  <line x1="62" y1="292" x2="62" y2="72" stroke="#000" stroke-width="1.7" marker-end="url(#arw)"/>
+  <text x="76" y="188" font-size="20" fill="#000">&#916;G<tspan font-size="13.5" x="106" dy="6">bind</tspan><tspan font-size="13.5" x="106" dy="-17">WT</tspan></text>
+
+  <line x1="440" y1="292" x2="440" y2="72" stroke="#000" stroke-width="1.7" marker-end="url(#arw)"/>
+  <text x="454" y="188" font-size="20" fill="#000">&#916;G<tspan font-size="13.5" x="484" dy="6">bind</tspan><tspan font-size="13.5" x="484" dy="-17">Mut</tspan></text>
+
+  <!-- ===== bottom row : apo ===== -->
+  <text x="34" y="316" font-size="22" fill="#000">WT RT + DOR</text>
+
+  <line x1="188" y1="310" x2="392" y2="310" stroke="#000" stroke-width="1.7" marker-end="url(#arw)"/>
+  <text x="290" y="296" font-size="20" fill="#000" text-anchor="middle">&#916;G<tspan font-size="13.5" dy="5">apo</tspan></text>
+
+  <text x="412" y="316" font-size="22" fill="#000">Mutant RT + DOR</text>
+</svg>
