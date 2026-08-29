@@ -54,11 +54,10 @@ echo "--- audit ---"
 # pipeline meant that when the audit printed nothing matching (or failed
 # outright), grep returned non-zero, `set -e` killed the script, and the real
 # error was never shown. Never let a filter decide whether an error is visible.
-AUDIT_RAW="$(python3 scripts/fep_pmx/audit_neq_panel.py --manifest "$MANIFEST" 2>&1)" || {
-    echo "ERROR: audit_neq_panel.py failed. Its output was:" >&2
-    echo "$AUDIT_RAW" >&2
-    exit 1
-}
+# NOTE: audit_neq_panel.py exits NON-ZERO whenever any unit is incomplete, which
+# is the normal mid-campaign state -- not an error. Do not let `set -e` or
+# pipefail treat that as a crash; judge completeness from the summary lines.
+AUDIT_RAW="$(python3 scripts/fep_pmx/audit_neq_panel.py --manifest "$MANIFEST" 2>&1 || true)"
 AUDIT="$(echo "$AUDIT_RAW" | grep '===' || true)"
 if [ -z "$AUDIT" ]; then
     echo "ERROR: audit produced no '===' summary lines. Full output:" >&2
