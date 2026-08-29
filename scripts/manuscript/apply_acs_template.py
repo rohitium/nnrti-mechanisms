@@ -122,12 +122,22 @@ def inject_styles(target_docx: Path, template_dotx: Path) -> list[str]:
     tgt_styles = etree.fromstring(parts["word/styles.xml"])
     have = {s.get(qn("w:styleId")) for s in tgt_styles.findall(qn("w:style"))}
 
+    # "Normal" must come across too: every ACS style is basedOn="Normal", so
+    # without it they resolve against the DRAFT's Normal -- which carries no
+    # explicit size and falls back to ~10pt, while the ACS Normal is 12pt. That
+    # is why the first conversion rendered main text smaller than its captions.
+    wanted = set(ROLE_STYLE.values()) | {"TCTableBody", "Normal"}
     added = []
     for s in tpl_styles.findall(qn("w:style")):
         sid = s.get(qn("w:styleId"))
-        if sid in ROLE_STYLE.values() and sid not in have:
-            tgt_styles.append(s)
-            added.append(sid)
+        if sid not in wanted:
+            continue
+        if sid in have:                      # replace, do not skip
+            for old in tgt_styles.findall(qn("w:style")):
+                if old.get(qn("w:styleId")) == sid:
+                    tgt_styles.remove(old)
+        tgt_styles.append(s)
+        added.append(sid)
 
     # adopt the template's font/paragraph defaults
     tpl_def = tpl_styles.find(qn("w:docDefaults"))
@@ -160,6 +170,24 @@ def inject_styles(target_docx: Path, template_dotx: Path) -> list[str]:
         for n in names:
             z.writestr(n, parts[n])
     return added
+
+
+def strip_direct_font(paragraph) -> None:
+    """Remove run-level size and typeface so the paragraph style governs.
+
+    Assigning a paragraph style does NOT clear direct character formatting, so a
+    draft that hard-codes 11pt on its captions keeps rendering at 11pt no matter
+    what style it is given. Only ``sz``/``szCs``/``rFonts`` are removed --
+    bold, italic, underline, colour and super/subscript are meaning-bearing here
+    (subscripts in the energy symbols, italics in the references) and are kept.
+    """
+    for run in paragraph.runs:
+        rPr = run._element.find(qn("w:rPr"))
+        if rPr is None:
+            continue
+        for tag in ("w:sz", "w:szCs", "w:rFonts"):
+            for el in rPr.findall(qn(tag)):
+                rPr.remove(el)
 
 
 def main() -> int:
@@ -231,6 +259,8 @@ def main() -> int:
     for i, p in enumerate(doc.paragraphs):
         role = classify(i, p.text, p.style.name, span)
         if role == "heading":
+            p.style = doc.styles["TAMainText"]
+            strip_direct_font(p)
             for r in p.runs:
                 r.bold = True
             continue
@@ -239,6 +269,7 @@ def main() -> int:
             continue
         try:
             p.style = doc.styles[sid]
+            strip_direct_font(p)
             applied += 1
         except KeyError:
             print(f"  WARN: style {sid} unavailable for paragraph {i}")
@@ -248,8 +279,9 @@ def main() -> int:
                 for p in cell.paragraphs:
                     try:
                         p.style = doc.styles["TCTableBody"]
+                        strip_direct_font(p)
                     except KeyError:
-                        pass
+                        print("  WARN: TCTableBody unavailable")
     doc.save(str(out))
 
     with zipfile.ZipFile(out) as z:
