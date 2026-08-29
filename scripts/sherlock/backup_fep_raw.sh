@@ -29,8 +29,16 @@
 #
 # USAGE
 #   bash scripts/sherlock/backup_fep_raw.sh                 # tier 1, 4 idle legs
-#   TIER=2 bash scripts/sherlock/backup_fep_raw.sh          # add trajectories
 #   LEGS="wt_to_G190E" bash scripts/sherlock/backup_fep_raw.sh   # after G190E finishes
+#
+#   TIER 2 IS ~289 GB AND TAKES HOURS -- run it as a batch job, never on a login
+#   node, which Sherlock throttles and may kill:
+#
+#     sbatch -p normal -t 24:00:00 -c 8 --mem 8G -J fep_backup \
+#            --wrap "TIER=2 bash scripts/sherlock/backup_fep_raw.sh"
+#
+#   Interrupted runs are safe to re-run: archives are written to .part and only
+#   renamed on success, and the skip check requires a verified manifest entry.
 #
 # SAFETY
 #   Never back up a leg with jobs actively writing to it -- tar would capture
@@ -97,11 +105,21 @@ for leg in $LEGS; do
     fi
 
     OUT="$DEST/${leg}_tier${TIER}.tar.gz"
-    if [ -f "$OUT" ]; then
-        echo "SKIP $leg -- archive already exists: $OUT"
-        echo "     (delete it to re-create; this script never overwrites)"
+    PART="$OUT.part"
+    # Skip only if the archive exists AND is recorded in the manifest. A bare
+    # existence check would treat a truncated archive from an interrupted run as
+    # complete -- silent data loss of exactly the kind this script exists to
+    # prevent. Interrupted runs leave a .part, which is not a valid skip.
+    if [ -f "$OUT" ] && grep -q ",$(basename "$OUT")," "$MANIFEST" 2>/dev/null; then
+        echo "SKIP $leg -- archive exists and is verified in the manifest"
         continue
     fi
+    if [ -f "$OUT" ]; then
+        echo "WARN $leg -- archive exists but is NOT in the manifest (interrupted run?)."
+        echo "     Re-creating it. Previous file moved to $OUT.unverified"
+        mv "$OUT" "$OUT.unverified"
+    fi
+    rm -f "$PART"
 
     LIST="$(mktemp)"
     trap 'rm -f "$LIST"' EXIT
@@ -137,7 +155,15 @@ for leg in $LEGS; do
     SRC_BYTES="$(xargs -a "$LIST" du -cb 2>/dev/null | tail -1 | cut -f1 || echo 0)"
 
     echo "-> $leg : $NFILES files, $(numfmt --to=iec "$SRC_BYTES" 2>/dev/null || echo "$SRC_BYTES B") uncompressed"
-    tar -czf "$OUT" -T "$LIST"
+
+    # pigz parallelises gzip across cores; dgdl.xvg is text, so -1 already gets
+    # most of the ratio at a fraction of the CPU. Falls back to plain gzip.
+    if command -v pigz >/dev/null 2>&1; then
+        tar -cf - -T "$LIST" | pigz -1 -p "${PIGZ_THREADS:-8}" > "$PART"
+    else
+        tar -cf - -T "$LIST" | gzip -1 > "$PART"
+    fi
+    mv "$PART" "$OUT"
 
     SHA="$(sha256sum "$OUT" | cut -d' ' -f1)"
     OUT_BYTES="$(stat -c %s "$OUT")"
