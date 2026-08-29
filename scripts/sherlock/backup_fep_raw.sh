@@ -29,13 +29,13 @@
 #
 # USAGE
 #   bash scripts/sherlock/backup_fep_raw.sh                 # tier 1, 4 idle legs
+#   TIER=2 bash scripts/sherlock/backup_fep_raw.sh          # + endpoint trajectories
 #   LEGS="wt_to_G190E" bash scripts/sherlock/backup_fep_raw.sh   # after G190E finishes
 #
-#   TIER 2 IS ~289 GB AND TAKES HOURS -- run it as a batch job, never on a login
-#   node, which Sherlock throttles and may kill:
-#
-#     sbatch -p normal -t 24:00:00 -c 8 --mem 8G -J fep_backup \
-#            --wrap "TIER=2 bash scripts/sherlock/backup_fep_raw.sh"
+#   This ALWAYS RUNS AS A BATCH JOB. Invoked from a login node it submits itself
+#   via sbatch and returns immediately -- compression is real work and login
+#   nodes are shared, throttled, and kill long processes. Set ALLOW_LOGIN_NODE=1
+#   only for a deliberate small test.
 #
 #   Interrupted runs are safe to re-run: archives are written to .part and only
 #   renamed on success, and the skip check requires a verified manifest entry.
@@ -55,11 +55,29 @@ cd "$PROJECT_ROOT"
 : "${GROUP_HOME:?GROUP_HOME is not set -- are you on Sherlock?}"
 
 TIER="${TIER:-1}"
-STAMP="$(date +%Y-%m-%d)"
+STAMP="${STAMP:-$(date +%Y-%m-%d)}"
 DEST="${DEST:-$GROUP_HOME/nnrti-mechanisms/fep_raw/$STAMP}"
 LEGS="${LEGS:-wt_to_K103N K103N_to_K103N_M230L K103N_to_K103N_P225H K103N_to_L100I_K103N}"
 LEGS_ROOT="results/analysis/fep_pmx/legs"
 MANIFEST="$DEST/BACKUP_MANIFEST.csv"
+
+# --- self-submit; compression does not belong on a shared login node ----------
+if [ -z "${SLURM_JOB_ID:-}" ] && [ "${ALLOW_LOGIN_NODE:-0}" != "1" ]; then
+    CPUS="${SBATCH_CPUS:-8}"
+    if [ "$TIER" -ge 2 ]; then WALL="${SBATCH_TIME:-24:00:00}"; else WALL="${SBATCH_TIME:-04:00:00}"; fi
+    mkdir -p logs/fep_backup
+    echo "Submitting as a batch job (tier $TIER, ${CPUS} cpus, ${WALL} wall)."
+    echo "Login nodes are shared and throttled; set ALLOW_LOGIN_NODE=1 to override."
+    JOB=$(sbatch --parsable \
+        -p "${SBATCH_PARTITION:-normal}" -t "$WALL" -c "$CPUS" --mem "${SBATCH_MEM:-8G}" \
+        -J "fep_backup_t${TIER}" \
+        -o "logs/fep_backup/fep_backup_t${TIER}_%j.log" \
+        --wrap "cd '$PROJECT_ROOT' && TIER='$TIER' STAMP='$STAMP' LEGS='$LEGS' DEST='$DEST' PIGZ_THREADS='$CPUS' bash scripts/sherlock/backup_fep_raw.sh")
+    echo "  job $JOB"
+    echo "  log logs/fep_backup/fep_backup_t${TIER}_${JOB}.log"
+    echo "  watch: tail -f logs/fep_backup/fep_backup_t${TIER}_${JOB}.log"
+    exit 0
+fi
 
 echo "=========================================="
 echo "pmx NEQ raw-data backup"
