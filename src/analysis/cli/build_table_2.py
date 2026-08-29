@@ -20,6 +20,18 @@ import pandas as pd
 #: Labels used in the draft that differ from the analysis keys.
 DOCX_ALIASES = {"K103N+L100I": "L100I+K103N"}
 
+
+def normalize_label(label: str) -> str:
+    """Map a .docx mutation label onto its analysis key.
+
+    Drafts are inconsistent about spacing around the '+' in combination
+    genotypes -- the 06-21 draft writes "A98G+F227C", the 08-26 draft writes
+    "A98G + F227C". Matching the raw string silently left every combination row
+    blank, so normalise the spacing before applying the alias map.
+    """
+    key = "+".join(part.strip() for part in str(label).split("+"))
+    return DOCX_ALIASES.get(key, key)
+
 #: (ddE column, header, decimal places)
 DDE_COLUMNS = [
     ("ddg", "∆∆E_Total (kcal/mol)", 2),
@@ -76,7 +88,7 @@ def main() -> int:
 
     records = []
     for category, label in row_order(args.docx, args.table_index):
-        key = DOCX_ALIASES.get(label, label)
+        key = normalize_label(label)
         rec = {"Mutation category": category, "Mutation": label}
         for col, header, dp in DDE_COLUMNS:
             mean, sem = stats[col]

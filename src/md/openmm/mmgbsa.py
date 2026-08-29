@@ -344,6 +344,7 @@ def _select_snapshot_indices(
     total_time_ns: float | None = None,
     sample_last_frames: int | None = None,
     allowed_frames: Iterable[int] | None = None,
+    frame_sampling: str = "terminal",
 ) -> np.ndarray:
     if allowed_frames is not None:
         allowed = np.asarray(sorted({int(f) for f in allowed_frames if 0 <= int(f) < n_frames}), dtype=int)
@@ -352,11 +353,23 @@ def _select_snapshot_indices(
                 "No usable frames remain after screening; widen the sampling window "
                 "or relax the contact threshold."
             )
-        # Take the most recent frames, matching the terminal-window convention
-        # used by the unscreened paths.
         take = min(max(1, int(n_snapshots)), allowed.size)
         if sample_last_frames is not None and int(sample_last_frames) > 0:
             take = min(take, int(sample_last_frames))
+        if str(frame_sampling) == "even":
+            # Spread the snapshots evenly over the whole post-equilibration
+            # region. MM/GBSA is an ensemble average, so adjacent terminal frames
+            # are the wrong sample: they are strongly autocorrelated, which both
+            # biases the replicate mean toward whatever local excursion the run
+            # happened to end in and inflates the between-replicate spread.
+            start = int(np.floor(max(0.0, min(0.95, discard_fraction)) * n_frames))
+            pool = allowed[allowed >= start]
+            if pool.size == 0:
+                pool = allowed
+            take = min(take, pool.size)
+            return pool[np.linspace(0, pool.size - 1, num=take, dtype=int)]
+        # Default: the most recent frames, matching the terminal-window convention
+        # used by the unscreened paths.
         return allowed[-take:]
 
     if sample_last_frames is not None and int(sample_last_frames) > 0:
@@ -465,6 +478,7 @@ def compute_mmgbsa_from_trajectory(
     allowed_frames: Iterable[int] | None = None,
     snapshot_relaxation: str = "unrestrained",
     relaxation_iterations: int = 100,
+    frame_sampling: str = "terminal",
 ) -> MMGBSAResult:
     """Compute MM/GBSA-style decomposition from explicit-MD snapshots.
 
@@ -475,8 +489,10 @@ def compute_mmgbsa_from_trajectory(
     ``allowed_frames`` restricts sampling to a whitelist of frame indices --
     used to exclude frames carrying unphysical ligand-protein contacts, which
     would otherwise contribute a huge spurious repulsive term. When given it
-    overrides the window-based selection and the most recent allowed frames are
-    taken.
+    overrides the window-based selection. ``frame_sampling`` then chooses which
+    of the allowed frames are scored: ``"terminal"`` takes the most recent ones
+    (the protocol behind the 2026-05-14 tables), ``"even"`` spreads them over
+    the whole post-``discard_fraction`` trajectory.
     """
     import MDAnalysis as mda
 
@@ -547,6 +563,7 @@ def compute_mmgbsa_from_trajectory(
         total_time_ns=total_time_ns,
         sample_last_frames=sample_last_frames,
         allowed_frames=allowed_frames,
+        frame_sampling=frame_sampling,
     )
 
     d_vdw: list[float] = []

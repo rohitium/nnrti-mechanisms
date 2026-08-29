@@ -20,8 +20,19 @@ The calculation is run in the `nnrti-prep` conda environment with `PYTHONPATH=.`
 
 ## Snapshot Sampling
 
-The current default analysis uses the 20 most recent trajectory frames that
-survive the contact screen described under "Contact screening" below. This terminal-frame protocol is stored under:
+**Current default (2026-08-28): 100 frames spread evenly over the whole
+post-equilibration trajectory, with NO frame filtering.** Selected with
+`compute_mmgbsa_safe --frame-sampling even --snapshots 100 --discard-fraction 0.25`
+(no `--contact-screen-csv`) and recorded in the `mmgbsa_frame_sampling` column.
+
+**Frames are never discarded.** Close ligand-protein contacts are repaired by the
+per-snapshot minimisation, not by exclusion -- see "Why the contact screen was
+retired" below. The screen and its rationale are kept in this note as history
+because they explain the 2026-08-18 numbers, but the screen is no longer applied. See "Widening the sampling
+window" below for why this replaced the terminal-20 protocol and what it changed.
+
+The superseded terminal-frame protocol used the 20 most recent surviving frames.
+It is stored under:
 
 ```text
 results/analysis/binding_energy/last20frames/
@@ -41,6 +52,131 @@ were archived on 2026-05-14 under:
 ```text
 results/archive/2026-05-14_binding_energy_nondefault/
 ```
+
+## Widening the sampling window (2026-08-28)
+
+The terminal-20-frame protocol scored the final ~10 ns of each 100 ns run --
+roughly 10% of the frames the contact screen leaves usable (57-540 per run, mean
+216). It was the dominant source of the reported error bars, and it was not an
+equilibration choice: the protocol already discards the first 25%, so frames
+between 25 and 90 ns were being thrown away for no stated reason.
+
+### Why the terminal window inflated the SEM
+
+MM/GBSA is an ensemble average, so the estimator wants snapshots spanning the
+equilibrium ensemble. Twenty temporally adjacent frames are strongly
+autocorrelated: each replicate mean lands on whatever local excursion that run
+happened to end in, and the three replicate means then disagree for reasons that
+have nothing to do with the mutation.
+
+Two measurements separate that from genuine replicate divergence.
+
+**Variance decomposition of the published SEMs.** Only a median **4%** of the
+between-replicate variance is 20-frame statistical noise -- so simply scoring
+*more* terminal frames would not have helped. Projected mean SEM on the total
+shift, from the published `mmgbsa_replicate_metrics.csv`:
+
+| configuration | mean SEM | max SEM | genotypes > 1.0 |
+| --- | --- | --- | --- |
+| n = 3, final 20 frames (published) | 1.09 | 2.55 | 11 |
+| n = 3, infinite terminal frames | 1.06 | 2.52 | 11 |
+| n = 6, final 20 frames | 0.77 | 1.80 | 4 |
+| n = 9, final 20 frames | 0.63 | 1.47 | 2 |
+
+**Time-window scan.** Eight frames were scored in each of five equal windows
+across the post-equilibration region of every replicate of four systems. The
+replicate spread in the terminal window is large; the spread of the *all-window*
+means is not (kcal/mol):
+
+| system | sigma_between, published (last 20) | sigma_between, terminal window | sigma_between, all windows |
+| --- | ---: | ---: | ---: |
+| G190E | 4.41 | 2.84 | **1.10** |
+| Y188L | 3.80 | 1.26 | **0.64** |
+| WT | 2.77 | 1.26 | **0.66** |
+| V106A | 0.58 | 0.78 | **0.35** |
+
+The replicates were never as far apart as the terminal window made them look.
+Raw scan: `results/analysis/binding_energy/window_scan_2026-08-28.csv`.
+
+### Why the contact screen was retired (2026-08-28)
+
+The screen excluded 12% of all frames (1779 of 14769) on a 2.5 A minimum
+ligand-protein heavy-atom distance. It was introduced on 2026-08-18, when the
+per-snapshot relaxation was still `h_relax` -- hydrogens only, heavy atoms
+restrained -- which by construction cannot relieve a heavy-atom overlap. The
+default relaxation is now `unrestrained`, and it does.
+
+Measured on the worst frames (G190S rep 1, mean minimum contact 0.92 A), at the
+production setting of 100 minimisation iterations:
+
+| quantity | flagged frames | clean frames |
+| --- | ---: | ---: |
+| minimum contact before | 0.92 A | 2.89 A |
+| minimum contact after | 3.01 A | 2.99 A |
+| geometry drift | 0.44 A | 0.49 A |
+
+The contact is fully repaired. A residual bias remains in the total -- roughly
+7 kcal/mol at 100 iterations, falling to ~3 at 500 -- but the artifact this
+guards against was ~3300 kcal/mol, so the residual is immaterial at the ~0.5
+kcal/mol precision of the panel. Raising the cap to 500 iterations would halve
+the residual at the cost of doubling geometry drift (0.49 A -> 1.12 A), so the
+100-iteration cap is kept.
+
+Consequences of dropping the screen:
+
+- Every run now scores the full 100 snapshots. Under the screen, four runs were
+  frame-starved because it rejected most of their *later* frames: G190E rep 2
+  (15 frames), Y188L rep 1 (13), G190S rep 1 (22), V106I+F227C rep 2 (42).
+- The sampled ensemble is wider. Flagged frames sit ~2.0 A from the clean mean
+  DOR pose versus ~0.7 A for clean frames, so including them broadens the pose
+  distribution the average is taken over. This is deliberate: excluding
+  configurations on the basis of their energy or geometry biases an ensemble
+  average.
+
+### The single-pose gate
+
+Widening the window is only legitimate while the ligand stays in one binding
+mode; otherwise the average would mix two states.
+`src/analysis/cli/screen_mmgbsa_pose_stability.py` measures this over exactly
+the frames the widened protocol scores, superposing the NNIBP pocket Calphas
+(the 15 p66 residues in the authoritative Cilento/Kirby/Sarafianos set) and
+tracking DOR heavy atoms. Across all 60 runs:
+
+| quantity | value |
+| --- | --- |
+| DOR RMSD to the WT reference pose, mean | 1.27 A |
+| spread of each run about its own mean pose | median 0.14 A, max 0.36 A |
+| RT-DOR centre-of-mass spread | median 0.17 A, max 0.32 A |
+| runs failing the gate | 1 of 60 |
+
+A 0.14 A spread is thermal breathing of a single pose, not a second binding
+mode. The one failure, G190S rep 3, exceeds the 3.0 A max-RMSD threshold at
+3.17 A but has a self-spread of only 0.22 A -- a displaced yet stable pose, not
+a mode switch. Output: `pose_stability_even_window.csv`.
+
+**Four runs are frame-poor after the discard**, because the contact screen flags
+most of their *later* frames: G190E rep 2 (15 scored), Y188L rep 1 (13),
+G190S rep 1 (22), V106I+F227C rep 2 (42). Their windows are effectively the
+first half of the trajectory. This is not a regression -- the terminal protocol
+drew from the same restricted pool -- but those four remain the noisiest runs
+and their shifts should be read with that in mind.
+
+### Platform
+
+The rebuild ran on the OpenCL platform (`OPENMM_PLATFORM=OpenCL`), validated
+first against CPU on six runs over identical frames: max difference on the total
+**0.059 kcal/mol**, mean 0.021, both inside the 0.068 kcal/mol single-precision
+noise floor recorded under "Decomposition audit". Comparison table:
+`platform_validation_cpu_vs_opencl.csv`. OpenCL scores ~0.8 s/frame against ~33
+s/frame single-threaded CPU, which is what made a 6,000-frame rebuild practical
+on the analysis machine.
+
+### Consequence for reported values
+
+**Point estimates move, not only error bars.** The widened window is a different
+(and better-sampled) estimate of the same quantity, so every `ddE` in Table 2 and
+Supplementary Table 3 shifts. Old-versus-new per genotype is tabulated in
+`terminal20_vs_even100_comparison.csv`.
 
 ## Per-Snapshot Energy Calculation
 

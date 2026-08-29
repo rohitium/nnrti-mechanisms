@@ -158,6 +158,7 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
             allowed_frames=task.get("allowed_frames"),
             snapshot_relaxation=task["snapshot_relaxation"],
             relaxation_iterations=int(task["relaxation_iterations"]),
+            frame_sampling=task["frame_sampling"],
         )
         row = {
             "structure": task["structure"],
@@ -198,6 +199,7 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
                 for key, stats in getattr(mm, "absolute_terms", ())
                 for stat, value in zip(("mean", "std", "sem"), stats)
             },
+            "mmgbsa_frame_sampling": task["frame_sampling"],
             "mmgbsa_snapshot_relaxation": task["snapshot_relaxation"],
             "mmgbsa_relaxation_iterations": int(task["relaxation_iterations"]),
             "mmgbsa_contact_screened": bool(task.get("allowed_frames") is not None),
@@ -266,6 +268,17 @@ def main() -> int:
         type=int,
         default=5,
         help="Fail a replicate rather than score it if the screen leaves fewer clean frames than this.",
+    )
+    parser.add_argument(
+        "--frame-sampling",
+        choices=("terminal", "even"),
+        default="terminal",
+        help=(
+            "Which screened frames to score. 'terminal' takes the most recent ones "
+            "(the protocol behind the 2026-05-14 tables); 'even' spreads them over the "
+            "whole post-discard trajectory, which is the ensemble average MM/GBSA is "
+            "defined as and removes the autocorrelation that inflates replicate SEM."
+        ),
     )
     parser.add_argument("--timestep-fs", type=float, default=2.0)
     parser.add_argument("--ligand-resname", type=str, default="2KW")
@@ -423,6 +436,7 @@ def main() -> int:
                 "total_time_ns": total_time_ns,
                 "time_source": time_source,
                 "sample_last_frames": sample_last_frames,
+                "frame_sampling": args.frame_sampling,
             }
         )
 
