@@ -1,0 +1,12 @@
+{
+  "mmgbsa_csv": "results/.checkpoints/.checkpoint_mmgbsa_cpu2000_2026-08-29.csv",
+  "structural_csv": "results/structural_metrics.csv",
+  "susceptibility_csv": "results/analysis/dor_susceptibility_bar_chart/tables/dor_susceptibility_values.csv",
+  "wt_reference": "unmatched",
+  "energy_units": "kcal/mol",
+  "source_energy_units": "kJ/mol",
+  "output_mmgbsa": "results/analysis/binding_energy/tables/mmgbsa_replicate_metrics.csv",
+  "output_ddg": "results/analysis/binding_energy/tables/ddg_full.csv",
+  "n_mmgbsa_rows": 60,
+  "n_ddg_rows": 60
+}

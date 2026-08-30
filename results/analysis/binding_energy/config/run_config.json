@@ -1,6 +1,6 @@
 {
   "replicate_csv": "results/analysis/binding_energy/last20frames/mmgbsa_replicate_metrics_last20frames.csv",
-  "ddg_csv": "results/analysis/binding_energy/last20frames/ddg_full_last20frames.csv",
+  "ddg_csv": "results/analysis/binding_energy/tables/ddg_full.csv",
   "component_columns": [
     "binding_dg",
     "binding_dg_vdw",
