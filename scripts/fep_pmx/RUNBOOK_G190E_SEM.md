@@ -282,3 +282,106 @@ Pull to the Mac with `SHERLOCK_USER=rsatija bash scripts/rsync_fep_pmx.sh pull`.
   variance ∆∆Gbind = 2.00 ± 1.77 kcal/mol"; Discussion reads "in some cases
   (e.g. G190E), this was not enough to mitigate the errors". Both need rewriting
   if the SEM drops.
+
+---
+
+## Lever C — repair holo rep 2's lambda=1 ensemble (2026-08-30)
+
+After the 20 ns rebuild G190E sits at **+0.99 +/- 1.63**, sigma_DDG 2.82 (was
+3.06). The equilibration lever worked on its own terms -- sd(holo-apo
+hysteresis) fell 7.39 -> 4.52 -- but one unit carries the whole variance.
+
+### The diagnosis, from the work distributions
+
+Per-replicate ddG: **-0.57 / +4.24 / -0.71**. Replicates 1 and 3 agree to
+0.14 kcal/mol; replicate 2 is 4.9 away. Mean work by direction (kcal/mol):
+
+| phase | direction | rep 1 | rep 2 | rep 3 | spread |
+| --- | --- | ---: | ---: | ---: | ---: |
+| holo | forward (from WT, lambda=0) | -43.87 | -39.64 | -35.73 | 8.14 |
+| holo | **reverse (from mutant, lambda=1)** | **-64.07** | **-55.43** | **-62.56** | 8.63 |
+| apo | forward | -37.69 | -40.79 | -39.76 | 3.10 |
+| apo | reverse | -64.09 | -61.13 | -64.26 | 3.12 |
+
+In the forward direction rep 2 sits *in the middle* of a smooth 8 kcal spread --
+ordinary scatter in the WT ensemble. In the reverse direction reps 1 and 3 agree
+within 1.5 kcal and **rep 2 is 7.1 kcal away**. The fault is therefore the
+**G190E mutant (lambda=1) endpoint ensemble of holo rep 2**, not the WT side,
+not the switching, and not dissipation.
+
+Corroborating, and all pointing the same way:
+
+- rep 2's hysteresis is the **smallest** of the six units (15.79 vs 20-27) and
+  its work range the **narrowest** (16.8 vs 24.5 / 31.0) -- it is internally
+  well converged, just converged somewhere else;
+- it is the only unit where BAR and Jarzynski disagree (-1.20; every other unit
+  within 0.05), which is one of this pipeline's stated confidence criteria;
+- no bimodality in any unit (largest sorted-work gap 1.3-3.9 kcal in ranges of
+  17-31), so this is not a second basin being sampled within a run;
+- the skew in every unit is driven by ~5 switches and vanishes when they are
+  dropped, so rep 2 is not uniquely tailed.
+
+This is the lambda=1 noisiness `STATUS.md` has flagged since the P0 pilot,
+caught in a specific unit.
+
+### The repair
+
+**Re-run only holo rep 2's lambda=1 equilibration and everything downstream of
+it** -- `eq_lambda1`, `snapshots/lambda1`, and the 10 reverse switch bundles.
+The lambda=0 side of that unit is sound and its forward switches are reusable,
+so this is about half the elements of a full unit re-run.
+
+`npt_warmup.mdp` sets `gen_vel = yes` with no `gen_seed`, so GROMACS defaults to
+`-1` and the re-run draws **independent velocities**. It is a genuine second
+sample of the lambda=1 ensemble, not a repeat.
+
+**Both outcomes are publishable, which is the point of doing it:**
+
+- lands near -63 (like reps 1 and 3) -> the original was a fluke, sigma_DDG
+  collapses, and G190E reports near **-0.6 +/- 0.1** -- sign flipped, meaning
+  binding does *not* explain its 18-fold resistance;
+- lands near -55 again -> rep 2's ensemble is real, sigma_DDG is genuinely ~2.8,
+  the leg needs n ~ 8, and the paper reports G190E as unresolved with a reason.
+
+What is *not* publishable is the current state: one unit failing an independent
+convergence check, unexplained.
+
+### Failure-minimisation, given an empty queue
+
+Every one of these cost real time earlier in this campaign.
+
+1. **Do not chain stages with `afterok`.** One transient
+   `cudaErrorLaunchFailure` on 2026-08-28 made the dependency unsatisfiable and
+   stalled everything behind it for a day. With a free queue there is no
+   scheduling reason to pre-chain -- submit equil, verify, submit extract,
+   verify, submit switch.
+2. **Archive the stale `analysis/` directory BEFORE running**, not after.
+   `combine_neq` reuses a cached `analysis.json` and will silently return the
+   old numbers otherwise -- it did exactly that on 2026-08-30.
+3. **Exclude the nodes that have faulted**: `sh03-12n12,sh02-16n06,sh03-13n01,sh03-12n01`.
+4. **Per-batch `TASK_ID_FILE` on every stage.** Array elements resolve it at
+   runtime; an unqualified name let a concurrent batch corrupt a live array on
+   2026-08-15.
+5. **Generous wall time.** Equil at 20 ns is ~7h20m/task; request 24 h.
+6. **Verify `equil.gro` line counts** after equil -- a truncated one is treated
+   as complete and skipped.
+
+### Apo G190E MD -- give it a wall it can finish in
+
+The apo runs have now failed to complete **twice**, both by wall-clock
+truncation (12 h wall against a ~38 GPU-h job), leaving no output JSON either
+time. They are the only thing blocking Lever B (extra replicates), and extra
+replicates need *both* phases: pairing is doing real work here (paired sigma_DDG
+2.82 against 5.69 unpaired), so holo-only replicates would not help.
+
+QOS ceilings: `normal` 2 days (unlimited concurrent), `long` 7 days (4
+concurrent). Take the certainty:
+
+```bash
+SHERLOCK_QOS=long SHERLOCK_TIME=72:00:00 MUTATION_ALLOWLIST=g190e \
+  MD_PRODUCTION_NS=100.0 bash scripts/sherlock/submit_apo_md_batched.sh 3 3
+```
+
+Three jobs fits the 4-concurrent cap, leaves `normal` free for the FEP work, and
+cannot truncate. Runs resume from checkpoint, so the ~20 GPU-h already spent
+counts toward the 100 ns.
