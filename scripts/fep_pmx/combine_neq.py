@@ -67,7 +67,18 @@ P0_SIGN_GATE = ("V106A", "Y188L")
 # not experimental match. V106M is included (tight SEM) but framed as a
 # binding-vs-phenotype finding, not a pipeline failure.
 SEM_MAIN_TEXT_MAX_KCAL = 0.6
-OMIT_MAIN_TEXT = frozenset({"K103N", "G190E"})  # charge / huge SEM
+# Was frozenset({"K103N", "G190E"}) -- "charge / huge SEM". Both grounds have
+# lapsed. K103N's SEM fell 2.19 -> 0.23 with the 500 ps rebuild (2026-08-17),
+# making it the tightest value in the panel, and the charge-leg concern was
+# resolved when the raw non-neutral box + analytical Rocklin/Hunenberger
+# correction was adopted: holo and apo box volumes differ by under 1%, so the
+# correction cancels to below 1e-3 kcal/mol in the double difference.
+#
+# The SEM threshold alone now gives the right answer for both -- K103N (0.23)
+# main_text, G190E (1.63) show -- so the override is redundant as well as stale.
+# Kept as an empty set rather than deleted so a genotype can be forced out of
+# the main text again if a specific reason arises; state the reason here.
+OMIT_MAIN_TEXT: frozenset[str] = frozenset()
 
 
 def load_experimental(csv_path: Path) -> dict[str, float]:
