@@ -151,11 +151,47 @@ Add the **Statistical analysis** subsection from
 
 ---
 
-## 8. Still outstanding
+## 8. G190E — resolved 2026-08-30
 
-- **G190E ∆∆Gbind (2.00 ± 1.77)** — the 20 ns-equilibration campaign was at
-  `SWITCH 14/60` on 2026-08-29 evening. When it lands, Table 2's ΔΔG column and
-  the Discussion sentence about G190E both change.
+The 20 ns-equilibration campaign completed. **∆∆G_bind = +0.99 ± 1.63** (was
++2.00 ± 1.77). Table 2's ∆∆G column is updated; G190E remains "weak impact"
+under the one-SEM-above-0.5 rule, so no category count changes.
+
+Results text: "in case of G190E because of large replicate variance ∆∆Gbind =
+2.00 ± 1.77 kcal/mol" → **0.99 ± 1.63**.
+
+Panel-wide FEP statistics essentially unchanged: Spearman ρ = 0.351,
+R² = 0.092, p = 0.221 (n = 18). The established-phenotype subset (R² = 0.26,
+p = 0.07) is untouched, since G190E is Uncertain.
+
+**What the campaign actually showed.** Longer equilibration worked on its own
+terms but did not fix the error bar:
+
+| | 5 ns equil | 20 ns equil |
+| --- | ---: | ---: |
+| σ_DDG | 3.06 | 2.82 |
+| sd(holo−apo hysteresis) | 7.39 | **4.52** |
+| per-replicate ∆∆G | −0.71 / +1.39 / +5.32 | **−0.57 / +4.24 / −0.71** |
+
+The holo/apo cancellation mechanism improved by 39%, which is what the
+equilibration lever was supposed to do. But σ_DDG barely moved because
+**replicates 1 and 3 now agree to 0.14 kcal/mol while replicate 2 sits 4.9
+kcal/mol away** and carries the whole variance.
+
+Replicate 2's holo unit is the only one of the twelve failing the BAR–Jarzynski
+agreement check (−1.20; every other unit within 0.04) — an independent
+convergence criterion, not a post-hoc exclusion. Re-running that one unit costs
+2 equil + 2 extract + 20 switch elements, against n = 8 replicates for SEM < 1
+by brute force or n = 32 for SEM < 0.5. If it converges near its siblings, G190E
+lands near **−0.6 ± 0.1**, which would flip its sign and make it a genotype
+where binding does not explain the 18-fold resistance at all.
+
+**Tiering:** `OMIT_MAIN_TEXT` in `combine_neq.py` no longer hardcodes K103N.
+Its SEM is 0.23 — the tightest in the panel — and the charge-leg concern lapsed
+with the raw-box + analytical-correction protocol. K103N is now `main_text`;
+G190E is `show` on its SEM alone.
+
+## 9. Still outstanding
 - **JCIM abstract** — must become unstructured (guidelines ask 3–4 sentences;
   the draft is 289 words under four subheadings). Deferred until G190E lands so
   it is written once.
