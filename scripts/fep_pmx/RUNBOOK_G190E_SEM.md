@@ -374,14 +374,20 @@ time. They are the only thing blocking Lever B (extra replicates), and extra
 replicates need *both* phases: pairing is doing real work here (paired sigma_DDG
 2.82 against 5.69 unpaired), so holo-only replicates would not help.
 
-QOS ceilings: `normal` 2 days (unlimited concurrent), `long` 7 days (4
-concurrent). Take the certainty:
+**48 h is the hard ceiling, and the QOS cannot lift it.** The `long` QOS allows
+7 days, but the `gpu` *partition* has `MaxTime=2-00:00:00`, and the partition
+limit wins -- `SHERLOCK_QOS=long SHERLOCK_TIME=72:00:00` is rejected with
+"Requested time limit is invalid (missing or exceeds some limit)". Verify with
+`scontrol show partition gpu | grep -oE "MaxTime=[^ ]*"`.
+
+So run on the default QOS at the ceiling; `long` would only cost you its
+4-concurrent-job cap for no benefit:
 
 ```bash
-SHERLOCK_QOS=long SHERLOCK_TIME=72:00:00 MUTATION_ALLOWLIST=g190e \
+SHERLOCK_TIME=48:00:00 MUTATION_ALLOWLIST=g190e \
   MD_PRODUCTION_NS=100.0 bash scripts/sherlock/submit_apo_md_batched.sh 3 3
 ```
 
-Three jobs fits the 4-concurrent cap, leaves `normal` free for the FEP work, and
-cannot truncate. Runs resume from checkpoint, so the ~20 GPU-h already spent
-counts toward the 100 ns.
+48 h is 4x the wall that truncated these twice, against a ~38 GPU-h job, and the
+runs resume from checkpoint so the ~20 GPU-h already spent counts toward the
+100 ns.
