@@ -327,16 +327,16 @@
   Bootstrap (Std Err): iteration 98/100
   Bootstrap (Std Err): iteration 99/100
   Bootstrap (Std Err): iteration 100/100
-  CGI: Forward Gauss mean =   -37.91 kcal/mol std =     5.90 kcal/mol
-  CGI: Reverse Gauss mean =   -59.55 kcal/mol std =     2.86 kcal/mol
-  CGI: dG =   -51.93 kcal/mol
-  CGI: Std Err (bootstrap:parametric) =     0.43 kcal/mol
-  CGI: Std Err (bootstrap) =     0.54 kcal/mol
+  CGI: Forward Gauss mean =   -40.79 kcal/mol std =     4.58 kcal/mol
+  CGI: Reverse Gauss mean =   -61.13 kcal/mol std =     3.84 kcal/mol
+  CGI: dG =   -51.71 kcal/mol
+  CGI: Std Err (bootstrap:parametric) =     0.53 kcal/mol
+  CGI: Std Err (bootstrap) =     0.48 kcal/mol
 
   Running KS-test...
-    Forward: gaussian quality = 0.59
+    Forward: gaussian quality = 0.23
              ---> KS-Test Ok
-    Reverse: gaussian quality = 0.73
+    Reverse: gaussian quality = 0.97
              ---> KS-Test Ok
 
  --------------------------------------------------------
@@ -545,11 +545,11 @@
   Bootstrap (Conv): iteration 98/100
   Bootstrap (Conv): iteration 99/100
   Bootstrap (Conv): iteration 100/100
-  BAR: dG =   -51.04 kcal/mol
-  BAR: Std Err (analytical) =     0.81 kcal/mol
-  BAR: Std Err (bootstrap)  =     0.42 kcal/mol
-  BAR: Conv =     0.72
-  BAR: Conv Std Err (bootstrap) =     0.08
+  BAR: dG =   -50.58 kcal/mol
+  BAR: Std Err (analytical) =     1.55 kcal/mol
+  BAR: Std Err (bootstrap)  =     0.34 kcal/mol
+  BAR: Conv =     0.93
+  BAR: Conv Std Err (bootstrap) =     0.02
 
  --------------------------------------------------------
              Jarzynski estimator     
@@ -756,11 +756,11 @@
   Bootstrap (Std Err): iteration 98/100
   Bootstrap (Std Err): iteration 99/100
   Bootstrap (Std Err): iteration 100/100
-  JARZ: dG Forward =   -47.73 kcal/mol
-  JARZ: dG Reverse =   -54.41 kcal/mol
-  JARZ: dG Mean    =   -51.07 kcal/mol
-  JARZ: Std Err Forward (bootstrap) =     0.67 kcal/mol
-  JARZ: Std Err Reverse (bootstrap) =     0.48 kcal/mol
+  JARZ: dG Forward =   -46.31 kcal/mol
+  JARZ: dG Reverse =   -54.83 kcal/mol
+  JARZ: dG Mean    =   -50.57 kcal/mol
+  JARZ: Std Err Forward (bootstrap) =     0.43 kcal/mol
+  JARZ: Std Err Reverse (bootstrap) =     0.58 kcal/mol
 
   Bootstrap (Std Err): iteration 1/100
   Bootstrap (Std Err): iteration 2/100
@@ -963,20 +963,20 @@
   Bootstrap (Std Err): iteration 98/100
   Bootstrap (Std Err): iteration 99/100
   Bootstrap (Std Err): iteration 100/100
-  JARZ_Gauss: dG Forward =   -67.43 kcal/mol
-  JARZ_Gauss: dG Reverse =   -52.63 kcal/mol
-  JARZ_Gauss: dG Mean    =   -60.03 kcal/mol
-  JARZ_Gauss: Std Err (analytical) Forward =     4.24 kcal/mol
-  JARZ_Gauss: Std Err (analytical) Reverse =     1.02 kcal/mol
-  JARZ_Gauss: Std Err Forward (bootstrap) =     3.76 kcal/mol
-  JARZ_Gauss: Std Err Reverse (bootstrap) =     0.99 kcal/mol
+  JARZ_Gauss: dG Forward =   -58.55 kcal/mol
+  JARZ_Gauss: dG Reverse =   -48.67 kcal/mol
+  JARZ_Gauss: dG Mean    =   -53.61 kcal/mol
+  JARZ_Gauss: Std Err (analytical) Forward =     2.57 kcal/mol
+  JARZ_Gauss: Std Err (analytical) Reverse =     1.81 kcal/mol
+  JARZ_Gauss: Std Err Forward (bootstrap) =     3.46 kcal/mol
+  JARZ_Gauss: Std Err Reverse (bootstrap) =     1.67 kcal/mol
  ========================================================
 
    Plotting histograms......
 
    ......done...........
 
-   Execution time = 00:00:47
+   Execution time = 00:01:15
 
 
 ---stderr---

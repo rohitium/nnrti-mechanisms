@@ -1,20 +1,2 @@
 genotype,ddg_bind_kcal,sem_kcal,dor_fold_reduction,tier,note
-F227C,-0.303,0.813,,show,show on scatter; do not over-interpret point estimate
-G190A,0.270,0.168,2.7,main_text,SEM ≤ 0.6 kcal/mol; discuss numerically
-G190E,2.000,1.767,18.0,omit_main,charge leg and/or SEM too large for main-text point estimate
-G190S,2.013,0.342,5.2,main_text,SEM ≤ 0.6 kcal/mol; discuss numerically
-V106A,1.757,0.512,9.6,main_text,SEM ≤ 0.6 kcal/mol; discuss numerically
-V106I,2.270,0.737,1.1,show,show on scatter; do not over-interpret point estimate
-V106M,6.097,0.162,3.4,main_text,tight SEM; binding ΔΔG much larger than fold implies — binding-vs-phenotype finding (not a pipeline fail)
-Y181C,-0.657,1.060,1.4,show,show on scatter; do not over-interpret point estimate
-Y188L,4.520,0.486,149.0,main_text,SEM ≤ 0.6 kcal/mol; discuss numerically
-Y318F,1.410,0.445,11.0,main_text,SEM ≤ 0.6 kcal/mol; discuss numerically
-A98G+F227C,-1.527,0.873,93.0,show,show on scatter; do not over-interpret point estimate
-V106A+F227L,4.393,1.003,106.0,show,show on scatter; do not over-interpret point estimate
-V106A+L234I,3.723,1.099,161.0,show,show on scatter; do not over-interpret point estimate
-V106A+P225H,3.707,1.126,153.0,show,show on scatter; do not over-interpret point estimate
-V106I+F227C,1.753,1.162,105.0,show,show on scatter; do not over-interpret point estimate
-K103N,0.540,0.227,1.2,omit_main,charge leg and/or SEM too large for main-text point estimate
-K103N+M230L,0.587,0.407,36.0,main_text,SEM ≤ 0.6 kcal/mol; discuss numerically
-K103N+P225H,1.757,0.788,7.8,show,show on scatter; do not over-interpret point estimate
-L100I+K103N,0.193,0.681,6.8,show,show on scatter; do not over-interpret point estimate
+G190E,0.987,1.627,18.0,omit_main,charge leg and/or SEM too large for main-text point estimate

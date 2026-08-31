@@ -11,10 +11,10 @@
   "integ_fwd": "results/analysis/fep_pmx/legs/wt_to_G190E/apo/rep_02/neq/analysis/integ_fwd.dat",
   "integ_rev": "results/analysis/fep_pmx/legs/wt_to_G190E/apo/rep_02/neq/analysis/integ_rev.dat",
   "work_plot": "results/analysis/fep_pmx/legs/wt_to_G190E/apo/rep_02/neq/analysis/work_dist.png",
-  "bar_dg": -51.04,
-  "bar_err_analytical": 0.81,
-  "bar_err_boot": 0.42,
-  "bar_conv": 0.72,
-  "cgi_dg": -51.93,
-  "jarz_dg_mean": -51.07
+  "bar_dg": -50.58,
+  "bar_err_analytical": 1.55,
+  "bar_err_boot": 0.34,
+  "bar_conv": 0.93,
+  "cgi_dg": -51.71,
+  "jarz_dg_mean": -50.57
 }
