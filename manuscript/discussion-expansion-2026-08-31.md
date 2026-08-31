@@ -247,6 +247,8 @@ across the three 100 ns replicates.
 | NNIBP proxy volume | `results/pocket_volume_profiles.csv` |
 | contact and H-bond counts | `results/structural_metrics.csv` |
 | Tyr188 interplanar angle, position-190 series | `results/analysis/mechanisms/y188_interplanar_angle_190series.csv` |
+| DOR moiety contacts, V106A genotypes | `results/analysis/mechanisms/dor_moiety_contacts_summary.csv` |
+| per-residue contact loss | `results/analysis/mechanisms/dor_residue_contact_delta.csv` |
 | ∆∆G<sub>bind</sub>, SEMs | `results/analysis/fep_pmx/panel_ddg.csv` |
 | classification metrics | `results/analysis/classification_performance/classification_metrics.csv` |
 
@@ -313,3 +315,140 @@ whose mean, 47.6, is the highest of the three — nearly three times as heavily 
 its siblings, giving 46.5. Taking each replicate's mean first weights the three
 independent trajectories equally, which is also what the reported SEM assumes.
 This is worth one sentence in Methods if it is not already stated.
+
+---
+
+## Moiety-resolved contact analysis for the V106A genotypes (added 2026-08-31)
+
+Replaces: *"This dislocation disrupts contacts with RT residues, for example the
+total number of protein heavy atoms within 4.5 Å of DOR fell from 224 ± 1 in WT
+to 212 ± 1 in V106A."*
+
+New analysis: `src/analysis/cli/compute_dor_moiety_contacts.py`. DOR is
+partitioned by bond connectivity into its three ring systems plus the
+ether/methylene linker, and the 4.5 Å contact count is computed for each, over
+the full production trajectory, for WT and all four V106A-containing genotypes.
+
+### Result — the loss is concentrated in the pyridinone ring
+
+Atom-pair contacts within 4.5 Å, mean ± SEM over three replicates:
+
+| genotype | whole ligand | chlorocyanophenyl | **pyridinone** | triazolinone | linker |
+|---|---:|---:|---:|---:|---:|
+| WT | 224.3 ± 1.0 | 69.3 ± 1.9 | **24.0 ± 2.1** | 43.3 ± 1.9 | 87.6 ± 1.4 |
+| V106A | 215.8 ± 0.9 | 65.1 ± 1.6 | **17.8 ± 1.3** | 45.2 ± 1.1 | 87.7 ± 1.4 |
+| V106A+F227L | 213.0 ± 2.4 | 63.7 ± 1.3 | **18.2 ± 1.3** | 45.6 ± 1.0 | 85.6 ± 1.3 |
+| V106A+L234I | 218.7 ± 2.1 | 67.1 ± 2.0 | **17.4 ± 1.7** | 46.5 ± 1.3 | 87.7 ± 0.5 |
+| V106A+P225H | 222.3 ± 2.7 | 68.3 ± 0.2 | **19.0 ± 0.2** | 44.6 ± 0.8 | 90.5 ± 2.4 |
+
+Change relative to WT:
+
+| genotype | whole ligand | chlorocyanophenyl | **pyridinone** | triazolinone | linker |
+|---|---:|---:|---:|---:|---:|
+| V106A | −3.8% | −6.1% | **−25.8%** | +4.4% | +0.1% |
+| V106A+F227L | −5.0% | −8.1% | **−24.2%** | +5.3% | −2.3% |
+| V106A+L234I | −2.5% | −3.2% | **−27.5%** | +7.4% | +0.1% |
+| V106A+P225H | −0.9% | −1.4% | **−20.8%** | +3.0% | +3.3% |
+
+**Why this is the better number.** The whole-ligand count ranges from −0.9% to
+−5.0% and would make V106A+P225H (153-fold resistant) look essentially
+unaffected. The pyridinone count is −21% to −28% in all four, a range of only
+7 percentage points across genotypes that differ 16-fold in susceptibility — the
+disruption is a shared, uniform property of the V106A background, which is
+exactly the claim the paragraph is making. The chlorocyanophenyl ring loses
+proportionally 3–5× less, and the distal triazolinone ring *gains* contacts,
+consistent with DOR pivoting about its distal end rather than withdrawing
+bodily.
+
+The pyridinone is also the mechanistically meaningful ring: it carries the
+Lys103 backbone hydrogen bond that anchors DOR (§¶2). So the V106A slide is
+best described not as a general loosening of the interface but as the
+displacement of the anchored end of the ligand.
+
+### The partner side
+
+Residues losing the most contact with DOR (mean over the four V106A genotypes,
+against WT), in contacts per frame:
+
+| residue | WT | V106A set | Δ |
+|---|---:|---:|---:|
+| Val106 | 3.26 | 0.00 | −3.26 (mutated to Ala) |
+| Phe227 | 5.57 | 4.00 | −1.57 |
+| Tyr318 | 6.68 | 5.20 | −1.48 |
+| Lys102 | 1.08 | 0.18 | −0.89 |
+| Lys101 | 1.57 | 1.01 | −0.56 |
+| Pro225 | 1.85 | 1.34 | −0.51 |
+
+Residues gaining: Ser105 (0.31 → 3.53), Ala106 (0 → 2.76), Lys104 (0.44 → 2.46).
+
+The exchange is directional and local to the pyridinone: contacts move from
+Lys101/Lys102 on one side of the 101–106 loop to Lys104/Ser105 on the other.
+This is the same displacement plotted in Figure 3B, now attributed to a specific
+part of the ligand and a specific set of partners. Note that Tyr318 and Phe227
+are themselves sites of DOR resistance mutations in this panel.
+
+### Suggested replacement text
+
+> This dislocation does not loosen the interface uniformly. Resolving the 4.5 Å
+> contact count by ligand moiety localises the loss to the central pyridinone
+> ring — the ring that carries the Lys103 backbone hydrogen bond — whose contacts
+> fall from 24.0 ± 2.1 in WT to 17.8 ± 1.3 in V106A, 18.2 ± 1.3 in V106A+F227L,
+> 17.4 ± 1.7 in V106A+L234I and 19.0 ± 0.2 in V106A+P225H, a loss of 21–28% in
+> every case. The chlorocyanophenyl ring loses proportionally three- to five-fold
+> less and the distal triazolinone ring gains contacts, indicating that DOR
+> pivots about its distal end rather than withdrawing from the pocket as a whole.
+> On the protein side the same motion transfers contacts from Lys101, Lys102,
+> Phe227 and Tyr318 to Ser105 and Lys104. That a 21–28% loss at the anchored end
+> of the ligand is common to all four V106A genotypes, which span a 16-fold range
+> of measured susceptibility, identifies displacement of the pyridinone as the
+> shared structural consequence of the V106A background.
+
+---
+
+## SECOND CORRECTION — "protein heavy atoms" are atom pairs
+
+Both packing figures in the draft are described as counts of atoms but are
+computed as counts of atom **pairs**. `_ncontacts()` in
+`compute_mechanism_coordinates.py` returns `(d < cutoff).sum()` over the full
+protein × ligand distance matrix, so an RT atom close to three ligand atoms is
+counted three times.
+
+| draft wording | computed quantity | count of distinct atoms |
+|---|---:|---:|
+| "total number of protein heavy atoms within 4.5 Å of DOR … 224 ± 1 in WT" | 224.3 ± 1.0 **atom pairs** | **76.3 ± 1.1** atoms |
+| "number of RT heavy atoms within 4.5 Å of the chlorocyanophenyl ring … 45.9 in WT" | 45.9 **atom pairs** | ~26.9 atoms |
+
+The numbers are correct and the comparisons are valid — a pair count is a
+legitimate packing density measure — but the *wording* is not. Both should read
+"contacts" or "heavy-atom contacts (atom pairs within 4.5 Å)" rather than
+"heavy atoms". The moiety script now reports both conventions side by side so
+they cannot be conflated again.
+
+This matters beyond wording in one place: under the distinct-atom convention the
+whole-ligand count **rises** in every V106A genotype (+1.5 to +4.4 atoms) while
+the pair count falls. DOR ends up touching slightly more RT atoms, less closely.
+The per-moiety result is robust to the choice — the pyridinone loses under both
+conventions (−5.0 to −6.6 pairs, −1.1 to −1.7 atoms) and the triazolinone gains
+under both — which is a further reason to report the moiety-resolved numbers
+rather than the whole-ligand one, whose sign depends on the convention chosen.
+
+## THIRD CORRECTION — V106A's 212 came from a terminal window
+
+WT reproduces the published value exactly, but V106A does not:
+
+| frame set | WT | V106A |
+|---|---:|---:|
+| **full trajectory** | **223.7 ± 0.7** | **215.8 ± 0.7** |
+| last 25% | 223.3 ± 2.4 | 210.4 ± 2.5 |
+| last 20 frames | 223.8 ± 4.2 | 207.1 ± 3.4 |
+| *draft* | *224 ± 1* | *212 ± 1* |
+
+WT is insensitive to the window; V106A is not. The published 224 → 212 contrast
+is therefore inflated by the same terminal-window sampling artifact that was
+identified and removed from the MM/GBSA protocol — note also the ~5× inflation
+of the replicate SEM in the terminal windows, the same signature. On the full
+trajectory the gap is 8.5 contacts, not 12.
+
+Since the surrounding analysis and the final MM/GBSA panel are both now
+full-trajectory, the replacement text above uses full-trajectory values
+throughout and this inconsistency disappears with it.
