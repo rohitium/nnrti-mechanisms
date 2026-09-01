@@ -1,55 +1,62 @@
 #!/usr/bin/env python3
-"""Figure 1B -- doravirine's moieties and the NNIBP residues that engage them.
+"""Figure 1B -- doravirine and its NNIBP environment, drawn from real geometry.
 
 Why this exists
 ---------------
 The manuscript names DOR's moieties throughout (chlorocyanophenyl, pyridinone,
-triazolinone) and the residues that contact them, but never shows the reader
-which part of the molecule is which. This draws DOR with each moiety shaded and
-labelled, and places a schematic of each key residue beside the moiety it
-engages, annotated with the contact count measured from the wild-type
-trajectories rather than assigned by eye.
+triazolinone) and the residues that engage them, but never shows which part of
+the molecule is which, or where each residue actually sits.
 
-Residues are positioned next to what they touch, so leader lines are
-unnecessary; the only connector drawn is the Lys103 main-chain hydrogen bond,
-which is the one interaction between specific atoms rather than a packing
-contact.
+Rather than a hand-placed cartoon, this projects the real wild-type structure
+onto the best plane through DOR's heavy atoms (principal axes of the ligand), so
+**every position and orientation in the figure is the true one** -- residues
+appear where they are relative to the drug, at the angle they actually adopt.
+The only liberty taken is a uniform radial expansion (--expand) to stop
+contacting groups from overlapping on the page; this preserves every direction
+exactly and is disclosed in the caption.
 
-Contacts are protein-ligand heavy-atom pairs within 4.0 A, averaged over three
-100 ns wild-type replicates. See manuscript/contact-cutoff-sensitivity.md for
-why 4.0 A.
+Out-of-plane depth is shown by opacity: groups lying near DOR's plane are drawn
+solid, those further above or below are faded. Depth in angstroms is available
+in the printed table.
+
+Bonds are inferred from interatomic distance, so no residue templates are
+needed and the backbone (N-CA-C=O) is drawn along with the side chain.
 
 Usage
 -----
     PYTHONPATH=. python -m src.analysis.cli.plot_dor_schematic
+    PYTHONPATH=. python -m src.analysis.cli.plot_dor_schematic --expand 1.6
 """
 from __future__ import annotations
 
 import argparse
+import itertools
 from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from rdkit import Chem
-from rdkit.Chem import AllChem
 
-#: residue -> (side-chain SMILES, contacts with whole ligand, caption, centre, scale)
-#: Fragments stand in for the side chain (p-cresol for Tyr, toluene for Phe,
-#: 3-methylindole for Trp, isobutane for Val); Lys103 is drawn as a main-chain
-#: amide because it is the backbone, not the side chain, that binds DOR.
+LIG = "2KW"
+OFFSET = -3  # topology resSeq = canonical + OFFSET
+
+#: canonical residue -> (display name, label direction hint in projected plane)
 RESIDUES = {
-    "Tyr188": ("Cc1ccc(O)cc1", 20.3, "stacks chlorocyanophenyl", (8.6, 7.4), 0.80),
-    "Trp229": ("Cc1c[nH]c2ccccc12", 8.4, "", (14.0, 0.4), 0.80),
-    "Phe227": ("Cc1ccccc1", 6.5, "", (-1.4, 7.5), 0.80),
-    "Tyr318": ("Cc1ccc(O)cc1", 9.5, "", (-9.6, 5.2), 0.80),
-    "Lys103": ("CC(=O)NC", 6.7, "main-chain C=O", (-10.6, -3.4), 0.85),
-    "Val106": ("CC(C)C", 9.5, "hydrophobic packing", (-1.6, -7.4), 0.85),
-    "Tyr181": ("Cc1ccc(O)cc1", 4.3, "rotated away; no ring contact", (-8.2, -7.6), 0.72),
-    "Gly190": (None, 3.0, "no side chain", (5.6, -7.2), 0.72),
+    188: "Tyr188",
+    229: "Trp229",
+    227: "Phe227",
+    181: "Tyr181",
+    103: "Lys103",
+    106: "Val106",
+    318: "Tyr318",
+    190: "Gly190",
+    # Ser105 is deliberately omitted: it makes no contact with DOR in the
+    # wild-type pose (4.36 A minimum heavy-atom distance, 0.0 contacts at
+    # 4.0 A). It matters only to the V106A displacement discussed later, and it
+    # projects into the most crowded region of this figure. Add it back by
+    # restoring the entry if that discussion needs it here.
 }
-FAINT = {"Tyr181", "Gly190"}
 
 MOIETY_COLOR = {
     "chlorocyanophenyl": "#3B6EA8",
@@ -58,164 +65,201 @@ MOIETY_COLOR = {
 }
 MOIETY_LABEL = {
     "chlorocyanophenyl": "chlorocyanophenyl",
-    "pyridinone": "pyridinone\n(central)",
+    "pyridinone": "pyridinone",
     "triazolinone": "triazolinone",
 }
-MOIETY_LABEL_XY = {
-    "triazolinone": (-6.4, 2.4),
-    "pyridinone": (-3.2, -4.1),
-    "chlorocyanophenyl": (7.4, 3.1),
-}
-HETERO_COLOR = {"N": "#1f4e9c", "O": "#c0392b", "F": "#7d3c98", "Cl": "#1e8449"}
+HETERO_COLOR = {"N": "#1f4e9c", "O": "#c0392b", "F": "#7d3c98",
+                "CL": "#1e8449", "S": "#b7950b"}
+RESIDUE_COLOR = "#4a4a4a"
 
 
-def classify_rings(mol) -> dict[str, list[int]]:
-    out: dict[str, list[int]] = {}
-    for ring in mol.GetRingInfo().AtomRings():
-        nbrs = {n.GetSymbol() for a in ring
-                for n in mol.GetAtomWithIdx(a).GetNeighbors() if n.GetIdx() not in ring}
-        if "Cl" in nbrs:
-            out["chlorocyanophenyl"] = list(ring)
-        elif len(ring) == 5:
-            out["triazolinone"] = list(ring)
-        else:
-            out["pyridinone"] = list(ring)
+def bonds_within(coords: np.ndarray, cutoff: float = 1.95):
+    out = []
+    for i, j in itertools.combinations(range(len(coords)), 2):
+        if np.linalg.norm(coords[i] - coords[j]) < cutoff:
+            out.append((i, j))
     return out
 
 
-def draw_mol(ax, mol, pos, *, colour_fn, lw=2.4, hetero_size=9.5, zorder=2,
-             label_hetero=True, dot=170, dbl_offset=0.11):
-    """Draw a 2D molecule as line bonds with heteroatom labels."""
-    for b in mol.GetBonds():
-        i, j = b.GetBeginAtomIdx(), b.GetEndAtomIdx()
-        col = colour_fn(i, j)
-        p, q = pos[i], pos[j]
-        if b.GetBondTypeAsDouble() == 2.0:
-            d = q - p
-            n = np.array([-d[1], d[0]])
-            n = n / (np.linalg.norm(n) + 1e-9) * dbl_offset
-            for s in (+1, -1):
-                ax.plot(*zip(p + n * s, q + n * s), color=col, lw=lw,
-                        zorder=zorder, solid_capstyle="round")
-        else:
-            ax.plot(*zip(p, q), color=col, lw=lw, zorder=zorder,
-                    solid_capstyle="round")
-    if not label_hetero:
-        return
-    for i, a in enumerate(mol.GetAtoms()):
-        s = a.GetSymbol()
-        if s == "C":
-            continue
-        ax.scatter(*pos[i], s=dot, color="white", zorder=zorder + 1, edgecolors="none")
-        ax.text(*pos[i], s, ha="center", va="center", fontsize=hetero_size,
-                fontweight="bold", zorder=zorder + 2,
-                color=HETERO_COLOR.get(s, "#333333"))
+def moiety_of_ligand(names, coords) -> dict[int, str]:
+    import networkx as nx
 
-
-def fragment_pos(smiles: str, centre, scale: float):
-    frag = Chem.MolFromSmiles(smiles)
-    # Kekulize: aromatic bonds report GetBondTypeAsDouble() == 1.5, which the
-    # renderer would draw as a plain single line, making Tyr/Phe/Trp look
-    # saturated. Kekulizing gives explicit alternating single/double bonds.
-    Chem.Kekulize(frag, clearAromaticFlags=True)
-    AllChem.Compute2DCoords(frag)
-    c = frag.GetConformer()
-    p = np.array([[c.GetAtomPosition(i).x, c.GetAtomPosition(i).y]
-                  for i in range(frag.GetNumAtoms())])
-    p = (p - p.mean(axis=0)) * scale + np.asarray(centre, dtype=float)
-    return frag, p
+    G = nx.Graph()
+    G.add_nodes_from(range(len(names)))
+    for i, j in bonds_within(coords, 1.85):
+        G.add_edge(i, j)
+    out: dict[int, str] = {}
+    for ring in [c for c in nx.cycle_basis(G) if len(c) >= 5]:
+        nb = {n for a in ring for n in G[a] if n not in ring}
+        nm = ("chlorocyanophenyl" if any(names[n].upper().startswith("CL") for n in nb)
+              else ("triazolinone" if len(ring) == 5 else "pyridinone"))
+        for a in ring:
+            out[a] = nm
+    return out
 
 
 def main() -> int:
+    import mdtraj as md
+
     repo = Path(__file__).resolve().parents[3]
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--sdf", type=Path, default=repo / "data/ligands/dor.sdf")
+    ap.add_argument("--structure", type=Path,
+                    default=repo / "results/md_runs/wt/rep_01/wt_minimized_rep01.pdb")
+    ap.add_argument("--expand", type=float, default=1.72,
+                    help="uniform radial expansion of residues about the ligand "
+                         "centroid; 1.0 keeps true distances but overlaps")
     ap.add_argument("--output", type=Path,
                     default=repo / "results/plots/figure1B_dor_schematic.pdf")
     args = ap.parse_args()
 
-    mol = Chem.RemoveHs(Chem.MolFromMolFile(str(args.sdf)))
-    AllChem.Compute2DCoords(mol)
-    conf = mol.GetConformer()
-    pos = np.array([[conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y]
-                    for i in range(mol.GetNumAtoms())])
+    t = md.load(str(args.structure))
+    top = t.topology
+    X = t.xyz[0] * 10.0
 
-    rings = classify_rings(mol)
-    atom_moiety = {a: m for m, atoms in rings.items() for a in atoms}
-    ring_centroid = {m: pos[a].mean(axis=0) for m, a in rings.items()}
+    lig_atoms = [a for a in top.atoms
+                 if a.residue.name == LIG and a.element.symbol != "H"]
+    lig_idx = [a.index for a in lig_atoms]
+    lig_names = [a.name for a in lig_atoms]
+    L = X[lig_idx]
+    centre = L.mean(axis=0)
 
-    fig, ax = plt.subplots(figsize=(12.0, 8.4))
+    # principal plane of the ligand
+    _, sv, vt = np.linalg.svd(L - centre)
+    e1, e2, e3 = vt[0], vt[1], vt[2]
+    proj = lambda P: np.column_stack([(P - centre) @ e1, (P - centre) @ e2])
+    depth = lambda P: (P - centre) @ e3
 
-    # --- doravirine
-    for m, c in ring_centroid.items():
-        ax.scatter(*c, s=6400, color=MOIETY_COLOR[m], alpha=0.12, zorder=0)
+    lig_xy = proj(L)
+    moiety = moiety_of_ligand(lig_names, L)
 
-    def dor_colour(i, j):
-        mi, mj = atom_moiety.get(i), atom_moiety.get(j)
-        return MOIETY_COLOR[mi] if (mi and mi == mj) else "#3d3d3d"
+    fig, ax = plt.subplots(figsize=(13.0, 10.0))
 
-    draw_mol(ax, mol, pos, colour_fn=dor_colour, lw=2.7, hetero_size=10.5,
-             zorder=2, dot=210, dbl_offset=0.13)
+    # ---- ligand
+    for m in set(moiety.values()):
+        pts = lig_xy[[i for i, v in moiety.items() if v == m]]
+        ax.scatter(*pts.mean(axis=0), s=5200, color=MOIETY_COLOR[m],
+                   alpha=0.13, zorder=0)
+    for i, j in bonds_within(L, 1.85):
+        mi, mj = moiety.get(i), moiety.get(j)
+        col = MOIETY_COLOR[mi] if (mi and mi == mj) else "#333333"
+        ax.plot(*zip(lig_xy[i], lig_xy[j]), color=col, lw=3.4, zorder=3,
+                solid_capstyle="round")
+    for i, nm in enumerate(lig_names):
+        el = "".join(ch for ch in nm if ch.isalpha()).upper()
+        el = "CL" if el.startswith("CL") else el[:1]
+        if el == "C":
+            continue
+        ax.scatter(*lig_xy[i], s=250, color="white", zorder=4, edgecolors="none")
+        ax.text(*lig_xy[i], "Cl" if el == "CL" else el, ha="center", va="center",
+                fontsize=10.5, fontweight="bold", zorder=5,
+                color=HETERO_COLOR.get(el, "#333"))
 
-    for m in rings:
-        lx, ly = MOIETY_LABEL_XY[m]
-        ax.text(lx, ly, MOIETY_LABEL[m], ha="center", va="center", fontsize=12.5,
-                fontweight="bold", color=MOIETY_COLOR[m], zorder=5)
+    # Moiety labels are pushed clear of the ligand along a fixed direction per
+    # moiety: purely radial placement put them back on top of the rings, since
+    # the three ring centroids are nearly collinear in this projection.
+    LABEL_DIR = {"chlorocyanophenyl": np.array([-0.95, -0.55]),
+                 "pyridinone": np.array([0.62, 1.0]),
+                 "triazolinone": np.array([0.30, -1.0])}
+    for m in set(moiety.values()):
+        pts = lig_xy[[i for i, v in moiety.items() if v == m]]
+        c = pts.mean(axis=0)
+        d = LABEL_DIR[m] / np.linalg.norm(LABEL_DIR[m])
+        reach = float(np.max((pts - c) @ d))
+        lp = c + d * (reach + 1.8)
+        ax.text(lp[0], lp[1], MOIETY_LABEL[m], ha="center", va="center",
+                fontsize=13, fontweight="bold", color=MOIETY_COLOR[m], zorder=6)
 
-    # --- residues
-    for res, (smi, n, note, centre, scale) in RESIDUES.items():
-        faint = res in FAINT
-        col = "#9aa0a6" if faint else "#2f2f2f"
-        cx, cy = centre
-        if smi is not None:
-            frag, fp = fragment_pos(smi, centre, scale)
-            draw_mol(ax, frag, fp, colour_fn=lambda i, j, c=col: c, lw=1.9,
-                     hetero_size=8.6, zorder=3, dot=150,
-                     dbl_offset=0.115 * scale)
-            ylo = fp[:, 1].min()
-        else:  # glycine: no side chain to draw
-            ax.text(cx, cy, "H", ha="center", va="center", fontsize=13,
-                    fontweight="bold", color=col, zorder=4)
-            ylo = cy - 0.35
-        head = f"{res}   {n:.1f} contacts" if not faint else f"{res}   {n:.1f}"
-        ax.text(cx, ylo - 0.72, head, ha="center", va="top", fontsize=11,
-                fontweight="bold", color=col, zorder=6)
-        if note:
-            ax.text(cx, ylo - 1.42, note, ha="center", va="top", fontsize=8.8,
-                    style="italic", color="#6b6b6b" if not faint else "#a5a5a5",
-                    zorder=6)
+    # ---- residues, at their true projected positions and orientations
+    print(f"{'residue':9s}{'u':>7s}{'v':>7s}{'depth':>8s}{'min d':>8s}")
+    rows = []
+    shifted: dict[int, dict[int, np.ndarray]] = {}
+    for can, name in RESIDUES.items():
+        ai = [a.index for a in top.atoms
+              if a.residue.resSeq == can + OFFSET
+              and a.residue.name != LIG
+              and a.element.symbol != "H"
+              and a.residue.chain.index == 0]
+        if not ai:
+            continue
+        P = X[ai]
+        xy = proj(P)
+        w = depth(P).mean()
+        mind = float(np.linalg.norm(P[:, None, :] - L[None, :, :], axis=-1).min())
+        # uniform radial expansion about the ligand centroid: preserves every
+        # direction and the shape of each residue, only adds page separation
+        rc = xy.mean(axis=0)
+        shift = rc * (args.expand - 1.0)
+        xy = xy + shift
+        alpha = float(np.clip(1.0 - abs(w) / 11.0, 0.42, 1.0))
+        for i, j in bonds_within(P, 1.95):
+            ax.plot(*zip(xy[i], xy[j]), color=RESIDUE_COLOR, lw=2.0,
+                    alpha=alpha, zorder=2, solid_capstyle="round")
+        for k, a_i in enumerate(ai):
+            el = top.atom(a_i).element.symbol.upper()
+            if el == "C":
+                continue
+            ax.scatter(*xy[k], s=150, color="white", zorder=2.5,
+                       edgecolors="none", alpha=alpha)
+            ax.text(*xy[k], el.capitalize() if el == "CL" else el, ha="center",
+                    va="center", fontsize=8.4, fontweight="bold", zorder=2.6,
+                    color=HETERO_COLOR.get(el, "#333"), alpha=alpha)
+        # Place the label just beyond the residue's own outer edge, along the
+        # direction pointing away from the ligand. Using a fixed radius from the
+        # origin instead put labels on top of neighbouring residues.
+        lc = xy.mean(axis=0)
+        d = lc / (np.linalg.norm(lc) + 1e-9)
+        reach = float(np.max((xy - lc) @ d))
+        lab = lc + d * (reach + 1.7)
+        ha = "left" if d[0] > 0.35 else ("right" if d[0] < -0.35 else "center")
+        va = "bottom" if d[1] > 0.35 else ("top" if d[1] < -0.35 else "center")
+        ax.text(lab[0], lab[1], name, ha=ha, va=va, fontsize=12.5,
+                fontweight="bold", color=RESIDUE_COLOR, alpha=max(alpha, 0.8),
+                zorder=6)
+        shifted[can] = dict(zip(ai, xy))
+        rows.append((name, rc[0], rc[1], w, mind))
+        print(f"{name:9s}{rc[0]:7.1f}{rc[1]:7.1f}{w:8.1f}{mind:8.2f}")
 
-    # --- the one connector: triazolinone N-H ... Lys103 main-chain C=O
-    tri = rings["triazolinone"]
-    nh = [k for k in tri if mol.GetAtomWithIdx(k).GetSymbol() == "N"
-          and mol.GetAtomWithIdx(k).GetTotalNumHs() > 0]
-    if nh:
-        p = pos[nh[0]]
-        lys_c = np.array(RESIDUES["Lys103"][3], dtype=float)
-        v = lys_c - p
-        v = v / np.linalg.norm(v)
-        start, end = p + v * 0.45, lys_c - v * 1.55
-        ax.annotate("", xy=end, xytext=start,
-                    arrowprops=dict(arrowstyle="-", color="#c0392b", lw=2.0,
-                                    linestyle=(0, (3, 2.4))), zorder=4)
-        ax.scatter(*p, s=250, facecolor="none", edgecolor="#c0392b", lw=1.8,
-                   zorder=6)
-        mid = (start + end) / 2
-        ax.text(mid[0], mid[1] + 0.55, "N–H···O=C\n3.0 Å", ha="center",
-                va="bottom", fontsize=9.2, color="#c0392b", fontweight="bold",
-                zorder=7,
-                bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
-                          edgecolor="none", alpha=0.9))
+    # ---- the one interaction drawn explicitly: Lys103 main chain -> triazolinone
+    tri = [i for i, v in moiety.items() if v == "triazolinone"]
+    donor = None
+    for i in tri:
+        if lig_names[i].upper().startswith("N"):
+            nb = [j for j in range(len(L))
+                  if j != i and np.linalg.norm(L[i] - L[j]) < 1.85]
+            if len(nb) == 2:  # the ring N bearing H, not the substituted one
+                donor = i
+    lys_o = [a.index for a in top.atoms
+             if a.residue.resSeq == 103 + OFFSET and a.name == "O"
+             and a.residue.chain.index == 0]
+    if donor is not None and lys_o and 103 in shifted:
+        p = lig_xy[donor]
+        q = shifted[103].get(lys_o[0])
+        if q is not None:
+            v = q - p
+            n = np.linalg.norm(v)
+            u = v / n
+            ax.plot(*zip(p + u * 0.42, q - u * 0.42), color="#c0392b", lw=2.2,
+                    linestyle=(0, (2.6, 2.2)), zorder=5)
+            ax.scatter(*p, s=300, facecolor="none", edgecolor="#c0392b", lw=1.9,
+                       zorder=6)
+            mid = (p + q) / 2
+            perp = np.array([-u[1], u[0]])
+            lp = mid + perp * 0.85
+            ax.text(lp[0], lp[1], "N–H···O=C", ha="center", va="center",
+                    fontsize=10.5, fontweight="bold", color="#c0392b", zorder=7,
+                    rotation=np.degrees(np.arctan2(u[1], u[0])),
+                    rotation_mode="anchor",
+                    bbox=dict(boxstyle="round,pad=0.25", facecolor="white",
+                              edgecolor="none", alpha=0.9))
 
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.set_xlim(-15.5, 19.0)
-    ax.set_ylim(-11.0, 10.0)
+    ax.margins(0.13)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(args.output, bbox_inches="tight")
     fig.savefig(args.output.with_suffix(".png"), dpi=300, bbox_inches="tight")
-    print(f"Wrote {args.output}")
+    print(f"\nWrote {args.output}")
     return 0
 
 
