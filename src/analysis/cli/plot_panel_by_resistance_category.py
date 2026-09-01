@@ -221,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
         ax.spines[side].set_visible(False)
     # Lower centre: upper left collided with V106M (the highest point), and the
     # mid/low-ddG band is the emptiest region of the panel.
-    ax.legend(loc="lower center", fontsize=LEGEND_FONTSIZE, frameon=True)
+    ax.legend(loc="upper center", fontsize=LEGEND_FONTSIZE, frameon=True)
     fig.tight_layout()
     fig.savefig(args.out_png, dpi=200)
     print(f"\nWrote {args.out_png}\nWrote {args.out_csv}")
