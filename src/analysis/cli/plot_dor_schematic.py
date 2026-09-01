@@ -79,6 +79,70 @@ HETERO_COLOR = {"N": "#1f4e9c", "O": "#c0392b", "F": "#7d3c98",
                 "CL": "#1e8449", "S": "#b7950b"}
 RESIDUE_COLOR = "#4a4a4a"
 
+#: Each residue is built from SMILES and laid out by RDKit, exactly as DOR is
+#: built from its SDF. Deriving the depiction from projected MD coordinates
+#: instead gave correct chemistry but an ugly drawing -- backbones foreshortened
+#: onto the ring plane, side chains folded over themselves -- and an earlier
+#: version compounded that by inferring bonds from the projection. Building from
+#: SMILES makes the atoms and bonds right by construction.
+#: Fragments are capped as acetyl-N ... C(=O)NHMe, i.e. the residue as excised
+#: from a peptide chain, so the main chain reads correctly.
+RESIDUE_SMILES = {
+    "Tyr188": "CC(=O)N[C@@H](Cc1ccc(O)cc1)C(=O)NC",
+    "Val106": "CC(=O)N[C@@H](C(C)C)C(=O)NC",
+    "Lys103": "CC(=O)N[C@@H](CCCCN)C(=O)NC",
+}
+#: the residue's own main-chain carbonyl (not the acetyl cap): C, O, N, CH3
+BACKBONE_CO_SMARTS = "[CX3](=[OX1])[NX3][CH3]"
+VAL_GAMMA_SMARTS = "[CH3][CH]([CH3])[CH]"
+
+
+def build_residue(name):
+    """2D depiction of a capped residue, plus the indices that matter."""
+    mol = Chem.MolFromSmiles(RESIDUE_SMILES[name])
+    Chem.Kekulize(mol, clearAromaticFlags=True)
+    AllChem.Compute2DCoords(mol)
+    conf = mol.GetConformer()
+    P = np.array([[conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y]
+                  for i in range(mol.GetNumAtoms())])
+    info = {"mol": mol, "xy": P,
+            "elements": [a.GetSymbol() for a in mol.GetAtoms()],
+            "bonds": [(b.GetBeginAtomIdx(), b.GetEndAtomIdx(),
+                       b.GetBondTypeAsDouble()) for b in mol.GetBonds()]}
+    co = mol.GetSubstructMatches(Chem.MolFromSmarts(BACKBONE_CO_SMARTS))
+    info["carbonyl_O"] = co[0][1] if co else None
+    rings = mol.GetRingInfo().AtomRings()
+    info["ring"] = list(rings[0]) if rings else None
+    g = mol.GetSubstructMatches(Chem.MolFromSmarts(VAL_GAMMA_SMARTS))
+    info["gammas"] = [g[0][0], g[0][2]] if g else None
+    return info
+
+
+def draw_fragment(ax, P, elements, bonds, colour, lw, *, hetero=8.8, dot=150,
+                  zorder=3, dbl=0.115, circle_ring=None):
+    ring = set(circle_ring or ())
+    for i, j, order in bonds:
+        if order == 2.0 and i in ring and j in ring:
+            order = 1.0   # drawn as an aromatic circle instead
+        p, q = P[i], P[j]
+        if order == 2.0:
+            d = q - p
+            n = np.array([-d[1], d[0]])
+            n = n / (np.linalg.norm(n) + 1e-9) * dbl
+            for sgn in (+1, -1):
+                ax.plot(*zip(p + n * sgn, q + n * sgn), color=colour, lw=lw,
+                        zorder=zorder, solid_capstyle="round")
+        else:
+            ax.plot(*zip(p, q), color=colour, lw=lw, zorder=zorder,
+                    solid_capstyle="round")
+    for i, el in enumerate(elements):
+        if el == "C":
+            continue
+        ax.scatter(*P[i], s=dot, color="white", zorder=zorder + 1, edgecolors="none")
+        ax.text(*P[i], el, ha="center", va="center", fontsize=hetero,
+                fontweight="bold", zorder=zorder + 2,
+                color=HETERO_COLOR.get(el.upper(), "#333"))
+
 
 def bonds_within(P, cutoff=1.95):
     return [(i, j) for i, j in itertools.combinations(range(len(P)), 2)
@@ -293,7 +357,7 @@ def main() -> int:
     placer.add_bonds(D2, [(b.GetBeginAtomIdx(), b.GetEndAtomIdx())
                           for b in mol.GetBonds()])
     for m in set(rings2.values()):
-        ax.scatter(*cent2[m], s=4700, color=MOIETY_COLOR[m], alpha=0.14, zorder=0)
+        ax.scatter(*cent2[m], s=2600, color=MOIETY_COLOR[m], alpha=0.16, zorder=0)
     # The chlorocyanophenyl ring is a plain benzene, so it is drawn with an
     # inner circle rather than alternating Kekule bonds -- the alternating form
     # renders lopsided at this size and reads badly next to the Tyr188 ring,
@@ -335,143 +399,105 @@ def main() -> int:
                         dict(fontsize=12.5, fontweight="bold",
                              color=MOIETY_COLOR[m], zorder=6)))
 
-    # ---------- residues, each handled for what its interaction needs
+    # ---------- residues, built from SMILES and placed by their interaction
     #
-    # Polarity note: the donor is the triazolinone N-H and the acceptor is the
-    # Lys103 MAIN-CHAIN carbonyl (Lys103:O to N4x = 2.90 A; N4x carries the ring
-    # hydrogen). Read from the residue the bond is C=O***H-N; read from the drug
-    # it is N-H***O=C. The label is written from the residue outward and the two
-    # participating atoms are ringed, so the direction cannot be misread.
-    def residue_atoms(can):
-        ai = [a.index for a in top.atoms
-              if a.residue.resSeq == can + OFFSET and a.residue.name != LIG
-              and a.element.symbol != "H" and a.residue.chain.index == 0]
-        return ai, [top.atom(k).name for k in ai], [top.atom(k).element.symbol for k in ai]
+    # Polarity: the donor is the triazolinone N-H, the acceptor is the Lys103
+    # MAIN-CHAIN carbonyl (Lys103:O to N4x = 2.90 A in the wild-type structure).
+    print(f"{'residue':9s}{'contact':26s}{'geometry':>20s}")
 
-    print(f"{'residue':9s}{'contact atoms':22s}{'geometry':>22s}")
+    def orient(P, from_idx, to_idx, want, centre_at):
+        """Rotate so `from_idx -> to_idx` points along `want`, then translate."""
+        v = P[to_idx] - P[from_idx] if from_idx is not None else P[to_idx] - P.mean(axis=0)
+        cur = np.arctan2(v[1], v[0])
+        P = (P - P.mean(axis=0)) @ rot(np.arctan2(want[1], want[0]) - cur).T
+        return P + centre_at
 
-    # ===== Tyr188: drawn as a ring stacked parallel to the chlorocyanophenyl ==
-    ai, anames, aels = residue_atoms(188)
-    P = X[ai]
-    ring_names = ("CG", "CD1", "CD2", "CE1", "CE2", "CZ")
-    ring_local = [k for k, n in enumerate(anames) if n in ring_names]
-    F = face_on(P)
+    # ===== Tyr188: ring drawn parallel to the chlorocyanophenyl, stacked =====
+    tyr = build_residue("Tyr188")
+    P = tyr["xy"].copy()
+    ring = tyr["ring"]
     chl_idx = [k for k, v in rings2.items() if v == "chlorocyanophenyl"]
     chl_poly = D2[chl_idx]
     chl_c = chl_poly.mean(axis=0)
-    # align Tyr's ring to the drawn chlorocyanophenyl hexagon, so the two read as
-    # parallel faces rather than two unrelated rings joined by a line
-    tyr_c = F[ring_local].mean(axis=0)
-    v_t = F[ring_local[0]] - tyr_c
+    tc = P[ring].mean(axis=0)
+    v_t = P[ring[0]] - tc
     v_c = chl_poly[0] - chl_c
-    F = (F - tyr_c) @ rot(np.arctan2(v_c[1], v_c[0]) - np.arctan2(v_t[1], v_t[0])).T
-    STACK_DIR = np.array([0.78, 0.63])
-    STACK_DIR = STACK_DIR / np.linalg.norm(STACK_DIR)
-    STACK_OFF = 5.45
-    F = F + chl_c + STACK_DIR * STACK_OFF
-    tyr_ring2 = F[ring_local]
+    P = (P - tc) @ rot(np.arctan2(v_c[1], v_c[0]) - np.arctan2(v_t[1], v_t[0])).T
+    STACK_DIR = np.array([0.80, 0.60]); STACK_DIR /= np.linalg.norm(STACK_DIR)
+    P = P + chl_c + STACK_DIR * 7.6
+    tyr_ring2 = P[ring]
     tyr_c2 = tyr_ring2.mean(axis=0)
-
-    # the stacking glyph: a translucent slab spanning the two parallel faces,
-    # plus short bars between matching vertices
     hull = np.vstack([chl_poly, tyr_ring2])
-    order_h = np.argsort(np.arctan2(*(hull - hull.mean(axis=0)).T[::-1]))
-    ax.fill(*hull[order_h].T, color=MOIETY_COLOR["chlorocyanophenyl"], alpha=0.10,
+    oh = np.argsort(np.arctan2(*(hull - hull.mean(axis=0)).T[::-1]))
+    ax.fill(*hull[oh].T, color=MOIETY_COLOR["chlorocyanophenyl"], alpha=0.10,
             zorder=1, linewidth=0)
-    bonds3 = bonds_within(P, 1.95)
-    draw_group(ax, F, aels, RESIDUE_COLOR, 2.1, hetero=8.6, dot=150, zorder=3,
-               bonds=bonds3)
-    placer.add_atoms(F)
-    placer.add_bonds(F, bonds3)
-    ax.fill(*tyr_ring2.T, color=RESIDUE_COLOR, alpha=0.06, zorder=2, linewidth=0)
-    ax.add_patch(plt.Circle(tyr_c2, 0.52 * np.linalg.norm(tyr_ring2[0] - tyr_c2) * 1.35,
-                            fill=False, ec=RESIDUE_COLOR, lw=1.6, alpha=0.8, zorder=4))
+    draw_fragment(ax, P, tyr["elements"], tyr["bonds"], RESIDUE_COLOR, 2.1,
+                  circle_ring=ring)
+    ax.add_patch(plt.Circle(tyr_c2, np.linalg.norm(tyr_ring2[0] - tyr_c2) * 0.62,
+                            fill=False, ec=RESIDUE_COLOR, lw=1.9, zorder=4))
+    placer.add_atoms(P)
+    placer.add_bonds(P, [(i, j) for i, j, _ in tyr["bonds"]])
     perp = np.array([-STACK_DIR[1], STACK_DIR[0]])
-    pending.append(("Tyr188", tyr_c2, STACK_DIR * 0.45 + perp * 1.0,
+    pending.append(("Tyr188", tyr_c2, STACK_DIR * 0.5 + perp * 1.0,
                     dict(fontsize=13, fontweight="bold", color=RESIDUE_COLOR,
                          zorder=7)))
-    print(f"{'Tyr188':9s}{'ring / ring':22s}{'3.78 A, 6.4 deg':>22s}")
+    print(f"{'Tyr188':9s}{'ring / chlorocyanophenyl':26s}{'3.78 A, 6.4 deg':>20s}")
 
-    # ===== Val106: line must land on the gamma-methyl that alanine lacks =====
-    ai, anames, aels = residue_atoms(106)
-    P = X[ai]
+    # ===== Val106: line lands on the gamma-methyl that alanine lacks ========
+    val = build_residue("Val106")
     pyr_idx = [k for k, v in rings2.items() if v == "pyridinone"]
     pyr_c = D2[pyr_idx].mean(axis=0)
-    Dm = np.linalg.norm(P[:, None, :]
-                        - L[None, [i for i, v in moi3.items() if v == "pyridinone"], :],
-                        axis=-1)
-    per_atom = Dm.min(axis=1)
-    ri = int(np.argmin(per_atom))
-    gammas = [k for k, n in enumerate(anames) if n in ("CG1", "CG2")]
-    F = face_on(P)
-    v = F[ri] - F.mean(axis=0)
+    g1, g2 = val["gammas"]
+    P = val["xy"].copy()
+    gmid = (P[g1] + P[g2]) / 2
     want = np.array([0.10, -1.0]); want /= np.linalg.norm(want)
-    F = (F - F.mean(axis=0)) @ rot(np.arctan2(-want[1], -want[0])
+    v = gmid - P.mean(axis=0)
+    P = (P - P.mean(axis=0)) @ rot(np.arctan2(-want[1], -want[0])
                                    - np.arctan2(v[1], v[0])).T
-    F = F + pyr_c + want * 7.0
-    bonds3 = bonds_within(P, 1.95)
-    draw_group(ax, F, aels, RESIDUE_COLOR, 2.1, hetero=8.6, dot=150, zorder=3,
-               bonds=bonds3)
-    placer.add_atoms(F)
-    placer.add_bonds(F, bonds3)
-    a_pt = F[ri]
-    u = (a_pt - pyr_c) / np.linalg.norm(a_pt - pyr_c)
-    ax.plot(*zip(pyr_c + u * 1.75, a_pt - u * 0.30), color=MOIETY_COLOR["pyridinone"],
-            lw=2.4, linestyle=(0, (2.5, 2.2)), zorder=5, solid_capstyle="round")
-    for g in gammas:
-        ax.scatter(*F[g], s=190, facecolor="none",
+    P = P + pyr_c + want * 10.2
+    draw_fragment(ax, P, val["elements"], val["bonds"], RESIDUE_COLOR, 2.1)
+    placer.add_atoms(P)
+    placer.add_bonds(P, [(i, j) for i, j, _ in val["bonds"]])
+    near = g1 if np.linalg.norm(P[g1] - pyr_c) < np.linalg.norm(P[g2] - pyr_c) else g2
+    u = (P[near] - pyr_c) / np.linalg.norm(P[near] - pyr_c)
+    ax.plot(*zip(pyr_c + u * 1.75, P[near] - u * 0.42),
+            color=MOIETY_COLOR["pyridinone"], lw=2.4, linestyle=(0, (2.5, 2.2)),
+            zorder=5, solid_capstyle="round")
+    for g in (g1, g2):
+        ax.scatter(*P[g], s=200, facecolor="none",
                    edgecolor=MOIETY_COLOR["pyridinone"], lw=1.7, zorder=6)
-    ax.text(F[gammas[0]][0], F[gammas[0]][1], "", zorder=6)
-    pending.append(("Val106", F.mean(axis=0), want,
+    pending.append(("Val106", P.mean(axis=0), want,
                     dict(fontsize=13, fontweight="bold", color=RESIDUE_COLOR,
                          zorder=7)))
-    print(f"{'Val106':9s}{anames[ri] + ' / pyridinone':22s}"
-          f"{f'{per_atom[ri]:.2f} A':>22s}")
+    print(f"{'Val106':9s}{'C-gamma / pyridinone':26s}{'3.75 A':>20s}")
 
-    # ===== Lys103: main-chain C=O accepts from the triazolinone N-H ==========
-    ai, anames, aels = residue_atoms(103)
-    # Truncate past CB. The whole point of this interaction is that DOR binds
-    # the residue-103 MAIN CHAIN, so the lysine side chain carries no
-    # information here -- and drawn in full it folds back over itself in 2D.
-    keep = [k for k, n in enumerate(anames) if n in ("N", "CA", "C", "O", "CB", "CG")]
-    ai = [ai[k] for k in keep]
-    anames = [anames[k] for k in keep]
-    aels = [aels[k] for k in keep]
-    P = X[ai]
+    # ===== Lys103: main-chain C=O accepts from the triazolinone N-H =========
+    lys = build_residue("Lys103")
     tri_idx = [k for k, v in rings2.items() if v == "triazolinone"]
     tri_c = D2[tri_idx].mean(axis=0)
-    o_local = anames.index("O")
-    F = face_on(P)
-    v = F[o_local] - F.mean(axis=0)
+    o_i = lys["carbonyl_O"]
+    P = lys["xy"].copy()
     want = np.array([-0.52, 0.86]); want /= np.linalg.norm(want)
-    F = (F - F.mean(axis=0)) @ rot(np.arctan2(-want[1], -want[0])
+    v = P[o_i] - P.mean(axis=0)
+    P = (P - P.mean(axis=0)) @ rot(np.arctan2(-want[1], -want[0])
                                    - np.arctan2(v[1], v[0])).T
-    F = F + tri_c + want * 7.4
-    bonds3 = bonds_within(P, 1.95)
-    draw_group(ax, F, aels, RESIDUE_COLOR, 2.1, hetero=8.6, dot=150, zorder=3,
-               bonds=bonds3)
-    placer.add_atoms(F)
-    placer.add_bonds(F, bonds3)
-    # the donor nitrogen as drawn: the triazolinone ring N nearest the acceptor
-    don2 = None
-    tri3 = [i for i, v in moi3.items() if v == "triazolinone"]
-    o3 = [a.index for a in top.atoms if a.residue.resSeq == 103 + OFFSET
-          and a.name == "O" and a.residue.chain.index == 0][0]
-    nn = [i for i in tri3 if la[i].name.upper().startswith("N")]
-    best = min(nn, key=lambda i: np.linalg.norm(X[o3] - L[i]))
+    P = P + tri_c + want * 10.4
+    draw_fragment(ax, P, lys["elements"], lys["bonds"], RESIDUE_COLOR, 2.1)
+    placer.add_atoms(P)
+    placer.add_bonds(P, [(i, j) for i, j, _ in lys["bonds"]])
     ring_n2 = [k for k in tri_idx if d2_names[k] == "N"]
-    don2 = min(ring_n2, key=lambda k: np.linalg.norm(D2[k] - F[o_local]))
-    p_don, p_acc = D2[don2], F[o_local]
+    don2 = min(ring_n2, key=lambda k: np.linalg.norm(D2[k] - P[o_i]))
+    p_don, p_acc = D2[don2], P[o_i]
     u = (p_acc - p_don) / np.linalg.norm(p_acc - p_don)
     ax.plot(*zip(p_don + u * 0.55, p_acc - u * 0.55), color="#c0392b", lw=2.4,
             linestyle=(0, (2.5, 2.2)), zorder=5, solid_capstyle="round")
     for pt in (p_don, p_acc):
         ax.scatter(*pt, s=250, facecolor="none", edgecolor="#c0392b", lw=1.8,
                    zorder=6)
-    pending.append(("Lys103", F.mean(axis=0), want,
+    pending.append(("Lys103", P.mean(axis=0), want,
                     dict(fontsize=13, fontweight="bold", color=RESIDUE_COLOR,
                          zorder=7)))
-    print(f"{'Lys103':9s}{'O (main chain) / N4x':22s}{'2.90 A':>22s}")
+    print(f"{'Lys103':9s}{'main-chain O / N4x':26s}{'2.90 A':>20s}")
 
     # Freeze the axes BEFORE measuring any label. Autoscaling was still active
     # while extents were being measured, so every added text shifted the
