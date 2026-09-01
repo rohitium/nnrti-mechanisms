@@ -102,8 +102,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--fep-csv",
         type=Path,
-        default=root / "results/analysis/fep_pmx/panel_discussion_tiers.csv",
-        help="pmx NEQ FEP panel (ddG_bind per genotype, with SEM and reporting tier).",
+        default=root / "results/analysis/fep_pmx/panel_ddg.csv",
+        help="pmx NEQ FEP panel (ddG_bind per genotype, with SEM).",
     )
     parser.add_argument(
         "--output-xlsx",

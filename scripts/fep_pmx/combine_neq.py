@@ -10,7 +10,6 @@ Outputs (under ``results/analysis/fep_pmx/``):
     targets/{genotype}/summary.json   per-target ΔΔG_bind ± SEM + per-rep table
     panel_ddg.csv                     one row per genotype, with experimental fold
     panel_ddg_vs_experiment.png       ΔΔG_bind vs experimental fold (no fitted line)
-    panel_discussion_tiers.csv        main-text / show / omit classification by SEM
 """
 
 from __future__ import annotations
@@ -78,7 +77,12 @@ SEM_MAIN_TEXT_MAX_KCAL = 0.6
 # main_text, G190E (1.63) show -- so the override is redundant as well as stale.
 # Kept as an empty set rather than deleted so a genotype can be forced out of
 # the main text again if a specific reason arises; state the reason here.
-OMIT_MAIN_TEXT: frozenset[str] = frozenset()
+# (The former OMIT_MAIN_TEXT / discussion-tier machinery has been removed. It
+# classified genotypes as main_text / show / omit_main from their SEM, which was
+# a triage aid during the campaign and never belonged in the published output:
+# every table already prints the SEM beside the value, so a reader can judge
+# precision directly, and the tier strings went stale whenever a leg was
+# re-run -- G190E was still marked omit_main at a SEM of 0.38.)
 
 
 def load_experimental(csv_path: Path) -> dict[str, float]:
@@ -258,15 +262,6 @@ def _repel_labels(ax, fig, xs, ys, labels, *, fontsize=8, n_iter=400) -> None:
                         arrowprops=dict(arrowstyle="-", lw=0.5, color="0.6"))
 
 
-def discussion_tier(genotype: str, sem: float | None) -> str:
-    """Classify how a genotype should be used in the manuscript FEP section."""
-    if genotype in OMIT_MAIN_TEXT:
-        return "omit_main"
-    if sem is not None and sem <= SEM_MAIN_TEXT_MAX_KCAL:
-        return "main_text"
-    return "show"
-
-
 def _plot(rows: list[dict], rho: float | None, output: Path) -> dict:
     """Scatter ΔΔG vs log10(fold). No fitted line — weak correlation is the finding."""
     import matplotlib
@@ -330,41 +325,6 @@ def _plot(rows: list[dict], rho: float | None, output: Path) -> dict:
     return stats
 
 
-def write_discussion_tiers(rows: list[dict], output: Path) -> None:
-    """Export main-text / show / omit tiers for the FEP Results rewrite."""
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open("w", newline="") as handle:
-        writer = csv.writer(handle)
-        writer.writerow([
-            "genotype", "ddg_bind_kcal", "sem_kcal", "dor_fold_reduction",
-            "tier", "note",
-        ])
-        for r in rows:
-            if r.get("ddg_bind") is None:
-                continue
-            tier = discussion_tier(r["genotype"], r.get("sem"))
-            note = ""
-            if r["genotype"] == "V106M":
-                note = (
-                    "tight SEM; binding ΔΔG much larger than fold implies — "
-                    "binding-vs-phenotype finding (not a pipeline fail)"
-                )
-            elif tier == "omit_main":
-                note = "charge leg and/or SEM too large for main-text point estimate"
-            elif tier == "main_text":
-                note = f"SEM ≤ {SEM_MAIN_TEXT_MAX_KCAL} kcal/mol; discuss numerically"
-            else:
-                note = "show on scatter; do not over-interpret point estimate"
-            writer.writerow([
-                r["genotype"],
-                f"{r['ddg_bind']:.3f}",
-                f"{r['sem']:.3f}" if r.get("sem") is not None else "",
-                r.get("fold", "") if r.get("fold") is not None else "",
-                tier,
-                note,
-            ])
-
-
 def rows_from_panel_csv(panel_csv: Path) -> list[dict]:
     """Rebuild plot rows from an existing panel_ddg.csv (no re-analysis)."""
     rows = []
@@ -400,7 +360,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--replot-only",
         action="store_true",
-        help="Rebuild panel_ddg_vs_experiment.png + panel_discussion_tiers.csv from existing panel_ddg.csv",
+        help="Rebuild panel_ddg_vs_experiment.png from existing panel_ddg.csv",
     )
     args = parser.parse_args(argv)
 
@@ -416,11 +376,9 @@ def main(argv: list[str] | None = None) -> int:
             )
         plot_path = args.output_dir / "panel_ddg_vs_experiment.png"
         stats = _plot(rows, rho, plot_path)
-        tiers_path = args.output_dir / "panel_discussion_tiers.csv"
-        write_discussion_tiers(rows, tiers_path)
         print(f"replot n={stats.get('n_with_fold')}  R²={stats.get('pearson_r2')}  "
               f"p={stats.get('pearson_p')}  Spearman ρ={rho}")
-        print(f"Wrote {plot_path}\nWrote {tiers_path}")
+        print(f"Wrote {plot_path}")
         return 0
 
     replicates = range(1, args.replicates + 1)
@@ -470,22 +428,19 @@ def main(argv: list[str] | None = None) -> int:
 
     plot_path = args.output_dir / "panel_ddg_vs_experiment.png"
     stats = _plot(rows, rho, plot_path)
-    tiers_path = args.output_dir / "panel_discussion_tiers.csv"
-    write_discussion_tiers(rows, tiers_path)
 
     # Report
-    print(f"{'genotype':<14} {'ddg_bind':>10} {'sem':>7} {'n':>3}  {'fold':>7}  tier")
+    print(f"{'genotype':<14} {'ddg_bind':>10} {'sem':>7} {'n':>3}  {'fold':>7}")
     for r in rows:
         ddg = f"{r['ddg_bind']:+.2f}" if r["ddg_bind"] is not None else "  n/a"
         sem = f"{r['sem']:.2f}" if r.get("sem") is not None else "  - "
         fold = f"{r['fold']:.1f}" if r.get("fold") is not None else "   -"
-        tier = discussion_tier(r["genotype"], r.get("sem")) if r.get("ddg_bind") is not None else "-"
-        print(f"{r['genotype']:<14} {ddg:>10} {sem:>7} {r['n_reps']:>3}  {fold:>7}  {tier}")
+        print(f"{r['genotype']:<14} {ddg:>10} {sem:>7} {r['n_reps']:>3}  {fold:>7}")
     if rho is not None:
         print(f"\nSpearman ρ (ΔΔG_bind vs fold) = {rho:.3f}  (n = {len(x)})")
     if stats.get("pearson_r2") is not None:
         print(f"Pearson R² = {stats['pearson_r2']:.3f}  p = {stats.get('pearson_p')}")
-    print(f"\nWrote {panel_csv}\nWrote {plot_path}\nWrote {tiers_path}")
+    print(f"\nWrote {panel_csv}\nWrote {plot_path}")
 
     # P0 sign gate
     gate_fail = False

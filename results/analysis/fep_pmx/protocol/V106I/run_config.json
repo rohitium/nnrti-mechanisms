@@ -24,6 +24,10 @@
     "status": "placeholder",
     "legs": [
       "wt_to_V106I"
+    ],
+    "have": [],
+    "missing": [
+      "wt_to_V106I"
     ]
   },
   "per_leg_prepare": {

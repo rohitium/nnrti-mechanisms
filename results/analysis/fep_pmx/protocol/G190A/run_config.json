@@ -24,6 +24,10 @@
     "status": "placeholder",
     "legs": [
       "wt_to_G190A"
+    ],
+    "have": [],
+    "missing": [
+      "wt_to_G190A"
     ]
   },
   "per_leg_prepare": {

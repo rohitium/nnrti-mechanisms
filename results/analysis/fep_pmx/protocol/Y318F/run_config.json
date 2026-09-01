@@ -24,6 +24,10 @@
     "status": "placeholder",
     "legs": [
       "wt_to_Y318F"
+    ],
+    "have": [],
+    "missing": [
+      "wt_to_Y318F"
     ]
   },
   "per_leg_prepare": {

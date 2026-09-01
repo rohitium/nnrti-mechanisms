@@ -52,7 +52,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ddg-csv", type=Path,
                         default=root / "results/analysis/binding_energy/tables/ddg_full.csv")
     parser.add_argument("--fep-csv", type=Path,
-                        default=root / "results/analysis/fep_pmx/panel_discussion_tiers.csv")
+                        default=root / "results/analysis/fep_pmx/panel_ddg.csv")
     parser.add_argument("--docx", type=Path,
                         default=root / "manuscript/DorDRM-MD-06-21-26.docx",
                         help="Read-only source of row order and mutation-category labels.")
@@ -93,11 +93,8 @@ def main() -> int:
         for col, header, dp in DDE_COLUMNS:
             mean, sem = stats[col]
             rec[header] = f"{mean[key]:.{dp}f} ± {sem[key]:.{dp}f}" if key in mean.index else ""
-        # No tier column: the SEM is already shown next to every value, so a reader
-        # can judge confidence directly. The tier string also encodes a stale rule
-        # (charge legs are forced to omit_main regardless of their SEM, which since
-        # the 500 ps re-run marks K103N -- the panel's tightest value at +-0.23 --
-        # as omit_main). Tiers remain in panel_discussion_tiers.csv for triage.
+        # The SEM is printed beside every value, so a reader can judge precision
+        # directly; the old main_text/show/omit tiering has been removed.
         if key in fep.index and pd.notna(fep.loc[key, "ddg_bind_kcal"]):
             rec["∆∆G_bind (kcal/mol)"] = f"{fep.loc[key,'ddg_bind_kcal']:.2f} ± {fep.loc[key,'sem_kcal']:.2f}"
         else:
