@@ -1,6 +1,5 @@
 mutation,whole_ligand,whole_ligand_sem,d_whole_ligand,chlorocyanophenyl,chlorocyanophenyl_sem,d_chlorocyanophenyl,pyridinone,pyridinone_sem,d_pyridinone,triazolinone,triazolinone_sem,d_triazolinone,linker,linker_sem,d_linker,whole_ligand_atoms,whole_ligand_atoms_sem,d_whole_ligand_atoms,chlorocyanophenyl_atoms,chlorocyanophenyl_atoms_sem,d_chlorocyanophenyl_atoms,pyridinone_atoms,pyridinone_atoms_sem,d_pyridinone_atoms,triazolinone_atoms,triazolinone_atoms_sem,d_triazolinone_atoms,linker_atoms,linker_atoms_sem,d_linker_atoms
 V106A,97.6,2.2,-4.3,28.6,0.3,-1.2,11.7,1.8,-3.1,35.9,2.8,0.5,25.6,1.5,-1.5,50.5,1.4,-0.1,15.9,0.7,-0.5,8.8,0.8,-1.4,19.1,0.2,1.8,20.1,0.9,-0.2
-V106A+F227L,92.4,1.7,-9.5,26.6,0.8,-3.3,10.3,0.7,-4.4,32.8,0.9,-2.5,26.3,0.5,-0.8,51.2,1.1,0.5,14.7,0.6,-1.7,7.7,0.2,-2.5,19.3,0.5,2.0,20.9,0.4,0.6
-V106A+L234I,97.4,2.2,-4.4,28.7,0.1,-1.2,10.5,0.8,-4.2,34.2,1.0,-1.1,27.2,0.7,0.1,52.3,1.0,1.6,15.5,0.8,-0.9,7.8,0.4,-2.4,19.4,0.4,2.1,21.1,0.6,0.8
-V106A+P225H,96.8,1.9,-5.1,27.5,0.4,-2.3,11.8,0.1,-2.9,33.2,0.6,-2.1,27.8,1.9,0.7,52.9,1.5,2.2,16.5,0.6,0.1,8.8,0.3,-1.4,20.2,0.6,3.0,20.8,0.5,0.5
+V106I,102.4,1.7,0.5,30.3,0.3,0.5,15.9,0.6,1.2,35.7,2.6,0.4,25.7,1.1,-1.4,48.5,1.7,-2.1,15.7,0.8,-0.7,10.3,0.3,0.0,17.1,0.3,-0.2,20.0,1.0,-0.3
+V106M,101.3,8.4,-0.6,28.6,1.5,-1.2,16.7,2.3,2.0,30.0,2.6,-5.3,30.0,2.3,2.9,48.7,1.4,-1.9,15.4,0.7,-1.0,9.8,0.4,-0.5,15.8,0.6,-1.5,21.9,0.4,1.5
 WT,101.9,2.9,0.0,29.8,0.5,0.0,14.7,1.4,0.0,35.4,3.2,0.0,27.1,1.2,0.0,50.7,1.0,0.0,16.4,0.5,0.0,10.2,0.4,0.0,17.3,0.6,0.0,20.3,0.7,0.0

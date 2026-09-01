@@ -5,12 +5,14 @@ Why this exists
 ---------------
 The manuscript reports a single number for the V106A dislocation -- "the total
 number of protein heavy atoms within 4.5 A of DOR fell from 224 +/- 1 in WT to
+(that figure predates the switch to a 4.0 A cutoff; see
+manuscript/contact-cutoff-sensitivity.md)
 212 +/- 1 in V106A". A whole-ligand count says the interface loosens but not
 *where*, and DOR is not a homogeneous object: it is three ring systems joined by
 an ether and a methylene, and the V106A slide toward Ser105 is directional, so
 the loss should not be uniform across them.
 
-This decomposes the same 4.5 A count over the ligand:
+This decomposes the same count, now at 4.0 A, over the ligand:
 
   chlorocyanophenyl   the ring that stacks against Tyr188
   pyridinone          the central ring bearing the Lys103 backbone H-bond
@@ -228,7 +230,7 @@ def main() -> int:
     sdf = pd.DataFrame(summary)
     sdf.to_csv(args.output_dir / "dor_moiety_contacts_summary.csv", index=False)
 
-    print("\n=== ATOM-PAIR contacts within 4.5 A (the manuscript's convention) ===")
+    print("\n=== ATOM-PAIR contacts within 4.0 A (the manuscript's convention) ===")
     hdr = f"{'genotype':16s}" + "".join(f"{c[:12]:>18s}" for c in moieties)
     print(hdr)
     for _, rec in sdf.iterrows():
@@ -236,7 +238,7 @@ def main() -> int:
         for c in moieties:
             line += f"{rec[c]:8.1f} ± {rec[f'{c}_sem']:<4.1f}   "[:18]
         print(line)
-    print("\n=== DISTINCT protein heavy atoms within 4.5 A ===")
+    print("\n=== DISTINCT protein heavy atoms within 4.0 A ===")
     print(f"{'genotype':16s}" + "".join(f"{c[:12]:>18s}" for c in moieties))
     for _, rec in sdf.iterrows():
         line = f"{rec['mutation']:16s}"
