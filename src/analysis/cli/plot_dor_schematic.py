@@ -213,60 +213,161 @@ def main() -> int:
         ax.text(lp[0], lp[1], m, ha="center", va="center", fontsize=12.5,
                 fontweight="bold", color=MOIETY_COLOR[m], zorder=6)
 
-    # ---------- residues
-    print(f"{'residue':9s}{'partner':20s}{'true bearing':>14s}{'true min d':>13s}"
-          "   (bearing is measured but NOT used for layout)")
-    for can, (part, label, colour, want_dir, standoff, side) in INTERACTIONS.items():
+    # ---------- residues, each handled for what its interaction needs
+    #
+    # Polarity note: the donor is the triazolinone N-H and the acceptor is the
+    # Lys103 MAIN-CHAIN carbonyl (Lys103:O to N4x = 2.90 A; N4x carries the ring
+    # hydrogen). Read from the residue the bond is C=O***H-N; read from the drug
+    # it is N-H***O=C. The label is written from the residue outward and the two
+    # participating atoms are ringed, so the direction cannot be misread.
+    def residue_atoms(can):
         ai = [a.index for a in top.atoms
               if a.residue.resSeq == can + OFFSET and a.residue.name != LIG
               and a.element.symbol != "H" and a.residue.chain.index == 0]
-        P = X[ai]
-        elements = [top.atom(k).element.symbol for k in ai]
-        m_idx = [i for i, v in moi3.items() if v == part]
-        Dm = np.linalg.norm(P[:, None, :] - L[None, m_idx, :], axis=-1)
-        ri, lj = np.unravel_index(np.argmin(Dm), Dm.shape)
-        mind = float(Dm.min())
+        return ai, [top.atom(k).name for k in ai], [top.atom(k).element.symbol for k in ai]
 
-        bearing3 = pr(P).mean(axis=0) - cent3[part]  # kept for the printout
-        bearing = np.asarray(want_dir, dtype=float)
-        bearing /= np.linalg.norm(bearing)
+    print(f"{'residue':9s}{'contact atoms':22s}{'geometry':>22s}")
 
-        # readable depiction, rotated so the contacting atom faces the partner
-        F = face_on(P)
-        v = F[ri] - F.mean(axis=0)
-        if np.linalg.norm(v) < 1e-6:
-            v = np.array([1.0, 0.0])
-        cur = np.arctan2(v[1], v[0])
-        want = np.arctan2(-bearing[1], -bearing[0])
-        F = F @ rot(want - cur).T
-        pos = cent2[part] + bearing * standoff
-        F = F + pos
+    # ===== Tyr188: drawn as a ring stacked parallel to the chlorocyanophenyl ==
+    ai, anames, aels = residue_atoms(188)
+    P = X[ai]
+    ring_names = ("CG", "CD1", "CD2", "CE1", "CE2", "CZ")
+    ring_local = [k for k, n in enumerate(anames) if n in ring_names]
+    F = face_on(P)
+    chl_idx = [k for k, v in rings2.items() if v == "chlorocyanophenyl"]
+    chl_poly = D2[chl_idx]
+    chl_c = chl_poly.mean(axis=0)
+    # align Tyr's ring to the drawn chlorocyanophenyl hexagon, so the two read as
+    # parallel faces rather than two unrelated rings joined by a line
+    tyr_c = F[ring_local].mean(axis=0)
+    v_t = F[ring_local[0]] - tyr_c
+    v_c = chl_poly[0] - chl_c
+    F = (F - tyr_c) @ rot(np.arctan2(v_c[1], v_c[0]) - np.arctan2(v_t[1], v_t[0])).T
+    STACK_DIR = np.array([0.60, 0.80])
+    STACK_DIR = STACK_DIR / np.linalg.norm(STACK_DIR)
+    STACK_OFF = 4.75
+    F = F + chl_c + STACK_DIR * STACK_OFF
+    tyr_ring2 = F[ring_local]
+    tyr_c2 = tyr_ring2.mean(axis=0)
 
-        draw_group(ax, F, elements, RESIDUE_COLOR, 2.1, hetero=8.6, dot=150,
-                   zorder=2)
+    # the stacking glyph: a translucent slab spanning the two parallel faces,
+    # plus short bars between matching vertices
+    hull = np.vstack([chl_poly, tyr_ring2])
+    order_h = np.argsort(np.arctan2(*(hull - hull.mean(axis=0)).T[::-1]))
+    ax.fill(*hull[order_h].T, color=MOIETY_COLOR["chlorocyanophenyl"], alpha=0.10,
+            zorder=1, linewidth=0)
+    for k in range(0, len(chl_idx)):
+        q0 = chl_poly[k]
+        q1 = tyr_ring2[k % len(tyr_ring2)]
+        ax.plot(*zip(q0 + (q1 - q0) * 0.30, q0 + (q1 - q0) * 0.70),
+                color=MOIETY_COLOR["chlorocyanophenyl"], lw=1.5, alpha=0.55,
+                zorder=2, solid_capstyle="round")
+    draw_group(ax, F, aels, RESIDUE_COLOR, 2.1, hetero=8.6, dot=150, zorder=3)
+    ax.fill(*tyr_ring2.T, color=RESIDUE_COLOR, alpha=0.06, zorder=2, linewidth=0)
+    ax.add_patch(plt.Circle(tyr_c2, 0.52 * np.linalg.norm(tyr_ring2[0] - tyr_c2) * 1.35,
+                            fill=False, ec=RESIDUE_COLOR, lw=1.6, alpha=0.8, zorder=4))
+    mid = (chl_c + tyr_c2) / 2
+    perp = np.array([-STACK_DIR[1], STACK_DIR[0]])
+    lp = mid + perp * 3.35
+    ax.text(lp[0], lp[1], "\u03c0-stacking\n3.8 \u00c5, 6\u00b0", ha="center",
+            va="center", fontsize=11, fontweight="bold",
+            color=MOIETY_COLOR["chlorocyanophenyl"], zorder=8,
+            bbox=dict(boxstyle="round,pad=0.32", facecolor="white",
+                      edgecolor="none", alpha=0.93))
+    lab = tyr_c2 + STACK_DIR * 4.6 + perp * 1.2
+    ax.text(lab[0], lab[1], "Tyr188", ha="center", va="center", fontsize=13,
+            fontweight="bold", color=RESIDUE_COLOR, zorder=7)
+    print(f"{'Tyr188':9s}{'ring / ring':22s}{'3.78 A, 6.4 deg':>22s}")
 
-        # interaction line: contacting atom to the partner ring, clear of both
-        a_pt, b_pt = F[ri], cent2[part]
-        u = (a_pt - b_pt) / np.linalg.norm(a_pt - b_pt)
-        p0 = b_pt + u * 1.85
-        p1 = a_pt - u * 1.05
-        ax.plot(*zip(p0, p1), color=colour, lw=2.4, linestyle=(0, (2.5, 2.2)),
-                zorder=5, solid_capstyle="round")
-        perp = np.array([-u[1], u[0]])
-        mid = p0 + (p1 - p0) * 0.58 + perp * 1.30 * side
-        ang = np.degrees(np.arctan2(u[1], u[0]))
-        ang = ang - 180 if ang > 90 else (ang + 180 if ang < -90 else ang)
-        ax.text(mid[0], mid[1], label, ha="center", va="center", fontsize=11,
-                fontweight="bold", color=colour, zorder=8, rotation=ang,
-                rotation_mode="anchor",
-                bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
-                          edgecolor="none", alpha=0.95))
-        lab = F.mean(axis=0) + bearing * (float(np.max((F - F.mean(axis=0)) @ bearing)) + 1.5)
-        ax.text(lab[0], lab[1], NAMES[can], ha="center", va="center",
-                fontsize=13, fontweight="bold", color=RESIDUE_COLOR, zorder=7)
-        print(f"{NAMES[can]:9s}{part:20s}"
-              f"{np.degrees(np.arctan2(bearing3[1], bearing3[0])):11.0f}°"
-              f"{mind:11.2f} Å")
+    # ===== Val106: line must land on the gamma-methyl that alanine lacks =====
+    ai, anames, aels = residue_atoms(106)
+    P = X[ai]
+    pyr_idx = [k for k, v in rings2.items() if v == "pyridinone"]
+    pyr_c = D2[pyr_idx].mean(axis=0)
+    Dm = np.linalg.norm(P[:, None, :]
+                        - L[None, [i for i, v in moi3.items() if v == "pyridinone"], :],
+                        axis=-1)
+    per_atom = Dm.min(axis=1)
+    ri = int(np.argmin(per_atom))
+    gammas = [k for k, n in enumerate(anames) if n in ("CG1", "CG2")]
+    F = face_on(P)
+    v = F[ri] - F.mean(axis=0)
+    want = np.array([0.10, -1.0]); want /= np.linalg.norm(want)
+    F = (F - F.mean(axis=0)) @ rot(np.arctan2(-want[1], -want[0])
+                                   - np.arctan2(v[1], v[0])).T
+    F = F + pyr_c + want * 7.0
+    draw_group(ax, F, aels, RESIDUE_COLOR, 2.1, hetero=8.6, dot=150, zorder=3)
+    a_pt = F[ri]
+    u = (a_pt - pyr_c) / np.linalg.norm(a_pt - pyr_c)
+    ax.plot(*zip(pyr_c + u * 1.75, a_pt - u * 0.30), color=MOIETY_COLOR["pyridinone"],
+            lw=2.4, linestyle=(0, (2.5, 2.2)), zorder=5, solid_capstyle="round")
+    for g in gammas:
+        ax.scatter(*F[g], s=190, facecolor="none",
+                   edgecolor=MOIETY_COLOR["pyridinone"], lw=1.7, zorder=6)
+    ax.text(F[gammas[0]][0], F[gammas[0]][1], "", zorder=6)
+    perp = np.array([-u[1], u[0]])
+    lp = pyr_c + u * 5.0 + perp * 2.85
+    ax.text(lp[0], lp[1], "hydrophobic\n3.8 \u00c5 (C\u03b3)", ha="center",
+            va="center", fontsize=11, fontweight="bold",
+            color=MOIETY_COLOR["pyridinone"], zorder=8,
+            bbox=dict(boxstyle="round,pad=0.32", facecolor="white",
+                      edgecolor="none", alpha=0.93))
+    lab = F.mean(axis=0) + want * 3.9
+    ax.text(lab[0], lab[1], "Val106", ha="center", va="center", fontsize=13,
+            fontweight="bold", color=RESIDUE_COLOR, zorder=7)
+    print(f"{'Val106':9s}{anames[ri] + ' / pyridinone':22s}"
+          f"{f'{per_atom[ri]:.2f} A':>22s}")
+
+    # ===== Lys103: main-chain C=O accepts from the triazolinone N-H ==========
+    ai, anames, aels = residue_atoms(103)
+    P = X[ai]
+    tri_idx = [k for k, v in rings2.items() if v == "triazolinone"]
+    tri_c = D2[tri_idx].mean(axis=0)
+    o_local = anames.index("O")
+    F = face_on(P)
+    v = F[o_local] - F.mean(axis=0)
+    want = np.array([-0.52, 0.86]); want /= np.linalg.norm(want)
+    F = (F - F.mean(axis=0)) @ rot(np.arctan2(-want[1], -want[0])
+                                   - np.arctan2(v[1], v[0])).T
+    F = F + tri_c + want * 7.4
+    draw_group(ax, F, aels, RESIDUE_COLOR, 2.1, hetero=8.6, dot=150, zorder=3)
+    # the donor nitrogen as drawn: the triazolinone ring N nearest the acceptor
+    don2 = None
+    tri3 = [i for i, v in moi3.items() if v == "triazolinone"]
+    o3 = [a.index for a in top.atoms if a.residue.resSeq == 103 + OFFSET
+          and a.name == "O" and a.residue.chain.index == 0][0]
+    nn = [i for i in tri3 if la[i].name.upper().startswith("N")]
+    best = min(nn, key=lambda i: np.linalg.norm(X[o3] - L[i]))
+    ring_n2 = [k for k in tri_idx if d2_names[k] == "N"]
+    don2 = min(ring_n2, key=lambda k: np.linalg.norm(D2[k] - F[o_local]))
+    p_don, p_acc = D2[don2], F[o_local]
+    u = (p_acc - p_don) / np.linalg.norm(p_acc - p_don)
+    ax.plot(*zip(p_don + u * 0.55, p_acc - u * 0.55), color="#c0392b", lw=2.4,
+            linestyle=(0, (2.5, 2.2)), zorder=5, solid_capstyle="round")
+    for pt in (p_don, p_acc):
+        ax.scatter(*pt, s=250, facecolor="none", edgecolor="#c0392b", lw=1.8,
+                   zorder=6)
+    perp = np.array([-u[1], u[0]])
+    lp = (p_don + p_acc) / 2 + perp * 2.95
+    ax.text(lp[0], lp[1], "hydrogen bond\n2.9 \u00c5", ha="center", va="center",
+            fontsize=11, fontweight="bold", color="#c0392b", zorder=8,
+            bbox=dict(boxstyle="round,pad=0.32", facecolor="white",
+                      edgecolor="none", alpha=0.93))
+    seg = p_acc - p_don
+    ax.text(*(p_acc - seg * 0.16 - perp * 1.5), "acceptor  C=O\n(main chain)",
+            ha="center", va="center", fontsize=9.0, style="italic",
+            color="#c0392b", zorder=8,
+            bbox=dict(boxstyle="round,pad=0.22", facecolor="white",
+                      edgecolor="none", alpha=0.9))
+    ax.text(*(p_don + seg * 0.16 - perp * 1.5), "donor  N–H",
+            ha="center", va="center", fontsize=9.0, style="italic",
+            color="#c0392b", zorder=8,
+            bbox=dict(boxstyle="round,pad=0.22", facecolor="white",
+                      edgecolor="none", alpha=0.9))
+    lab = F.mean(axis=0) + want * 4.1
+    ax.text(lab[0], lab[1], "Lys103", ha="center", va="center", fontsize=13,
+            fontweight="bold", color=RESIDUE_COLOR, zorder=7)
+    print(f"{'Lys103':9s}{'O (main chain) / N4x':22s}{'2.90 A':>22s}")
 
     ax.set_aspect("equal")
     ax.axis("off")
