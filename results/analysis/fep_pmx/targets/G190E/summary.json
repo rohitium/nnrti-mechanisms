@@ -4,16 +4,16 @@
   "n_reps_per_leg": {
     "wt_to_G190E": 3
   },
-  "ddg_bind": 0.98662582679931,
-  "sem": 1.627177234237567,
+  "ddg_bind": -1.0200408398673557,
+  "sem": 0.38213122652814996,
   "units": "kcal/mol",
   "legs": [
     {
       "leg_id": "wt_to_G190E",
       "n_reps": 3,
-      "leg_ddg_mean": 0.98662582679931,
-      "leg_ddg_sd": 2.81835364261887,
-      "leg_ddg_sem": 1.627177234237567,
+      "leg_ddg_mean": -1.0200408398673557,
+      "leg_ddg_sd": 0.6618706995053677,
+      "leg_ddg_sem": 0.38213122652814996,
       "per_rep": [
         {
           "replicate": 1,
@@ -24,10 +24,10 @@
         },
         {
           "replicate": 2,
-          "holo_dg": -46.34,
+          "holo_dg": -52.36,
           "apo_dg": -50.58,
           "charge_correction": -2.2384939446243313e-05,
-          "leg_ddg": 4.239977615060549
+          "leg_ddg": -1.7800223849394474
         },
         {
           "replicate": 3,
