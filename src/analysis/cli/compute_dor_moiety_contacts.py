@@ -41,7 +41,7 @@ import numpy as np
 import pandas as pd
 
 LIG_RESNAME = "2KW"
-CUTOFF_NM = 0.45  # 4.5 A, matching the manuscript
+CUTOFF_NM = 0.40  # 4.0 A (switched from 4.5 on 2026-08-31)
 OFFSET = -3  # topology resid = canonical + OFFSET
 
 V106A_SET = ["WT", "V106A", "V106A+F227L", "V106A+L234I", "V106A+P225H"]
@@ -80,15 +80,17 @@ def _moieties(traj) -> dict[str, list[int]]:
     out: dict[str, list[int]] = {}
     for r in rings:
         nbrs = {n for a in r for n in G[a] if n not in r}
-        if any(n.startswith("Cl") for n in nbrs):
-            # the ring plus its exocyclic Cl and nitrile, which are what pack
-            sub = list(r) + [n for n in nbrs if n.startswith(("Cl", "N", "C")) and
-                             len(list(G[n])) <= 2]
-            out["chlorocyanophenyl"] = sorted({idx[a] for a in sub})
-        elif len(r) == 5:
-            out["triazolinone"] = sorted({idx[a] for a in r})
-        else:
-            out["pyridinone"] = sorted({idx[a] for a in r})
+        # Every ring takes its own exocyclic substituents (Cl and nitrile on the
+        # phenyl; CF3 and carbonyl on the pyridinone; methyl and carbonyl on the
+        # triazolinone). Treating only the phenyl this way -- as an earlier
+        # version did -- understated the pyridinone and triazolinone surfaces and
+        # made the two scripts disagree. The shared ether oxygen (O1) is left to
+        # the linker so it is not double counted.
+        name = ("chlorocyanophenyl" if any(n.startswith("Cl") for n in nbrs)
+                else ("triazolinone" if len(r) == 5 else "pyridinone"))
+        sub = list(r) + [n for n in nbrs
+                         if len(list(G[n])) <= 2 and not n.startswith("O1")]
+        out[name] = sorted({idx[a] for a in sub})
 
     assigned = {i for v in out.values() for i in v}
     out["linker"] = sorted(set(idx.values()) - assigned)

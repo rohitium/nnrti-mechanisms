@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
-"""Figure 1B -- annotated schematic of doravirine and its NNIBP environment.
+"""Figure 1B -- doravirine's moieties and the NNIBP residues that engage them.
 
 Why this exists
 ---------------
-The manuscript refers to DOR's moieties by name throughout (chlorocyanophenyl,
-pyridinone, triazolinone) and to the residues that engage them, but never shows
-the reader which part of the molecule is which. This draws the 2D structure with
-each moiety shaded and labelled, and places the key NNIBP residues beside the
-moiety they actually contact, with the contact counts measured from the
-wild-type trajectories rather than assigned by eye.
+The manuscript names DOR's moieties throughout (chlorocyanophenyl, pyridinone,
+triazolinone) and the residues that contact them, but never shows the reader
+which part of the molecule is which. This draws DOR with each moiety shaded and
+labelled, and places a schematic of each key residue beside the moiety it
+engages, annotated with the contact count measured from the wild-type
+trajectories rather than assigned by eye.
 
-Contact counts are atom pairs within 4.5 A, averaged over three 100 ns WT
-replicates (see compute_dor_moiety_contacts.py for the same convention).
+Residues are positioned next to what they touch, so leader lines are
+unnecessary; the only connector drawn is the Lys103 main-chain hydrogen bond,
+which is the one interaction between specific atoms rather than a packing
+contact.
+
+Contacts are protein-ligand heavy-atom pairs within 4.0 A, averaged over three
+100 ns wild-type replicates. See manuscript/contact-cutoff-sensitivity.md for
+why 4.0 A.
 
 Usage
 -----
@@ -25,57 +31,49 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
-# WT atom-pair contacts (<4.5 A) per moiety, from the equilibrium trajectories.
-# residue -> (moiety, contacts, note)
-# residue -> (moiety, contacts, note, label_xy)
-# Label positions are hand-placed against the deterministic RDKit 2D layout
-# (ring centroids: triazolinone (-5.00, 0.26), pyridinone (-0.38, -1.66),
-# chlorocyanophenyl (3.67, 1.59)) so no leader line crosses the structure.
-RESIDUE_CONTACTS = {
-    "Tyr188": ("chlorocyanophenyl", 27.5, "aromatic stacking", (11.2, 2.4)),
-    "Trp229": ("chlorocyanophenyl", 16.9, "", (10.0, 6.0)),
-    "Phe227": ("chlorocyanophenyl", 9.0, "", (4.6, 7.6)),
-    "Tyr181": ("chlorocyanophenyl", 0.4, "rotated away;\nno contact with DOR", (-1.2, 7.4)),
-    "Tyr318": ("triazolinone", 18.6, "", (-11.6, 4.2)),
-    "Lys103": ("triazolinone", 10.9, "main-chain C=O accepts\nN–H···O=C, 3.0 Å", (-11.8, -3.2)),
-    "Val106": ("pyridinone", 8.9, "hydrophobic packing", (-4.2, -7.8)),
-    "Gly190": ("pyridinone", 0.1, "no direct contact", (4.4, -7.2)),
+#: residue -> (side-chain SMILES, contacts with whole ligand, caption, centre, scale)
+#: Fragments stand in for the side chain (p-cresol for Tyr, toluene for Phe,
+#: 3-methylindole for Trp, isobutane for Val); Lys103 is drawn as a main-chain
+#: amide because it is the backbone, not the side chain, that binds DOR.
+RESIDUES = {
+    "Tyr188": ("Cc1ccc(O)cc1", 20.3, "stacks chlorocyanophenyl", (8.6, 7.4), 0.80),
+    "Trp229": ("Cc1c[nH]c2ccccc12", 8.4, "", (14.0, 0.4), 0.80),
+    "Phe227": ("Cc1ccccc1", 6.5, "", (-1.4, 7.5), 0.80),
+    "Tyr318": ("Cc1ccc(O)cc1", 9.5, "", (-9.6, 5.2), 0.80),
+    "Lys103": ("CC(=O)NC", 6.7, "main-chain C=O", (-10.6, -3.4), 0.85),
+    "Val106": ("CC(C)C", 9.5, "hydrophobic packing", (-1.6, -7.4), 0.85),
+    "Tyr181": ("Cc1ccc(O)cc1", 4.3, "rotated away; no ring contact", (-8.2, -7.6), 0.72),
+    "Gly190": (None, 3.0, "no side chain", (5.6, -7.2), 0.72),
 }
-
-# moiety -> label anchor
-MOIETY_LABEL_XY = {
-    "triazolinone": (-6.6, 2.3),
-    "pyridinone": (-3.0, -4.0),
-    "chlorocyanophenyl": (7.4, 0.0),
-}
+FAINT = {"Tyr181", "Gly190"}
 
 MOIETY_COLOR = {
-    "chlorocyanophenyl": "#4C72B0",
-    "pyridinone": "#C44E52",
-    "triazolinone": "#55A868",
+    "chlorocyanophenyl": "#3B6EA8",
+    "pyridinone": "#B5474B",
+    "triazolinone": "#3F8C5E",
 }
 MOIETY_LABEL = {
     "chlorocyanophenyl": "chlorocyanophenyl",
     "pyridinone": "pyridinone\n(central)",
     "triazolinone": "triazolinone",
 }
+MOIETY_LABEL_XY = {
+    "triazolinone": (-6.4, 2.4),
+    "pyridinone": (-3.2, -4.1),
+    "chlorocyanophenyl": (7.4, 3.1),
+}
+HETERO_COLOR = {"N": "#1f4e9c", "O": "#c0392b", "F": "#7d3c98", "Cl": "#1e8449"}
 
 
 def classify_rings(mol) -> dict[str, list[int]]:
-    """Assign each ring of DOR to a moiety by its substituents."""
     out: dict[str, list[int]] = {}
     for ring in mol.GetRingInfo().AtomRings():
-        nbrs = {
-            n.GetSymbol()
-            for a in ring
-            for n in mol.GetAtomWithIdx(a).GetNeighbors()
-            if n.GetIdx() not in ring
-        }
+        nbrs = {n.GetSymbol() for a in ring
+                for n in mol.GetAtomWithIdx(a).GetNeighbors() if n.GetIdx() not in ring}
         if "Cl" in nbrs:
             out["chlorocyanophenyl"] = list(ring)
         elif len(ring) == 5:
@@ -83,6 +81,49 @@ def classify_rings(mol) -> dict[str, list[int]]:
         else:
             out["pyridinone"] = list(ring)
     return out
+
+
+def draw_mol(ax, mol, pos, *, colour_fn, lw=2.4, hetero_size=9.5, zorder=2,
+             label_hetero=True, dot=170, dbl_offset=0.11):
+    """Draw a 2D molecule as line bonds with heteroatom labels."""
+    for b in mol.GetBonds():
+        i, j = b.GetBeginAtomIdx(), b.GetEndAtomIdx()
+        col = colour_fn(i, j)
+        p, q = pos[i], pos[j]
+        if b.GetBondTypeAsDouble() == 2.0:
+            d = q - p
+            n = np.array([-d[1], d[0]])
+            n = n / (np.linalg.norm(n) + 1e-9) * dbl_offset
+            for s in (+1, -1):
+                ax.plot(*zip(p + n * s, q + n * s), color=col, lw=lw,
+                        zorder=zorder, solid_capstyle="round")
+        else:
+            ax.plot(*zip(p, q), color=col, lw=lw, zorder=zorder,
+                    solid_capstyle="round")
+    if not label_hetero:
+        return
+    for i, a in enumerate(mol.GetAtoms()):
+        s = a.GetSymbol()
+        if s == "C":
+            continue
+        ax.scatter(*pos[i], s=dot, color="white", zorder=zorder + 1, edgecolors="none")
+        ax.text(*pos[i], s, ha="center", va="center", fontsize=hetero_size,
+                fontweight="bold", zorder=zorder + 2,
+                color=HETERO_COLOR.get(s, "#333333"))
+
+
+def fragment_pos(smiles: str, centre, scale: float):
+    frag = Chem.MolFromSmiles(smiles)
+    # Kekulize: aromatic bonds report GetBondTypeAsDouble() == 1.5, which the
+    # renderer would draw as a plain single line, making Tyr/Phe/Trp look
+    # saturated. Kekulizing gives explicit alternating single/double bonds.
+    Chem.Kekulize(frag, clearAromaticFlags=True)
+    AllChem.Compute2DCoords(frag)
+    c = frag.GetConformer()
+    p = np.array([[c.GetAtomPosition(i).x, c.GetAtomPosition(i).y]
+                  for i in range(frag.GetNumAtoms())])
+    p = (p - p.mean(axis=0)) * scale + np.asarray(centre, dtype=float)
+    return frag, p
 
 
 def main() -> int:
@@ -93,10 +134,7 @@ def main() -> int:
                     default=repo / "results/plots/figure1B_dor_schematic.pdf")
     args = ap.parse_args()
 
-    mol = Chem.MolFromMolFile(str(args.sdf))
-    if mol is None:
-        raise SystemExit(f"could not read {args.sdf}")
-    mol = Chem.RemoveHs(mol)
+    mol = Chem.RemoveHs(Chem.MolFromMolFile(str(args.sdf)))
     AllChem.Compute2DCoords(mol)
     conf = mol.GetConformer()
     pos = np.array([[conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y]
@@ -104,99 +142,80 @@ def main() -> int:
 
     rings = classify_rings(mol)
     atom_moiety = {a: m for m, atoms in rings.items() for a in atoms}
-
-    fig, ax = plt.subplots(figsize=(12.5, 8.2))
-
-    # bonds
-    for b in mol.GetBonds():
-        i, j = b.GetBeginAtomIdx(), b.GetEndAtomIdx()
-        mi, mj = atom_moiety.get(i), atom_moiety.get(j)
-        col = MOIETY_COLOR[mi] if (mi and mi == mj) else "#444444"
-        lw = 2.6 if (mi and mi == mj) else 1.9
-        p, q = pos[i], pos[j]
-        if b.GetBondTypeAsDouble() == 2.0:
-            d = q - p
-            n = np.array([-d[1], d[0]])
-            n = n / (np.linalg.norm(n) + 1e-9) * 0.055
-            for s in (+1, -1):
-                ax.plot(*zip(p + n * s, q + n * s), color=col, lw=lw, zorder=2,
-                        solid_capstyle="round")
-        else:
-            ax.plot(*zip(p, q), color=col, lw=lw, zorder=2, solid_capstyle="round")
-
-    # heteroatom labels
-    for i, a in enumerate(mol.GetAtoms()):
-        s = a.GetSymbol()
-        if s == "C":
-            continue
-        ax.scatter(*pos[i], s=210, color="white", zorder=3, edgecolors="none")
-        ax.text(*pos[i], s, ha="center", va="center", fontsize=10.5,
-                fontweight="bold", zorder=4,
-                color={"N": "#1f4e9c", "O": "#c0392b", "F": "#7d3c98",
-                       "Cl": "#1e8449"}.get(s, "#333333"))
-
-    # moiety shading + label
-    centre = pos.mean(axis=0)
     ring_centroid = {m: pos[a].mean(axis=0) for m, a in rings.items()}
+
+    fig, ax = plt.subplots(figsize=(12.0, 8.4))
+
+    # --- doravirine
     for m, c in ring_centroid.items():
-        ax.scatter(*c, s=6400, color=MOIETY_COLOR[m], alpha=0.11, zorder=0)
+        ax.scatter(*c, s=6400, color=MOIETY_COLOR[m], alpha=0.12, zorder=0)
+
+    def dor_colour(i, j):
+        mi, mj = atom_moiety.get(i), atom_moiety.get(j)
+        return MOIETY_COLOR[mi] if (mi and mi == mj) else "#3d3d3d"
+
+    draw_mol(ax, mol, pos, colour_fn=dor_colour, lw=2.7, hetero_size=10.5,
+             zorder=2, dot=210, dbl_offset=0.13)
+
+    for m in rings:
         lx, ly = MOIETY_LABEL_XY[m]
-        ax.text(lx, ly, MOIETY_LABEL[m], ha="center", va="center",
-                fontsize=12, fontweight="bold", color=MOIETY_COLOR[m], zorder=5)
+        ax.text(lx, ly, MOIETY_LABEL[m], ha="center", va="center", fontsize=12.5,
+                fontweight="bold", color=MOIETY_COLOR[m], zorder=5)
 
-    # residue callouts at hand-placed anchors
-    for res, (moi, n, note, xy) in RESIDUE_CONTACTS.items():
-        c = ring_centroid[moi]
-        tx, ty = xy
-        faint = n < 1.0
-        col = "#9aa0a6" if faint else MOIETY_COLOR[moi]
-        is_hbond = res == "Lys103"
-        ax.annotate("", xy=c, xytext=(tx, ty),
-                    arrowprops=dict(arrowstyle="-",
-                                    color="#c0392b" if is_hbond else col,
-                                    lw=1.7 if is_hbond else 1.3,
-                                    linestyle=(0, (3, 2)) if is_hbond
-                                    else (":" if faint else "-"),
-                                    alpha=0.85, shrinkA=10, shrinkB=34),
-                    zorder=1)
-        head = res if faint else f"{res}  ·  {n:.1f} contacts"
+    # --- residues
+    for res, (smi, n, note, centre, scale) in RESIDUES.items():
+        faint = res in FAINT
+        col = "#9aa0a6" if faint else "#2f2f2f"
+        cx, cy = centre
+        if smi is not None:
+            frag, fp = fragment_pos(smi, centre, scale)
+            draw_mol(ax, frag, fp, colour_fn=lambda i, j, c=col: c, lw=1.9,
+                     hetero_size=8.6, zorder=3, dot=150,
+                     dbl_offset=0.115 * scale)
+            ylo = fp[:, 1].min()
+        else:  # glycine: no side chain to draw
+            ax.text(cx, cy, "H", ha="center", va="center", fontsize=13,
+                    fontweight="bold", color=col, zorder=4)
+            ylo = cy - 0.35
+        head = f"{res}   {n:.1f} contacts" if not faint else f"{res}   {n:.1f}"
+        ax.text(cx, ylo - 0.72, head, ha="center", va="top", fontsize=11,
+                fontweight="bold", color=col, zorder=6)
         if note:
-            head += f"\n{note}"
-        ax.text(tx, ty, head, ha="center", va="center", fontsize=9.4,
-                linespacing=1.4,
-                color="#6b7075" if faint else "#1a1a1a", zorder=6,
-                bbox=dict(boxstyle="round,pad=0.5",
-                          facecolor="#f5f5f5" if faint else "white",
-                          edgecolor="#c0392b" if is_hbond else col,
-                          linewidth=1.6 if is_hbond else 1.2, alpha=0.98))
+            ax.text(cx, ylo - 1.42, note, ha="center", va="top", fontsize=8.8,
+                    style="italic", color="#6b6b6b" if not faint else "#a5a5a5",
+                    zorder=6)
 
-    # mark the donor nitrogen itself so the dashed Lys103 leader has an origin
+    # --- the one connector: triazolinone N-H ... Lys103 main-chain C=O
     tri = rings["triazolinone"]
     nh = [k for k in tri if mol.GetAtomWithIdx(k).GetSymbol() == "N"
           and mol.GetAtomWithIdx(k).GetTotalNumHs() > 0]
     if nh:
-        ax.scatter(*pos[nh[0]], s=250, facecolor="none", edgecolor="#c0392b",
-                   lw=1.8, zorder=5)
+        p = pos[nh[0]]
+        lys_c = np.array(RESIDUES["Lys103"][3], dtype=float)
+        v = lys_c - p
+        v = v / np.linalg.norm(v)
+        start, end = p + v * 0.45, lys_c - v * 1.55
+        ax.annotate("", xy=end, xytext=start,
+                    arrowprops=dict(arrowstyle="-", color="#c0392b", lw=2.0,
+                                    linestyle=(0, (3, 2.4))), zorder=4)
+        ax.scatter(*p, s=250, facecolor="none", edgecolor="#c0392b", lw=1.8,
+                   zorder=6)
+        mid = (start + end) / 2
+        ax.text(mid[0], mid[1] + 0.55, "N–H···O=C\n3.0 Å", ha="center",
+                va="bottom", fontsize=9.2, color="#c0392b", fontweight="bold",
+                zorder=7,
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
+                          edgecolor="none", alpha=0.9))
 
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.set_xlim(-15.0, 16.0)
-    ax.set_ylim(-10.5, 9.5)
-    ax.set_title(
-        "Doravirine moieties and their NNIBP contacts",
-        fontsize=13, fontweight="bold", pad=12,
-    )
-    ax.text(0.5, -0.055,
-            "Contacts are protein–ligand heavy-atom pairs within 4.5 Å, "
-            "averaged over three 100 ns wild-type replicates.",
-            transform=ax.transAxes, ha="center", va="top",
-            fontsize=8.4, color="#666666")
+    ax.set_xlim(-15.5, 19.0)
+    ax.set_ylim(-11.0, 10.0)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(args.output, bbox_inches="tight")
     fig.savefig(args.output.with_suffix(".png"), dpi=300, bbox_inches="tight")
     print(f"Wrote {args.output}")
-    print(f"Wrote {args.output.with_suffix('.png')}")
     return 0
 
 
