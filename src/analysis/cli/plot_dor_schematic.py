@@ -307,6 +307,8 @@ def main() -> int:
     ap.add_argument("--structure", type=Path,
                     default=repo / "results/md_runs/wt/rep_01/wt_minimized_rep01.pdb")
     ap.add_argument("--sdf", type=Path, default=repo / "data/ligands/dor.sdf")
+    ap.add_argument("--dor-scale", type=float, default=1.5,
+                    help="bond length of DOR relative to the residues and labels")
     ap.add_argument("--output", type=Path,
                     default=repo / "results/plots/figure1B_dor_schematic.pdf")
     args = ap.parse_args()
@@ -318,6 +320,12 @@ def main() -> int:
     conf = mol.GetConformer()
     D2 = np.array([[conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y]
                    for i in range(mol.GetNumAtoms())])
+    # Atom labels are drawn in points and so keep a fixed size on the page,
+    # while the structure is drawn in data units. Scaling DOR up therefore
+    # lengthens its bonds RELATIVE to the labels and interaction lines, which is
+    # what relieves the crowding -- a uniform scaling of everything would be a
+    # no-op once the axes autoscale.
+    D2 = D2 * args.dor_scale
     d2_names = [a.GetSymbol() for a in mol.GetAtoms()]
     rings2 = {}
     for ring in mol.GetRingInfo().AtomRings():
@@ -372,7 +380,7 @@ def main() -> int:
         if b.GetBondTypeAsDouble() == 2.0 and not in_benzene:
             d = q - p
             n = np.array([-d[1], d[0]])
-            n = n / (np.linalg.norm(n) + 1e-9) * 0.13
+            n = n / (np.linalg.norm(n) + 1e-9) * 0.13 * args.dor_scale
             for sgn in (+1, -1):
                 ax.plot(*zip(p + n * sgn, q + n * sgn), color=col, lw=2.8,
                         zorder=3, solid_capstyle="round")
@@ -450,7 +458,9 @@ def main() -> int:
     g1, g2 = val["gammas"]
     P = val["xy"].copy()
     gmid = (P[g1] + P[g2]) / 2
-    want = np.array([0.10, -1.0]); want /= np.linalg.norm(want)
+    # exit on the side opposite the trifluoromethyl: heading straight down took
+    # the dashed contact line through the CF3 fluorines
+    want = np.array([-0.62, -1.0]); want /= np.linalg.norm(want)
     v = gmid - P.mean(axis=0)
     P = (P - P.mean(axis=0)) @ rot(np.arctan2(-want[1], -want[0])
                                    - np.arctan2(v[1], v[0])).T
