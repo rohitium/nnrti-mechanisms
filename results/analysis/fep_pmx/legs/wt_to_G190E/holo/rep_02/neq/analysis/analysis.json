@@ -11,10 +11,10 @@
   "integ_fwd": "results/analysis/fep_pmx/legs/wt_to_G190E/holo/rep_02/neq/analysis/integ_fwd.dat",
   "integ_rev": "results/analysis/fep_pmx/legs/wt_to_G190E/holo/rep_02/neq/analysis/integ_rev.dat",
   "work_plot": "results/analysis/fep_pmx/legs/wt_to_G190E/holo/rep_02/neq/analysis/work_dist.png",
-  "bar_dg": -46.34,
-  "bar_err_analytical": 0.66,
-  "bar_err_boot": 0.87,
-  "bar_conv": -0.19,
-  "cgi_dg": -47.94,
-  "jarz_dg_mean": -45.14
+  "bar_dg": -52.36,
+  "bar_err_analytical": 55.89,
+  "bar_err_boot": 0.23,
+  "bar_conv": 1.0,
+  "cgi_dg": -53.86,
+  "jarz_dg_mean": -52.36
 }
