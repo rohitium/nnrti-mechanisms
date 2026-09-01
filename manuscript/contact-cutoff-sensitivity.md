@@ -138,3 +138,109 @@ being cutoff-dependent, which is a further reason to drop it.
 of the pyridinone's actual contact surface — but that changes the absolute
 numbers in the suggested V106A replacement text from "24.0 ± 2.1 → 17.8 ± 1.3"
 to "38.5 → 29.8". The percentages barely move either way.
+
+---
+
+# 5. Does the CURRENT manuscript survive a switch to 4.0 Å?
+
+Recomputed using the manuscript's own definition — `chl_ring_burial` counts atom
+**pairs** between the six chlorophenyl **ring** atoms (no exocyclic Cl or C≡N)
+and all protein heavy atoms. This is *not* the same atom set as the moiety sweep
+in §2, so the numbers below supersede that section for these specific claims.
+
+Data: `results/analysis/mechanisms/burial_cutoff_4_vs_45.csv`.
+
+## The verdict, claim by claim
+
+| claim in the Discussion | cutoff-sensitive? | survives 4.0 Å? |
+|---|---|---|
+| Y188L packing loss (Supp. Fig. 3A) | yes | **yes — strengthens** |
+| Y181C packing "nearly identical to WT" | yes | **yes — strengthens** |
+| whole-ligand 224 → 212 | yes | **yes, directionally; absolute values halve** |
+| K103N H-bond 2.97 → 3.08 Å, 3.05–3.20 Å range | **no** | unaffected — it is a distance |
+| K103N side chain 8.38 → 5.07 Å | **no** | unaffected — a distance |
+| ∆∆E<sub>vdW</sub> = 2.25 ± 0.20, ∆∆G<sub>bind</sub> = 4.52 ± 0.49 | **no** | unaffected — energies |
+| DOR → Ser105 6.61 → 5.32 Å (V106A set) | **no** | unaffected — a distance |
+| NNIBP pocket volumes | **no** | unaffected — grid-based |
+| Tyr188 stacking distance / interplanar angle | **no** | unaffected — geometry |
+
+**Most of the Discussion is not cutoff-dependent at all.** Only the three contact
+counts are, and all three hold.
+
+## Supplementary Figure 3A — Y188L
+
+| | WT | Y188L | ratio | loss |
+|---|---:|---:|---:|---:|
+| **4.5 Å** | 46.1 ± 2.5 | 36.1 ± 0.7 | 0.78× | **22%** |
+| **4.0 Å** | 19.9 ± 0.7 | 14.4 ± 1.6 | 0.72× | **28%** |
+
+The effect is **larger** at 4.0 Å. "A loss of roughly a quarter" is accurate at
+both (22% and 28% bracket it). The figure itself would only need its y-axis
+rescaled; the shape and the separation between traces are unchanged.
+
+## Y181C
+
+| | WT | Y181C | ratio |
+|---|---:|---:|---:|
+| **4.5 Å** | 46.1 ± 2.5 | 46.2 ± 2.8 | 1.00× |
+| **4.0 Å** | 19.9 ± 0.7 | 22.3 ± 4.4 | 1.12× |
+
+At 4.5 Å the two are indistinguishable, which supports "nearly identical". At
+4.0 Å Y181C is 12% *higher*, though with a large uncertainty (± 4.4). Either way
+the claim that packing is **not reduced** is safe; the specific word "identical"
+is better supported at 4.5 Å.
+
+## Whole-ligand contacts (Results, mechanisms paragraph)
+
+| | WT | V106A | change |
+|---|---:|---:|---:|
+| **4.5 Å** | 227.1 | 214.0 | −5.8% |
+| **4.0 Å** | 102.9 | 95.8 | −6.9% |
+
+Directionally identical, but a switch would change the quoted numbers from
+"224 ± 1 … 212 ± 1" to roughly "103 … 96". Note this figure needs correcting for
+the terminal-window issue regardless (see §THIRD CORRECTION in
+`discussion-expansion-2026-08-31.md`).
+
+## Full panel, ratio to WT
+
+| system | 4.5 Å | 4.0 Å |
+|---|---:|---:|
+| K103N | 0.98× | 1.04× |
+| Y181C | 1.00× | 1.12× |
+| G190A | 1.00× | 1.07× |
+| G190S | 0.93× | 0.91× |
+| G190E | 1.00× | 1.15× |
+| **Y188L** | **0.78×** | **0.72×** |
+| V106A | 0.92× | 0.88× |
+| V106I | 0.96× | 0.99× |
+| K103N+M230L | 1.07× | 1.19× |
+| L100I+K103N | 0.97× | 0.94× |
+| K103N+P225H | 0.96× | 0.90× |
+| V106M | 0.96× | 0.96× |
+
+Y188L is the outlier at both cutoffs by a wide margin, and no other genotype
+changes rank order in a way that would alter a sentence.
+
+## The one argument against switching: precision
+
+Halving the count roughly doubles the relative uncertainty. Mean SEM as a
+fraction of the value across the panel is **≈ 4% at 4.5 Å against ≈ 7% at 4.0 Å**,
+and individual systems degrade badly — Y181C goes from ± 2.8 on 46.2 (6%) to
+± 4.4 on 22.3 (20%). Since the paper reports these as mean ± SEM and leans on
+the separation between genotypes, the wider bars at 4.0 Å are a real cost for no
+change in conclusion.
+
+## Recommendation, unchanged
+
+**Stay at 4.5 Å.** Every conclusion is identical at 4.0 Å, the error bars are
+tighter, and nothing already merged needs re-deriving. Add the 4.0 Å column to
+the SI as the sensitivity check — it is now a strength of the paper rather than
+an open question, since it shows the Y188L result is *stronger* under the
+stricter definition.
+
+**Caveat on the numbers above:** computed at stride 10 for speed, so they differ
+slightly from the canonical stride-1 values (WT 45.9 ± 1.3, Y188L 34.6 ± 0.9).
+The *ratios* are what the comparison rests on and they agree (0.78 here against
+34.6/45.9 = 0.75). If 4.0 Å is adopted, everything must be regenerated at
+stride 1.
