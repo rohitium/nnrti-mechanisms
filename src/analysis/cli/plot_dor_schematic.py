@@ -70,7 +70,7 @@ MOIETY_COLOR = {"chlorocyanophenyl": "#3B6EA8",
 #: respectively, so labels go on the free side of each ring. Placing these by a
 #: rule kept dropping them onto the lines.
 MOIETY_LABEL_XY = {"chlorocyanophenyl": (5.85, -2.45),
-                   "pyridinone": (-4.95, -4.35),
+                   "pyridinone": (-3.20, -3.05),
                    "triazolinone": (-5.60, -1.95)}
 HETERO_COLOR = {"N": "#1f4e9c", "O": "#c0392b", "F": "#7d3c98",
                 "CL": "#1e8449", "S": "#b7950b"}
@@ -245,7 +245,7 @@ def main() -> int:
     F = (F - tyr_c) @ rot(np.arctan2(v_c[1], v_c[0]) - np.arctan2(v_t[1], v_t[0])).T
     STACK_DIR = np.array([0.60, 0.80])
     STACK_DIR = STACK_DIR / np.linalg.norm(STACK_DIR)
-    STACK_OFF = 4.75
+    STACK_OFF = 5.45
     F = F + chl_c + STACK_DIR * STACK_OFF
     tyr_ring2 = F[ring_local]
     tyr_c2 = tyr_ring2.mean(axis=0)
@@ -256,25 +256,12 @@ def main() -> int:
     order_h = np.argsort(np.arctan2(*(hull - hull.mean(axis=0)).T[::-1]))
     ax.fill(*hull[order_h].T, color=MOIETY_COLOR["chlorocyanophenyl"], alpha=0.10,
             zorder=1, linewidth=0)
-    for k in range(0, len(chl_idx)):
-        q0 = chl_poly[k]
-        q1 = tyr_ring2[k % len(tyr_ring2)]
-        ax.plot(*zip(q0 + (q1 - q0) * 0.30, q0 + (q1 - q0) * 0.70),
-                color=MOIETY_COLOR["chlorocyanophenyl"], lw=1.5, alpha=0.55,
-                zorder=2, solid_capstyle="round")
     draw_group(ax, F, aels, RESIDUE_COLOR, 2.1, hetero=8.6, dot=150, zorder=3)
     ax.fill(*tyr_ring2.T, color=RESIDUE_COLOR, alpha=0.06, zorder=2, linewidth=0)
     ax.add_patch(plt.Circle(tyr_c2, 0.52 * np.linalg.norm(tyr_ring2[0] - tyr_c2) * 1.35,
                             fill=False, ec=RESIDUE_COLOR, lw=1.6, alpha=0.8, zorder=4))
-    mid = (chl_c + tyr_c2) / 2
     perp = np.array([-STACK_DIR[1], STACK_DIR[0]])
-    lp = mid + perp * 3.35
-    ax.text(lp[0], lp[1], "\u03c0-stacking\n3.8 \u00c5, 6\u00b0", ha="center",
-            va="center", fontsize=11, fontweight="bold",
-            color=MOIETY_COLOR["chlorocyanophenyl"], zorder=8,
-            bbox=dict(boxstyle="round,pad=0.32", facecolor="white",
-                      edgecolor="none", alpha=0.93))
-    lab = tyr_c2 + STACK_DIR * 4.6 + perp * 1.2
+    lab = tyr_c2 + STACK_DIR * 2.35 + perp * 4.35
     ax.text(lab[0], lab[1], "Tyr188", ha="center", va="center", fontsize=13,
             fontweight="bold", color=RESIDUE_COLOR, zorder=7)
     print(f"{'Tyr188':9s}{'ring / ring':22s}{'3.78 A, 6.4 deg':>22s}")
@@ -305,13 +292,6 @@ def main() -> int:
         ax.scatter(*F[g], s=190, facecolor="none",
                    edgecolor=MOIETY_COLOR["pyridinone"], lw=1.7, zorder=6)
     ax.text(F[gammas[0]][0], F[gammas[0]][1], "", zorder=6)
-    perp = np.array([-u[1], u[0]])
-    lp = pyr_c + u * 5.0 + perp * 2.85
-    ax.text(lp[0], lp[1], "hydrophobic\n3.8 \u00c5 (C\u03b3)", ha="center",
-            va="center", fontsize=11, fontweight="bold",
-            color=MOIETY_COLOR["pyridinone"], zorder=8,
-            bbox=dict(boxstyle="round,pad=0.32", facecolor="white",
-                      edgecolor="none", alpha=0.93))
     lab = F.mean(axis=0) + want * 3.9
     ax.text(lab[0], lab[1], "Val106", ha="center", va="center", fontsize=13,
             fontweight="bold", color=RESIDUE_COLOR, zorder=7)
@@ -347,23 +327,6 @@ def main() -> int:
     for pt in (p_don, p_acc):
         ax.scatter(*pt, s=250, facecolor="none", edgecolor="#c0392b", lw=1.8,
                    zorder=6)
-    perp = np.array([-u[1], u[0]])
-    lp = (p_don + p_acc) / 2 + perp * 2.95
-    ax.text(lp[0], lp[1], "hydrogen bond\n2.9 \u00c5", ha="center", va="center",
-            fontsize=11, fontweight="bold", color="#c0392b", zorder=8,
-            bbox=dict(boxstyle="round,pad=0.32", facecolor="white",
-                      edgecolor="none", alpha=0.93))
-    seg = p_acc - p_don
-    ax.text(*(p_acc - seg * 0.16 - perp * 1.5), "acceptor  C=O\n(main chain)",
-            ha="center", va="center", fontsize=9.0, style="italic",
-            color="#c0392b", zorder=8,
-            bbox=dict(boxstyle="round,pad=0.22", facecolor="white",
-                      edgecolor="none", alpha=0.9))
-    ax.text(*(p_don + seg * 0.16 - perp * 1.5), "donor  N–H",
-            ha="center", va="center", fontsize=9.0, style="italic",
-            color="#c0392b", zorder=8,
-            bbox=dict(boxstyle="round,pad=0.22", facecolor="white",
-                      edgecolor="none", alpha=0.9))
     lab = F.mean(axis=0) + want * 4.1
     ax.text(lab[0], lab[1], "Lys103", ha="center", va="center", fontsize=13,
             fontweight="bold", color=RESIDUE_COLOR, zorder=7)
