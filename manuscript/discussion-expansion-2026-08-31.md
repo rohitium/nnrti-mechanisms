@@ -68,7 +68,7 @@ all stale; the current values are 0.22/0.048, 0.06/0.31 and 0.13/0.23.*
 >
 > For **K103N**, the interaction that anchors DOR is made to the residue-103
 > *backbone*, not its side chain: the carbonyl oxygen accepts a hydrogen bond
-> from the pyridinone nitrogen at 2.97 ± 0.01 Å in WT, and this distance is
+> from the triazolinone N–H at 2.97 ± 0.01 Å in WT, and this distance is
 > unchanged at 3.08 ± 0.06 Å in K103N. Substituting lysine by asparagine
 > shortens the side chain and in fact brings its polar atoms closer to the
 > ligand (8.38 ± 0.15 Å to 5.07 ± 0.04 Å), yet DOR neither moves nor loses
@@ -360,10 +360,12 @@ proportionally 3–5× less, and the distal triazolinone ring *gains* contacts,
 consistent with DOR pivoting about its distal end rather than withdrawing
 bodily.
 
-The pyridinone is also the mechanistically meaningful ring: it carries the
-Lys103 backbone hydrogen bond that anchors DOR (§¶2). So the V106A slide is
-best described not as a general loosening of the interface but as the
-displacement of the anchored end of the ligand.
+The pyridinone is also the ring Val106 itself contacts (8.9 atom-pair contacts
+in WT, against 0.4 for the chlorocyanophenyl ring), so the mutation removes
+packing from precisely the moiety it packs against. See
+`dor-moiety-terminology.md`: an earlier version of this section wrongly
+attributed the Lys103 hydrogen bond to the pyridinone; that bond is donated by
+the triazolinone N–H, and the V106A result does not depend on it.
 
 ### The partner side
 
@@ -391,7 +393,7 @@ are themselves sites of DOR resistance mutations in this panel.
 
 > This dislocation does not loosen the interface uniformly. Resolving the 4.5 Å
 > contact count by ligand moiety localises the loss to the central pyridinone
-> ring — the ring that carries the Lys103 backbone hydrogen bond — whose contacts
+> ring — the ring that Val106 packs against directly — whose contacts
 > fall from 24.0 ± 2.1 in WT to 17.8 ± 1.3 in V106A, 18.2 ± 1.3 in V106A+F227L,
 > 17.4 ± 1.7 in V106A+L234I and 19.0 ± 0.2 in V106A+P225H, a loss of 21–28% in
 > every case. The chlorocyanophenyl ring loses proportionally three- to five-fold
