@@ -69,9 +69,12 @@ MOIETY_COLOR = {"chlorocyanophenyl": "#3B6EA8",
 #: (-5.00, 0.26); the interaction lines leave up-right, down and up-left
 #: respectively, so labels go on the free side of each ring. Placing these by a
 #: rule kept dropping them onto the lines.
-MOIETY_LABEL_XY = {"chlorocyanophenyl": (5.85, -2.45),
-                   "pyridinone": (-3.20, -3.05),
-                   "triazolinone": (-5.60, -1.95)}
+#: (x, y, horizontal alignment). The chlorocyanophenyl label is wide, so it is
+#: left-anchored at the ring's lower-right edge and grows outward; centring it
+#: near the ring drops it onto the ether oxygen.
+MOIETY_LABEL_XY = {"chlorocyanophenyl": (4.55, -1.05, "left"),
+                   "pyridinone": (-3.20, -3.05, "center"),
+                   "triazolinone": (-5.60, -1.95, "center")}
 HETERO_COLOR = {"N": "#1f4e9c", "O": "#c0392b", "F": "#7d3c98",
                 "CL": "#1e8449", "S": "#b7950b"}
 RESIDUE_COLOR = "#4a4a4a"
@@ -209,8 +212,8 @@ def main() -> int:
                 fontweight="bold", zorder=5,
                 color=HETERO_COLOR.get(el.upper(), "#333"))
     for m in set(rings2.values()):
-        lp = MOIETY_LABEL_XY[m]
-        ax.text(lp[0], lp[1], m, ha="center", va="center", fontsize=12.5,
+        lx, ly, ha = MOIETY_LABEL_XY[m]
+        ax.text(lx, ly, m, ha=ha, va="center", fontsize=12.5,
                 fontweight="bold", color=MOIETY_COLOR[m], zorder=6)
 
     # ---------- residues, each handled for what its interaction needs
