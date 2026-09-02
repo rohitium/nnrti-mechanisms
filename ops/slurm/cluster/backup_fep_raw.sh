@@ -9,7 +9,7 @@
 #   five legs -- 380 GB that cannot be regenerated without re-running the whole
 #   campaign. $GROUP_HOME is durable, 1 TB, and currently empty.
 #
-#   docs/repository-layout.md already mandates this: "Raw heavy data is not in git and not
+#   docs/methods/md-run-data.md already mandates this: "Raw heavy data is not in git and not
 #   only on scratch ... durable storage ($GROUP_HOME) with sha256 manifests."
 #
 # WHAT IT DOES

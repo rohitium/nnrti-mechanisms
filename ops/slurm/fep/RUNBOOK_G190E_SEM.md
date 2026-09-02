@@ -4,14 +4,14 @@
 G190E can carry a main-text point estimate in Table 2 / Supplementary Figure 2
 instead of being flagged as unresolved.
 
-Run on Sherlock at `/scratch/users/rsatija/nnrti-mechanisms-git`. Agents cannot
+Run on Sherlock at `$PROJECT_ROOT`. Agents cannot
 reach Sherlock — paste output back. Read [`OPERATIONS.md`](OPERATIONS.md) before
 acting; this runbook only covers what is specific to G190E.
 
 Prerequisite every session:
 
 ```bash
-cd /scratch/users/rsatija/nnrti-mechanisms-git && git pull
+cd $PROJECT_ROOT && git pull
 source ops/slurm/cluster/activate_pmx_env.sh
 ```
 

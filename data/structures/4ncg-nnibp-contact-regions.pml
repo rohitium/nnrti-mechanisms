@@ -1,9 +1,10 @@
+# Run from the repository root:  pymol -cq data/structures/4ncg-nnibp-contact-regions.pml
 reinitialize
 
 # Crystal NNIBP view keyed to the WT all-contacted-residue plot.
 # Doravirine is resn 2KW in 4NCG. Contacted residues are grouped by the
 # same seven plot regions used in plot_triplet_contact_story.py.
-load /Users/rohitpro/Career/00_Github/nnrti-mechanisms/data/structures/4NCG.cif, dor_rt
+load data/structures/4NCG.cif, dor_rt
 
 hide everything
 remove solvent
@@ -127,4 +128,4 @@ move y, 1
 clip slab, 42
 
 ray 3600, 2200
-png /Users/rohitpro/Career/00_Github/nnrti-mechanisms/data/structures/4ncg-nnibp-contact-regions.png, dpi=600
+png data/structures/4ncg-nnibp-contact-regions.png, dpi=600

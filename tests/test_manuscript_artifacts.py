@@ -1,17 +1,15 @@
-"""Regression tests for the manuscript artifacts.
+"""Consistency checks on the manuscript artifacts.
 
-These exist because of the failure modes this project actually hit, not because
-of a coverage target. Every test here corresponds to a real defect found in the
-2026-09-01 audit:
+The manuscript's numbers are spread across several files that are generated
+separately and pasted into the paper by hand. These tests assert the invariants
+that tie them together:
 
-- Table 2's surface-area column was regenerated under one protocol while the
-  other four columns came from another, so the row components stopped summing
-  to the total. Nothing caught it for three weeks.
-- Supplementary Table 3's FEP sheet went stale against Table 2 for G190E, and
-  disagreed in *sign*.
-- Table 3 and Supplementary Table 4 report the same numbers and could drift.
-- Figure 2D's phenotype categories used to live inside an exploratory plotting
-  script, where archiving that script would have silently broken the figure.
+- Table 2's energy components sum to its total.
+- Table 2 and Supplementary Table 3 agree with the free energy panel they
+  summarise.
+- Table 3 and Supplementary Table 4 report the same values.
+- Figure 2D takes its phenotype categories from the analysis library rather than
+  from a plotting script.
 
 Run with:  PYTHONPATH=src pytest tests -q
 """
@@ -55,12 +53,12 @@ def test_panel_categories_are_disjoint_and_complete():
 
 
 def test_figure_2d_does_not_import_an_archived_script():
-    """Figure 2D must get its categories from the library, not a plotting CLI."""
+    """The phenotype categories belong to the analysis library."""
     src = (REPO / "src/nnrti/cli/plot_panel_by_resistance_category.py").read_text()
     assert "from ..analysis.panel import" in src
     imports = [l for l in src.splitlines() if l.startswith(("import ", "from "))]
     assert not [l for l in imports if "occupancy_tick_lines" in l or "triplet_contact_story" in l], (
-        "Figure 2D imports an exploratory plotting CLI; archiving it would break the figure"
+        "Figure 2D must not depend on a plotting script for its category definitions"
     )
 
 
@@ -76,8 +74,8 @@ def test_table2_components_sum_to_total():
     for r in rows:
         parts = _val(r[vdw]) + _val(r[elec]) + _val(r[gb]) + _val(r[sa])
         assert parts == pytest.approx(_val(r[total]), abs=0.021), (
-            f"{r[cols[1]]}: components sum to {parts:.3f}, total says {_val(r[total]):.3f}. "
-            "This is what a half-regenerated table looks like."
+            f"{r[cols[1]]}: vdW + elec + GB + SA = {parts:.3f}, "
+            f"but the total column says {_val(r[total]):.3f}"
         )
 
 
@@ -102,7 +100,7 @@ def test_supp_table3_fep_sheet_matches_panel():
 
 
 def test_table2_ddg_matches_the_fep_panel():
-    """Table 2's last column is the FEP panel; a stale value here is a sign error away."""
+    """Table 2's last column must match the free energy panel."""
     panel = pd.read_csv(PANEL_DDG).set_index("genotype")
     rows = list(csv.DictReader(TABLE2.open(encoding="utf-8-sig")))
     ddg_col = list(rows[0])[-1]
@@ -126,8 +124,8 @@ def test_table3_matches_supp_table4_summary():
     s4 = s4[s4["Genotype"].isin(t3["Genotype"])].set_index("Genotype")
     t3 = t3.set_index("Genotype")
     assert len(t3) == 19
-    # Table 3 renames the columns for print; compare positionally over the nine
-    # metric columns, which are last in both tables and in the same order.
+    # Table 3 renames the columns for print, so compare positionally over the
+    # nine metric columns, which are last in both tables and in the same order.
     t3_metrics = list(t3.columns)[1:]
     s4_metrics = [c for c in s4.columns if c not in ("Category", "Replicates")]
     assert len(t3_metrics) == len(s4_metrics) == 9
@@ -145,7 +143,7 @@ def test_supp_table4_has_three_replicates_per_genotype():
 
 
 def test_y188l_has_no_interplanar_angle():
-    """Y188L has no Tyr188 ring, so the angle must be blank rather than zero."""
+    """Y188L has no Tyr188 ring: the interplanar angle is undefined, not zero."""
     s4 = pd.read_excel(SUPP4, sheet_name="Summary").set_index("Genotype")
     angle = [c for c in s4.columns if "interplanar" in c][0]
     assert pd.isna(s4.loc["Y188L", angle]) or s4.loc["Y188L", angle] in ("", "—")

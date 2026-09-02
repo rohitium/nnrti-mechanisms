@@ -6,7 +6,7 @@ python
 from pymol import cmd
 
 if cmd.count_atoms("dor_rt") == 0:
-    cmd.load("/Users/rohitpro/Career/00_Github/nnrti-mechanisms/data/structures/4NCG.cif", "dor_rt")
+    cmd.load("data/structures/4NCG.cif", "dor_rt")
 python end
 
 hide everything, dor_rt
@@ -115,4 +115,4 @@ label_region("distal", "region_distal_wall", "Distal\npocket wall", 4.8, (0.6, -
 python end
 
 ray 3600, 2200
-png /Users/rohitpro/Career/00_Github/nnrti-mechanisms/data/structures/dor_rt-nnibp-contact-regions-current-view.png, dpi=600
+png data/structures/dor_rt-nnibp-contact-regions-current-view.png, dpi=600

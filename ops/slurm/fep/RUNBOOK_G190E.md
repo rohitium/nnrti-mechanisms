@@ -2,7 +2,7 @@
 
 Completes the 18-genotype panel. **G190E, not G190S.**
 
-Run on a Sherlock login node at `/scratch/users/rsatija/nnrti-mechanisms-git`.
+Run on a Sherlock login node at `$PROJECT_ROOT`.
 Agents cannot reach Sherlock — paste output back.
 
 > **2026-08-15: switched from 100 ps to 500 ps.** The original run was pinned to
@@ -52,7 +52,7 @@ two arms differ in equilibration as well.
 ## Step 0 — sync
 
 ```bash
-cd /scratch/users/rsatija/nnrti-mechanisms-git
+cd $PROJECT_ROOT
 git pull
 ```
 
@@ -86,7 +86,7 @@ Want 12 files. If any are missing, push from the Mac:
 
 ```bash
 rsync -avz --prune-empty-dirs --include='*/' --include='*_start.pdb' --exclude='*' \
-  results/md_runs/ rsatija@login.sherlock.stanford.edu:/scratch/users/rsatija/nnrti-mechanisms-git/results/md_runs/
+  results/md_runs/ <user>@<cluster>:$PROJECT_ROOT/results/md_runs/
 ```
 
 ## Step 3 — hybrids

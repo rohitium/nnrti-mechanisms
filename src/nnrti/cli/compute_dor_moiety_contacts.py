@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
 """Protein heavy-atom contacts resolved by DOR moiety.
 
-Why this exists
----------------
-The manuscript reports a single number for the V106A dislocation -- "the total
-number of protein heavy atoms within 4.5 A of DOR fell from 224 +/- 1 in WT to
-(that figure predates the switch to a 4.0 A cutoff; see
-paper/contact-cutoff-sensitivity.md)
-212 +/- 1 in V106A". A whole-ligand count says the interface loosens but not
-*where*, and DOR is not a homogeneous object: it is three ring systems joined by
-an ether and a methylene, and the V106A slide toward Ser105 is directional, so
-the loss should not be uniform across them.
+A whole-ligand contact count shows that an interface loosens but not where.
+DOR is three ring systems joined by an ether and a methylene, and the
+displacements seen at position 106 are directional, so contact loss is not
+uniform across them.
 
-This decomposes the same count, now at 4.0 A, over the ligand:
+This resolves the count at 4.0 A over the ligand:
 
   chlorocyanophenyl   the ring that stacks against Tyr188
   pyridinone          the central ring bearing the Lys103 backbone H-bond
@@ -128,7 +122,7 @@ def _counts(traj, lig_idx: np.ndarray, prot_idx: np.ndarray) -> tuple[np.ndarray
                   any ligand atom -- the quantity the manuscript's wording
                   actually describes.
 
-    Both are reported so the two can never be silently conflated again.
+    Both conventions are reported, since they differ by roughly a factor of two.
     """
     import mdtraj as md
 

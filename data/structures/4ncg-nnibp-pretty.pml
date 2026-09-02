@@ -1,7 +1,8 @@
+# Run from the repository root:  pymol -cq data/structures/4ncg-nnibp-pretty.pml
 reinitialize
 
 # Load crystal structure (4NCG, Doravirine = resn 2KW)
-load /Users/rohitpro/Career/00_Github/nnrti-mechanisms/data/structures/4NCG.cif, 4ncg
+load data/structures/4NCG.cif, 4ncg
 
 # Core selections
 select dor, 4ncg and resn 2KW
@@ -134,4 +135,4 @@ zoom dor or key_rt, 12
 
 # Save a publication PNG with transparent background
 ray 3600, 2700
-png /Users/rohitpro/Career/00_Github/nnrti-mechanisms/data/structures/4ncg-nnibp-pretty.png, dpi=600
+png data/structures/4ncg-nnibp-pretty.png, dpi=600

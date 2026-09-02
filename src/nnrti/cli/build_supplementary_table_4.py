@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
 """Build Supplementary Table 4: per-replicate structural observables.
 
-Why this exists
----------------
-Every structural number quoted in the Discussion -- burial, interplanar angles,
-named distances, pocket volume, per-moiety contacts -- was previously scattered
-across several analysis CSVs that had been produced at different times over
-different genotype subsets, and two of them computed the *same* quantity with
-slightly different frame handling. A reader had no way to trace a number in the
-text back to a value the pipeline actually produced.
-
-This collects all of them into one workbook, one row per (genotype, replicate),
-from a single pass over three canonical sources:
+Collects every structural observable reported in the paper into one workbook,
+one row per genotype and replicate, from a single pass over three sources:
 
   results/analysis/mechanisms/mechanism_coordinates.csv        (per-frame -> per-replicate mean)
   results/analysis/mechanisms/dor_moiety_contacts_per_replicate.csv
   results/analysis/modern_md_suite/tables/pocket_volume_per_rep.csv
 
 Replicate means are averaged, never pooled across frames, so the Summary sheet's
-SEM is the replicate-to-replicate SEM quoted in the manuscript.
+standard error is the replicate-to-replicate error quoted in the paper.
+
+Also emits main-text Table 3, which is the Summary sheet without the constant
+``Replicates`` column and without the F227C alchemical intermediate. The two are
+written by one function so they cannot disagree.
 
 Usage
 -----

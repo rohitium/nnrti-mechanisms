@@ -3,36 +3,29 @@
 *Molecular Simulation of Doravirine Resistance in HIV-1 Reverse Transcriptase*
 
 This file maps every table and figure in the paper to the command that produces
-it. **Read §"Where the reproducible chain starts" first** — it says honestly
-which steps you can re-run and which you cannot.
+it.
 
 ---
 
-## Where the reproducible chain starts
+## Where to start
 
-Two stages of this work required a GPU cluster and produced data that no longer
-exists in full:
+Simulation (stages 1–3) needs a GPU cluster and several weeks. Analysis (stages
+4–5) runs on a workstation from deposited data, and regenerates every number in
+the paper.
 
-- The **full MD trajectories** were lost to a `/scratch` 90-day purge.
-- Most of the **raw per-switch FEP data** was lost on 2026-08-13.
-
-What survives, and what it supports:
-
-| deposited artifact | where | supports |
+| Deposited | Location | Supports |
 | --- | --- | --- |
-| stripped analysis DCDs (94 runs, ~7 GB) | Zenodo (see §Data) | every structural analysis, MM/GBSA, Figures 1 & 3, Supp. Fig. 1 |
-| per-switch work values `integ_*.dat` (228 files) | **in this repo**, `results/analysis/fep_pmx/legs/**/analysis/` | the whole FEP ΔΔG panel, Table 2, Figure 2, Supp. Fig. 2 |
-| raw switch data, 5 legs | `$GROUP_HOME` archive, sha256 in `manifests/fep_raw_backup_*.csv` | re-integration of those legs from scratch |
-| susceptibility data | `data/DRM-susceptibilities.csv.xlsx` | Table 1 |
+| Stripped analysis trajectories, 94 runs, ~7 GB | Zenodo (§Data) | All structural analysis, MM/GBSA, Figures 1 and 3, Supp. Fig. 1 |
+| Per-switch work values, `integ_*.dat`, 228 files | This repository, `results/analysis/fep_pmx/legs/**/analysis/` | The free energy panel, Table 2, Figure 2, Supp. Fig. 2 |
+| Raw switch data, 5 legs | Durable storage, checksums in `manifests/fep_raw_backup_*.csv` | Re-integrating those legs from the trajectories |
+| Susceptibility data | `data/DRM-susceptibilities.csv.xlsx` | Table 1 |
 
-So: **everything downstream of the trajectories and the work values is fully
-reproducible from a clone plus the Zenodo deposit.** The MD and the alchemical
-switching themselves are documented (§Regenerating from scratch) but need a GPU
-cluster and weeks of wall time.
+The free energies are recomputed, not cached: the BAR, Crooks and Jarzynski
+estimates are derived from the deposited per-switch work values, which is the
+step that determines every ΔΔG reported.
 
-The FEP free energies are *not* merely cached numbers — the BAR/CGI/Jarzynski
-estimates are recomputed from the deposited per-switch work values, which is the
-step that actually determines every ΔΔG in the paper.
+Regenerating the trajectories and the alchemical switching themselves is
+documented under §Regenerating from scratch.
 
 ---
 

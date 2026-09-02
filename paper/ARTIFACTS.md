@@ -1,15 +1,7 @@
 # Manuscript artifacts — what produces every numbered figure and table
 
-**This file is the authority.** If a number, panel or table appears in the
-paper, its provenance is here. Nothing else in `results/` is a manuscript
-artifact, however similar the filename looks.
-
-Why it exists: on 2026-09-01 the wrong file was identified as the source of
-Figure 2D. Two plots differ by one suffix —
-`panel_ddg_vs_experiment.png` (a monochrome QC diagnostic from `nnrti.fep.combine_neq`)
-and `panel_ddg_vs_experiment_by_category.png` (the manuscript panel, with the
-Susceptible/Resistant/Uncertain colour coding) — and both sit in the same
-directory with nothing marking which is which.
+Every numbered figure and table in the paper, with the script that produces it
+and the file it is read from.
 
 Every command below assumes `pip install -e .` or `PYTHONPATH=src`;
 `workflows/05_manuscript_artifacts.sh` runs them all in order.
@@ -55,7 +47,7 @@ image name are given so a panel can be replaced without guessing.
 | `results/analysis/binding_energy/tables/ddg_full.csv` | `nnrti.cli.compute_mmgbsa_safe` → `nnrti.cli.rebuild_binding_energy_sources` |
 | `results/analysis/mechanisms/mechanism_coordinates.csv` | `nnrti.cli.compute_mechanism_coordinates` |
 | `manifests/md_manifest.csv` | `src/nnrti/structure_prep/preparation.py` |
-| fold-change ground truth | `data/DRM-susceptibilities.csv.xlsx` — **never hardcode these** |
+| Fold-change values | `data/DRM-susceptibilities.csv.xlsx` |
 
 ## Statistics reported in the text
 
@@ -67,21 +59,16 @@ image name are given so a panel can be replaced without guessing.
 
 ---
 
-## Known traps
+## Notes
 
-- **`panel_ddg_vs_experiment.png` is NOT Figure 2D.** It is a QC diagnostic.
-  The manuscript panel is the `_by_category` file.
-- **`combine_neq.py --targets X` truncates `panel_ddg.csv`** to those targets.
-  Always re-run with the full genotype list afterwards.
-- **The mechanism panel is Figure 3** as of 2026-09-01, promoted from
-  Supplementary Figure 3. Change-notes dated before then call it Supp. Fig. 3.
-- **Table 3 and Supplementary Table 4 come from one script.** `build_supplementary_table_4`
-  emits both, so they cannot drift apart; Table 3 is the Summary sheet minus the
-  constant `Replicates` column and minus the F227C alchemical intermediate.
-- **Contact counts are atom PAIRS, not atoms**, and the cutoff is **4.0 Å** as of
-  2026-08-31. See `paper/contact-cutoff-sensitivity.md`.
-- Anything under `results/analysis/` not named above — `fep_jorgensen`,
-  `boltz`, `new_logistic_regression`, `triplet_story_analyses`,
-  `modern_md_suite`, `custom_mechanism_*`, `openmm_sidechain_deletion_*`,
-  `occupancy_stats`, `ligand_pocket_features`, `tunnel`, `dccm` — is
-  exploratory and appears nowhere in the paper.
+- Figure 2D is `panel_ddg_vs_experiment_by_category.png`. The file named
+  `panel_ddg_vs_experiment.png` in the same directory is a monochrome QC
+  diagnostic, not the manuscript panel.
+- Table 3 and Supplementary Table 4 are both written by
+  `build_supplementary_table_4`; Table 3 is the Summary sheet without
+  the constant `Replicates` column and without the F227C alchemical
+  intermediate.
+- `combine_neq --targets X` writes `panel_ddg.csv` for those targets only; re-run with the full genotype list to restore the complete panel.
+- Contact counts are atom pairs, not atoms, at a 4.0 Å cutoff. An RT atom
+  close to several ligand atoms contributes once per pair.
+- Fold-change values are read from `data/DRM-susceptibilities.csv.xlsx`.

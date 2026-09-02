@@ -3,7 +3,7 @@
 **Living snapshot. Update this when state changes.** A fresh agent should read this first, then
 [`OPERATIONS.md`](OPERATIONS.md) for how to act. Last meaningful update: **2026-08-15**.
 
-Sherlock repo: `/scratch/users/rsatija/nnrti-mechanisms-git` (account `rshafer`, QOS `long,normal`).
+Sherlock repo: `$PROJECT_ROOT` (account `rshafer`, QOS `long,normal`).
 The human runs everything on Sherlock and pastes output — agents cannot reach it. Activate the pmx env
 first every session: `source ops/slurm/cluster/activate_pmx_env.sh` (login-node python3 is 3.6 and dies
 on `from __future__ import annotations`).

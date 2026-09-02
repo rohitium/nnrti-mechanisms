@@ -19,7 +19,7 @@ annotations` with `SyntaxError: future feature annotations is not defined`. **Al
 the pmx env first (gives Python 3.9 + `GMXLIB` pointing at pmx's mutant force field):
 
 ```bash
-cd /scratch/users/rsatija/nnrti-mechanisms-git
+cd $PROJECT_ROOT
 source ops/slurm/cluster/activate_pmx_env.sh   # prints [pmx] python: .../3.9.0 and GMXLIB=...
 ```
 
@@ -203,7 +203,7 @@ to cancel the doomed downstream and **re-run + re-chain** the whole equil→extr
 equil units skip instantly; only the failures recompute (on healthy nodes).
 
 ```bash
-cd /scratch/users/rsatija/nnrti-mechanisms-git
+cd $PROJECT_ROOT
 source ops/slurm/cluster/activate_pmx_env.sh
 export MANIFEST=results/analysis/fep_pmx/neq_p1a_manifest.csv   # the batch's manifest
 export EXCLUDE_NODES=sh03-12n12                                 # avoid the known-bad node (repeat offender)
@@ -395,7 +395,7 @@ All three are idempotent (SKIP existing). Then run via §4b (em pre-flight) + th
    didn't need them). Push once, Mac→Sherlock (small, but ~1.9 GB for all — compresses ~5×):
    ```bash
    rsync -avz --prune-empty-dirs --include='*/' --include='*_start.pdb' --exclude='*' \
-     results/md_runs/ rsatija@login.sherlock.stanford.edu:/scratch/users/rsatija/nnrti-mechanisms-git/results/md_runs/
+     results/md_runs/ <user>@<cluster>:$PROJECT_ROOT/results/md_runs/
    ```
 
 3. **Legs without a `fep_jorgensen` backend map need openmm in the pmx venv.** `prepare_hybrid` resolves

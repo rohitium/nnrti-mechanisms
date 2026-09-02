@@ -501,4 +501,3 @@ dependencies:
       - throttler==1.2.3
       - wrapt==2.1.1
       - yte==1.9.4
-prefix: /Users/rohitpro/miniconda3/envs/nnrti-prep

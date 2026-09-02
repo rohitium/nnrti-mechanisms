@@ -31,7 +31,7 @@ echo "Requesting interactive GPU allocation for pmx NEQ smoke test (partition=${
 echo "  ${CMD[*]}"
 echo ""
 echo "Once allocated:"
-echo "  cd /scratch/users/rsatija/nnrti-mechanisms-git"
+echo "  cd \$PROJECT_ROOT"
 echo "  git pull"
 echo "  bash ops/slurm/fep/smoke_neq_em.sh"
 echo "  bash ops/slurm/fep/smoke_neq_task.sh          # equil λ0 holo rep1"

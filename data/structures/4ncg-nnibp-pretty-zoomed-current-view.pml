@@ -5,7 +5,7 @@ python
 from pymol import cmd
 
 if cmd.count_atoms("4ncg") == 0:
-    cmd.load("/Users/rohitpro/Career/00_Github/nnrti-mechanisms/data/structures/4NCG.cif", "4ncg")
+    cmd.load("data/structures/4NCG.cif", "4ncg")
 python end
 
 # Core selections
@@ -134,4 +134,4 @@ zoom dor or key_rt, 8
 
 # High-res transparent export
 ray 3600, 2700
-png /Users/rohitpro/Career/00_Github/nnrti-mechanisms/data/structures/4ncg-nnibp-pretty-zoomed-current-view.png, dpi=600
+png data/structures/4ncg-nnibp-pretty-zoomed-current-view.png, dpi=600

@@ -3,7 +3,7 @@
 # Interactive GPU smoke test: Y188L apo MD (0.01 ns) before batch submit.
 #
 # Usage:
-#   cd /scratch/users/rsatija/nnrti-mechanisms-git
+#   cd $PROJECT_ROOT
 #   git pull origin main
 #   bash ops/slurm/fep/salloc_apo_gpu.sh          # get gpu node
 #   bash ops/slurm/fep/test_y188l_apo_gpu.sh      # run inside allocation
@@ -80,7 +80,7 @@ if [[ "$MISSING" -eq 1 ]]; then
     echo ""
     echo "Sync apo assets to Sherlock if needed, e.g.:"
     echo "  rsync -av results/md_runs/apo/y188l/ \\"
-    echo "    rsatija@login.sherlock.stanford.edu:/scratch/users/rsatija/nnrti-mechanisms-git/results/md_runs/apo/y188l/"
+    echo "    <user>@<cluster>:\$PROJECT_ROOT/results/md_runs/apo/y188l/"
     exit 1
 fi
 

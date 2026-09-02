@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 """Classification performance of FEP and MM/GBSA against established phenotype.
 
-Why this exists
----------------
-The manuscript states counts -- "3 of 4 susceptible, 7 of 9 resistant" -- which
-is the right observation but not a metric a reader can compare against anything.
-This turns it into standard, reportable numbers.
-
-Two framings are computed, and they answer different questions:
+Turns the paper's counts -- "3 of 4 susceptible, 7 of 9 resistant" -- into
+standard classification metrics. Two framings are computed, answering different
+questions:
 
 **Threshold classification.** Applies the manuscript's own rule -- a genotype is
 called "strong impact" when its estimate lies more than one standard error above

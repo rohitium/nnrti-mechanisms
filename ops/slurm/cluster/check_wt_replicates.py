@@ -5,7 +5,7 @@ Designed to run on Sherlock inside the repo root:
 
     module load chemistry py-openmm/8.1.1_py312
     PYTHONPATH=. python ops/slurm/cluster/check_wt_replicates.py \
-      --root /scratch/users/rsatija/nnrti-mechanisms \
+      --root "$PROJECT_ROOT" \
       --replicates 1-6
 """
 
