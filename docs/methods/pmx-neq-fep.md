@@ -2,7 +2,7 @@
 
 **Status (Jul 2026):** P0 pilot on Sherlock (`wt_to_V106A`, `wt_to_Y188L`; holo + apo; 3 replicates).  
 Interactive GPU smoke test before batch `sbatch`.  
-Implementation: `scripts/fep_pmx/` · Design detail: `scripts/fep_pmx/PLAN.md`.
+Implementation: `ops/slurm/fep/` · Design detail: `ops/slurm/fep/PLAN.md`.
 
 ---
 
@@ -141,7 +141,7 @@ V106A was re-run at **500 ps** (5× the 100 ps default), 3 reps, to test whether
 | **P2** | 8 compound targets (background-dependent legs) | Epistatic additivity (see below) |
 | **P3** | 19 targets | Manuscript table |
 
-19 unique mutation legs from `scripts/fep_jorgensen/mutations.py`. Compound genotypes are **paths**, not sums of singles:
+19 unique mutation legs from `src/nnrti/fep/mutations.py`. Compound genotypes are **paths**, not sums of singles:
 
 | Target | Leg 1 | Leg 2 (mutant background) |
 |--------|-------|----------------------------|
@@ -253,7 +253,7 @@ Switch tasks run 6–15 h against a 48 h cap with preemption possible. Per-switc
 
 - Logs: `logs/pmx_neq/{em,equil,extract,switch}/`.
 - **`prepare --force` must not delete completed stage outputs** (regenerates mdps/manifests in place).
-- Implementation: `scripts/fep_pmx/submit_p0_neq.sh`, `config.py` (`switch_snapshots_per_task`).
+- Implementation: `ops/slurm/fep/submit_p0_neq.sh`, `config.py` (`switch_snapshots_per_task`).
 
 ---
 
@@ -261,9 +261,9 @@ Switch tasks run 6–15 h against a 48 h cap with preemption possible. Per-switc
 
 | Approach | Why dropped |
 |----------|-------------|
-| Perses / OpenMM fixed-λ FEP (full protein) | MBAR failure at high λ; pilot in `scripts/fep_jorgensen/README.md` |
+| Perses / OpenMM fixed-λ FEP (full protein) | MBAR failure at high λ; pilot documented in the external archive |
 | Truncated-sphere NEQ | Unnecessary under NEQ parallelism; boundary risk ([Genheden & Ryde 2012](https://doi.org/10.1021/ct200853g)) |
-| Jorgensen MCPRO reproduction | Proprietary; approximated in `scripts/fep_jorgensen/` for comparison only |
+| Jorgensen MCPRO reproduction | Proprietary; approximated in the archived Jorgensen pipeline for comparison only |
 | Dual-topology mutation | pmx uses hybrid residues, not full dual side chains |
 
 ---

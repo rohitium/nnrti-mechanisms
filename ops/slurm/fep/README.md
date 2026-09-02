@@ -1,0 +1,181 @@
+# DOR resistance FEP: pmx + GROMACS NEQ
+
+Full-system alchemical free energy calculations for the **manuscript mutation panel** (19 targets,
+19 unique legs).
+
+**Method:** pmx hybrid topology + GROMACS non-equilibrium switching (Crooks/BAR) on rhombic
+dodecahedron solvated HIV RT — holo (DOR-bound) and apo (ligand-free) per leg.
+
+**Start here:** [`PLAN.md`](PLAN.md)
+
+**Current state (what's running now, what's next):** [`STATUS.md`](STATUS.md)
+
+**Running/monitoring/recovering a Sherlock panel:** [`OPERATIONS.md`](OPERATIONS.md) — the runbook for failure modes (bad GPU nodes, stalled `afterok` chains, the pmx-env gotcha) and their fixes.
+
+**Why not truncated / Perses:** [`APPROACHES.md`](APPROACHES.md)
+
+Perses full-protein pilot (deprecated path): [`../fep_jorgensen/README.md`](../fep_jorgensen/README.md)
+
+## Local pmx setup (Mac)
+
+Hybrid prep and NEQ analysis run locally; GROMACS GPU jobs go to Sherlock.
+
+```bash
+bash ops/slurm/fep/setup_pmx_env.sh
+conda activate pmx
+export GMXLIB=...   # printed by setup script
+pmx -h
+```
+
+Do **not** use `pip install pmx` — install [deGrootLab/pmx](https://github.com/deGrootLab/pmx) `develop` from source.
+
+## P0 workflow (local)
+
+```bash
+# 1) Inventory what MD assets exist vs missing
+python -m nnrti.fep.asset_manifest
+
+# 2) Export DOR OpenFF → GROMACS (needs nnrti-prep env)
+conda activate nnrti-prep
+python -m nnrti.fep.export_dor_itp
+
+# 3) pmx hybrid structures for P0 legs (all reps × holo/apo)
+conda activate pmx
+bash ops/slurm/fep/prepare_p0_hybrids.sh
+
+# 4) GROMACS solvated hybrid systems (Sherlock login — needs gmx + GMXLIB)
+source ops/slurm/cluster/load_gromacs_module.sh
+conda activate pmx
+REPLICATES=1 bash ops/slurm/fep/build_p0_systems.sh   # smoke: rep01 only
+
+# 5) Y188L apo MD (P0 blocker — assets exist, trajectories missing)
+#    Smoke test on interactive GPU first, then batch:
+bash ops/slurm/fep/salloc_apo_gpu.sh
+bash ops/slurm/fep/test_y188l_apo_gpu.sh
+bash ops/slurm/fep/submit_y188l_apo_md.sh
+```
+
+## NEQ workflow (Sherlock GPU)
+
+**Validate on an interactive GPU node first** (catches path/topology bugs before batch submit):
+
+```bash
+bash ops/slurm/fep/salloc_neq_gpu.sh
+# inside allocation:
+bash ops/slurm/fep/smoke_neq_em.sh          # V106A holo rep1 EM
+LEG=wt_to_V106A PHASE=apo bash ops/slurm/fep/smoke_neq_em.sh
+```
+
+After smoke passes, batch submit (one command — SLURM chains em → equil → extract → switch):
+
+```bash
+NEQ_SNAPSHOTS=100 REPLICATES=3 FORCE=1 bash ops/slurm/fep/prepare_p0_neq.sh
+bash ops/slurm/fep/submit_p0_neq_pipeline.sh
+```
+
+Or stage-by-stage (manual dependency):
+
+```bash
+STAGE=em      bash ops/slurm/fep/submit_p0_neq.sh   # normal/CPU (A-state min)
+STAGE=equil   bash ops/slurm/fep/submit_p0_neq.sh   # gpu: per-λ min → C-rescale warmup → P-R production (PLAN.md §4.3)
+STAGE=extract bash ops/slurm/fep/submit_p0_neq.sh   # normal/CPU
+STAGE=switch  bash ops/slurm/fep/submit_p0_neq.sh   # gpu
+# Y188L switches are 500 ps — use STAGE=switch SHERLOCK_TIME=03:00:00 if needed
+
+# 3) Analysis (Mac or Sherlock login with pmx)
+conda activate pmx
+
+# 3a) per leg/phase/rep BAR+CGI+Jarzynski (writes analysis.json + work_dist.png)
+python -m nnrti.fep.analyze_neq --leg wt_to_V106A --phase holo --replicate 1
+
+# 3b) ΔΔG_bind per genotype (= ΔG_holo − ΔG_apo, summed over legs), mean ± SEM
+#     across replicates; correlates vs experiment; runs analyze_neq for any
+#     missing leg automatically.
+python -m nnrti.fep.combine_neq --targets V106A Y188L --replicates 3
+
+# 3c) QC: Crooks forward/reverse overlap, work outliers, BAR-vs-Jarzynski (§4.6)
+python -m nnrti.fep.qc_neq --replicates 3
+```
+
+Outputs land under `results/analysis/fep_pmx/`:
+- `legs/{leg}/{holo,apo}/rep_*/neq/analysis/` — per-unit `analysis.json`, `results.txt`, `work_dist.png`, `integ_{fwd,rev}.dat`
+- `targets/{genotype}/summary.json` — ΔΔG_bind ± SEM + per-replicate table
+- `panel_ddg.csv`, `panel_ddg_vs_experiment.png` — ΔΔG vs fold (**no fitted line**; weak Pearson R² stated in the title)
+- `panel_discussion_tiers.csv` — `main_text` (SEM ≤ 0.6) / `show` / `omit_main` for the Results rewrite
+- `panel_qc.csv`, `panel_crooks_overlap.png` — QC table + overlap histograms
+
+Rebuild the scatter + tiers from the existing CSV without re-running pmx:
+
+```bash
+python -m nnrti.fep.combine_neq --replot-only
+```
+
+### V106A / panel protocol figures (manuscript walkthrough)
+
+Per-genotype panels matching the Methods/Results FEP walkthrough (continuous NEQ,
+not discrete λ windows). Defaults to every genotype **shown** on
+`panel_ddg_vs_experiment.png` (panel_ddg.csv rows with an experimental fold):
+
+```bash
+conda activate nnrti-prep
+python -m nnrti.fep.plot_protocol_figures              # all panel genotypes
+python -m nnrti.fep.plot_protocol_figures --targets V106A Y188L
+python -m nnrti.fep.plot_v106a_protocol                # V106A only (compat)
+```
+
+Writes `results/analysis/fep_pmx/protocol/<SAFE>/` (V106A also mirrored to
+`protocol_v106a/`):
+
+| # | file | content |
+|---|---|---|
+| 01 | `01_thermodynamic_cycle.png` | holo/apo cycle + ΔΔG_bind (sums additive legs) |
+| 02 | `02_hybrid_topology.png` | sticks if local `hybrid.pdb` (V106A/Y188L); else schematic |
+| 03 | `03_neq_work.png` | per-rep forward/reverse work; title has equil → snaps → switch |
+| 04 | `04_lambda_profile.png` | ⟨W_f(λ)⟩ / G_f(λ) when `lambda_profiles/<leg>.csv` exists; else placeholder |
+| 05 | `05_crooks_overlap.png` | CGI ∩ / BAR / Jarzynski on pooled Crooks histograms |
+
+`run_config.json` in each folder lists panel order, hybrid mode, and λ status.
+Most legs lack local `hybrid.pdb` / `dgdl.xvg` (rsync excludes them); λ CSVs today
+exist for `wt_to_V106A` and `wt_to_K103N` only — regenerate others on Sherlock with
+`plot_lambda_profile.py`.
+
+**Note:** `pmx analyse` needs `numpy < 2.0` (newer numpy breaks pmx's estimators). The Sherlock `~/.venvs/pmx` env is fine; a local Mac `pmx` conda env may need `pip install 'numpy<2'`.
+
+Sync light results (no trajectories) to your Mac to inspect:
+
+```bash
+SHERLOCK_USER=rsatija bash ops/sync/rsync_fep_pmx.sh pull
+```
+
+## P0 results (first run)
+
+ΔΔG_bind **V106A = +1.69 ± 0.70**, **Y188L = +4.52 ± 0.49** kcal/mol (exp. fold 9.6 / 149).
+Both signs positive (resistance), ranking correct, SEM < 1, BAR/CGI/Jarzynski agree.
+**Caveat:** Crooks overlap is marginal (0.01–0.53), driven by the noisy reverse (λ=1)
+work — see [`PLAN.md`](PLAN.md) §9 and [`docs/pmx-neq-fep-plan.md`](../../docs/pmx-neq-fep-plan.md) §3.4.
+
+### Overlap sensitivity test (V106A: 100 → 500 ps switches, reuses equil/extract)
+
+V106A now defaults to 500 ps switches. Re-run **only its switch stage** (equilibration and
+snapshots are unchanged, so they are reused — cheap):
+
+```bash
+git pull
+# clear V106A's old 100 ps switch outputs so the 500 ps ones regenerate
+rm -rf results/analysis/fep_pmx/legs/wt_to_V106A/*/rep_*/neq/switches/*
+# FORCE re-renders all mdps at the new 500 ps + rebuilds the manifest; it never
+# deletes em/equil/extract outputs, so those (and Y188L's switches) are reused.
+NEQ_SNAPSHOTS=100 REPLICATES=3 FORCE=1 bash ops/slurm/fep/prepare_p0_neq.sh
+# re-run the switch stage only: V106A regenerates at 500 ps; Y188L keeps its dgdl.xvg → skipped
+STAGE=switch bash ops/slurm/fep/submit_p0_neq.sh
+# when switches finish: recover dgdl (idempotent), then re-analyze and compare
+find results/analysis/fep_pmx/legs/wt_to_V106A -path '*/switches/*' -name switch.gro -print0 |
+while IFS= read -r -d '' g; do d=$(dirname "$g"); [ -f "$d/dgdl.xvg" ] || cp "$d/switch.xvg" "$d/dgdl.xvg"; done
+python -m nnrti.fep.combine_neq --targets V106A Y188L --replicates 3
+python -m nnrti.fep.qc_neq --replicates 3
+```
+
+If overlap tightens and ΔΔG stays ~+1.7, adopt for the panel. If the reverse (λ=1) scatter
+persists, add equilibration (full V106A re-run): `NEQ_EQUIL_NS=10 REPLICATES=3 FORCE=1 bash
+ops/slurm/fep/prepare_p0_neq.sh` then the em→switch pipeline. **Do not raise snapshots for
+overlap** — that only shrinks ΔG error bars, not the fwd/rev gap.

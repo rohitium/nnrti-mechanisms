@@ -23,7 +23,7 @@ export PYTHONPATH="$PWD/src"   # or: pip install -e .
 python -m nnrti.md.sherlock.run_md_job --help    # should print usage
 ```
 
-Every submit script under `scripts/sherlock/` and `scripts/fep_pmx/` now exports
+Every submit script under `ops/slurm/cluster/` and `ops/slurm/fep/` now exports
 `PYTHONPATH` itself, so submitted jobs are fine once the pull is done. It is the
 *interactive* shell that needs the export.
 
@@ -52,12 +52,12 @@ directories a manuscript artifact reads.
 src/nnrti/
   analysis/   library + the new panel.py
   cli/        artifact-producing scripts only  (87 -> 16)
-  fep/        pmx non-equilibrium FEP  (was scripts/fep_pmx/*.py)
+  fep/        pmx non-equilibrium FEP  (was ops/slurm/fep/*.py)
   md/         simulation protocol + cluster workers
   structure_prep/  utils/  paths.py
 ```
 
-`scripts/` keeps only cluster-side operations: Slurm submission, rsync, MD
+`ops/` keeps only cluster-side operations: Slurm submission, rsync, MD
 metadata audit/repair, docx tooling. `pyproject.toml` makes `pip install -e .`
 work.
 

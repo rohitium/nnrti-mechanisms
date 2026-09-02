@@ -162,7 +162,7 @@ genotypes to prove the trajectories still load.
 
 ### Phase 4 — `ops/` and `results/` renaming (1 hour, medium churn, optional)
 
-Rename `scripts/` → `ops/{slurm,sync,maintenance}` and
+Rename `ops/` → `ops/{slurm,sync,maintenance}` and
 `results/analysis/{fep_pmx,binding_energy,…}` → `results/{fep,mmgbsa,structure,panel}`.
 
 This is polish, not correctness. It touches ~20 default paths in the CLIs and the

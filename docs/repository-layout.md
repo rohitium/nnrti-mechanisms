@@ -10,7 +10,7 @@ hardcode directory strings.**
 |---|---|
 | `workflows/` | The five numbered entry points, in the order the study ran. |
 | `src/nnrti/` | The Python package: `md/` (simulation protocol + cluster workers), `fep/` (pmx non-equilibrium FEP), `analysis/` (analysis library), `cli/` (only the scripts that build a manuscript artifact), `structure_prep/`, `utils/`, and the `paths.py` registry. |
-| `scripts/` | Cluster-side operations only: Slurm submission (`sherlock/`, `fep_pmx/`), rsync helpers, MD metadata audit/repair (`md/`), docx tooling (`paper/`). No analysis code. |
+| `ops/` | Cluster-side operations only: Slurm submission (`sherlock/`, `fep_pmx/`), rsync helpers, MD metadata audit/repair (`md/`), docx tooling (`paper/`). No analysis code. |
 | `data/` | Inputs: `data/structures/` (experimental CIF/PDB), `data/ligands/` (SDF), `data/prepared/`, and the susceptibility spreadsheet. |
 | `results/` | Manuscript-facing output only (see below). |
 | `figures/` | Curated, manuscript-facing figures (distinct from per-run plots under `results/`). |
@@ -49,9 +49,9 @@ there are no loose analysis scripts left to guess between.
 
 - Each run dir carries a JSON with step counts + paths, plus `state.csv` (energy
   log) and `_md.chk` (OpenMM checkpoint). Timestep is 2 fs.
-- **Audit:** `python3 scripts/md/audit_md_metadata.py [--check-checkpoints]` —
+- **Audit:** `python3 ops/maintenance/md/audit_md_metadata.py [--check-checkpoints]` —
   read-only consistency check across every run (JSON vs `state.csv` vs `.chk`).
-- **Repair:** `python3 scripts/md/repair_md_metadata.py [--apply]` — dry-run by
+- **Repair:** `python3 ops/maintenance/md/repair_md_metadata.py [--apply]` — dry-run by
   default; corrects paths/step-counts from ground truth, archives (never deletes).
 
 ## Sync model

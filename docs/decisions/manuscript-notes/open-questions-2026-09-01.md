@@ -120,7 +120,7 @@ mutation acts specifically at the bound interface.
 > "charge-changing transitions, e.g. Lys+1 to Asn0 in K103N or **Gly0 to Glu+1**
 > in G190E"
 
-Glutamate is **negatively** charged. `scripts/fep_pmx/charge_correction.py`
+Glutamate is **negatively** charged. `ops/slurm/fep/charge_correction.py`
 records the legs correctly as `wt_to_K103N: Lys+ -> Asn0` and
 `wt_to_G190E: Gly0 -> Glu-`, both with Δq = −1. The draft should read
 **"Gly0 to Glu−1"**.

@@ -56,8 +56,8 @@ in the bibliography**, not as analyses.
 | `results/analysis/ligand_pocket_features` | 2 | 1.8 M | no |
 | `results/analysis/wt_original_vs_sherlock_rerun` | 5 | 20 K | no |
 
-**3. Scripts are split across two trees with no rule.** `scripts/` holds both
-SLURM submission (`scripts/sherlock/`, `scripts/fep_pmx/`) and one-off diagnostics
+**3. Scripts are split across two trees with no rule.** `ops/` holds both
+SLURM submission (`ops/slurm/cluster/`, `ops/slurm/fep/`) and one-off diagnostics
 (`diagnose_mmgbsa_*.py`, `audit_mmgbsa_protocol_first5.py`) at top level;
 `src/nnrti/cli/` holds 82 more. Which tree a thing lives in is historical.
 
@@ -67,7 +67,7 @@ SLURM submission (`scripts/sherlock/`, `scripts/fep_pmx/`) and one-off diagnosti
 
 The binding constraint is that **the Sherlock checkout syncs by `git pull`, and
 running array elements resolve their paths at runtime.** A pull that relocated a
-manifest, a task-id file or `scripts/fep_pmx/*` under a live job would break it
+manifest, a task-id file or `ops/slurm/fep/*` under a live job would break it
 the same way the task-id collision did on 2026-08-15.
 
 Therefore the refactor is staged, and **nothing that a running job reads moves
@@ -77,7 +77,7 @@ until its queue is empty.**
 | --- | --- | --- | --- |
 | **1** | now | additive only: `REPRODUCE.md`, archive tooling, this plan | no file moves at all |
 | **2** | after local MM/GBSA rescore finishes | archive the exploratory `results/` dirs above | the FEP pipeline reads none of them; `results/analysis/fep_pmx/**` is untouched |
-| **3** | after Sherlock queues drain | move code (`scripts/` ↔ `src/`), rewrite entry points | nothing is executing against those paths |
+| **3** | after Sherlock queues drain | move code (`ops/` ↔ `src/`), rewrite entry points | nothing is executing against those paths |
 
 Stage 2 note: a Sherlock `git pull` during stage 2 applies the renames, so the
 files still exist at their new paths. It is still safest to defer the pull until
@@ -96,7 +96,7 @@ the campaign finishes.
 ├── manifests/              # run manifests + archive log
 ├── src/nnrti/              # importable package (was src/)
 │   ├── md/                 # simulation protocol + Sherlock workers
-│   ├── fep/                # pmx NEQ (was scripts/fep_pmx/*.py)
+│   ├── fep/                # pmx NEQ (was ops/slurm/fep/*.py)
 │   ├── analysis/           # analysis library
 │   └── cli/                # ONLY CLIs that produce a manuscript artifact
 ├── workflows/              # shell entry points, one per stage

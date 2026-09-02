@@ -39,4 +39,4 @@ See `results/analysis/occupancy_stats/OCCUPANCY_STATS_NOTES.md`.
 - Insert modern_md_suite highlights (pose PCA, H-bonds, COM r–α, DCCM).
 - Collapse Table 2 MM/GBSA to SI if desired; main text already demotes it.
 - Add Gapsys/Aldeghi/Hauser bibliography entries if not already cited numerically.
-- Re-run `python scripts/manuscript/apply_atanu_revision.py` only from the pristine `DorDRM-MD-08-14-26.docx` (script is not idempotent on `-rev.docx`).
+- Re-run `python ops/maintenance/manuscript/apply_atanu_revision.py` only from the pristine `DorDRM-MD-08-14-26.docx` (script is not idempotent on `-rev.docx`).
