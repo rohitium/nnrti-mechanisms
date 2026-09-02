@@ -12,8 +12,8 @@ Computes (standard libraries only — thin I/O wrappers):
 
 Requires *_analysis_pbcfix.dcd (write once with fix_pbc_trajectories).
 
-    ~/miniconda3/envs/nnrti-prep/bin/python -m nnrti.cli.compute_modern_md_suite
-    ~/miniconda3/envs/nnrti-prep/bin/python -m nnrti.cli.compute_modern_md_suite --from-tables
+    ~/miniconda3/env/nnrti-prep/bin/python -m nnrti.cli.compute_modern_md_suite
+    ~/miniconda3/env/nnrti-prep/bin/python -m nnrti.cli.compute_modern_md_suite --from-tables
 """
 from __future__ import annotations
 

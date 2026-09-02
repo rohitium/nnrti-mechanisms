@@ -1,0 +1,22 @@
+original_path,sha256,bytes,archived_group,reason
+inputs/boltz/K103N_rt_dor_affinity.yaml,2b931bdcfad95a06b1e4a4320749d4a6ef1428ae75d3ddb0df09a7d375c7b9cb,1198,inputs,Boltz-2 structure-prediction inputs; that test is not part of this study
+inputs/boltz/V106A_rt_dor_affinity.yaml,d0ae5cf5fcb1c49832ce90dcad486406febcac260654f14c2dde8e3317379eaf,1198,inputs,Boltz-2 structure-prediction inputs; that test is not part of this study
+inputs/boltz/Y181C_rt_dor_affinity.yaml,00799166bf6e634801dd7db64cdff21316d1c6e365af12ae46d02215d3735f02,1198,inputs,Boltz-2 structure-prediction inputs; that test is not part of this study
+inputs/boltz/Y318F_rt_dor_affinity.yaml,5a3e1122c94c3317364c9cf022144ad9023f9ec4a26649d8bd5996f527a01d18,1198,inputs,Boltz-2 structure-prediction inputs; that test is not part of this study
+inputs/boltz/wt_rt_dor_affinity.yaml,b647fbf91de170dbd8686c6fee82e03214b291196eec963dd6c5493d47f6224c,1249,inputs,Boltz-2 structure-prediction inputs; that test is not part of this study
+inputs/boltz/wt_rt_dor_affinity_Aonly.yaml,4d3ae4982686fa56ae07ec8312daee57fc4c6fa7e8d37723e065fa4e12da6cd4,764,inputs,Boltz-2 structure-prediction inputs; that test is not part of this study
+tmp_docx_extracts/DorDRM-MD-04-13-26.txt,4f74149fdf723f3ed8b7830afda2d9517b8d89071475c0dd775cd389f12c6e6f,48705,tmp_docx_extracts,"plain-text dumps of earlier manuscript drafts, regenerable from the drafts"
+tmp_docx_extracts/DorDRM-MD-04-21-26.txt,847e8d449cf3ff33463341cb0e8e28a7a82f0a1021c5c4731d5731d297c1d5f3,50277,tmp_docx_extracts,"plain-text dumps of earlier manuscript drafts, regenerable from the drafts"
+tmp_docx_extracts/DorDRM-MD-05-08-26.txt,cc1f70289de3ce352b4f4b13aeb695392e932015b9d57a6eceb0e0b79adbfba1,28564,tmp_docx_extracts,"plain-text dumps of earlier manuscript drafts, regenerable from the drafts"
+tmp_docx_extracts/DorDRM-MD-05-13-26.txt,dd7c471e6127e9341950ea73aaa514e1a9913e395f47770b9a6da8bf9ba42334,31568,tmp_docx_extracts,"plain-text dumps of earlier manuscript drafts, regenerable from the drafts"
+tmp_docx_extracts/DorDRM-MD-05-18-26.txt,1d825e9df814bce16d3bc61a4093bdaea10f53feca1116aa0b92b1a93ca376d5,32296,tmp_docx_extracts,"plain-text dumps of earlier manuscript drafts, regenerable from the drafts"
+tmp_docx_extracts/DorDRM-MD-05-20-26.txt,070d4774cd7ccbf7c17e94cd156ddf60e8a561a693a794ad94b52e1b6d29f50c,51609,tmp_docx_extracts,"plain-text dumps of earlier manuscript drafts, regenerable from the drafts"
+tmp_docx_extracts/DorDRM-MD-05-29-26.txt,70781ad83c9d72fe10aecba90fe961f986f8f77933a1407a3737f6397e9a6e72,51025,tmp_docx_extracts,"plain-text dumps of earlier manuscript drafts, regenerable from the drafts"
+tmp_docx_extracts/DorDRM-MD-06-02-26.txt,9fec96e5b228412cac803b116af762b4b580aad9d79fe1b9a718547f21c15b59,50226,tmp_docx_extracts,"plain-text dumps of earlier manuscript drafts, regenerable from the drafts"
+tmp_docx_extracts/DorDRM-MD-06-19-26.txt,afc78f84fa96b631bd004ab0a36ef48f37d842b36834b285b3f8f26386826e9a,32491,tmp_docx_extracts,"plain-text dumps of earlier manuscript drafts, regenerable from the drafts"
+tmp_docx_extracts/Supplementary Text.txt,309348e677db607fb41b6aea31b534ca0b132e75364f9a997160c42458d69341,1820,tmp_docx_extracts,"plain-text dumps of earlier manuscript drafts, regenerable from the drafts"
+figures/README.md,ca74fb490fd1582816cbb8c08aae16d0b757cdf1aad99b81cc4cef31bf2e1cdc,888,figures,held a single README describing a convention no longer used
+docs/Jorgensen-FEP-protocol.md,1bd9946068adcd04f3203fcaeabdf53830e892d973aadad51057a16f2922bd4b,4831,docs/Jorgensen-FEP-protocol.md,Jorgensen/perses alchemical protocol notes; that pipeline and its results are archived
+docs/Jorgensen-approx-FEP-protocol.md,327c880f5d48a7843a48033d495fdb170ad971a78ed6ab8dab0ac03156e2b59b,1762,docs/Jorgensen-approx-FEP-protocol.md,Jorgensen/perses alchemical protocol notes; that pipeline and its results are archived
+docs/fep_jorgensen_sherlock.md,983bb568229262ccd622a1b409310fa2e05271fe6e92b92f05e2ccd49f7e0c61,6887,docs/fep_jorgensen_sherlock.md,cluster runbook for the Jorgensen/perses pipeline
+docs/perses_point_mutation_fep.md,8bd33eb1d27fc6d5fdef20f624cb3592dffea7afe7c6fd2ecdcbb8b8fc41a96c,1792,docs/perses_point_mutation_fep.md,perses point-mutation FEP design notes

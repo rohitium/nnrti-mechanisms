@@ -7,7 +7,7 @@
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
-PYTHON="${PYTHON:-$HOME/miniconda3/envs/nnrti-prep/bin/python}"
+PYTHON="${PYTHON:-$HOME/miniconda3/env/nnrti-prep/bin/python}"
 export PYTHONPATH="${PYTHONPATH:-src}"
 
 "$PYTHON" -m nnrti.structure_prep.preparation "$@"

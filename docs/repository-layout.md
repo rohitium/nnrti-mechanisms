@@ -17,7 +17,7 @@ hardcode directory strings.**
 | `manifests/` | Provenance manifests & logs, including `archive_2026-09-01_manifest.csv`. |
 | `manuscript/` | Manuscript drafts and assets; `ARTIFACTS.md` is the artifact authority. |
 | `logs/` | Run logs (SLURM stdout/stderr). |
-| `docs/`, `tests/`, `envs/` | Docs, tests, environment specs. |
+| `docs/`, `tests/`, `env/` | Docs, tests, environment specs. |
 
 The package is importable as `nnrti` once you `pip install -e .` or set
 `PYTHONPATH=src`. Every entry point is `python -m nnrti.<subpackage>.<module>`;

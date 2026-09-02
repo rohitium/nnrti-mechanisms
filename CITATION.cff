@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+title: >-
+  Molecular Simulation of Doravirine Resistance in HIV-1 Reverse Transcriptase
+message: If you use this software or its derived data, please cite the paper.
+type: software
+authors:
+  - given-names: Rohit
+    family-names: Satija
+    affiliation: Division of Infectious Diseases, Stanford University School of Medicine
+  - given-names: Kaiming
+    family-names: Tao
+    affiliation: Division of Infectious Diseases, Stanford University School of Medicine
+  - given-names: Robert W.
+    family-names: Shafer
+    affiliation: Division of Infectious Diseases, Stanford University School of Medicine
+repository-code: https://github.com/rohitium/nnrti-mechanisms
+license: MIT
+abstract: >-
+  All-atom explicit-solvent molecular dynamics, non-equilibrium alchemical free
+  energy perturbation and MM/GBSA analysis of wild-type HIV-1 reverse
+  transcriptase and 18 doravirine-associated genotypes, compared against
+  measured phenotypic susceptibility.
+keywords:
+  - HIV-1 reverse transcriptase
+  - doravirine
+  - drug resistance
+  - free energy perturbation
+  - molecular dynamics

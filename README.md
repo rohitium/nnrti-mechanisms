@@ -18,7 +18,7 @@ a GPU cluster.
 
 ```bash
 git clone <repo> && cd nnrti-mechanisms
-conda env create -f envs/nnrti-prep.yml && conda activate nnrti-prep
+conda env create -f env/analysis.yml && conda activate nnrti-prep
 pip install -e .                      # or: export PYTHONPATH=src
 
 ./workflows/05_manuscript_artifacts.sh   # regenerates every table and figure, ~5 min
@@ -74,7 +74,7 @@ pocket volume column of Table 3) despite looking exploratory.
 
 ## Data-safety conventions
 
-These were learned the hard way; see [STRUCTURE.md](STRUCTURE.md) for the full
+These were learned the hard way; see [docs/repository-layout.md](docs/repository-layout.md) for the full
 set.
 
 1. Raw heavy data is not in git and not only on `/scratch`, which is purged

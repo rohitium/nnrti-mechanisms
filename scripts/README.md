@@ -22,10 +22,10 @@ Shell entrypoints for the two main workflows: **holo MD** and **apo MD**.
 
 ```bash
 # All mutations in susceptibility xlsx:
-OPENMM_PLATFORM=CPU ~/miniconda3/envs/nnrti-prep/bin/python -m nnrti.structure_prep.preparation
+OPENMM_PLATFORM=CPU ~/miniconda3/env/nnrti-prep/bin/python -m nnrti.structure_prep.preparation
 
 # One specific mutation (e.g. F227C):
-OPENMM_PLATFORM=CPU ~/miniconda3/envs/nnrti-prep/bin/python -m nnrti.structure_prep.preparation \
+OPENMM_PLATFORM=CPU ~/miniconda3/env/nnrti-prep/bin/python -m nnrti.structure_prep.preparation \
     --mutations F227C
 ```
 

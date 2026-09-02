@@ -298,3 +298,8 @@ logistic_regression_only_residue/
 # macOS / Word lock files
 .DS_Store
 ~$*
+
+# The Python template ignores env/ (virtualenvs). This project's conda specs
+# live in /env at the repository root, so un-ignore that one directory only.
+!/env/
+!/env/*.yml

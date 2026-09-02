@@ -15,7 +15,7 @@ authors = [
     { name = "Robert W. Shafer" },
 ]
 
-# Runtime dependencies are pinned in envs/; this list exists so that
+# Runtime dependencies are pinned in env/; this list exists so that
 # `pip install -e .` gives a working analysis environment on top of a conda
 # base that already provides OpenMM, MDAnalysis and MDTraj.
 dependencies = [
