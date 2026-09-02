@@ -2,8 +2,8 @@
 """Apply Atanu-revision manuscript edits to DorDRM-MD-08-14-26.docx.
 
 Writes:
-  manuscript/post-feedback-from-atanu/DorDRM-MD-08-14-26-rev.docx
-  manuscript/post-feedback-from-atanu/REVISION_CHANGELOG.md
+  paper/submission/DorDRM-MD-08-14-26-rev.docx
+  paper/submission/REVISION_CHANGELOG.md
 """
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ from docx import Document
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 
-SRC = Path("manuscript/post-feedback-from-atanu/DorDRM-MD-08-14-26.docx")
-DST = Path("manuscript/post-feedback-from-atanu/DorDRM-MD-08-14-26-rev.docx")
-LOG = Path("manuscript/post-feedback-from-atanu/REVISION_CHANGELOG.md")
+SRC = Path("paper/submission/DorDRM-MD-08-14-26.docx")
+DST = Path("paper/submission/DorDRM-MD-08-14-26-rev.docx")
+LOG = Path("paper/submission/REVISION_CHANGELOG.md")
 
 
 def _set_para(p: Paragraph, text: str) -> None:

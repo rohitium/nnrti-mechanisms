@@ -6,7 +6,7 @@ Why this exists
 The manuscript reports a single number for the V106A dislocation -- "the total
 number of protein heavy atoms within 4.5 A of DOR fell from 224 +/- 1 in WT to
 (that figure predates the switch to a 4.0 A cutoff; see
-manuscript/contact-cutoff-sensitivity.md)
+paper/contact-cutoff-sensitivity.md)
 212 +/- 1 in V106A". A whole-ligand count says the interface loosens but not
 *where*, and DOR is not a homogeneous object: it is three ring systems joined by
 an ether and a methylene, and the V106A slide toward Ser105 is directional, so

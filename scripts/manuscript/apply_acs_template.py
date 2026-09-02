@@ -194,9 +194,9 @@ def main() -> int:
     root = Path(__file__).resolve().parents[2]
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--src", type=Path,
-                    default=root / "manuscript/post-feedback-from-atanu/DorDRM-MD-09-02-26.docx")
+                    default=root / "paper/submission/DorDRM-MD-09-02-26.docx")
     ap.add_argument("--template", type=Path,
-                    default=root / "manuscript/post-feedback-from-atanu/acstemplate_msw2011_mac.dotx")
+                    default=root / "paper/submission/acstemplate_msw2011_mac.dotx")
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--check", action="store_true", help="Report the mapping; write nothing.")
     args = ap.parse_args()

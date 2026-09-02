@@ -227,9 +227,9 @@ def main() -> int:
     root = repo_root()
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--output-xlsx", type=Path,
-                    default=root / "manuscript/Supplementary-Table-4.xlsx")
+                    default=root / "paper/submission/Supplementary-Table-4.xlsx")
     ap.add_argument("--table3-csv", type=Path,
-                    default=root / "manuscript/Table-3-structural.csv")
+                    default=root / "paper/tables/Table-3-structural.csv")
     args = ap.parse_args()
 
     detail, summary = build(root)

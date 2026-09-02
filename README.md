@@ -34,7 +34,7 @@ pip install -e .                      # or: export PYTHONPATH=src
 | `data/` | Deposited inputs: structures, the DOR ligand, and `DRM-susceptibilities.csv.xlsx` — the authoritative fold-change source. |
 | `manifests/` | Run manifests and provenance logs, including the archive manifest with checksums. |
 | `results/` | Manuscript-facing output only. Everything else was archived; see below. |
-| `manuscript/` | Drafts, tables, and [`ARTIFACTS.md`](manuscript/ARTIFACTS.md) — the authority on what produced each figure and table. |
+| `paper/` | Drafts, tables, and [`ARTIFACTS.md`](paper/ARTIFACTS.md) — the authority on what produced each figure and table. |
 | `docs/` | Method notes and cluster runbooks. |
 
 `src/nnrti/paths.py` defines the canonical directories. Import them; don't

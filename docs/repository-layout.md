@@ -10,12 +10,12 @@ hardcode directory strings.**
 |---|---|
 | `workflows/` | The five numbered entry points, in the order the study ran. |
 | `src/nnrti/` | The Python package: `md/` (simulation protocol + cluster workers), `fep/` (pmx non-equilibrium FEP), `analysis/` (analysis library), `cli/` (only the scripts that build a manuscript artifact), `structure_prep/`, `utils/`, and the `paths.py` registry. |
-| `scripts/` | Cluster-side operations only: Slurm submission (`sherlock/`, `fep_pmx/`), rsync helpers, MD metadata audit/repair (`md/`), docx tooling (`manuscript/`). No analysis code. |
+| `scripts/` | Cluster-side operations only: Slurm submission (`sherlock/`, `fep_pmx/`), rsync helpers, MD metadata audit/repair (`md/`), docx tooling (`paper/`). No analysis code. |
 | `data/` | Inputs: `data/structures/` (experimental CIF/PDB), `data/ligands/` (SDF), `data/prepared/`, and the susceptibility spreadsheet. |
 | `results/` | Manuscript-facing output only (see below). |
 | `figures/` | Curated, manuscript-facing figures (distinct from per-run plots under `results/`). |
 | `manifests/` | Provenance manifests & logs, including `archive_2026-09-01_manifest.csv`. |
-| `manuscript/` | Manuscript drafts and assets; `ARTIFACTS.md` is the artifact authority. |
+| `paper/` | Manuscript drafts and assets; `ARTIFACTS.md` is the artifact authority. |
 | `logs/` | Run logs (SLURM stdout/stderr). |
 | `docs/`, `tests/`, `env/` | Docs, tests, environment specs. |
 

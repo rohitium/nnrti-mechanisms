@@ -129,7 +129,7 @@ changes genotype labels from `A98G + F227C` to `A98G+F227C`, because the
 workflow does not pass `--docx`. Every number is unchanged. The unspaced form
 matches Tables 1 and 3, so I left it — but if you want Table 2 to keep the
 spaced spelling, run it with
-`--docx manuscript/post-feedback-from-atanu/DorDRM-MD-09-02-26.docx` as
+`--docx paper/submission/DorDRM-MD-09-02-26.docx` as
 `REPRODUCE.md` documents.
 
 ---

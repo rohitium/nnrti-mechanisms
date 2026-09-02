@@ -106,7 +106,7 @@ the campaign finishes.
 │   ├── 04_analysis.sh            (local)
 │   └── 05_manuscript_artifacts.sh
 ├── results/                # manuscript-facing outputs only
-├── manuscript/
+├── paper/
 └── archive/2026-08-28_pre-submission/
     ├── MANIFEST.csv        # original path, archived path, sha256, bytes, reason
     ├── README.md           # what each subdirectory was, and why it was set aside

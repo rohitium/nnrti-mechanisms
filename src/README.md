@@ -40,7 +40,7 @@ Post-MD analysis and plotting.
 
 Only scripts that produce a numbered figure or table live here; there were 87
 modules before the 2026-09-01 refactor and there are 16 now. The rest are in the
-external archive (see the repository README). `manuscript/ARTIFACTS.md` maps
+external archive (see the repository README). `paper/ARTIFACTS.md` maps
 each one to its artifact.
 
 ## 6) `src/nnrti/fep/` — pmx non-equilibrium FEP

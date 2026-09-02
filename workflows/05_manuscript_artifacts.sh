@@ -4,7 +4,7 @@
 #   ./workflows/05_manuscript_artifacts.sh
 #
 # Reads only committed/deposited derived data, so it runs in about five minutes
-# on a laptop. manuscript/ARTIFACTS.md maps each output back to its figure or
+# on a laptop. paper/ARTIFACTS.md maps each output back to its figure or
 # table number.
 
 set -euo pipefail
@@ -31,4 +31,4 @@ run "$PYTHON" -m nnrti.cli.plot_fep_work_distributions       # Supp. Figure 2
 # --- Statistics quoted in the text ------------------------------------------
 run "$PYTHON" -m nnrti.cli.classification_performance
 
-echo; echo "Done. See manuscript/ARTIFACTS.md for the artifact -> file map."
+echo; echo "Done. See paper/ARTIFACTS.md for the artifact -> file map."

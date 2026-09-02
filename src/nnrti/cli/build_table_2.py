@@ -54,12 +54,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fep-csv", type=Path,
                         default=root / "results/analysis/fep_pmx/panel_ddg.csv")
     parser.add_argument("--docx", type=Path,
-                        default=root / "manuscript/DorDRM-MD-06-21-26.docx",
+                        default=root / "paper/submission/DorDRM-MD-09-02-26.docx",
                         help="Read-only source of row order and mutation-category labels.")
     parser.add_argument("--table-index", type=int, default=1,
                         help="Which table in the .docx carries the energetics panel.")
     parser.add_argument("--output-csv", type=Path,
-                        default=root / "manuscript/Table-2-energetics.csv")
+                        default=root / "paper/tables/Table-2-energetics.csv")
     return parser.parse_args()
 
 

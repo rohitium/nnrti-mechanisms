@@ -289,7 +289,7 @@ the 500 ps route). One leg-rep = 8 GPU elements at 100 ps, 12 at 500 ps.
 2. **Panel-wide SEM < 1.** Rank by σ_DDG (see the CORRECTION above). Test the switch-length lever
    on G190E via runbook step 11 (switch stage only, reusing its own snapshots) before committing
    GPU to a `wt_to_K103N` rebuild; if that comes back flat, fall back to `NEQ_EQUIL_NS` + more reps.
-3. **Manuscript**: `manuscript/DorDRM-FEP-08-05-26.docx` (untracked working drafts in `manuscript/`).
+3. **Manuscript**: `paper/DorDRM-FEP-08-05-26.docx` (untracked working drafts in `paper/`).
    The second-wave analysis is done: protocol figures, `modern_md_suite`, `occupancy_stats` (FWER +
    Welch), the DCD-fingerprint MD-timing correction (`src/nnrti/analysis/md_timing.py`).
 

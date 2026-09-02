@@ -29,7 +29,7 @@ PANELS = [
         # Two corrections: the cutoff is 4.0 A (changed 2026-08-31), and the
         # quantity is a count of atom PAIRS within it, not of atoms -- an RT atom
         # close to three ring atoms contributes three. See
-        # manuscript/contact-cutoff-sensitivity.md.
+        # paper/contact-cutoff-sensitivity.md.
         ylabel="DOR ring burial\n(RT heavy-atom contacts < 4.0 Å)",
         title="Y188L: loss of aromatic packing",
         legend_loc="upper center",

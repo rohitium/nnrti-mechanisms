@@ -25,10 +25,10 @@ import pandas as pd
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
-TABLE2 = REPO / "manuscript/Table-2-energetics.csv"
-TABLE3 = REPO / "manuscript/Table-3-structural.csv"
-SUPP3 = REPO / "manuscript/Supplementary-Table-3.xlsx"
-SUPP4 = REPO / "manuscript/Supplementary-Table-4.xlsx"
+TABLE2 = REPO / "paper/tables/Table-2-energetics.csv"
+TABLE3 = REPO / "paper/tables/Table-3-structural.csv"
+SUPP3 = REPO / "paper/submission/Supplementary-Table-3.xlsx"
+SUPP4 = REPO / "paper/submission/Supplementary-Table-4.xlsx"
 PANEL_DDG = REPO / "results/analysis/fep_pmx/panel_ddg.csv"
 
 

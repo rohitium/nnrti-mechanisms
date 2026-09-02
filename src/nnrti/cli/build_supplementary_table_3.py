@@ -85,7 +85,7 @@ def repo_root() -> Path:
 def parse_args() -> argparse.Namespace:
     root = repo_root()
     parser = argparse.ArgumentParser(
-        description="Generate manuscript/Supplementary-Table-3.xlsx from WT-referenced energetic shifts."
+        description="Generate paper/submission/Supplementary-Table-3.xlsx from WT-referenced energetic shifts."
     )
     parser.add_argument(
         "--ddg-csv",
@@ -108,7 +108,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-xlsx",
         type=Path,
-        default=root / "manuscript/Supplementary-Table-3.xlsx",
+        default=root / "paper/submission/Supplementary-Table-3.xlsx",
         help="Output workbook path.",
     )
     parser.add_argument(

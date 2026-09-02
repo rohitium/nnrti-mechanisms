@@ -13,7 +13,7 @@ engineer on day one, with the paper in hand and no history, what would they buil
 | | now | why it is wrong |
 | --- | ---: | --- |
 | Root entries | 26 | Should be ~10. `tmp_docx_extracts/`, `inputs/`, `figures/` (one README), `.env`, `.mplconfig` are all visible on `ls`. |
-| `manuscript/` files | 112 | 18 superseded drafts, 19 dead figure exports (23 MB) for Figures 4–8 that no longer exist, 15 per-genotype notes, 16 dated working notes. The live submission set is **8 files** — and it lives in a directory named after a colleague. |
+| `paper/` files | 112 | 18 superseded drafts, 19 dead figure exports (23 MB) for Figures 4–8 that no longer exist, 15 per-genotype notes, 16 dated working notes. The live submission set is **8 files** — and it lives in a directory named after a colleague. |
 | `results/` | 35 GB | 27 GB is superseded: `.bak` analysis DCDs (6.9 GB), OpenMM checkpoints (1.9 GB), system XMLs (6.3 GB), an old in-tree archive (2.6 GB), 253 MB of tables and 315 MB of plots from analyses that were archived yesterday. The manuscript needs **~7.5 GB**. |
 | `docs/` | 8 files | 5 of the 8 document the superseded Jorgensen pipeline. |
 
@@ -77,7 +77,7 @@ nnrti-mechanisms/
 │   ├── structure/                 was analysis/{mechanisms,modern_md_suite,md_convergence}
 │   └── panel/                     was analysis/{dor_susceptibility_bar_chart,classification_performance}
 │
-├── paper/                     ← was manuscript/. The deliverable, and only that.
+├── paper/                     ← was paper/. The deliverable, and only that.
 │   ├── ARTIFACTS.md               the artifact authority
 │   ├── submission/                exactly what JCIM receives
 │   │   ├── manuscript.docx
@@ -122,7 +122,7 @@ artifact unchanged.**
 
 ### Phase 2 — `paper/` (1 hour, low risk, biggest legibility win)
 
-`manuscript/` → `paper/`, and the live submission set is lifted out of
+`paper/` → `paper/`, and the live submission set is lifted out of
 `post-feedback-from-atanu/` into `paper/submission/` under plain names.
 
 Archived (85 files, ~60 MB):
