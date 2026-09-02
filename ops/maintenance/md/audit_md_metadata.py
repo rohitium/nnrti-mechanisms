@@ -32,11 +32,19 @@ import sys
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = _repo_root()
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from nnrti.paths import MD_RUNS, APO_MD_RUNS, REPO_ROOT as _ROOT, rel  # noqa: E402
+
+
+def _repo_root() -> Path:
+    """Nearest ancestor containing pyproject.toml."""
+    for d in Path(__file__).resolve().parents:
+        if (d / "pyproject.toml").is_file():
+            return d
+    raise RuntimeError("repository root not found from %s" % __file__)
 
 DEFAULT_TIMESTEP_FS = 2.0
 TARGET_1US_STEPS = 500_000_000  # 1 us at 2 fs, for "remaining" reporting

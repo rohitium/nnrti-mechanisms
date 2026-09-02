@@ -35,11 +35,19 @@ import shutil
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = _repo_root()
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from nnrti.paths import MD_RUNS, APO_MD_RUNS, MANIFESTS, REPO_ROOT as ROOT, rel  # noqa: E402
+
+
+def _repo_root() -> Path:
+    """Nearest ancestor containing pyproject.toml."""
+    for d in Path(__file__).resolve().parents:
+        if (d / "pyproject.toml").is_file():
+            return d
+    raise RuntimeError("repository root not found from %s" % __file__)
 
 DT_FS = 2.0
 STALE = "apo_md_runs"

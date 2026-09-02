@@ -41,6 +41,14 @@ from pathlib import Path
 
 from lxml import etree
 
+
+def _repo_root() -> Path:
+    """Nearest ancestor containing pyproject.toml."""
+    for d in Path(__file__).resolve().parents:
+        if (d / "pyproject.toml").is_file():
+            return d
+    raise RuntimeError("repository root not found from %s" % __file__)
+
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 NS = {"w": W}
 
@@ -191,12 +199,12 @@ def strip_direct_font(paragraph) -> None:
 
 
 def main() -> int:
-    root = Path(__file__).resolve().parents[2]
+    root = _repo_root()
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--src", type=Path,
                     default=root / "paper/submission/DorDRM-MD-09-02-26.docx")
     ap.add_argument("--template", type=Path,
-                    default=root / "paper/submission/acstemplate_msw2011_mac.dotx")
+                    default=root / "paper/sources/acstemplate_msw2011_mac.dotx")
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--check", action="store_true", help="Report the mapping; write nothing.")
     args = ap.parse_args()

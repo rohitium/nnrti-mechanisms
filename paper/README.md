@@ -11,4 +11,9 @@ Supplementary Tables 3 and 4 are written into `submission/` by
 `build_supplementary_table_3` and `build_supplementary_table_4`; Tables 2 and 3
 go to `tables/`. There is one copy of each.
 
+`DorDRM-MD-09-02-26.docx` is the draft of record. The `-ACS` copy is generated
+from it by `ops/maintenance/manuscript/apply_acs_template.py`, which applies the
+ACS template's styles and page setup; regenerate it after editing the draft
+rather than editing it directly.
+
 Notes from the drafting rounds are in `docs/decisions/manuscript-notes/`.
