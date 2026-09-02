@@ -3,7 +3,7 @@
 
 Prefer the multi-genotype entry point:
 
-    python3 scripts/fep_pmx/plot_protocol_figures.py --targets V106A
+    python3 ops/slurm/fep/plot_protocol_figures.py --targets V106A
 
 This wrapper regenerates only V106A (also mirrors to protocol_v106a/).
 """

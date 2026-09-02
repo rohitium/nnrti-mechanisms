@@ -15,7 +15,7 @@ The converged BAR ΔG (from analysis.json) is drawn at λ = 1 as the reference.
 Run where the dgdl.xvg live (Sherlock). Outputs per leg:
   results/analysis/fep_pmx/lambda_profiles/<leg>.png  and  <leg>.csv
 
-  python3 scripts/fep_pmx/plot_lambda_profile.py --legs wt_to_V106A wt_to_K103N
+  python3 ops/slurm/fep/plot_lambda_profile.py --legs wt_to_V106A wt_to_K103N
 """
 
 from __future__ import annotations

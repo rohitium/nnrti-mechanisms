@@ -138,8 +138,8 @@ These are decisions, not defaults, and changing them changes the numbers.
 Neither of these is required to reproduce the published numbers from the
 deposited data; they document how that data was made.
 
-**MD** — `scripts/sherlock/submit_md_batched.sh` (holo),
-`scripts/sherlock/submit_apo_md_batched.sh` (apo). 19 genotypes × 3 replicates ×
+**MD** — `ops/slurm/cluster/submit_md_batched.sh` (holo),
+`ops/slurm/cluster/submit_apo_md_batched.sh` (apo). 19 genotypes × 3 replicates ×
 100 ns, ~38 GPU-h per run. System preparation is
 `src/nnrti/structure_prep/preparation.py`, which is idempotent: `--replicates N`
 generates rep_04 onwards with fresh jitter seeds and leaves existing replicates
@@ -147,7 +147,7 @@ untouched.
 
 **FEP** — pmx non-equilibrium alchemical switching. Prepare hybrids, build
 solvated systems, then chain em → equil → extract → switch:
-`scripts/fep_pmx/`, with `OPERATIONS.md` for the pipeline and
+`ops/slurm/fep/`, with `OPERATIONS.md` for the pipeline and
 `RUNBOOK_G190E_SEM.md` for a worked campaign including failure recovery.
 
 ---

@@ -88,7 +88,7 @@ def build_solvated_system(
         env["GMXLIB"] = gmxlib
 
     em_mdp = out_dir / "em.mdp"
-    shutil.copy2(REPO_ROOT / "scripts/fep_pmx/mdp/em.mdp", em_mdp)
+    shutil.copy2(REPO_ROOT / "ops/slurm/fep/mdp/em.mdp", em_mdp)
 
     work_hybrid = out_dir / "hybrid.pdb"
     shutil.copy2(hybrid_pdb, work_hybrid)

@@ -7,7 +7,7 @@ the BAR dG and the overlap coefficient. Reuses qc_neq.qc_unit so the overlap
 definition matches panel_qc.csv exactly. Uses cached analysis (no dgdl needed);
 pass --force to re-run pmx analyse on Sherlock.
 
-  python3 scripts/fep_pmx/plot_crooks_per_genotype.py --targets K103N V106M ...
+  python3 ops/slurm/fep/plot_crooks_per_genotype.py --targets K103N V106M ...
 Outputs: results/analysis/fep_pmx/crooks_overlap/<genotype>.png
 """
 

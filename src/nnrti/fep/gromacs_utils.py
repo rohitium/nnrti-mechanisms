@@ -16,7 +16,7 @@ def find_gmx() -> str:
     gmx = shutil.which("gmx") or shutil.which("gmx_mpi")
     if gmx is None:
         raise GromacsError(
-            "gmx not found on PATH. On Sherlock: source scripts/sherlock/load_gromacs_module.sh"
+            "gmx not found on PATH. On Sherlock: source ops/slurm/cluster/load_gromacs_module.sh"
         )
     return gmx
 

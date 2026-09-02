@@ -45,8 +45,8 @@ each one to its artifact.
 
 ## 6) `src/nnrti/fep/` — pmx non-equilibrium FEP
 
-The alchemical pipeline, moved here from `scripts/fep_pmx/`. Slurm submission
-scripts and `.mdp` files stay under `scripts/fep_pmx/`, since they are
+The alchemical pipeline, moved here from `ops/slurm/fep/`. Slurm submission
+scripts and `.mdp` files stay under `ops/slurm/fep/`, since they are
 cluster-side operations rather than importable code.
 
 ### command-line entrypoints
@@ -93,7 +93,7 @@ Shared cross-cutting helpers: paths, CIF parsing, mutation token utilities.
 
 ## DCD timestamp note
 
-> See `scripts/README.md` → "DCD trajectory time metadata" for full details.
+> See `ops/README.md` → "DCD trajectory time metadata" for full details.
 
 **Never use `ts.time`** on DCDs produced by this pipeline. OpenMM's `DCDFile` writer
 wrote a corrupt DELTA field (near-zero in AKMA units) because `interval` was passed

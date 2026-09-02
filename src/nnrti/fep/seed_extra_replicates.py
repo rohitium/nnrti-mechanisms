@@ -31,15 +31,15 @@ baked into the alchemical system silently.
 
 Usage
 -----
-    python3 scripts/fep_pmx/seed_extra_replicates.py --legs wt_to_V106A            # dry run
-    python3 scripts/fep_pmx/seed_extra_replicates.py --legs wt_to_V106A --apply
-    python3 scripts/fep_pmx/seed_extra_replicates.py --legs A B --source-rep 2 --dest-rep 5 --apply
+    python3 ops/slurm/fep/seed_extra_replicates.py --legs wt_to_V106A            # dry run
+    python3 ops/slurm/fep/seed_extra_replicates.py --legs wt_to_V106A --apply
+    python3 ops/slurm/fep/seed_extra_replicates.py --legs A B --source-rep 2 --dest-rep 5 --apply
 
 Then prepare the new replicate as usual (note REPLICATES is a LIST here):
 
-    LEGS="wt_to_V106A" REPLICATES="4" bash scripts/fep_pmx/prepare_p0_hybrids.sh
-    LEGS="wt_to_V106A" REPLICATES="4" bash scripts/fep_pmx/build_p0_systems.sh
-    python3 scripts/fep_pmx/prepare_neq.py --legs wt_to_V106A --rep-start 4 --replicates 4 \
+    LEGS="wt_to_V106A" REPLICATES="4" bash ops/slurm/fep/prepare_p0_hybrids.sh
+    LEGS="wt_to_V106A" REPLICATES="4" bash ops/slurm/fep/build_p0_systems.sh
+    python3 ops/slurm/fep/prepare_neq.py --legs wt_to_V106A --rep-start 4 --replicates 4 \
         --n-snapshots 100 --force --panel-manifest results/analysis/fep_pmx/neq_<batch>_manifest.csv
 """
 

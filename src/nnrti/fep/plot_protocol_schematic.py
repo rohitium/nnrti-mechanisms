@@ -15,7 +15,7 @@ Three panels (the λ-profile figure has no schematic analogue and is skipped):
       given as equations rather than fitted values
 
 Usage:
-    PYTHONPATH=. python scripts/fep_pmx/plot_protocol_schematic.py
+    PYTHONPATH=. python ops/slurm/fep/plot_protocol_schematic.py
 """
 
 from __future__ import annotations
