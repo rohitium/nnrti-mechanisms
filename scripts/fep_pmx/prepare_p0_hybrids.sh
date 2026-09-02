@@ -12,6 +12,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
+export PYTHONPATH="${PROJECT_ROOT:-$PWD}/src:${PYTHONPATH:-}"
 
 REPLICATES="${REPLICATES:-1 2 3}"
 # REPLICATES is a LIST of rep INDICES, not a count. Accept "1-3" range syntax, and
@@ -74,7 +75,7 @@ for leg in "${LEGS[@]}"; do
                 continue
             fi
             echo "→ ${leg} ${phase} rep${rep}"
-            if python scripts/fep_pmx/prepare_hybrid.py \
+            if python -m nnrti.fep.prepare_hybrid \
                 --leg "${leg}" \
                 --phase "${phase}" \
                 --replicate "${rep}" \

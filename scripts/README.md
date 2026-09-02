@@ -22,10 +22,10 @@ Shell entrypoints for the two main workflows: **holo MD** and **apo MD**.
 
 ```bash
 # All mutations in susceptibility xlsx:
-OPENMM_PLATFORM=CPU ~/miniconda3/envs/nnrti-prep/bin/python -m src.structure_prep.preparation
+OPENMM_PLATFORM=CPU ~/miniconda3/envs/nnrti-prep/bin/python -m nnrti.structure_prep.preparation
 
 # One specific mutation (e.g. F227C):
-OPENMM_PLATFORM=CPU ~/miniconda3/envs/nnrti-prep/bin/python -m src.structure_prep.preparation \
+OPENMM_PLATFORM=CPU ~/miniconda3/envs/nnrti-prep/bin/python -m nnrti.structure_prep.preparation \
     --mutations F227C
 ```
 
@@ -69,7 +69,7 @@ bash scripts/run_analysis.sh
 ### Step 1 — prep locally
 
 ```bash
-OPENMM_PLATFORM=CPU python -m src.md.dor_md_pipeline_apo
+OPENMM_PLATFORM=CPU python -m nnrti.md.dor_md_pipeline_apo
 ```
 
 This strips DOR from each holo minimized PDB and writes `manifests/apo_md_manifest.csv`.
@@ -193,7 +193,7 @@ python3 scripts/sherlock/boltz/summarize_boltz_panel.py \
 | `sherlock/boltz/run_boltz_mutation_affinity.sh` | Run one mutation (or WT) Boltz affinity prediction from prepared mutant CIF |
 | `sherlock/boltz/run_boltz_control_panel.sh` | Run the default control panel (`K103N Y181C V106A Y318F`) with N replicates |
 | `sherlock/boltz/summarize_boltz_panel.py` | Aggregate replicate affinity JSONs into per-mutation mean/SD/95% CI |
-| `src/analysis/cli/validate_manuscript_citations.py` | Check that manuscript figure files exist |
+| `src/nnrti/cli/validate_manuscript_citations.py` | Check that manuscript figure files exist |
 
 ---
 

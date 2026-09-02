@@ -15,7 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.md.artifact_steps import infer_state_csv_path, reconcile_json_with_state_csv
+from nnrti.md.artifact_steps import infer_state_csv_path, reconcile_json_with_state_csv
 
 
 class TaskState(object):

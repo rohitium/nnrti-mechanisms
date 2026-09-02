@@ -116,7 +116,7 @@ find $ARCH -name equil.gro | wc -l          # want 12
 # run_neq_task.py reads the rendered .mdp files off disk, so the 20 ns and the
 # bundling are already baked into what prepare_neq wrote.
 NEQ_EQUIL_NS=20 NEQ_EXTRA_LONG_SWITCH_LEGS=wt_to_G190E NEQ_SNAPSHOTS_PER_TASK_LONG=10 \
-python3 scripts/fep_pmx/prepare_neq.py --legs wt_to_G190E \
+python -m nnrti.fep.prepare_neq --legs wt_to_G190E \
   --replicates 3 --n-snapshots 100 --force \
   --panel-manifest results/analysis/fep_pmx/neq_g190e_equil20_manifest.csv
 
@@ -163,7 +163,7 @@ per-task, so completed work is never redone.
 export MANIFEST=results/analysis/fep_pmx/neq_g190e_equil20_manifest.csv
 TASK_ID_FILE=$PWD/results/analysis/fep_pmx/neq_em_g190e_e20_task_ids.txt \
 STAGE=em bash scripts/fep_pmx/submit_p0_neq.sh
-python3 scripts/fep_pmx/audit_neq_panel.py --manifest $MANIFEST | grep '==='   # want EM (6/6 ok)
+python -m nnrti.fep.audit_neq_panel --manifest $MANIFEST | grep '==='   # want EM (6/6 ok)
 
 export EXCLUDE_NODES=sh03-12n12,sh02-16n06,sh03-13n01
 EQUIL=$(TASK_ID_FILE=$PWD/results/analysis/fep_pmx/neq_equil_g190e_e20_task_ids.txt \
@@ -195,7 +195,7 @@ independent conformations rather than three re-runs of one.
 ```bash
 # B1 — seed. Dry run first; it validates atom count, PBC-split and ligand contact.
 for s in 1 2 3; do
-  python3 scripts/fep_pmx/seed_extra_replicates.py --legs wt_to_G190E \
+  python -m nnrti.fep.seed_extra_replicates --legs wt_to_G190E \
     --source-rep $s --dest-rep $((s+3))
 done
 # then repeat with --apply once all three report ok
@@ -215,7 +215,7 @@ LEGS="wt_to_G190E" REPLICATES="4-6" bash scripts/fep_pmx/build_p0_systems.sh
 ```bash
 # B3 — NEQ prep for reps 4-6. Match whatever equilibration Lever A settled on.
 NEQ_EQUIL_NS=20 NEQ_EXTRA_LONG_SWITCH_LEGS=wt_to_G190E \
-python3 scripts/fep_pmx/prepare_neq.py --legs wt_to_G190E \
+python -m nnrti.fep.prepare_neq --legs wt_to_G190E \
   --rep-start 4 --replicates 6 --n-snapshots 100 --force \
   --panel-manifest results/analysis/fep_pmx/neq_g190e_reps456_manifest.csv
 ```
@@ -234,15 +234,15 @@ lost their raw `dgdl.xvg` to the 2026-08-13 `git clean -fd` — it would fail on
 missing inputs.
 
 ```bash
-python3 scripts/fep_pmx/combine_neq.py --targets G190E --replicates 6
-python3 scripts/fep_pmx/qc_neq.py --legs wt_to_G190E --replicates 6
+python -m nnrti.fep.combine_neq --targets G190E --replicates 6
+python -m nnrti.fep.qc_neq --legs wt_to_G190E --replicates 6
 ```
 
 ⚠️ `combine_neq --targets X` **rewrites `panel_ddg.csv` with only those targets.**
 Rebuild the full panel afterwards with the complete genotype list:
 
 ```bash
-python3 scripts/fep_pmx/combine_neq.py --targets \
+python -m nnrti.fep.combine_neq --targets \
   F227C G190A G190E G190S V106A V106I V106M Y181C Y188L Y318F \
   A98G+F227C V106A+F227L V106A+L234I V106A+P225H V106I+F227C \
   K103N K103N+M230L K103N+P225H L100I+K103N --replicates 3
@@ -271,13 +271,13 @@ Pull to the Mac with `SHERLOCK_USER=rsatija bash scripts/rsync_fep_pmx.sh pull`.
 ## Manuscript hooks
 
 - `results/analysis/fep_pmx/panel_ddg.csv` → Table 2 `∆∆Gbind` column, rebuilt by
-  `src/analysis/cli/build_table_2.py`.
+  `src/nnrti/cli/build_table_2.py`.
 - `results/analysis/fep_pmx/panel_discussion_tiers.csv` → the main-text /
   show / omit tiering. `OMIT_MAIN_TEXT` in `combine_neq.py` still hardcodes
   `{"K103N", "G190E"}` from when both had SEM > 2; K103N is now 0.23. **Revisit
   that set** once G190E lands.
 - Supplementary Figure 2 work distributions:
-  `src/analysis/cli/plot_fep_work_distributions.py`.
+  `src/nnrti/cli/plot_fep_work_distributions.py`.
 - Results text currently reads "in case of G190E because of large replicate
   variance ∆∆Gbind = 2.00 ± 1.77 kcal/mol"; Discussion reads "in some cases
   (e.g. G190E), this was not enough to mitigate the errors". Both need rewriting

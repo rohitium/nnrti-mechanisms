@@ -16,7 +16,7 @@ and flag every inconsistency class:
 
 JSON is a claim, never trusted. ``state.csv`` is better but can also be a stale
 mid-slice dump. For analysis time axes, prefer the analysis-DCD fingerprint
-(see ``src.analysis.md_timing``): 180 fr / 34 MB and 360 fr / 68 MB are the
+(see ``nnrti.analysis.md_timing``): 180 fr / 34 MB and 360 fr / 68 MB are the
 completed 100 ns products, even when JSON/CSV say 50–70 ns.
 
     python3 scripts/md/audit_md_metadata.py                    # table + summary
@@ -36,7 +36,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.paths import MD_RUNS, APO_MD_RUNS, REPO_ROOT as _ROOT, rel  # noqa: E402
+from nnrti.paths import MD_RUNS, APO_MD_RUNS, REPO_ROOT as _ROOT, rel  # noqa: E402
 
 DEFAULT_TIMESTEP_FS = 2.0
 TARGET_1US_STEPS = 500_000_000  # 1 us at 2 fs, for "remaining" reporting

@@ -33,11 +33,11 @@ Do **not** use `pip install pmx` — install [deGrootLab/pmx](https://github.com
 
 ```bash
 # 1) Inventory what MD assets exist vs missing
-python scripts/fep_pmx/asset_manifest.py
+python -m nnrti.fep.asset_manifest
 
 # 2) Export DOR OpenFF → GROMACS (needs nnrti-prep env)
 conda activate nnrti-prep
-python scripts/fep_pmx/export_dor_itp.py
+python -m nnrti.fep.export_dor_itp
 
 # 3) pmx hybrid structures for P0 legs (all reps × holo/apo)
 conda activate pmx
@@ -86,15 +86,15 @@ STAGE=switch  bash scripts/fep_pmx/submit_p0_neq.sh   # gpu
 conda activate pmx
 
 # 3a) per leg/phase/rep BAR+CGI+Jarzynski (writes analysis.json + work_dist.png)
-python scripts/fep_pmx/analyze_neq.py --leg wt_to_V106A --phase holo --replicate 1
+python -m nnrti.fep.analyze_neq --leg wt_to_V106A --phase holo --replicate 1
 
 # 3b) ΔΔG_bind per genotype (= ΔG_holo − ΔG_apo, summed over legs), mean ± SEM
 #     across replicates; correlates vs experiment; runs analyze_neq for any
 #     missing leg automatically.
-python scripts/fep_pmx/combine_neq.py --targets V106A Y188L --replicates 3
+python -m nnrti.fep.combine_neq --targets V106A Y188L --replicates 3
 
 # 3c) QC: Crooks forward/reverse overlap, work outliers, BAR-vs-Jarzynski (§4.6)
-python scripts/fep_pmx/qc_neq.py --replicates 3
+python -m nnrti.fep.qc_neq --replicates 3
 ```
 
 Outputs land under `results/analysis/fep_pmx/`:
@@ -107,7 +107,7 @@ Outputs land under `results/analysis/fep_pmx/`:
 Rebuild the scatter + tiers from the existing CSV without re-running pmx:
 
 ```bash
-python scripts/fep_pmx/combine_neq.py --replot-only
+python -m nnrti.fep.combine_neq --replot-only
 ```
 
 ### V106A / panel protocol figures (manuscript walkthrough)
@@ -118,9 +118,9 @@ not discrete λ windows). Defaults to every genotype **shown** on
 
 ```bash
 conda activate nnrti-prep
-python scripts/fep_pmx/plot_protocol_figures.py              # all panel genotypes
-python scripts/fep_pmx/plot_protocol_figures.py --targets V106A Y188L
-python scripts/fep_pmx/plot_v106a_protocol.py                # V106A only (compat)
+python -m nnrti.fep.plot_protocol_figures              # all panel genotypes
+python -m nnrti.fep.plot_protocol_figures --targets V106A Y188L
+python -m nnrti.fep.plot_v106a_protocol                # V106A only (compat)
 ```
 
 Writes `results/analysis/fep_pmx/protocol/<SAFE>/` (V106A also mirrored to
@@ -171,8 +171,8 @@ STAGE=switch bash scripts/fep_pmx/submit_p0_neq.sh
 # when switches finish: recover dgdl (idempotent), then re-analyze and compare
 find results/analysis/fep_pmx/legs/wt_to_V106A -path '*/switches/*' -name switch.gro -print0 |
 while IFS= read -r -d '' g; do d=$(dirname "$g"); [ -f "$d/dgdl.xvg" ] || cp "$d/switch.xvg" "$d/dgdl.xvg"; done
-python3 scripts/fep_pmx/combine_neq.py --targets V106A Y188L --replicates 3
-python3 scripts/fep_pmx/qc_neq.py --replicates 3
+python -m nnrti.fep.combine_neq --targets V106A Y188L --replicates 3
+python -m nnrti.fep.qc_neq --replicates 3
 ```
 
 If overlap tightens and ΔΔG stays ~+1.7, adopt for the panel. If the reverse (λ=1) scatter

@@ -13,7 +13,7 @@ Nothing is deleted; superseded material moves to a dated archive with checksums.
 ## What is wrong now
 
 **1. There is no path from data to manuscript.** `scripts/run_analysis.sh` is the
-nominal entry point, but of the 82 CLIs in `src/analysis/cli/`, **61 are
+nominal entry point, but of the 82 CLIs in `src/nnrti/cli/`, **61 are
 referenced by no shell script and no doc** — and that unreferenced set includes
 every script that builds a manuscript artifact:
 
@@ -21,7 +21,7 @@ every script that builds a manuscript artifact:
 | --- | --- | :---: |
 | Table 1 | `plot_dor_susceptibility_bars` | no |
 | Table 2 | `build_table_2` | no |
-| Figure 2 | `scripts/fep_pmx/plot_protocol_schematic.py`, `combine_neq.py` | no |
+| Figure 2 | `src/nnrti/fep/plot_protocol_schematic.py`, `combine_neq.py` | no |
 | Figure 3 | `compute_mechanism_coordinates` → `plot_mechanism_panel` | no |
 | Supp. Figure 1 | `compute_md_convergence` → `plot_convergence_panel` | no |
 | Supp. Figure 2 | `plot_fep_work_distributions` | no |
@@ -59,7 +59,7 @@ in the bibliography**, not as analyses.
 **3. Scripts are split across two trees with no rule.** `scripts/` holds both
 SLURM submission (`scripts/sherlock/`, `scripts/fep_pmx/`) and one-off diagnostics
 (`diagnose_mmgbsa_*.py`, `audit_mmgbsa_protocol_first5.py`) at top level;
-`src/analysis/cli/` holds 82 more. Which tree a thing lives in is historical.
+`src/nnrti/cli/` holds 82 more. Which tree a thing lives in is historical.
 
 ---
 
@@ -127,13 +127,13 @@ notes.
 
 ### On moving code (stage 3)
 
-`src/analysis/...` → `src/nnrti/analysis/...` breaks every `python -m
-src.analysis.cli.X` invocation, including ones written into the FEP runbooks and
+`src/nnrti/analysis/...` → `src/nnrti/analysis/...` breaks every `python -m
+nnrti.cli.X` invocation, including ones written into the FEP runbooks and
 into `RUNBOOK_G190E_SEM.md`. Two options:
 
 - **(a) Rename the package**, update every call site and runbook in the same
   commit. Cleaner for a submitted artifact; one atomic breaking change.
-- **(b) Leave `src/` as the package root**, and only prune `src/analysis/cli/`
+- **(b) Leave `src/` as the package root**, and only prune `src/nnrti/cli/`
   down to the manuscript scripts. Much lower risk, still fixes the "which script
   made Figure 3" problem.
 
@@ -155,14 +155,14 @@ Draft rows:
 
 | artifact | command | needs cluster |
 | --- | --- | :---: |
-| Table 1 | `python -m src.analysis.cli.plot_dor_susceptibility_bars` | no |
-| Table 2 | `python -m src.analysis.cli.build_table_2 --docx <draft>` | no |
-| Supp. Table 3 | `python -m src.analysis.cli.build_supplementary_table_3` | no |
-| Figure 2 | `python scripts/fep_pmx/plot_protocol_schematic.py` + `combine_neq.py --replot-only` | no |
-| Figure 3 | `python -m src.analysis.cli.compute_mechanism_coordinates && ... plot_mechanism_panel` | no |
-| Supp. Figure 1 | `python -m src.analysis.cli.compute_md_convergence && ... plot_convergence_panel` | no |
-| Supp. Figure 2 | `python -m src.analysis.cli.plot_fep_work_distributions` | no |
-| MM/GBSA table | `python -m src.analysis.cli.compute_mmgbsa_safe --frame-sampling even --snapshots 100` | no (GPU helps) |
+| Table 1 | `python -m nnrti.cli.plot_dor_susceptibility_bars` | no |
+| Table 2 | `python -m nnrti.cli.build_table_2 --docx <draft>` | no |
+| Supp. Table 3 | `python -m nnrti.cli.build_supplementary_table_3` | no |
+| Figure 2 | `python -m nnrti.fep.plot_protocol_schematic` + `combine_neq.py --replot-only` | no |
+| Figure 3 | `python -m nnrti.cli.compute_mechanism_coordinates && ... plot_mechanism_panel` | no |
+| Supp. Figure 1 | `python -m nnrti.cli.compute_md_convergence && ... plot_convergence_panel` | no |
+| Supp. Figure 2 | `python -m nnrti.cli.plot_fep_work_distributions` | no |
+| MM/GBSA table | `python -m nnrti.cli.compute_mmgbsa_safe --frame-sampling even --snapshots 100` | no (GPU helps) |
 | MD trajectories | `workflows/02_run_md.sh` | **yes** |
 | FEP ΔΔG panel | `workflows/03_run_fep.sh` | **yes** |
 

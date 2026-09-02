@@ -24,7 +24,7 @@ if command -v module >/dev/null 2>&1; then
 fi
 PYTHON="${PYTHON:-python3}"
 
-"${PYTHON}" scripts/fep_pmx/prepare_neq.py \
+"${PYTHON}" src/nnrti/fep/prepare_neq.py \
     --refresh-switch-only \
     --replicates "${REPLICATES}" \
     --n-snapshots "${NEQ_SNAPSHOTS}"

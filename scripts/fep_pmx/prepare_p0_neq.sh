@@ -35,4 +35,4 @@ if [[ "${REFRESH_SWITCH_ONLY}" == "1" ]]; then
     args+=(--refresh-switch-only)
 fi
 
-"${PYTHON}" scripts/fep_pmx/prepare_neq.py "${args[@]}"
+"${PYTHON}" src/nnrti/fep/prepare_neq.py "${args[@]}"

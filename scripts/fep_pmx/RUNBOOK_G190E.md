@@ -118,7 +118,7 @@ PLAN §4.3) — this is expected, not a missing step.
 
 ```bash
 NEQ_EXTRA_LONG_SWITCH_LEGS=wt_to_G190E \
-python3 scripts/fep_pmx/prepare_neq.py --legs wt_to_G190E \
+python -m nnrti.fep.prepare_neq --legs wt_to_G190E \
   --replicates 3 --n-snapshots 100 --force \
   --panel-manifest results/analysis/fep_pmx/neq_g190e500_manifest.csv
 ```
@@ -182,7 +182,7 @@ this passes, the GPU stages reuse the same topology and will run.
 ```bash
 export MANIFEST=results/analysis/fep_pmx/neq_g190e500_manifest.csv
 STAGE=em bash scripts/fep_pmx/submit_p0_neq.sh
-python3 scripts/fep_pmx/audit_neq_panel.py --manifest $MANIFEST | grep '==='   # want EM (6/6 ok)
+python -m nnrti.fep.audit_neq_panel --manifest $MANIFEST | grep '==='   # want EM (6/6 ok)
 ```
 
 ## Step 7 — chain equil -> extract -> switch
@@ -219,8 +219,8 @@ Rough timing: equil ~1h50m/task at 5 ns; switch ~3-9 h/task at 500 ps.
 ## Step 8 — monitor
 
 ```bash
-python3 scripts/fep_pmx/audit_neq_panel.py --manifest $MANIFEST | grep '==='
-python3 scripts/fep_pmx/audit_neq_panel.py --manifest $MANIFEST | grep -E 'FAIL|RUNNING'
+python -m nnrti.fep.audit_neq_panel --manifest $MANIFEST | grep '==='
+python -m nnrti.fep.audit_neq_panel --manifest $MANIFEST | grep -E 'FAIL|RUNNING'
 squeue -u $USER
 ```
 
@@ -237,8 +237,8 @@ The rsync deliberately excludes `dgdl.xvg`, so the Mac has nothing to analyze
 until this runs and writes `analysis.json`.
 
 ```bash
-python3 scripts/fep_pmx/combine_neq.py --targets G190E --replicates 3
-python3 scripts/fep_pmx/qc_neq.py --legs wt_to_G190E --replicates 3
+python -m nnrti.fep.combine_neq --targets G190E --replicates 3
+python -m nnrti.fep.qc_neq --legs wt_to_G190E --replicates 3
 ```
 
 - `combine_neq` takes `--targets` (genotype); `qc_neq` takes `--legs` (leg id).
@@ -349,7 +349,7 @@ rm -rf results/analysis/fep_pmx/legs/wt_to_G190E/*/rep_*/neq/switches/*
 find results/analysis/fep_pmx/legs/wt_to_G190E -name analysis.json -delete
 
 # re-render mdps at 100 ps: note NO NEQ_EXTRA_LONG_SWITCH_LEGS here
-python3 scripts/fep_pmx/prepare_neq.py --legs wt_to_G190E \
+python -m nnrti.fep.prepare_neq --legs wt_to_G190E \
   --replicates 3 --n-snapshots 100 --force \
   --panel-manifest results/analysis/fep_pmx/neq_g190e100_manifest.csv
 
@@ -372,8 +372,8 @@ for older units recover with the `find ... -name switch.gro` loop in `README.md`
 ### Reading the result
 
 ```bash
-python3 scripts/fep_pmx/combine_neq.py --targets G190E --replicates 3
-python3 scripts/fep_pmx/qc_neq.py --legs wt_to_G190E --replicates 3
+python -m nnrti.fep.combine_neq --targets G190E --replicates 3
+python -m nnrti.fep.qc_neq --legs wt_to_G190E --replicates 3
 
 # hysteresis + separation, current run vs whatever is archived
 python3 - <<'PY'

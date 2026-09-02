@@ -1,22 +1,27 @@
 # Repository structure
 
 Layout and the conventions that keep it reproducible and provenance-tracked.
-Paths are defined once in [`src/paths.py`](src/paths.py) — **import them, don't
+Paths are defined once in [`src/nnrti/paths.py`](src/nnrti/paths.py) — **import them, don't
 hardcode directory strings.**
 
 ## Top-level layout
 
 | Directory | Holds |
 |---|---|
-| `src/` | Python package: MD (`src/md/`), analysis (`src/analysis/`), the `src/paths.py` registry. |
-| `scripts/` | Entry-point scripts & SLURM submission (`scripts/md/`, `scripts/fep_pmx/`, `scripts/sherlock/`). |
-| `data/` | Inputs: `data/structures/` (experimental CIF/PDB), `data/ligands/` (SDF), `data/prepared/`. |
-| `results/` | Generated results (see below). The bulk of the repo. |
+| `workflows/` | The five numbered entry points, in the order the study ran. |
+| `src/nnrti/` | The Python package: `md/` (simulation protocol + cluster workers), `fep/` (pmx non-equilibrium FEP), `analysis/` (analysis library), `cli/` (only the scripts that build a manuscript artifact), `structure_prep/`, `utils/`, and the `paths.py` registry. |
+| `scripts/` | Cluster-side operations only: Slurm submission (`sherlock/`, `fep_pmx/`), rsync helpers, MD metadata audit/repair (`md/`), docx tooling (`manuscript/`). No analysis code. |
+| `data/` | Inputs: `data/structures/` (experimental CIF/PDB), `data/ligands/` (SDF), `data/prepared/`, and the susceptibility spreadsheet. |
+| `results/` | Manuscript-facing output only (see below). |
 | `figures/` | Curated, manuscript-facing figures (distinct from per-run plots under `results/`). |
-| `manifests/` | Provenance manifests & logs (e.g. `md_archive_log.csv`). |
-| `manuscript/` | Manuscript drafts and assets. |
+| `manifests/` | Provenance manifests & logs, including `archive_2026-09-01_manifest.csv`. |
+| `manuscript/` | Manuscript drafts and assets; `ARTIFACTS.md` is the artifact authority. |
 | `logs/` | Run logs (SLURM stdout/stderr). |
 | `docs/`, `tests/`, `envs/` | Docs, tests, environment specs. |
+
+The package is importable as `nnrti` once you `pip install -e .` or set
+`PYTHONPATH=src`. Every entry point is `python -m nnrti.<subpackage>.<module>`;
+there are no loose analysis scripts left to guess between.
 
 ## Results
 

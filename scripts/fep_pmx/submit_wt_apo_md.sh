@@ -11,7 +11,7 @@
 # The 10 ns runs are marked status="ok", so a plain rerun would skip them:
 # we force the rerun but keep SKIP_IF_AT_TARGET so anything already at 100 ns is
 # left alone, and resume from the existing checkpoint (runs the *remaining*
-# 45M steps, i.e. to 100 ns total -- see src/md/openmm/md_protocol.py).
+# 45M steps, i.e. to 100 ns total -- see src/nnrti/md/openmm/md_protocol.py).
 #
 # Usage (on Sherlock, after Batch A finishes):
 #   ./scripts/fep_pmx/submit_wt_apo_md.sh            # 3 reps, up to 6 concurrent

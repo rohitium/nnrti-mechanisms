@@ -16,6 +16,7 @@ set -e
 
 PROJECT_ROOT="/scratch/users/rsatija/nnrti-mechanisms"
 cd "$PROJECT_ROOT"
+export PYTHONPATH="${PROJECT_ROOT:-$PWD}/src:${PYTHONPATH:-}"
 
 module load chemistry py-openmm/8.1.1_py312
 
@@ -85,7 +86,7 @@ echo ""
 echo "Running short test MD (0.01 ns, ~5000 steps)..."
 echo ""
 
-python3 -m src.md.sherlock.run_md_job \
+python3 -m nnrti.md.sherlock.run_md_job \
     --mutation "$MUTATION" \
     --replicate $REP_INT \
     --task-id 0 \

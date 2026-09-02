@@ -7,7 +7,7 @@
 #
 # Or locally (GPU/OpenMM):
 #   conda activate nnrti-openmm   # or env with OpenMM CUDA/CPU
-#   python scripts/fep_pmx/run_apo_md.py --mutations Y188L --production-ns 100
+#   python -m nnrti.fep.run_apo_md --mutations Y188L --production-ns 100
 
 set -euo pipefail
 

@@ -299,8 +299,9 @@ set -euo pipefail
 module load chemistry py-openmm/8.1.1_py312
 
 cd ${PROJECT_ROOT}
+export PYTHONPATH="${PROJECT_ROOT}/src:\${PYTHONPATH:-}"
 
-python3 -m src.md.sherlock.run_md_job \
+python3 -m nnrti.md.sherlock.run_md_job \
     --mutation "${MUTATION}" \
     --replicate ${REP_INT} \
     --task-id ${TASK_ID} \

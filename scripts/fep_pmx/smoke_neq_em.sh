@@ -29,7 +29,7 @@ PREP_ARGS=(--leg "${LEG}" --phase "${PHASE}" --replicate "${REP}" --n-snapshots 
 if [[ "${FORCE:-0}" == "1" ]]; then
     PREP_ARGS+=(--force)
 fi
-"${PYTHON}" scripts/fep_pmx/prepare_neq.py "${PREP_ARGS[@]}"
+"${PYTHON}" src/nnrti/fep/prepare_neq.py "${PREP_ARGS[@]}"
 
 if [[ -z "${TASK_ID}" ]]; then
     TASK_ID="$("${PYTHON}" - <<PY
@@ -56,7 +56,7 @@ PY
 fi
 
 echo "Running NEQ smoke: leg=${LEG} phase=${PHASE} rep=${REP} task_id=${TASK_ID}"
-"${PYTHON}" scripts/fep_pmx/run_neq_task.py --manifest "${MANIFEST}" --task-id "${TASK_ID}"
+"${PYTHON}" src/nnrti/fep/run_neq_task.py --manifest "${MANIFEST}" --task-id "${TASK_ID}"
 
 OUT="results/analysis/fep_pmx/legs/${LEG}/${PHASE}/rep_$(printf '%02d' "${REP}")/neq/em/em.gro"
 if [[ -f "${OUT}" ]]; then

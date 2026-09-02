@@ -25,6 +25,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
+export PYTHONPATH="${PROJECT_ROOT:-$PWD}/src:${PYTHONPATH:-}"
 
 MANIFEST="${MANIFEST:-results/analysis/fep_pmx/neq_g190e_equil20_manifest.csv}"
 EXCLUDE_NODES="${EXCLUDE_NODES:-sh03-12n12,sh02-16n06,sh03-13n01,sh03-12n01}"
@@ -57,7 +58,7 @@ echo "--- audit ---"
 # NOTE: audit_neq_panel.py exits NON-ZERO whenever any unit is incomplete, which
 # is the normal mid-campaign state -- not an error. Do not let `set -e` or
 # pipefail treat that as a crash; judge completeness from the summary lines.
-AUDIT_RAW="$(python3 scripts/fep_pmx/audit_neq_panel.py --manifest "$MANIFEST" 2>&1 || true)"
+AUDIT_RAW="$(python -m nnrti.fep.audit_neq_panel --manifest "$MANIFEST" 2>&1 || true)"
 AUDIT="$(echo "$AUDIT_RAW" | grep '===' || true)"
 if [ -z "$AUDIT" ]; then
     echo "ERROR: audit produced no '===' summary lines. Full output:" >&2
@@ -118,11 +119,11 @@ echo "  * switch must be 60 tasks in ONE chunk. 120 would exceed the gpu QOS"
 echo "    cap of 100 submitted jobs and be rejected."
 echo "  * each submit must print a chunk file with the g190e_e20 qualifier."
 echo ""
-echo "Monitor:  python3 scripts/fep_pmx/audit_neq_panel.py --manifest \$MANIFEST | grep '==='"
+echo "Monitor:  python -m nnrti.fep.audit_neq_panel --manifest \$MANIFEST | grep '==='"
 echo ""
 echo "When SWITCH is 60/60, analyse ON SHERLOCK and WITHOUT --force:"
-echo "  python3 scripts/fep_pmx/combine_neq.py --targets G190E --replicates 3"
-echo "  python3 scripts/fep_pmx/qc_neq.py --legs wt_to_G190E --replicates 3"
+echo "  python -m nnrti.fep.combine_neq --targets G190E --replicates 3"
+echo "  python -m nnrti.fep.qc_neq --legs wt_to_G190E --replicates 3"
 echo ""
 echo "Then REBUILD THE FULL PANEL -- combine_neq --targets X rewrites panel_ddg.csv"
 echo "with only those targets. Full genotype list is in RUNBOOK_G190E_SEM.md."

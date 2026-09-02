@@ -63,9 +63,9 @@ of that file. That's how a failed `..._<JOBID>_<IDX>` maps back to a leg/phase/r
 ```bash
 source scripts/sherlock/activate_pmx_env.sh
 # summary counts per stage:
-python3 scripts/fep_pmx/audit_neq_panel.py --manifest <manifest.csv> | grep '==='
+python -m nnrti.fep.audit_neq_panel --manifest <manifest.csv> | grep '==='
 # which units are incomplete and why:
-python3 scripts/fep_pmx/audit_neq_panel.py --manifest <manifest.csv> | grep -E 'FAIL|RUNNING'
+python -m nnrti.fep.audit_neq_panel --manifest <manifest.csv> | grep -E 'FAIL|RUNNING'
 ```
 
 - `RUNNING` = a unit mid-flight (equil checkpoint present, no final `.gro` yet) — **not** a failure.
@@ -244,7 +244,7 @@ stages (which reuse the same topology) will run. Only then chain equil→extract
 ```bash
 export MANIFEST=results/analysis/fep_pmx/neq_<batch>_manifest.csv
 STAGE=em bash scripts/fep_pmx/submit_p0_neq.sh                 # CPU only
-python3 scripts/fep_pmx/audit_neq_panel.py --manifest $MANIFEST | grep '==='   # want EM (18/18 ok)
+python -m nnrti.fep.audit_neq_panel --manifest $MANIFEST | grep '==='   # want EM (18/18 ok)
 # then the GPU stages, chained on the validated em:
 EQUIL=$(STAGE=equil   bash scripts/fep_pmx/submit_p0_neq.sh | tail -1)
 EXTRACT=$(STAGE=extract DEPENDENCY=afterok:$EQUIL   bash scripts/fep_pmx/submit_p0_neq.sh | tail -1)
@@ -257,7 +257,7 @@ means prep is complete for every leg/phase/rep.
 
 New neutral P1 batch prep (mirrors how P1a/P1b were built):
 ```bash
-python3 scripts/fep_pmx/prepare_neq.py --legs wt_to_<A> wt_to_<B> wt_to_<C> \
+python -m nnrti.fep.prepare_neq --legs wt_to_<A> wt_to_<B> wt_to_<C> \
   --replicates 3 --n-snapshots 100 \
   --panel-manifest results/analysis/fep_pmx/neq_<batch>_manifest.csv
 ```
@@ -346,8 +346,8 @@ deliberately **excludes `dgdl.xvg`** (light provenance only). `analyze_neq`/`com
 
 ```bash
 # 1) ON SHERLOCK (dgdl live here): generate analysis.json + the ΔΔG table.
-python3 scripts/fep_pmx/combine_neq.py --targets <G1> <G2> ... --replicates 3
-python3 scripts/fep_pmx/qc_neq.py --legs wt_to_<G1> wt_to_<G2> ... --replicates 3
+python -m nnrti.fep.combine_neq --targets <G1> <G2> ... --replicates 3
+python -m nnrti.fep.qc_neq --legs wt_to_<G1> wt_to_<G2> ... --replicates 3
 # 2) THEN from the Mac: pull the now-existing light outputs and inspect/re-run locally (no --force).
 SHERLOCK_USER=rsatija bash scripts/rsync_fep_pmx.sh pull
 ```
@@ -380,7 +380,7 @@ mechanism for any leg, P0/P1/P2. Full prep for a set of legs (Sherlock login, pm
 LEGS="wt_to_G190S V106A_to_V106A_F227L ..."                                  # leg_ids from MANUSCRIPT_PLANS
 LEGS="$LEGS" bash scripts/fep_pmx/prepare_p0_hybrids.sh                       # pmx hybrids, reps 1-3
 REPLICATES="1 2 3" LEGS="$LEGS" bash scripts/fep_pmx/build_p0_systems.sh      # gmx solvate+ionize
-python3 scripts/fep_pmx/prepare_neq.py --legs $LEGS --replicates 3 --n-snapshots 100 \
+python -m nnrti.fep.prepare_neq --legs $LEGS --replicates 3 --n-snapshots 100 \
   --panel-manifest results/analysis/fep_pmx/neq_<batch>_manifest.csv
 ```
 All three are idempotent (SKIP existing). Then run via §4b (em pre-flight) + the em→…→switch chain.

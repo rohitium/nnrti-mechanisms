@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.md.artifact_steps import infer_state_csv_path, reconcile_json_with_state_csv
+from nnrti.md.artifact_steps import infer_state_csv_path, reconcile_json_with_state_csv
 
 
 JSON_PAT = re.compile(r".*_(?:apo_)?rep[0-9]{2}\.json$")
@@ -46,7 +46,7 @@ def main() -> int:
             "Permit LOWERING md_production_steps_completed from state.csv. Off by "
             "default: state.csv is often a stale mid-slice dump, and a downgrade "
             "silently compresses every analysis time axis. Prefer the analysis-DCD "
-            "fingerprint (src.analysis.md_timing) before using this."
+            "fingerprint (nnrti.analysis.md_timing) before using this."
         ),
     )
     parser.add_argument("--csv-out", type=Path, default=None)

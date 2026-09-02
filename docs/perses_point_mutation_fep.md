@@ -55,7 +55,7 @@ REPLICATES=1,2,3 FEP_N_CYCLES=5000 \
 Summarize against the current MM/GBSA table:
 
 ```bash
-PYTHONPATH=. python -m src.analysis.cli.summarize_perses_point_mutation_fep
+PYTHONPATH=. python -m nnrti.cli.summarize_perses_point_mutation_fep
 ```
 
 ## Scope

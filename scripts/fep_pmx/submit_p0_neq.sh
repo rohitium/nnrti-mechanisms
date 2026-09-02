@@ -223,6 +223,7 @@ export GMXLIB=${GMXLIB}
 export GMX_NTOMP=${SHERLOCK_CPUS_PER_TASK}
 
 cd ${PROJECT_ROOT}
+export PYTHONPATH="${PROJECT_ROOT}/src:\${PYTHONPATH:-}"
 
 module load python/3.9.0 2>/dev/null || true
 if [[ -f "${HOME}/.venvs/pmx/bin/activate" ]]; then
@@ -235,7 +236,7 @@ if [[ -z "\${TASK_ID}" ]]; then
   exit 1
 fi
 
-python3 scripts/fep_pmx/run_neq_task.py \
+python -m nnrti.fep.run_neq_task \
     --manifest ${MANIFEST} \
     --task-id \${TASK_ID}
 SBATCH_EOF

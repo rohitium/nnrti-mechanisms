@@ -5,7 +5,7 @@ WARNING: ``state.csv`` is *not* always ground truth for the holo 100 ns panel.
 Many analysis DCDs match the completed 100 ns fingerprint (180 frames / 34 MB
 or 360 frames / 68 MB) while JSON+CSV still say 50–70 ns — leftover mid-slice
 ``status=ok`` dumps. Do not blindly copy those step counts into the JSON.
-Use ``src.analysis.md_timing.infer_production_ns`` (DCD fingerprint) for
+Use ``nnrti.analysis.md_timing.infer_production_ns`` (DCD fingerprint) for
 analysis time axes. This script only reconciles JSON↔CSV agreement.
 
 Nothing is written unless ``--apply`` is passed. All actions are idempotent.
@@ -39,7 +39,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.paths import MD_RUNS, APO_MD_RUNS, MANIFESTS, REPO_ROOT as ROOT, rel  # noqa: E402
+from nnrti.paths import MD_RUNS, APO_MD_RUNS, MANIFESTS, REPO_ROOT as ROOT, rel  # noqa: E402
 
 DT_FS = 2.0
 STALE = "apo_md_runs"

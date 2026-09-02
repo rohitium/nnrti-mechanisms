@@ -50,4 +50,4 @@ PY
 fi
 
 echo "Running NEQ task_id=${TASK_ID} (manifest=${MANIFEST})"
-"${PYTHON}" scripts/fep_pmx/run_neq_task.py --manifest "${MANIFEST}" --task-id "${TASK_ID}"
+"${PYTHON}" src/nnrti/fep/run_neq_task.py --manifest "${MANIFEST}" --task-id "${TASK_ID}"

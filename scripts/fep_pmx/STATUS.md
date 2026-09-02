@@ -59,7 +59,7 @@ source scripts/sherlock/activate_pmx_env.sh
 LEGS="<leg_id>" REPLICATES="1-3" bash scripts/fep_pmx/prepare_p0_hybrids.sh
 source scripts/sherlock/load_gromacs_module.sh && source scripts/sherlock/activate_pmx_env.sh  # GMXLIB must be .../mutff
 LEGS="<leg_id>" REPLICATES="1-3" bash scripts/fep_pmx/build_p0_systems.sh
-python3 scripts/fep_pmx/prepare_neq.py --legs <leg_id ...> --replicates 3 --n-snapshots 100 --force
+python -m nnrti.fep.prepare_neq --legs <leg_id ...> --replicates 3 --n-snapshots 100 --force
 bash scripts/fep_pmx/submit_p0_neq_pipeline.sh   # em→equil→extract→switch, afterok, ≤3-leg batches
 ```
 - `REPLICATES` is a LIST/range (`"1-3"`), NOT a count (`REPLICATES=3` = rep 3 only — guarded now).
@@ -233,9 +233,9 @@ When each finishes, analyse **on Sherlock** (rsync excludes `dgdl.xvg`, so the M
 has nothing to analyse until `analysis.json` exists), and **without `--force`**:
 
 ```bash
-python3 scripts/fep_pmx/combine_neq.py --targets G190E --replicates 3
-python3 scripts/fep_pmx/combine_neq.py --targets K103N --replicates 3
-python3 scripts/fep_pmx/qc_neq.py --legs wt_to_G190E wt_to_K103N --replicates 3
+python -m nnrti.fep.combine_neq --targets G190E --replicates 3
+python -m nnrti.fep.combine_neq --targets K103N --replicates 3
+python -m nnrti.fep.qc_neq --legs wt_to_G190E wt_to_K103N --replicates 3
 ```
 
 **What to look for in K103N-500** (baseline table in
@@ -248,7 +248,7 @@ that is the K103N-matched baseline, not a failure.
 
 Extra reps always work (SEM = σ_DDG/√n) but the leg resolver needs
 `results/md_runs/<label>/rep_{n:02d}/` and **only three MD replicates exist**.
-`scripts/fep_pmx/seed_extra_replicates.py` creates a rep_04 seed from a run's
+`src/nnrti/fep/seed_extra_replicates.py` creates a rep_04 seed from a run's
 `*_md_final.pdb` (validated: atom count, PBC-split, ligand still bound). Dry run by
 default.
 
@@ -291,7 +291,7 @@ the 500 ps route). One leg-rep = 8 GPU elements at 100 ps, 12 at 500 ps.
    GPU to a `wt_to_K103N` rebuild; if that comes back flat, fall back to `NEQ_EQUIL_NS` + more reps.
 3. **Manuscript**: `manuscript/DorDRM-FEP-08-05-26.docx` (untracked working drafts in `manuscript/`).
    The second-wave analysis is done: protocol figures, `modern_md_suite`, `occupancy_stats` (FWER +
-   Welch), the DCD-fingerprint MD-timing correction (`src/analysis/md_timing.py`).
+   Welch), the DCD-fingerprint MD-timing correction (`src/nnrti/analysis/md_timing.py`).
 
 ---
 

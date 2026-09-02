@@ -17,6 +17,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 cd "$PROJECT_ROOT"
+export PYTHONPATH="${PROJECT_ROOT:-$PWD}/src:${PYTHONPATH:-}"
 
 source scripts/sherlock/load_openmm_module.sh
 
@@ -85,7 +86,7 @@ fi
 
 echo ""
 echo "Running apo MD smoke test..."
-python3 -m src.md.sherlock.run_md_job \
+python3 -m nnrti.md.sherlock.run_md_job \
     --mutation "y188l" \
     --replicate "$REP_INT" \
     --task-id 0 \

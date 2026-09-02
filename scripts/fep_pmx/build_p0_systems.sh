@@ -101,7 +101,7 @@ for leg in "${LEGS[@]}"; do
             fi
             echo "→ ${leg} ${phase} rep${rep}"
             if [[ "${FORCE}" == "1" ]]; then
-                if "${PYTHON}" scripts/fep_pmx/build_solvated_system.py \
+                if "${PYTHON}" src/nnrti/fep/build_solvated_system.py \
                     --leg "${leg}" \
                     --phase "${phase}" \
                     --replicate "${rep}" \
@@ -112,7 +112,7 @@ for leg in "${LEGS[@]}"; do
                     echo "FAILED ${leg} ${phase} rep${rep}" >&2
                     FAIL=$((FAIL + 1))
                 fi
-            elif "${PYTHON}" scripts/fep_pmx/build_solvated_system.py \
+            elif "${PYTHON}" src/nnrti/fep/build_solvated_system.py \
                 --leg "${leg}" \
                 --phase "${phase}" \
                 --replicate "${rep}" \

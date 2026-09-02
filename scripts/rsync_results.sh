@@ -169,7 +169,7 @@ import sys
 
 from pathlib import Path
 
-from src.md.artifact_steps import infer_state_csv_path, reconcile_json_with_state_csv
+from nnrti.md.artifact_steps import infer_state_csv_path, reconcile_json_with_state_csv
 
 target_steps = int(sys.argv[1])
 json_pat = re.compile(r'.*_rep[0-9]{2}\.json$')

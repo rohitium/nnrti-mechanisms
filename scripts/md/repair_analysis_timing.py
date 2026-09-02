@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Archive stale MD JSON/DCDs and write a 100 ns-corrected version.
 
-The analysis DCD is the ground truth (see src/analysis/md_timing.py). JSON and
+The analysis DCD is the ground truth (see src/nnrti/analysis/md_timing.py). JSON and
 state.csv often froze at 50–70 ns because the worker wrote status=ok after each
 SLURM slice. DCD headers are also broken (nsavc=1, DELTA=1.0 ps).
 
@@ -32,8 +32,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.analysis.md_timing import DT_FS, infer_production_ns
-from src.paths import MANIFESTS, MD_RUNS, rel
+from nnrti.analysis.md_timing import DT_FS, infer_production_ns
+from nnrti.paths import MANIFESTS, MD_RUNS, rel
 
 ARCHIVE_DIR = MD_RUNS / "_archive"
 ARCHIVE_LOG = MANIFESTS / "md_archive_log.csv"
