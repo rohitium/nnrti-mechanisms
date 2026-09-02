@@ -1,2 +1,0 @@
-c_value,penalty,solver,class_weight,n_features,features,accuracy,balanced_accuracy,macro_f1,macro_precision,macro_recall,roc_auc,tn,fp,fn,tp,wt_prob_high,round,dropped_feature,feature_set_source
-10.0,l2,lbfgs,balanced,4,residue_min_distance_SER105_angstrom_mean|residue_min_distance_TYR188_angstrom_mean|ligand_pose_rmsd_angstrom_mean|ddg_electrostatic_mean,1.0,1.0,1.0,1.0,1.0,1.0,5,0,0,8,0.013063076812387053,0,,initial_all_features

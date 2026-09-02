@@ -1,5 +1,0 @@
-dropped_feature,n_features,features,accuracy,balanced_accuracy,macro_f1,roc_auc,pearson_r_logit_vs_fold,pearson_r_logit_vs_log10_fold,tn,fp,fn,tp
-none,3,ser105_dor_distance_angstrom_mean|residue_min_distance_TYR188_angstrom_mean|ligand_pose_rmsd_angstrom_mean,0.8461538461538461,0.8375,0.8375,0.9750000000000001,0.6856341667516492,0.6711395823146177,4,1,1,7
-residue_min_distance_TYR188_angstrom_mean,2,ser105_dor_distance_angstrom_mean|ligand_pose_rmsd_angstrom_mean,0.8461538461538461,0.8375,0.8375,0.825,0.6882052643884146,0.6752443785336103,4,1,1,7
-ligand_pose_rmsd_angstrom_mean,2,ser105_dor_distance_angstrom_mean|residue_min_distance_TYR188_angstrom_mean,0.5384615384615384,0.5125,0.5125,0.7250000000000001,0.4309126117765147,0.4235828299376626,2,3,3,5
-ser105_dor_distance_angstrom_mean,2,residue_min_distance_TYR188_angstrom_mean|ligand_pose_rmsd_angstrom_mean,0.38461538461538464,0.3125,0.2777777777777778,0.5,0.09757582860849254,0.006197057294003349,0,5,3,5

@@ -1,4 +1,0 @@
-feature,label,r_squared,p_value
-ser105_dor_distance_angstrom,SER105-DOR Distance,0.3439815236390944,0.008305428883022362
-residue_min_distance_TYR188_angstrom,TYR188-DOR Distance,0.0037422943191376358,0.8035292107911576
-ligand_pose_rmsd_angstrom,Ligand Pose RMSD,0.16542616753816378,0.08396206481274866

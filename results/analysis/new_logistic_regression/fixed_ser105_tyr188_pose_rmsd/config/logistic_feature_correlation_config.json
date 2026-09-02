@@ -1,9 +1,0 @@
-{
-  "replicate_feature_csv": "results/analysis/new_logistic_regression/fixed_ser105_tyr188_pose_rmsd/tables/replicate_level_feature_matrix.csv",
-  "output_dir": "results/analysis/new_logistic_regression/fixed_ser105_tyr188_pose_rmsd",
-  "features": [
-    "residue_min_distance_SER105_angstrom_mean",
-    "residue_min_distance_TYR188_angstrom_mean",
-    "ligand_pose_rmsd_angstrom_mean"
-  ]
-}

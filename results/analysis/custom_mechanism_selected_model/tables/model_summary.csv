@@ -1,2 +1,0 @@
-penalty,c_value,decision_threshold,n_features,features,cv_scheme,accuracy,balanced_accuracy,macro_f1,roc_auc,pearson_r_logit_vs_fold,pearson_r_logit_vs_log10_fold,tn,fp,fn,tp
-l1,3.0,0.5,3,ser105_dor_distance_angstrom_mean|residue_min_distance_TYR188_angstrom_mean|ligand_pose_rmsd_angstrom_mean,leave_one_out,0.8461538461538461,0.8375,0.8375,0.9750000000000001,0.6856341667516493,0.6711395823146178,4,1,1,7

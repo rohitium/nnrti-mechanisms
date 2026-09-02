@@ -1,3 +1,0 @@
-feature,label,n_mutations,pearson_r,pearson_pvalue,r_squared,slope_per_log10_fold,intercept,output_png
-residue_min_distance_SER105_angstrom_mean,SER105-DOR distance,14,-0.533348502870848,0.049523228236467716,0.28446062551457496,-0.32164637586319395,4.849976821532023,results/analysis/new_logistic_regression/fixed_ser105_pose_rmsd/plots/ser105_dor_distance_vs_fold_change.png
-ligand_pose_rmsd_angstrom_mean,DOR pose RMSD,14,0.5481404461223498,0.042418089859040484,0.30045794867520864,0.05587562133234755,1.3331998421943538,results/analysis/new_logistic_regression/fixed_ser105_pose_rmsd/plots/dor_pose_rmsd_vs_fold_change.png
