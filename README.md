@@ -30,12 +30,14 @@ pip install -e .                      # or: export PYTHONPATH=src
 |---|---|
 | `workflows/` | The five numbered entry points, in the order the study ran. Start here. |
 | `src/nnrti/` | The package. `md/` simulation protocol, `fep/` pmx non-equilibrium FEP, `analysis/` analysis library, `cli/` the scripts that build manuscript artifacts, `structure_prep/` system building. |
-| `scripts/` | Cluster-side operations: Slurm submission (`sherlock/`, `fep_pmx/`), rsync helpers, MD metadata audit/repair, docx tooling. |
+| `ops/` | Cluster operations, no science: `slurm/` submission and runbooks, `sync/` rsync helpers, `maintenance/` MD metadata repair and Word tooling. |
 | `data/` | Deposited inputs: structures, the DOR ligand, and `DRM-susceptibilities.csv.xlsx` — the authoritative fold-change source. |
-| `manifests/` | Run manifests and provenance logs, including the archive manifest with checksums. |
-| `results/` | Manuscript-facing output only. Everything else was archived; see below. |
-| `paper/` | Drafts, tables, and [`ARTIFACTS.md`](paper/ARTIFACTS.md) — the authority on what produced each figure and table. |
-| `docs/` | Method notes and cluster runbooks. |
+| `results/` | Generated output, all of it rebuilt by `workflows/`. See `results/README.md`. |
+| `paper/` | The deliverable: `submission/` is exactly what the journal receives, `tables/` the derived CSVs, `sources/` figure assembly, and `ARTIFACTS.md` the authority on what produced each figure and table. |
+| `manifests/` | Run manifests and archive inventories with checksums. |
+| `docs/` | `methods/`, `runbooks/`, and `decisions/` — the dated record of why things are as they are. |
+| `env/` | Conda specs: `analysis.yml` and `fep.yml`. |
+| `tests/` | Nine regression tests over the manuscript artifacts. |
 
 `src/nnrti/paths.py` defines the canonical directories. Import them; don't
 hardcode directory strings.
@@ -55,22 +57,22 @@ need a cluster; `REPRODUCE.md` explains what is deposited so you can start at 4.
 
 ## What was archived, and where
 
-The repository previously carried about three years of exploratory work
-alongside the manuscript analyses, with no way to tell them apart. On
-2026-09-01 everything no manuscript artifact depends on was moved to an external
-archive: 1,069 result files (5.3 GB) and 76 code files. Nothing was deleted.
+The repository carried three years of exploratory work alongside the manuscript
+analyses with nothing distinguishing them. Over 2026-09-01 and 09-02 everything
+no manuscript artifact depends on was moved to an external archive: **2,379
+files, about 27 GB.** Nothing was deleted.
 
-- The inventory, with a sha256 for every file, is committed at
-  [`manifests/archive_2026-09-01_manifest.csv`](manifests/archive_2026-09-01_manifest.csv).
-- The archive itself lives outside the repository and carries its own
-  `MANIFEST.csv` and `README.md` explaining each group.
-- Every archived path also remains in git history at tag
-  `pre-refactor-2026-09-01`, so nothing is unrecoverable.
+- Inventories, with a sha256 for every file, are committed at
+  `manifests/archive_2026-09-01_manifest.csv` and
+  `manifests/archive_2026-09-02_manifest.csv`.
+- The archive carries its own `MANIFEST.csv` and `README.md` per group.
+- Every archived path also remains in git history, at tags
+  `pre-refactor-2026-09-01` and `pre-structure-2026-09-02`.
 
-The selection was made from a static import graph rooted at the scripts that
-produce each numbered figure and table, not by hand — which is how it caught
-that `results/analysis/modern_md_suite` is load-bearing (it supplies the NNIBP
-pocket volume column of Table 3) despite looking exploratory.
+What stayed was chosen mechanically: a static import graph rooted at the scripts
+that produce each numbered figure and table, plus the data those scripts read.
+That is how it caught `results/analysis/modern_md_suite` — which looks
+exploratory and supplies the NNIBP pocket volume column of Table 3.
 
 ## Data-safety conventions
 

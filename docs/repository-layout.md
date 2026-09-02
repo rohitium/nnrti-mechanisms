@@ -8,20 +8,16 @@ hardcode directory strings.**
 
 | Directory | Holds |
 |---|---|
-| `workflows/` | The five numbered entry points, in the order the study ran. |
-| `src/nnrti/` | The Python package: `md/` (simulation protocol + cluster workers), `fep/` (pmx non-equilibrium FEP), `analysis/` (analysis library), `cli/` (only the scripts that build a manuscript artifact), `structure_prep/`, `utils/`, and the `paths.py` registry. |
-| `ops/` | Cluster-side operations only: Slurm submission (`sherlock/`, `fep_pmx/`), rsync helpers, MD metadata audit/repair (`md/`), docx tooling (`paper/`). No analysis code. |
-| `data/` | Inputs: `data/structures/` (experimental CIF/PDB), `data/ligands/` (SDF), `data/prepared/`, and the susceptibility spreadsheet. |
-| `results/` | Manuscript-facing output only (see below). |
-| `figures/` | Curated, manuscript-facing figures (distinct from per-run plots under `results/`). |
-| `manifests/` | Provenance manifests & logs, including `archive_2026-09-01_manifest.csv`. |
-| `paper/` | Manuscript drafts and assets; `ARTIFACTS.md` is the artifact authority. |
-| `logs/` | Run logs (SLURM stdout/stderr). |
-| `docs/`, `tests/`, `env/` | Docs, tests, environment specs. |
-
-The package is importable as `nnrti` once you `pip install -e .` or set
-`PYTHONPATH=src`. Every entry point is `python -m nnrti.<subpackage>.<module>`;
-there are no loose analysis scripts left to guess between.
+| `workflows/` | Five numbered entry points, in the order the study ran. |
+| `src/nnrti/` | The package: `md/`, `fep/`, `analysis/`, `cli/`, `structure_prep/`, `utils/`, and the `paths.py` registry. Importable as `nnrti` after `pip install -e .` or `PYTHONPATH=src`. |
+| `ops/` | Cluster operations, no science: `slurm/{cluster,fep}`, `sync/`, `maintenance/{md,manuscript}`. |
+| `data/` | Deposited inputs: structures, ligands, prepared systems, the susceptibility spreadsheet. |
+| `results/` | Generated output. See `results/README.md` for the map and for why `analysis/` is still a layer. |
+| `paper/` | The deliverable: `submission/`, `tables/`, `sources/`, `ARTIFACTS.md`. |
+| `manifests/` | Run manifests and archive inventories. |
+| `docs/` | `methods/`, `runbooks/`, `decisions/`. |
+| `env/` | Conda specs. The Python `.gitignore` template ignores `env/`, so the root directory is un-ignored explicitly. |
+| `tests/`, `logs/` | Regression tests; Slurm stdout/stderr (git-ignored). |
 
 ## Results
 
