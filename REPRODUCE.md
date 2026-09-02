@@ -52,7 +52,7 @@ number, which the wrapper cannot.
 | # | Artifact | Command | Cluster? |
 | --- | --- | --- | :---: |
 | 1 | **Table 1** — DOR susceptibility panel | `python -m nnrti.cli.plot_dor_susceptibility_bars` | no |
-| 2 | **Table 2** — ΔΔE and ΔΔG | `python -m nnrti.cli.build_table_2 --docx paper/submission/DorDRM-MD-09-02-26.docx` | no |
+| 2 | **Table 2** — ΔΔE and ΔΔG | `python -m nnrti.cli.build_table_2 --docx paper/submission/DorDRM-MD-09-02-26-ACS.docx` | no |
 | 3 | **Table 3** — RT–DOR interface observables | `python -m nnrti.cli.build_supplementary_table_4` | no |
 | 4 | **Supp. Table 3** — per-replicate ΔΔE and ΔΔG | `python -m nnrti.cli.build_supplementary_table_3` | no |
 | 5 | **Supp. Table 4** — per-replicate structural observables | `python -m nnrti.cli.build_supplementary_table_4` (same command as Table 3) | no |

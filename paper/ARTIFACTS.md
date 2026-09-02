@@ -6,7 +6,7 @@ and the file it is read from.
 Every command below assumes `pip install -e .` or `PYTHONPATH=src`;
 `workflows/05_manuscript_artifacts.sh` runs them all in order.
 
-Draft of record: `paper/submission/DorDRM-MD-09-02-26.docx`.
+Draft of record: `paper/submission/DorDRM-MD-09-02-26-ACS.docx`.
 Composite figures are assembled in `paper/sources/Figures.pptx`; the slide and
 image name are given so a panel can be replaced without guessing.
 

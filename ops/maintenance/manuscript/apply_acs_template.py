@@ -201,8 +201,10 @@ def strip_direct_font(paragraph) -> None:
 def main() -> int:
     root = _repo_root()
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--src", type=Path,
-                    default=root / "paper/submission/DorDRM-MD-09-02-26.docx")
+    ap.add_argument("--src", type=Path, required=True,
+                    help="Draft to restyle. The ACS template has already been applied to "
+                         "paper/submission/DorDRM-MD-09-02-26-ACS.docx, which is now edited "
+                         "directly; pass a source only to restyle a new draft.")
     ap.add_argument("--template", type=Path,
                     default=root / "paper/sources/acstemplate_msw2011_mac.dotx")
     ap.add_argument("--out", type=Path, default=None)
