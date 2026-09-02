@@ -11,7 +11,7 @@ analysis time axes. This script only reconciles JSON↔CSV agreement.
 Nothing is written unless ``--apply`` is passed. All actions are idempotent.
 
 Actions:
-  1. Archive superseded / stub metadata to ``results/md_runs/_archive/`` and log
+  1. Move earlier and stub metadata out to ``results/md_runs/_archive/`` and log
      it in ``manifests/md_archive_log.csv`` (never delete):
        * ``*_quick.json`` short-test metadata (wt/rep_01, Y188L/rep_01)
        * the aborted 4000-step stub ``apo/y188l/rep_01`` (light files only)
@@ -182,9 +182,9 @@ class Planner:
 
 
 def build_plan(p: Planner):
-    # 1. archive superseded quick-test metadata
+    # 1. move the quick-test metadata out of the run directory
     for q in sorted(MD_RUNS.glob("*/rep_*/*_quick.json")):
-        p.archive(q, "superseded quick-test metadata")
+        p.archive(q, "quick-test metadata from an earlier smoke run")
 
     # 1b. archive the aborted apo/y188l/rep_01 stub (light metadata only)
     stub = APO_MD_RUNS / "y188l" / "rep_01"

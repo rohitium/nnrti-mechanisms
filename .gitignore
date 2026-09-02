@@ -263,7 +263,7 @@ results/analysis/fep_pmx/legs/**
 !results/analysis/fep_pmx/legs/**/residue_map.json
 !results/analysis/fep_pmx/legs/**/mutation.script
 
-# Same whitelist for the pmx _archive/ tree. Archiving a superseded run MOVES it
+# Same whitelist for the pmx _archive/ tree. Archiving an earlier run MOVES it
 # out of legs/ -- which also moved it out of the rule above, so the heavy data it
 # carries (per-switch dgdl.xvg, equil.trr/tpr, extracted frames) became
 # git-addable. Found 2026-08-28, when archiving the G190E 5 ns arm left ~65 GB

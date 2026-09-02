@@ -23,8 +23,8 @@ hardcode directory strings.**
 
 - `results/md_runs/<genotype>/rep_NN/` — **holo** (DOR-bound) classical MD.
 - `results/md_runs/apo/<genotype>/rep_NN/` — **apo** (ligand-free) classical MD.
-- `results/md_runs/_archive/` — superseded/stub artifacts, never deleted; every
-  move is logged in `manifests/md_archive_log.csv` with a sha256.
+- Earlier and stub run artifacts are never deleted. `ops/maintenance/md/repair_md_metadata.py`
+  moves them out and logs every move in `manifests/md_archive_log.csv` with a sha256.
 - `results/analysis/fep_pmx/` — pmx non-equilibrium alchemical FEP.
 
 ## Data-safety conventions (learned the hard way)

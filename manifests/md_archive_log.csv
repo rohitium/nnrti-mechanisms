@@ -1,6 +1,6 @@
 date,reason,original_path,archived_path,sha256,bytes
-2026-08-13,superseded quick-test metadata,results/md_runs/Y188L/rep_01/Y188L_rep01_quick.json,results/md_runs/_archive/Y188L/rep_01/Y188L_rep01_quick.json,864d95b1b8ce115c76ea225ee5c28e9a445868bf9d8ffbfd5c9914110cd97f97,1173
-2026-08-13,superseded quick-test metadata,results/md_runs/wt/rep_01/wt_rep01_quick.json,results/md_runs/_archive/wt/rep_01/wt_rep01_quick.json,905dc8a194bc48aee0dc927e695ec97f42e3a0c5ce2dbaff497d9d5ebc5dd095,1131
+2026-08-13,quick-test metadata from an earlier smoke run,results/md_runs/Y188L/rep_01/Y188L_rep01_quick.json,results/md_runs/_archive/Y188L/rep_01/Y188L_rep01_quick.json,864d95b1b8ce115c76ea225ee5c28e9a445868bf9d8ffbfd5c9914110cd97f97,1173
+2026-08-13,quick-test metadata from an earlier smoke run,results/md_runs/wt/rep_01/wt_rep01_quick.json,results/md_runs/_archive/wt/rep_01/wt_rep01_quick.json,905dc8a194bc48aee0dc927e695ec97f42e3a0c5ce2dbaff497d9d5ebc5dd095,1131
 2026-08-13,aborted 4000-step (8 ps) test stub,results/md_runs/apo/y188l/rep_01/y188l_apo_rep01.json,results/md_runs/_archive/apo/y188l/rep_01/y188l_apo_rep01.json,d7fd4bf789a297bf272b816d568a7d8075e12cdb8f5a33d631f675d364f6830d,1074
 2026-08-13,aborted 4000-step (8 ps) test stub,results/md_runs/apo/y188l/rep_01/y188l_rep01_md_state.csv,results/md_runs/_archive/apo/y188l/rep_01/y188l_rep01_md_state.csv,f8b95ad661cdbf9aef927b23597b5e4b511f9e8120c7d331fb85488abac755c5,274
 2026-08-13,stale timing metadata + broken DCD header; replaced with 100 ns DCD-fingerprint version,results/md_runs/A98G_F227C/rep_01/A98G_F227C_rep01.json,results/md_runs/_archive/A98G_F227C/rep_01/A98G_F227C_rep01.json,379e96211029253ad2ed980cc384bfabd5d2cd1625d5a2d93867fee265d9c96e,1166
