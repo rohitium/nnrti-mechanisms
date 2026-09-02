@@ -1,8 +1,11 @@
-# src/ layout
+# `src/nnrti/` layout
 
-Top-level packages are intentionally limited to four:
+The importable package. `pip install -e .`, or `export PYTHONPATH=src`, then
+every entry point is `python -m nnrti.<subpackage>.<module>`.
 
-## 1) `src/structure_prep/`
+Six subpackages:
+
+## 1) `src/nnrti/structure_prep/`
 
 Structure and mutation preparation logic.
 
@@ -10,7 +13,7 @@ Structure and mutation preparation logic.
 - `preparation.py` — WT/mutant prep + manifest creation
 - `mutation/` — mutation parsing, application, numbering helpers
 
-## 2) `src/md/`
+## 2) `src/nnrti/md/`
 
 MD execution runtime and cluster-facing utilities.
 
@@ -24,7 +27,7 @@ MD execution runtime and cluster-facing utilities.
 - `sherlock/run_md_job.py` — SLURM job entrypoint (called by submission scripts)
 - `cli/test_md_single.py` — local one-task smoke test (manual use only)
 
-## 3) `src/analysis/`
+## 3) `src/nnrti/analysis/` — analysis library
 
 Post-MD analysis and plotting.
 
@@ -33,7 +36,20 @@ Post-MD analysis and plotting.
 - `result_collector.py` — MM/GBSA pipeline + profile collection + merge/correlation
 - `plotting.py` — figure builders (convergence, scatter grids, pocket volume)
 
-### `src/analysis/cli/` — command-line entrypoints
+## 5) `src/nnrti/cli/` — manuscript artifact scripts
+
+Only scripts that produce a numbered figure or table live here; there were 87
+modules before the 2026-09-01 refactor and there are 16 now. The rest are in the
+external archive (see the repository README). `manuscript/ARTIFACTS.md` maps
+each one to its artifact.
+
+## 6) `src/nnrti/fep/` — pmx non-equilibrium FEP
+
+The alchemical pipeline, moved here from `scripts/fep_pmx/`. Slurm submission
+scripts and `.mdp` files stay under `scripts/fep_pmx/`, since they are
+cluster-side operations rather than importable code.
+
+### command-line entrypoints
 
 #### Data collection / computation
 
@@ -69,7 +85,7 @@ Post-MD analysis and plotting.
 | `curate_interesting_drm_traces.py` | Score and rank DRM traces for PyMOL follow-up |
 | `trim_for_pymol.py` | Topology/trajectory trimming helper for visualization |
 
-## 4) `src/utils/`
+## 4) `src/nnrti/utils/`
 
 Shared cross-cutting helpers: paths, CIF parsing, mutation token utilities.
 
@@ -84,8 +100,8 @@ wrote a corrupt DELTA field (near-zero in AKMA units) because `interval` was pas
 alongside `dt`. MDAnalysis fell back to `dt = 1.0 ps`, making all `ts.time` values
 equal to the bare frame index.
 
-The fix is in `src/md/openmm/md_protocol.py` (`_StrippedDCDReporter`) and
-`src/analysis/result_collector.py` (all three profile workers). Any new code that
+The fix is in `src/nnrti/md/openmm/md_protocol.py` (`_StrippedDCDReporter`) and
+`src/nnrti/analysis/result_collector.py` (all three profile workers). Any new code that
 reads trajectory timestamps must use:
 
 ```python

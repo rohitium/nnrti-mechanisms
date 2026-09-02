@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-# Canonical binding-energy tables are already in kcal/mol; see src/analysis/units.py.
+# Canonical binding-energy tables are already in kcal/mol; see src/nnrti/analysis/units.py.
 
 
 def cleanup_legacy_plots(paths) -> None:
