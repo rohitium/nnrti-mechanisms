@@ -4,7 +4,7 @@ How the Sherlock pipeline is wired, how to monitor it, and how to recover from t
 failures we have actually hit. Read this before touching a running panel.
 
 - **How to *run* a panel:** [`README.md`](README.md)
-- **Scientific plan / stage design:** [`PLAN.md`](PLAN.md), [`docs/pmx-neq-fep-plan.md`](../../docs/pmx-neq-fep-plan.md)
+- **Scientific plan / stage design:** [`PLAN.md`](PLAN.md), [`docs/methods/pmx-neq-fep.md`](../../docs/methods/pmx-neq-fep.md)
 - **Current live state (what's running *right now*):** [`STATUS.md`](STATUS.md)
 
 Claude/agents cannot reach Sherlock. The human runs commands there and pastes output.

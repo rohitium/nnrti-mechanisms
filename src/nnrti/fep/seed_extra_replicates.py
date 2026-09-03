@@ -31,15 +31,15 @@ baked into the alchemical system silently.
 
 Usage
 -----
-    python3 ops/slurm/fep/seed_extra_replicates.py --legs wt_to_V106A            # dry run
-    python3 ops/slurm/fep/seed_extra_replicates.py --legs wt_to_V106A --apply
-    python3 ops/slurm/fep/seed_extra_replicates.py --legs A B --source-rep 2 --dest-rep 5 --apply
+    python -m nnrti.fep.seed_extra_replicates --legs wt_to_V106A            # dry run
+    python -m nnrti.fep.seed_extra_replicates --legs wt_to_V106A --apply
+    python -m nnrti.fep.seed_extra_replicates --legs A B --source-rep 2 --dest-rep 5 --apply
 
 Then prepare the new replicate as usual (note REPLICATES is a LIST here):
 
     LEGS="wt_to_V106A" REPLICATES="4" bash ops/slurm/fep/prepare_p0_hybrids.sh
     LEGS="wt_to_V106A" REPLICATES="4" bash ops/slurm/fep/build_p0_systems.sh
-    python3 ops/slurm/fep/prepare_neq.py --legs wt_to_V106A --rep-start 4 --replicates 4 \
+    python -m nnrti.fep.prepare_neq --legs wt_to_V106A --rep-start 4 --replicates 4 \
         --n-snapshots 100 --force --panel-manifest results/analysis/fep_pmx/neq_<batch>_manifest.csv
 """
 
@@ -272,7 +272,7 @@ def main(argv: list[str] | None = None) -> int:
     tmpdir_ctx = tempfile.TemporaryDirectory(prefix="seed_reps_")
     tmpdir = Path(tmpdir_ctx.name)
 
-    import mutations as m
+    from nnrti.fep import mutations as m
 
     plans = m.MANUSCRIPT_PLANS
     items = plans.items() if isinstance(plans, dict) else [(p.genotype, p) for p in plans]

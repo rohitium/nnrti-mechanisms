@@ -83,7 +83,7 @@ NEQ_WARMUP_PS = 500.0
 # Endpoint equilibration (ns), applied to BOTH endpoints. Env-overridable so a
 # longer-equilibration sensitivity test needs no code edit — the P0 pilot showed
 # the reverse (λ=1 / mutant) work distributions are the noisy half, so more
-# equilibration is the second lever after switch length (docs/pmx-neq-fep-plan.md
+# equilibration is the second lever after switch length (docs/methods/pmx-neq-fep.md
 # §3.4). Example: NEQ_EQUIL_NS=10 REPLICATES=3 FORCE=1 bash prepare_p0_neq.sh
 NEQ_EQUIL_NS = _env_float("NEQ_EQUIL_NS", 5.0)
 # Snapshots per endpoint per replicate. Increasing this tightens the statistical
@@ -124,7 +124,7 @@ LONG_SWITCH_LEGS = frozenset(_BASE_LONG_SWITCH_LEGS | _EXTRA_LONG_SWITCH_LEGS)
 NEQ_SWITCH_PS_DEFAULT = _env_float("NEQ_SWITCH_PS_DEFAULT", 100.0)
 LONG_SWITCH_PS = _env_float("NEQ_LONG_SWITCH_PS", 500.0)
 
-# SLURM array bundling: snapshots executed sequentially per GPU job (see docs/pmx-neq-fep-plan.md §7).
+# SLURM array bundling: snapshots executed sequentially per GPU job (see docs/methods/pmx-neq-fep.md §7).
 #
 # Switches are embarrassingly parallel -- each is an independent run from its own
 # snapshot -- so this constant, not GPU availability, sets the wall clock. A leg is

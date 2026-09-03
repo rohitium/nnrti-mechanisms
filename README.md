@@ -13,7 +13,7 @@ measured phenotypic susceptibility.
 ## Install
 
 ```bash
-conda env create -f env/analysis.yml && conda activate nnrti-prep
+conda env create -f environment.yml && conda activate nnrti-prep
 pip install -e .          # or: export PYTHONPATH=src
 pytest tests -q
 ```
@@ -41,7 +41,7 @@ numbered table and figure to the command that produces it.
 | `paper/` | The manuscript and its artifacts — see [paper/ARTIFACTS.md](paper/ARTIFACTS.md) |
 | `manifests/` | Run manifests and archive inventories |
 | `docs/` | Methods notes and the project's decision record |
-| `env/` | Conda specifications |
+| `environment.yml` | Conda specification (one file, all steps) |
 
 Directory constants are in `src/nnrti/paths.py`.
 

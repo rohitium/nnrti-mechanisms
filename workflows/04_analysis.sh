@@ -11,7 +11,7 @@
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
-PYTHON="${PYTHON:-$HOME/miniconda3/env/nnrti-prep/bin/python}"
+PYTHON="${PYTHON:-python}"
 export PYTHONPATH="${PYTHONPATH:-src}"
 
 run() { echo; echo "=== $* ==="; "$@"; }

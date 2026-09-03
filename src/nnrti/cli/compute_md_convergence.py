@@ -15,7 +15,7 @@ the same style as the old RMSD / COM panels. Not last-N window tests.
 Time axis comes from infer_production_ns() (DCD fingerprint / repaired JSON), not DCD dt.
 
 Example:
-    ~/miniconda3/env/nnrti-prep/bin/python -m nnrti.cli.compute_md_convergence
+    python -m nnrti.cli.compute_md_convergence
 """
 from __future__ import annotations
 

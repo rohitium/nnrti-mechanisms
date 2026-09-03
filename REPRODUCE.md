@@ -32,7 +32,7 @@ documented under §Regenerating from scratch.
 ## Setup
 
 ```bash
-conda env create -f env/analysis.yml && conda activate nnrti-prep
+conda env create -f environment.yml && conda activate nnrti-prep
 pip install -e .          # or: export PYTHONPATH=src
 pytest tests -q           # 9 regression tests over the manuscript artifacts
 ```

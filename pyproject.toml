@@ -15,15 +15,18 @@ authors = [
     { name = "Robert W. Shafer" },
 ]
 
-# Runtime dependencies are pinned in env/; this list exists so that
-# `pip install -e .` gives a working analysis environment on top of a conda
-# base that already provides OpenMM, MDAnalysis and MDTraj.
+# The full environment is specified in environment.yml. This list exists so
+# that `pip install -e .` gives a working analysis environment on top of a
+# conda base that already provides OpenMM, MDAnalysis, MDTraj and RDKit.
 dependencies = [
     "numpy",
     "pandas",
     "scipy",
     "matplotlib",
+    "networkx",
     "openpyxl",
+    "python-docx",
+    "lxml",
 ]
 
 [tool.setuptools.packages.find]

@@ -3,8 +3,8 @@
 
 Order: cycle → hybrid → NEQ work → λ profile → Crooks estimators.
 
-    python3 ops/slurm/fep/plot_protocol_figures.py
-    python3 ops/slurm/fep/plot_protocol_figures.py --targets V106A Y188L
+    python -m nnrti.fep.plot_protocol_figures
+    python -m nnrti.fep.plot_protocol_figures --targets V106A Y188L
 
 Defaults to genotypes plotted in panel_ddg_vs_experiment.png (panel_ddg.csv
 rows with an experimental fold). Writes:
@@ -482,7 +482,7 @@ def _plot_lambda(genotype: str, summary: dict, out_path: Path) -> dict:
             f"have: {have}\n"
             f"missing: {', '.join(missing)}\n\n"
             f"(needs switches/*/dgdl.xvg on Sherlock)\n"
-            f"python3 ops/slurm/fep/plot_lambda_profile.py --legs {' '.join(legs)}",
+            f"python -m nnrti.fep.plot_lambda_profile --legs {' '.join(legs)}",
             ha="center", va="center", fontsize=11,
         )
         fig.savefig(out_path, dpi=200, bbox_inches="tight")

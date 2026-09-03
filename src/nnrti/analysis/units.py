@@ -4,7 +4,7 @@ Manuscript-facing energies are reported in **kcal/mol**, matching the pmx
 non-equilibrium FEP outputs in ``scripts/fep_pmx`` (see ``analyze_neq.py``,
 which uses the same ``4.184`` factor and an ``OUTPUT_UNITS`` marker).
 
-OpenMM reports in kJ/mol, so ``src/md/openmm/mmgbsa.py`` emits kJ/mol. The
+OpenMM reports in kJ/mol, so ``src/nnrti/md/openmm/mmgbsa.py`` emits kJ/mol. The
 conversion happens once, at the canonical-table rebuild boundary, and the
 result is stamped into an ``energy_units`` column so the conversion is
 idempotent and every consumer can tell what it is reading.
@@ -76,7 +76,7 @@ def read_energy_table(path, target_units: str = KCAL_UNITS, columns=None) -> pd.
     """Read an energy CSV and return it in ``target_units``.
 
     Frames written before the units stamp existed are assumed to be kJ/mol
-    (the OpenMM-native output of ``src/md/openmm/mmgbsa.py``) and are converted;
+    (the OpenMM-native output of ``src/nnrti/md/openmm/mmgbsa.py``) and are converted;
     frames already stamped with ``target_units`` pass through untouched.
     """
     return convert_energy_columns(pd.read_csv(path), target_units, columns=columns)

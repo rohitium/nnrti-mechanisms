@@ -137,7 +137,7 @@ Consequences of dropping the screen:
 
 Widening the window is only legitimate while the ligand stays in one binding
 mode; otherwise the average would mix two states.
-`src/analysis/cli/screen_mmgbsa_pose_stability.py` measures this over exactly
+The pose-stability screen (an exploratory script, archived) measured this over exactly
 the frames the widened protocol scores, superposing the NNIBP pocket Calphas
 (the 15 p66 residues in the authoritative Cilento/Kirby/Sarafianos set) and
 tracking DOR heavy atoms. Across all 60 runs:
@@ -196,7 +196,7 @@ total MM/GBSA score = vdW + electrostatic + GB polar + SA
 ```
 
 The ligand is parameterised with SMIRNOFF `openff-2.0.0`, pinned explicitly in
-`src/md/openmm/ligand.py`. openmmforcefields 0.16 removed the implicit default
+`src/nnrti/md/openmm/ligand.py`. openmmforcefields 0.16 removed the implicit default
 that earlier runs relied on; openff-2.0.0 reproduces the ligand parameters in
 the production system XMLs exactly, 2.0.0-2.2.1 are equivalent for doravirine,
 and 2.3.0 is not.
@@ -209,13 +209,13 @@ see "GB parameterisation" below.
 
 ## Units
 
-OpenMM reports energies in kJ/mol, so `src/md/openmm/mmgbsa.py` and the raw
+OpenMM reports energies in kJ/mol, so `src/nnrti/md/openmm/mmgbsa.py` and the raw
 per-replicate checkpoints are kJ/mol. **All canonical outputs are kcal/mol**,
 matching the pmx non-equilibrium FEP results in `scripts/fep_pmx` (which use the
 same 4.184 factor; see `analyze_neq.py`).
 
 Conversion happens once, at the canonical-table rebuild boundary, via
-`src/analysis/units.py`:
+`src/nnrti/analysis/units.py`:
 
 - `KJ_PER_KCAL = 4.184`, applied to the 15 `binding_dg*` energy columns
   (value, `_std`, `_sem`) before WT referencing, so the derived `ddg*` and
@@ -240,7 +240,7 @@ their relative placement is wrong. Scoring one produces an enormous positive
 r^-12 Lennard-Jones term, and the number of sub-2.2 A frames in a run predicts
 its van der Waals result with r = 0.981.
 
-`src/analysis/cli/screen_ligand_contact_artifacts.py` records the minimum
+The ligand-contact screen (an exploratory script, archived) recorded the minimum
 ligand-protein heavy-atom distance for every frame. The distribution is strongly
 bimodal -- artifact frames below ~2.4 A, physical contacts above ~2.6 A, the
 band between essentially unpopulated -- so the 2.5 A default threshold sits in
@@ -291,7 +291,7 @@ Correcting it cut the WT desolvation penalty by 4.3x.
 and eps_in = 1.0 is the internally consistent choice; it also matches the
 AmberTools MMPBSA.py default. The previous 2.0 damped the polar term by roughly
 half relative to the Coulomb term it is meant to balance. Set via
-`GB_SOLUTE_DIELECTRIC` in `src/md/openmm/mmgbsa.py`.
+`GB_SOLUTE_DIELECTRIC` in `src/nnrti/md/openmm/mmgbsa.py`.
 
 The two corrections act in opposite directions (measured on WT/K103N rep 1,
 screened frames, kcal/mol):

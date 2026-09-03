@@ -40,7 +40,7 @@ OFFSET = -3  # topology resid = canonical + OFFSET
 R188, R106, R105, R103, R101, R179, R190 = 188, 106, 105, 103, 101, 179, 190
 R229 = 229  # Trp229: conserved pocket aromatic, never mutated in this panel
 R227 = 227
-CONTACT_CUT = 4.0  # A  (switched from 4.5 on 2026-08-31; see paper/contact-cutoff-sensitivity.md)
+CONTACT_CUT = 4.0  # A  (switched from 4.5 on 2026-08-31; see docs/decisions/manuscript-notes/contact-cutoff-sensitivity.md)
 
 TYR_RING = ("CG", "CD1", "CD2", "CE1", "CE2", "CZ")
 TRP_RING = ("CG", "CD1", "CD2", "NE1", "CE2", "CE3", "CZ2", "CZ3", "CH2")

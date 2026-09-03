@@ -1,0 +1,51 @@
+# Single environment for every step in REPRODUCE.md: system preparation,
+# equilibrium MD, alchemical FEP setup and analysis, and the manuscript
+# artifacts.
+#
+#   conda env create -f environment.yml
+#   conda activate nnrti-prep
+#
+# Versions are pinned to the minor release used for the published results.
+# The non-equilibrium switching simulations themselves were run with the
+# GPU build of GROMACS 2023.1 provided as a cluster module; the conda-forge
+# package below is a CPU build, sufficient for topology preparation, for
+# short test runs and for reading the resulting trajectories.
+name: nnrti-prep
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+
+  # Simulation and force fields
+  - openmm=8.5
+  - openmmforcefields=0.16
+  - openff-toolkit=0.18
+  - openff-interchange=0.5
+  - pdbfixer=1.12
+  - gromacs=2023.1
+
+  # Trajectory and structure analysis
+  - mdanalysis=2.10
+  - mdtraj=1.11
+  - rdkit=2025.9
+
+  # Numerics and plotting
+  - numpy=2.3
+  - scipy=1.17
+  - pandas=2.3
+  - matplotlib=3.10
+  - networkx=3.6
+
+  # Manuscript artifacts (Supplementary Tables, ACS template application)
+  - openpyxl=3.1
+  - python-docx=1.2
+  - lxml=6.1
+
+  - pytest=9.1
+
+  - pip
+  - pip:
+      # pmx supplies the hybrid residues and the amber14sbmut mutation force
+      # field. Installed from the upstream repository: the `pmx` package on
+      # PyPI is a different, unrelated project.
+      - git+https://github.com/deGrootLab/pmx.git@develop

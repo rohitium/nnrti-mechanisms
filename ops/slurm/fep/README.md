@@ -152,7 +152,7 @@ SHERLOCK_USER=rsatija bash ops/sync/rsync_fep_pmx.sh pull
 ΔΔG_bind **V106A = +1.69 ± 0.70**, **Y188L = +4.52 ± 0.49** kcal/mol (exp. fold 9.6 / 149).
 Both signs positive (resistance), ranking correct, SEM < 1, BAR/CGI/Jarzynski agree.
 **Caveat:** Crooks overlap is marginal (0.01–0.53), driven by the noisy reverse (λ=1)
-work — see [`PLAN.md`](PLAN.md) §9 and [`docs/pmx-neq-fep-plan.md`](../../docs/pmx-neq-fep-plan.md) §3.4.
+work — see [`PLAN.md`](PLAN.md) §9 and [`docs/methods/pmx-neq-fep.md`](../../docs/methods/pmx-neq-fep.md) §3.4.
 
 ### Overlap sensitivity test (V106A: 100 → 500 ps switches, reuses equil/extract)
 
