@@ -59,7 +59,7 @@ def _leg_charge_correction(leg_id: str, replicate: int) -> float:
 
 DEFAULT_TARGETS = ("V106A", "Y188L")
 EXPERIMENTAL_CSV = Path(
-    "results/analysis/dor_susceptibility_bar_chart/tables/dor_susceptibility_values.csv"
+    "results/analysis/susceptibility/tables/dor_susceptibility_values.csv"
 )
 P0_SIGN_GATE = ("V106A", "Y188L")
 # Main-text discussion gate (plan §2B). Confidence = SEM + estimator agreement,

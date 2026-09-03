@@ -96,7 +96,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--panel-csv",
         type=Path,
-        default=root / "results/analysis/dor_susceptibility_bar_chart/tables/dor_susceptibility_values.csv",
+        default=root / "results/analysis/susceptibility/tables/dor_susceptibility_values.csv",
         help="Current manuscript mutation panel and DOR fold reductions.",
     )
     parser.add_argument(

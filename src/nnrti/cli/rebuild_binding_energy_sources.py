@@ -25,7 +25,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--susceptibility-csv",
         type=Path,
-        default=Path("results/analysis/dor_susceptibility_bar_chart/tables/dor_susceptibility_values.csv"),
+        default=Path("results/analysis/susceptibility/tables/dor_susceptibility_values.csv"),
     )
     parser.add_argument("--output-mmgbsa", type=Path, default=Path("results/analysis/binding_energy/tables/mmgbsa_replicate_metrics.csv"))
     parser.add_argument("--output-ddg", type=Path, default=Path("results/analysis/binding_energy/tables/ddg_full.csv"))

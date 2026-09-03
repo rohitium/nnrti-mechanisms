@@ -1,2 +1,0 @@
-panel_task_id,task_id,leg_id,phase,replicate,stage,lambda_state,direction,snapshot_index,snapshot_index_end,snapshot_time_ps,switch_ps,run_dir
-18,3,wt_to_G190E,holo,2,equil,1,,,,,,eq_lambda1

@@ -157,7 +157,7 @@ def test_y188l_has_no_interplanar_angle():
 def test_fold_changes_come_from_the_spreadsheet():
     xlsx = REPO / "data/DRM-susceptibilities.csv.xlsx"
     assert xlsx.exists(), "the authoritative susceptibility source is missing"
-    values = REPO / "results/analysis/dor_susceptibility_bar_chart/tables/dor_susceptibility_values.csv"
+    values = REPO / "results/analysis/susceptibility/tables/dor_susceptibility_values.csv"
     if not values.exists():
         pytest.skip("run nnrti.cli.plot_dor_susceptibility_bars first")
     df = pd.read_csv(values)

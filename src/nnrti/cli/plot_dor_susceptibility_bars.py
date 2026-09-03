@@ -72,7 +72,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("results/analysis/dor_susceptibility_bar_chart"),
+        default=Path("results/analysis/susceptibility"),
     )
     parser.add_argument(
         "--star-mutation",

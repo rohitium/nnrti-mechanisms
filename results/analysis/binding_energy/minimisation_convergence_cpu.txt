@@ -1,8 +1,0 @@
-  overlap    100 iters ->   -50.83 kcal/mol     12.7 s/frame
-  overlap    500 iters ->   -64.45 kcal/mol     35.7 s/frame
-  overlap   2000 iters ->   -64.15 kcal/mol     44.2 s/frame
-  overlap   5000 iters ->   -64.21 kcal/mol     46.7 s/frame
-  clean      100 iters ->   -63.44 kcal/mol     11.6 s/frame
-  clean      500 iters ->   -64.61 kcal/mol     35.6 s/frame
-  clean     2000 iters ->   -65.45 kcal/mol     45.3 s/frame
-  clean     5000 iters ->   -65.56 kcal/mol     47.0 s/frame
