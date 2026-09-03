@@ -47,10 +47,8 @@ Directory constants are in `src/nnrti/paths.py`.
 
 ## Data
 
-Trajectories and per-switch free energy data are deposited separately;
-[REPRODUCE.md](REPRODUCE.md) lists what each supports. Exploratory work not used
-in the manuscript is held outside the repository, inventoried with checksums in
-`manifests/archive_*.csv`.
+Raw solvent-stripped trajectories and per-switch free energy data are are available upon request.
+[REPRODUCE.md](REPRODUCE.md) can help reproduce the figures and analyses reported in the paper from the available processed data.
 
 ## Citing
 
