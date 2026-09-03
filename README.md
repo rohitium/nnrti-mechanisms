@@ -48,7 +48,6 @@ Directory constants are in `src/nnrti/paths.py`.
 ## Data
 
 Raw solvent-stripped trajectories and per-switch free energy data are are available upon request.
-[REPRODUCE.md](REPRODUCE.md) can help reproduce the figures and analyses reported in the paper from the available processed data.
 
 ## Citing
 
