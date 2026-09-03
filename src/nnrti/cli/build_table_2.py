@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-#: Labels used in the draft that differ from the analysis keys.
+#: Older drafts wrote combination genotypes in a different residue order.
 DOCX_ALIASES = {"K103N+L100I": "L100I+K103N"}
 
 
@@ -25,9 +25,9 @@ def normalize_label(label: str) -> str:
     """Map a .docx mutation label onto its analysis key.
 
     Drafts are inconsistent about spacing around the '+' in combination
-    genotypes -- the 06-21 draft writes "A98G+F227C", the 08-26 draft writes
-    "A98G + F227C". Matching the raw string silently left every combination row
-    blank, so normalise the spacing before applying the alias map.
+    genotypes: some write "A98G+F227C", others "A98G + F227C". Matching the raw
+    string silently leaves every combination row blank, so normalize the spacing
+    before applying the alias map.
     """
     key = "+".join(part.strip() for part in str(label).split("+"))
     return DOCX_ALIASES.get(key, key)
