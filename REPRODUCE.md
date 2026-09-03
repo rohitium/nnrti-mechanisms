@@ -43,7 +43,7 @@ says which command produces which number, which the wrapper cannot.
 | 4 | **Supp. Table 3** — per-replicate ΔΔE and ΔΔG | `python -m nnrti.cli.build_supplementary_table_3` |
 | 5 | **Supp. Table 4** — per-replicate structural observables | `python -m nnrti.cli.build_supplementary_table_4` (same command as Table 3) |
 | 6 | **Figure 1** — crystal structure | PyMOL session, not scripted; source `data/structures/` (PDB 4NCG) |
-| 7 | **Figure 2** — FEP protocol and ΔΔG vs fold | `python -m nnrti.fep.plot_protocol_schematic` and `python -m nnrti.fep.combine_neq --replot-only` |
+| 7 | **Figure 2** — FEP protocol (A–C) and ΔΔG vs fold (D) | `python -m nnrti.fep.plot_protocol_schematic` then `python -m nnrti.cli.plot_panel_by_resistance_category` |
 | 8 | **Figure 3** — resistance mechanisms | `python -m nnrti.cli.compute_mechanism_coordinates` then `python -m nnrti.cli.plot_mechanism_panel` |
 | 9 | **Supp. Figure 1** — MD convergence | `python -m nnrti.cli.compute_md_convergence` then `python -m nnrti.cli.plot_convergence_panel` |
 | 10 | **Supp. Figure 2** — FEP work distributions | `python -m nnrti.cli.plot_fep_work_distributions` |

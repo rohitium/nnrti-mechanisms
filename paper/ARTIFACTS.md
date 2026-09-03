@@ -54,7 +54,7 @@ image name are given so a panel can be replaced without guessing.
 | quantity | computed by |
 |---|---|
 | classification performance (MCC, ROC AUC, Fisher) | `nnrti.cli.classification_performance` |
-| ∆∆G vs ∆∆E and vs log₁₀(fold) correlations | `nnrti.fep.combine_neq` (panel-wide) and the block in `docs/decisions/manuscript-notes/CHANGES_2026-09-01_g190e_resolved.md` |
+| ∆∆G vs ∆∆E and vs log₁₀(fold) correlations | `nnrti.fep.combine_neq` |
 | per-category subset fits | `nnrti.cli.plot_panel_by_resistance_category` → `panel_category_subset_stats.csv` |
 
 ---

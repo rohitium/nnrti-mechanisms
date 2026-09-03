@@ -16,4 +16,3 @@ from it by `ops/maintenance/manuscript/apply_acs_template.py`, which applies the
 ACS template's styles and page setup; regenerate it after editing the draft
 rather than editing it directly.
 
-Notes from the drafting rounds are in `docs/decisions/manuscript-notes/`.

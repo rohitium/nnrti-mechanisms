@@ -150,7 +150,7 @@ def reconcile_json_with_state_csv(
     (e.g. G190A rep_01 50,000,000 -> 25,218,000) from state.csv files that the
     same tool had flagged ``state_csv_stale: true``. The analysis DCDs for those
     runs carry the canonical completed-100 ns fingerprint (180 fr / 34 MB), which
-    ``ops/maintenance/md/audit_md_metadata.py`` documents as authoritative over both JSON
+    the analysis DCD is authoritative over both the JSON
     and state.csv.
 
     Raising the count is safe and still automatic; lowering now requires an

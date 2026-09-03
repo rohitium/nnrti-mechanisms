@@ -6,10 +6,9 @@ Cluster operations. Simulation and analysis code is the `nnrti` package under
 | Path | Contents |
 |---|---|
 | `slurm/cluster/` | Slurm submission and monitoring for the equilibrium MD arrays, with module-load helpers |
-| `slurm/fep/` | Slurm submission for the alchemical free energy campaign, GROMACS `.mdp` files, and operational runbooks |
+| `slurm/fep/` | Slurm submission for the alchemical free energy calculations, and the GROMACS `.mdp` files |
 | `sync/` | rsync helpers for moving trajectories between the cluster and a workstation |
-| `maintenance/md/` | MD metadata audit and repair. `audit_md_metadata.py` is read-only; `repair_md_metadata.py` is dry-run by default |
-| `maintenance/manuscript/` | Word tooling: applying the ACS template and revision rounds |
+| `maintenance/manuscript/` | Applies the ACS template to a Word draft |
 
 ## On the cluster
 
