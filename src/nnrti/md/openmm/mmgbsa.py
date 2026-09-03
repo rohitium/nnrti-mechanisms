@@ -269,7 +269,7 @@ def _apply_unrestrained_min(
 
     The cap is the protocol: minimisation is not run to convergence, which would
     drift ~1.1 A from the sampled geometry. It is run just far enough to relieve
-    steric overlap. See MMGBSA_METHOD_AND_RECOMPUTE.md for the iteration sweep.
+    steric overlap.
     """
     openmm = require_module("openmm")
     unit = require_module("openmm.unit")

@@ -3,11 +3,9 @@
 # Back up irreplaceable raw pmx NEQ FEP data from /scratch to $GROUP_HOME.
 #
 # WHY
-#   /scratch is purged after 90 days. This project has already lost the full MD
-#   trajectories to a purge and 14 legs' raw FEP data to a `git clean -fd`
-#   (STATUS.md, 2026-08-13). What survives on scratch is the raw switch data for
-#   five legs -- 380 GB that cannot be regenerated without re-running the whole
-#   campaign. $GROUP_HOME is durable, 1 TB, and currently empty.
+#   /scratch is purged after 90 days. Raw switch data cannot be regenerated
+#   without re-running the campaign, so it is copied to $GROUP_HOME, which is
+#   durable.
 #
 #   docs/methods/md-run-data.md already mandates this: "Raw heavy data is not in git and not
 #   only on scratch ... durable storage ($GROUP_HOME) with sha256 manifests."

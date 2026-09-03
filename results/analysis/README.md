@@ -29,4 +29,3 @@ Each analysis folder follows the same container layout:
 
 `results/analysis/<analysis_name>/{plots,tables,config}/`
 
-Exploratory folders that were superseded during this cleanup were removed.

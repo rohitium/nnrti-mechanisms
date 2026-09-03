@@ -40,10 +40,7 @@ LIGAND_RESNAME = "2KW"
 
 P0_LEGS = ("wt_to_V106A", "wt_to_Y188L")
 
-# P1 single-residue legs for the ranking gate (Spearman vs experimental fold).
-# Split by net charge: neutral legs run the standard pipeline now; the two
-# charge-changing legs need the co-alchemical ion / double-box protocol (PLAN
-# §6.2, not yet implemented) and are deferred.
+# Single-residue legs, split by whether the substitution changes net charge.
 P1_NEUTRAL_LEGS = (
     "wt_to_F227C", "wt_to_G190A", "wt_to_V106I",
     "wt_to_V106M", "wt_to_Y181C", "wt_to_Y318F",
@@ -58,14 +55,9 @@ CHARGE_LEG_DELTA_Q = {
     "wt_to_G190E": -1,   # Gly0 -> Glu-
 }
 
-# Co-alchemical ion ABANDONED 2026-08-05: decoupling one bulk Cl- to keep the box
-# neutral dissipated ~20-26 kcal/mol (vs ~1-3 neutral), near-zero overlap, SEM ~1.4,
-# BAR-Jarz disagreement ~3.7 — it does not converge (see OPERATIONS.md §7). We now
-# run charge legs in a RAW non-neutral box (genion -neutral neutralises the A-state;
-# the B-state carries net charge under PME's uniform background) and apply the
-# Rocklin/Hunenberger analytical net-charge correction post-hoc (zero added
-# perturbation). Set True only to reproduce the abandoned co-alchemical experiment.
-USE_COALCHEMICAL_ION = False
+# Charge-changing legs run in a non-neutral box: genion neutralises the A state,
+# the B state carries net charge under PME's uniform background, and the
+# Rocklin/Hunenberger analytical net-charge correction is applied afterwards.
 
 # Match OpenMM MD prep (md_protocol.py / manuscript)
 SOLVENT_PADDING_NM = 1.0
@@ -73,7 +65,7 @@ IONIC_STRENGTH_M = 0.15
 BOX_TYPE = "dodecahedron"
 WATER_MODEL = "tip3p"
 
-# NEQ protocol (PLAN.md §4.3–4.4; pmx protein_mut tutorial)
+# NEQ protocol (pmx protein_mut tutorial)
 NEQ_TEMPERATURE_K = 300.0
 NEQ_DT_PS = 0.002
 # C-rescale barostat warmup before Parrinello-Rahman production. Starting P-R
@@ -81,10 +73,7 @@ NEQ_DT_PS = 0.002
 # large solvated box; a short C-rescale phase relaxes the box first.
 NEQ_WARMUP_PS = 500.0
 # Endpoint equilibration (ns), applied to BOTH endpoints. Env-overridable so a
-# longer-equilibration sensitivity test needs no code edit — the P0 pilot showed
-# the reverse (λ=1 / mutant) work distributions are the noisy half, so more
-# equilibration is the second lever after switch length (docs/methods/pmx-neq-fep.md
-# §3.4). Example: NEQ_EQUIL_NS=10 REPLICATES=3 FORCE=1 bash prepare_p0_neq.sh
+# Set NEQ_EQUIL_NS to lengthen end-state equilibration without editing code.
 NEQ_EQUIL_NS = _env_float("NEQ_EQUIL_NS", 5.0)
 # Snapshots per endpoint per replicate. Increasing this tightens the statistical
 # error of ΔG but does NOT improve Crooks overlap (same distributions) — use
@@ -92,39 +81,14 @@ NEQ_EQUIL_NS = _env_float("NEQ_EQUIL_NS", 5.0)
 NEQ_SNAPSHOTS_DEFAULT = 100
 NEQ_EQUIL_SNAPSHOT_START_PS = 100.0  # skip first 100 ps of equil when extracting
 
-# Legs whose driven switches run LONG_SWITCH_PS instead of NEQ_SWITCH_PS_DEFAULT.
-# V106A was added after the P0 pilot: its 100 ps switches gave marginal Crooks
-# overlap (large reverse-work dissipation, ~1.5–6 kcal fwd/rev gap); 500 ps
-# reduces dissipation and improves overlap. Extend the set for further tests via
-# NEQ_EXTRA_LONG_SWITCH_LEGS (comma-separated leg ids) without editing code.
-# F227C (Phe→Cys) was TESTED at 500 ps (2026-08-08) then REVERTED to 100 ps
-# (2026-08-10): the 500 ps run gave per-rep ΔG identical to 100 ps (holo
-# −0.18/−1.72/−2.15 vs −0.1/−1.8/−2.2) — clean switch-length invariance. Its noise
-# is NOT switch dissipation but across-rep endpoint scatter (fast local pocket
-# repacking around the deleted ring; no slow basin seen in 100 ns MD once PBC
-# artifacts are removed). The fix is more replicates (SEM∝1/√n), not longer
-# switches, so F227C stays at the cheaper 100 ps default. The 3 existing 500 ps
-# reps remain on disk and double as the switch-length-invariance check. Same
-# reasoning applies to the other aromatic→Cys legs (V106I_to_V106I_F227C,
-# wt_to_Y181C): keep them at 100 ps and add replicates.
-# G190E was MOVED OUT of the long-switch set (2026-08-15). It was listed here
-# speculatively (charge leg => assumed dissipative) back when charge legs still ran
-# the co-alchemical ion. That ion is abandoned (OPERATIONS.md §7): the ~20-26 kcal
-# dissipation came from annihilating a whole Cl-, not from the Gly->Glu mutation, and
-# the raw-box + analytical-correction protocol has neutral-like dissipation. K103N —
-# the other delta_q = -1 leg — ran the whole panel at 100 ps. G190E now matches it
-# exactly, which also makes it a like-for-like member of the charge family for the
-# SEM work. Switch length is in any case NOT the SEM lever (V106A 100 vs 500 ps:
-# +1.69 +- 0.70 vs +1.76 +- 0.51, invariant); endpoint equilibration is.
-_BASE_LONG_SWITCH_LEGS = {"wt_to_V106A", "wt_to_Y188L"}
-_EXTRA_LONG_SWITCH_LEGS = {
-    leg.strip() for leg in os.environ.get("NEQ_EXTRA_LONG_SWITCH_LEGS", "").split(",") if leg.strip()
-}
-LONG_SWITCH_LEGS = frozenset(_BASE_LONG_SWITCH_LEGS | _EXTRA_LONG_SWITCH_LEGS)
+# Legs whose driven switches run LONG_SWITCH_PS instead of NEQ_SWITCH_PS_DEFAULT:
+# those whose forward and reverse work distributions are widely separated at the
+# default length. Extend the set via NEQ_EXTRA_LONG_SWITCH_LEGS (comma-separated
+# leg ids) without editing code.
 NEQ_SWITCH_PS_DEFAULT = _env_float("NEQ_SWITCH_PS_DEFAULT", 100.0)
 LONG_SWITCH_PS = _env_float("NEQ_LONG_SWITCH_PS", 500.0)
 
-# SLURM array bundling: snapshots executed sequentially per GPU job (see docs/methods/pmx-neq-fep.md §7).
+# SLURM array bundling: snapshots executed sequentially per GPU job.
 #
 # Switches are embarrassingly parallel -- each is an independent run from its own
 # snapshot -- so this constant, not GPU availability, sets the wall clock. A leg is

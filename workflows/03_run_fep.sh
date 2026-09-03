@@ -14,7 +14,7 @@
 #
 #   python -m nnrti.fep.combine_neq
 #
-# Runbooks: ops/slurm/fep/OPERATIONS.md, ops/slurm/fep/RUNBOOK_G190E_SEM.md
+# Pipeline reference: ops/slurm/fep/README.md
 
 set -euo pipefail
 sed -n '2,20p' "$(dirname "$0")/03_run_fep.sh" | sed 's/^# \{0,1\}//'

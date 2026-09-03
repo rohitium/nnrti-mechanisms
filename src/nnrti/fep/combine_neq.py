@@ -4,7 +4,7 @@
 ΔΔG_bind(G) = ΔG_mut^holo − ΔG_mut^apo, summed over the additive legs of a
 compound genotype (see ``mutations.py::MANUSCRIPT_PLANS``). Uncertainty is the
 SEM across replicates of the per-replicate target ΔΔG — not the pooled within-
-replicate BAR error, which underestimates it (``pmx-neq-fep-plan.md`` §3.2).
+replicate BAR error, which underestimates it.
 
 Outputs (under ``results/analysis/fep_pmx/``):
     targets/{genotype}/summary.json   per-target ΔΔG_bind ± SEM + per-rep table

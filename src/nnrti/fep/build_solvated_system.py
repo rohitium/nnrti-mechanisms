@@ -24,10 +24,8 @@ from nnrti.fep.config import (
     LIGAND_RESNAME,
     PMX_FORCE_FIELD_LABEL,
     SOLVENT_PADDING_NM,
-    USE_COALCHEMICAL_ION,
     WATER_MODEL,
 )
-from nnrti.fep.coalchemical_ion import add_coalchemical_ion
 from nnrti.fep.gromacs_utils import (
     GromacsError,
     append_ligand_to_topology,
@@ -273,18 +271,6 @@ def build_solvated_system(
     )
     shutil.copy2(solv_top, final_top)
 
-    # Charge-changing legs: the co-alchemical ion is ABANDONED (does not converge;
-    # see config.USE_COALCHEMICAL_ION). Default is a RAW non-neutral box + analytical
-    # net-charge correction post-hoc. The block below only runs if explicitly
-    # re-enabled to reproduce the abandoned experiment.
-    coalch_info = None
-    delta_q = CHARGE_LEG_DELTA_Q.get(leg_id)
-    if delta_q is not None and USE_COALCHEMICAL_ION:
-        # COALCH_ION_RANK (default 0 = farthest ion) lets the placement-insensitivity
-        # check rebuild a leg using a different bulk ion without editing code.
-        ion_rank = int(os.environ.get("COALCH_ION_RANK", "0"))
-        coalch_info = add_coalchemical_ion(final_top, final_gro, delta_q=delta_q, ion_rank=ion_rank)
-
     n_atoms = parse_gro_atom_count(final_gro)
     net_charge = count_net_charge_from_top(final_top)
 
@@ -322,7 +308,6 @@ def build_solvated_system(
         "n_atoms": n_atoms,
         "net_charge_before_ions": net_charge,
         "validated_grompp": validate_grompp,
-        "coalchemical_ion": coalch_info,
     }
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     return final_gro

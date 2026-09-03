@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""QC for NEQ switch work distributions (PLAN.md §4.6 gates).
+"""QC for NEQ switch work distributions.
 
 Per leg/phase/replicate, reads the per-switch work values dumped by
 ``analyze_neq.py`` and reports:
@@ -28,7 +28,7 @@ if str(REPO_ROOT) not in sys.path:
 from nnrti.fep.analyze_neq import ensure_leg_analysis, read_work_values_kcal
 from nnrti.fep.config import FEP_PMX_ROOT, NEQ_TEMPERATURE_K, P0_LEGS
 
-# PLAN.md §4.6 pass thresholds
+# Pass thresholds
 OVERLAP_MIN = 0.3
 OUTLIER_FRAC_MAX = 0.05
 BAR_JARZ_MAX_KCAL = 1.0
