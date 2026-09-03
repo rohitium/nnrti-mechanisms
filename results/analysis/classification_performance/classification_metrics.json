@@ -16,7 +16,7 @@
     "mcc": 0.5006939628599933,
     "fisher_p": 0.11888111888111888,
     "auc": 0.7777777777777778,
-    "auc_ci_low": 0.42857142857142855,
+    "auc_ci_low": 0.43333333333333335,
     "auc_ci_high": 1.0,
     "auc_p": 0.07412587412587412,
     "auc_p_method": "exact (715 labelings)",
@@ -39,10 +39,10 @@
     "mcc": 0.03042903097250923,
     "fisher_p": 0.7062937062937062,
     "auc": 0.6944444444444444,
-    "auc_ci_low": 0.3611111111111111,
-    "auc_ci_high": 0.9722222222222222,
+    "auc_ci_low": 0.36363636363636365,
+    "auc_ci_high": 0.975,
     "auc_p": 0.16503496503496504,
     "auc_p_method": "exact (715 labelings)",
-    "misclassified": "V106I+F227C (FN), K103N+M230L (FN), V106I (FP), Y181C (FP), G190A (FP)"
+    "misclassified": "K103N+M230L (FN), V106I+F227C (FN), G190A (FP), V106I (FP), Y181C (FP)"
   }
 ]

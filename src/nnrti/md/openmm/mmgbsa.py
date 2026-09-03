@@ -124,9 +124,7 @@ _OBC_DEFAULT_SCALE = 0.8
 #: Interior dielectric for the GB term. The MM electrostatics are evaluated in
 #: vacuum (NoCutoff NonbondedForce, eps = 1), so the GB term describes a
 #: vacuum -> water transfer and eps_in = 1.0 is the internally consistent
-#: choice; it also matches the AmberTools MMPBSA.py default. A value of 2.0 was
-#: used before 2026-08-18, which damped the polar term by roughly half relative
-#: to the Coulomb term it is meant to balance.
+#: choice; it also matches the AmberTools MMPBSA.py default.
 GB_SOLUTE_DIELECTRIC = 1.0
 
 

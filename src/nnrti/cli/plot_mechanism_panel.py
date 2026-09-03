@@ -26,10 +26,8 @@ PANELS = [
     dict(
         tag="A",
         column="chl_ring_burial",
-        # Two corrections: the cutoff is 4.0 A (changed 2026-08-31), and the
-        # quantity is a count of atom PAIRS within it, not of atoms -- an RT atom
-        # close to three ring atoms contributes three. See
-        # docs/decisions/manuscript-notes/contact-cutoff-sensitivity.md.
+        # A count of atom PAIRS within 4.0 A, not of atoms: an RT atom close to
+        # three ring atoms contributes three.
         ylabel="DOR ring burial\n(RT heavy-atom contacts < 4.0 Å)",
         title="Y188L: loss of aromatic packing",
         legend_loc="upper center",

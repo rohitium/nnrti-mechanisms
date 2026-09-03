@@ -75,16 +75,6 @@ Outputs land under `results/analysis/fep_pmx/`:
 | `panel_ddg.csv` | The panel, and the source for Table 2 |
 | `panel_qc.csv`, `panel_crooks_overlap.png` | Forward/reverse overlap and estimator agreement |
 
-## Protocol figures
-
-```bash
-conda activate nnrti-prep
-python -m nnrti.fep.plot_protocol_figures --targets V106A Y188L
-```
-
-Writes the thermodynamic cycle, hybrid topology, work distributions, λ profile
-and Crooks overlap panels to `results/analysis/fep_pmx/protocol/<genotype>/`.
-
 ## Syncing
 
 ```bash

@@ -95,11 +95,10 @@ LONG_SWITCH_PS = _env_float("NEQ_LONG_SWITCH_PS", 500.0)
 # 1200 switches; at 50/task that is 24 elements and ~15 h each. Lowering it trades
 # more array elements (against the MaxSubmitPU=100 cap) for a shorter critical path.
 #
-# Both are env-overridable so a tail-end top-up can be re-bundled small and finish in
-# hours instead of a day: on 2026-08-17 G190E's last 96 switches sat in 2 elements at
-# ~21 h; re-bundled at 6/task they spread over 16 GPUs (~3 h). Re-bundling is SAFE --
-# run_neq_task skips per-switch on an existing dgdl.xvg, not per-task, so completed
-# work is never redone. Rebuild the manifest with prepare_neq --force afterwards.
+# Both are env-overridable, so a small tail of remaining switches can be re-bundled
+# to spread over more GPUs. Re-bundling is safe: run_neq_task skips per switch on an
+# existing dgdl.xvg, not per task, so completed work is never redone. Rebuild the
+# manifest with prepare_neq --force afterwards.
 SWITCH_SNAPSHOTS_PER_TASK_DEFAULT = _env_int("NEQ_SNAPSHOTS_PER_TASK", 100)
 SWITCH_SNAPSHOTS_PER_TASK_LONG = _env_int("NEQ_SNAPSHOTS_PER_TASK_LONG", 50)
 

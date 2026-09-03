@@ -2,7 +2,7 @@
 
 Import these instead of hardcoding directory strings::
 
-    from nnrti.paths import MD_RUNS, FEP_PMX, FIGURES
+    from nnrti.paths import MD_RUNS, FEP_PMX
 
 Rationale: result/data paths are currently hardcoded across ~120 files, so any
 move means editing all of them. Routing through this module makes the structure
@@ -25,7 +25,6 @@ PREPARED = DATA / "prepared"              # prepared/parameterized inputs
 
 # --- code & run provenance --------------------------------------------------
 SRC = REPO_ROOT / "src"
-SCRIPTS = REPO_ROOT / "scripts"
 MANIFESTS = REPO_ROOT / "manifests"
 LOGS = REPO_ROOT / "logs"
 
@@ -37,8 +36,6 @@ ANALYSIS = RESULTS / "analysis"
 FEP_PMX = ANALYSIS / "fep_pmx"            # pmx non-equilibrium alchemical FEP
 
 # --- human-facing outputs ---------------------------------------------------
-FIGURES = REPO_ROOT / "figures"           # curated, manuscript-facing figures
-MANUSCRIPT = REPO_ROOT / "manuscript"
 
 
 def rel(path: Path | str) -> str:

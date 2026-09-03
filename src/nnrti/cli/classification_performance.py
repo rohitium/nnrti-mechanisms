@@ -41,10 +41,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-SUSCEPTIBLE = ["K103N", "V106I", "Y181C", "G190A"]
-RESISTANT = ["Y318F", "V106A", "A98G+F227C", "V106I+F227C", "V106A+F227L",
-             "Y188L", "V106A+P225H", "V106A+L234I", "K103N+M230L"]
-UNCERTAIN = ["V106M", "G190S", "L100I+K103N", "K103N+P225H", "G190E"]
+from nnrti.analysis.panel import RESISTANT, SUSCEPTIBLE, UNCERTAIN
 
 #: thermal energy at 300 K; the manuscript's "strong impact" threshold
 THRESHOLD = 0.5
@@ -111,7 +108,8 @@ def auc_ci(y_true: np.ndarray, score: np.ndarray, n_boot: int = 10000) -> tuple[
 
 
 def evaluate(name: str, est: pd.Series, sem: pd.Series, include_uncertain: bool) -> dict:
-    labels = {g: 1 for g in RESISTANT} | {g: 0 for g in SUSCEPTIBLE}
+    # sorted so the genotype order in the output does not depend on set iteration
+    labels = {g: 1 for g in sorted(RESISTANT)} | {g: 0 for g in sorted(SUSCEPTIBLE)}
     genos = [g for g in labels if g in est.index and pd.notna(est[g])]
     y = np.array([labels[g] for g in genos])
     score = est[genos].to_numpy(dtype=float)

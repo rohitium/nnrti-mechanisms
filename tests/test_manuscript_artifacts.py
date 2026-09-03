@@ -52,14 +52,14 @@ def test_panel_categories_are_disjoint_and_complete():
     assert len(SUSCEPTIBLE) + len(RESISTANT) + len(UNCERTAIN) == 18
 
 
-def test_figure_2d_does_not_import_an_archived_script():
-    """The phenotype categories belong to the analysis library."""
-    src = (REPO / "src/nnrti/cli/plot_panel_by_resistance_category.py").read_text()
-    assert "from ..analysis.panel import" in src
-    imports = [l for l in src.splitlines() if l.startswith(("import ", "from "))]
-    assert not [l for l in imports if "occupancy_tick_lines" in l or "triplet_contact_story" in l], (
-        "Figure 2D must not depend on a plotting script for its category definitions"
-    )
+def test_panel_categories_have_one_definition():
+    """No CLI may keep its own copy of the phenotype categories."""
+    for path in sorted((REPO / "src/nnrti/cli").glob("*.py")):
+        src = path.read_text()
+        for name in ("SUSCEPTIBLE", "RESISTANT", "UNCERTAIN"):
+            assert f"{name} = [" not in src and f"{name} = {{" not in src, (
+                f"{path.name} redefines {name}; import it from nnrti.analysis.panel"
+            )
 
 
 # --------------------------------------------------------------------------- #

@@ -1,14 +1,6 @@
-"""Analysis utilities: susceptibility IO, trajectory metrics, and plotting."""
+"""Analysis utilities: susceptibility IO, trajectory metrics, and the genotype panel."""
 
 from .metrics import ContactMetrics, EnsembleMetrics, compute_contacts, compute_ensemble_metrics, pocket_volume_proxy
-from .plotting import (
-    cleanup_legacy_plots,
-    plot_all_metrics_vs_fold_reduction,
-    plot_all_mutation_pocket_volume_timeseries,
-    plot_boundness_qc,
-    plot_si_figure_s1_like,
-    plot_simulation_convergence,
-)
 from .result_collector import (
     collect_ca_rmsd_profiles,
     collect_com_distance_profiles,
@@ -31,7 +23,6 @@ __all__ = [
     "collect_com_distance_profiles",
     "collect_md_results",
     "collect_pocket_volume_profiles",
-    "cleanup_legacy_plots",
     "compute_binding_ddg",
     "compute_boundness_qc",
     "compute_contacts",
@@ -41,11 +32,6 @@ __all__ = [
     "compute_structural_metrics",
     "load_dor_susceptibilities",
     "merge_with_structural_metrics",
-    "plot_all_metrics_vs_fold_reduction",
-    "plot_all_mutation_pocket_volume_timeseries",
-    "plot_boundness_qc",
-    "plot_si_figure_s1_like",
-    "plot_simulation_convergence",
     "pocket_volume_proxy",
     "run_result_collection",
 ]

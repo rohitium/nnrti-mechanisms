@@ -66,12 +66,9 @@ P0_SIGN_GATE = ("V106A", "Y188L")
 # not experimental match. V106M is included (tight SEM) but framed as a
 # binding-vs-phenotype finding, not a pipeline failure.
 SEM_MAIN_TEXT_MAX_KCAL = 0.6
-# Was frozenset({"K103N", "G190E"}) -- "charge / huge SEM". Both grounds have
-# lapsed. K103N's SEM fell 2.19 -> 0.23 with the 500 ps rebuild (2026-08-17),
-# making it the tightest value in the panel, and the charge-leg concern was
-# resolved when the raw non-neutral box + analytical Rocklin/Hunenberger
-# correction was adopted: holo and apo box volumes differ by under 1%, so the
-# correction cancels to below 1e-3 kcal/mol in the double difference.
+# The analytical Rocklin/Hunenberger correction makes the charge legs usable:
+# holo and apo box volumes differ by under 1%, so the correction cancels to below
+# 1e-3 kcal/mol in the double difference.
 #
 # The SEM threshold alone now gives the right answer for both -- K103N (0.23)
 # main_text, G190E (1.63) show -- so the override is redundant as well as stale.
@@ -299,10 +296,8 @@ def _plot(rows: list[dict], rho: float | None, output: Path) -> dict:
             corr_label = f"{corr_label}  ·  {spearman_bit}" if corr_label else spearman_bit
         ax.set_xlabel(r"$\log_{10}$(experimental DOR fold reduction)")
         ax.set_ylabel(r"Computed $\Delta\Delta G_{\mathrm{bind}}$ (kcal/mol)")
-        # "incomplete panel" was hardcoded while genotypes were still missing. The
-        # panel completed with G190E on 2026-08-17, so derive the label instead of
-        # asserting it: MANUSCRIPT_PANEL_N_WITH_FOLD is how many of the 19 legs carry
-        # an experimental fold (F227C has none).
+        # MANUSCRIPT_PANEL_N_WITH_FOLD is how many of the 19 legs carry an
+        # experimental fold (F227C has none).
         n_done = len(with_fold)
         completeness = "" if n_done >= MANUSCRIPT_PANEL_N_WITH_FOLD else "; incomplete panel"
         title = f"NEQ ΔΔG_bind vs experiment (n = {n_done}{completeness})"
