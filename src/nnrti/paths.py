@@ -48,13 +48,3 @@ def rel(path: Path | str) -> str:
         return p.relative_to(REPO_ROOT).as_posix()
     except ValueError:
         return p.as_posix()
-
-
-def md_run_dir(genotype: str, replicate: int, *, apo: bool = False) -> Path:
-    """Directory for one classical-MD run.
-
-    Holo: results/md_runs/<genotype>/rep_NN
-    Apo:  results/md_runs/apo/<genotype>/rep_NN
-    """
-    base = APO_MD_RUNS if apo else MD_RUNS
-    return base / genotype / f"rep_{replicate:02d}"

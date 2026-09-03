@@ -19,26 +19,6 @@ from ..md.manifest import load_manifest
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
-def _make_whole_transform(ag):
-    """MDAnalysis-compatible transformation that makes protein chains whole across PBC.
-
-    Uses compound='segments' (then 'residues' as fallback) so that entire protein
-    chains are reassembled without requiring CONECT bond records in the topology.
-    trans.unwrap() uses compound='fragments' which silently fails when bonds are
-    absent, leaving frame-0 PBC splits intact for NoJump to lock in.
-    """
-    def _apply(ts):
-        try:
-            ag.unwrap(compound="segments", inplace=True)
-        except Exception:
-            try:
-                ag.unwrap(compound="residues", inplace=True)
-            except Exception:
-                pass
-        return ts
-    return _apply
-
-
 def _format_seconds(seconds: float) -> str:
     seconds = max(0.0, float(seconds))
     mins, sec = divmod(int(seconds), 60)

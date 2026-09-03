@@ -70,13 +70,3 @@ def convert_energy_columns(df: pd.DataFrame, target_units: str, columns=None) ->
             out[column] = pd.to_numeric(out[column], errors="coerce") * factor
     out[ENERGY_UNITS_COLUMN] = target_units
     return out
-
-
-def read_energy_table(path, target_units: str = KCAL_UNITS, columns=None) -> pd.DataFrame:
-    """Read an energy CSV and return it in ``target_units``.
-
-    Frames written before the units stamp existed are assumed to be kJ/mol
-    (the OpenMM-native output of ``src/nnrti/md/openmm/mmgbsa.py``) and are converted;
-    frames already stamped with ``target_units`` pass through untouched.
-    """
-    return convert_energy_columns(pd.read_csv(path), target_units, columns=columns)

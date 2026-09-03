@@ -9,7 +9,7 @@ edited by hand.
 | `analysis/fep_pmx/` | Non-equilibrium alchemical free energy: per-switch work values, per-leg BAR/CGI/Jarzynski estimates, the ΔΔG panel | `workflows/03` (cluster) |
 | `analysis/binding_energy/` | MM/GBSA interface energies per replicate | `workflows/04` |
 | `analysis/mechanisms/` | Interface geometry for Table 3 and Figure 3 | `workflows/04` |
-| `analysis/modern_md_suite/` | NNIBP pocket volume | `workflows/04` |
+| `analysis/pocket_volume/` | NNIBP pocket volume | `workflows/04` |
 | `analysis/md_convergence/` | DOR pose RMSD and DOR–RT centre-of-mass distance | `workflows/04` |
 | `analysis/dor_susceptibility_bar_chart/` | Susceptibility panel for Table 1 | `workflows/05` |
 | `analysis/classification_performance/` | Sensitivity, specificity, MCC, ROC AUC | `workflows/05` |

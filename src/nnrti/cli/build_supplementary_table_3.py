@@ -223,64 +223,8 @@ def load_details(ddg_csv: Path, panel: pd.DataFrame, expected_replicates: int) -
     return filtered
 
 
-def build_summary(details: pd.DataFrame) -> pd.DataFrame:
-    grouped = details.groupby("mutation", sort=False)
-    summary = grouped.agg(
-        **{
-            "DOR fold reduction": ("dor_fold_reduction", "first"),
-            "n replicates": ("replicate", "nunique"),
-        }
-    ).reset_index()
-    summary = summary.rename(columns={"mutation": "Mutation"})
-    for column, label in SUMMARY_COMPONENTS:
-        summary[f"{label} mean (kcal/mol)"] = grouped[column].mean().to_numpy(dtype=float)
-        summary[f"{label} SEM (kcal/mol)"] = grouped[column].apply(sem).to_numpy(dtype=float)
-    return summary
-
-
-def attach_fep(summary: pd.DataFrame, fep: pd.DataFrame) -> pd.DataFrame:
-    """Left-join the FEP ddG columns; genotypes without FEP stay blank."""
-    if fep.empty:
-        return summary
-    merged = summary.merge(
-        fep.rename(columns={"mutation": "Mutation", **{c: l for c, l in FEP_COLUMNS}}),
-        on="Mutation",
-        how="left",
-    )
-    return merged
-
-
 def build_detail_table(details: pd.DataFrame) -> pd.DataFrame:
     return details[[column for column, _label in DETAIL_COLUMNS]].rename(columns=dict(DETAIL_COLUMNS))
-
-
-def wt_reference_note(details: pd.DataFrame) -> str:
-    """One-line description of the shared WT reference and its uncertainty."""
-    labels = [
-        ("wt_binding_dg", "wt_binding_dg_sem", "total"),
-        ("wt_binding_dg_vdw", "wt_binding_dg_vdw_sem", "van der Waals"),
-        ("wt_binding_dg_electrostatic", "wt_binding_dg_electrostatic_sem", "electrostatic"),
-        ("wt_binding_dg_gb", "wt_binding_dg_gb_sem", "GB polar solvation"),
-        ("wt_binding_dg_sa", "wt_binding_dg_sa_sem", "nonpolar SA"),
-    ]
-    parts = []
-    for value_col, sem_col, label in labels:
-        if value_col not in details.columns:
-            continue
-        value = float(pd.to_numeric(details[value_col], errors="coerce").dropna().iloc[0])
-        if sem_col in details.columns:
-            sem_value = float(pd.to_numeric(details[sem_col], errors="coerce").dropna().iloc[0])
-            parts.append(f"{label} {value:.1f} +/- {sem_value:.1f}")
-        else:
-            parts.append(f"{label} {value:.1f}")
-    if not parts:
-        return ""
-    return (
-        "WT reference (mean +/- SEM over three WT production replicates, kcal/mol): "
-        + "; ".join(parts)
-        + ". These reference uncertainties are common to every row and are not included in the "
-        "per-mutation SEM values above."
-    )
 
 
 def build_fep_sheet(fep: pd.DataFrame, panel: pd.DataFrame) -> pd.DataFrame:

@@ -16,7 +16,12 @@ export PYTHONPATH="${PYTHONPATH:-src}"
 
 run() { echo; echo "=== $* ==="; "$@"; }
 
-# Convergence: DOR pose RMSD and DOR-RT centre-of-mass distance (Supp. Fig. 1).
+# Periodic images first: the convergence and pocket-volume steps read the
+# *_analysis_pbcfix.dcd sidecars this writes. Idempotent -- existing files are
+# skipped unless --force.
+run "$PYTHON" -m nnrti.cli.fix_pbc_trajectories --workers 4
+
+# Convergence: DOR pose RMSD and DOR-RT center-of-mass distance (Supp. Fig. 1).
 run "$PYTHON" -m nnrti.cli.compute_md_convergence
 
 # Interface geometry: the observables behind Table 3 and Figure 3.
@@ -27,7 +32,7 @@ run "$PYTHON" -m nnrti.cli.compute_dor_moiety_contacts \
                 V106I V106I+F227C V106M Y181C Y188L Y318F A98G+F227C
 
 # NNIBP pocket volume (the V(NNIBP) column of Table 3).
-run "$PYTHON" -m nnrti.cli.compute_modern_md_suite
+run "$PYTHON" -m nnrti.cli.compute_pocket_volume
 
 # MM/GBSA interface energies. 100 evenly spaced snapshots, no frame filtering,
 # minimisation to convergence, double precision -- see Methods.

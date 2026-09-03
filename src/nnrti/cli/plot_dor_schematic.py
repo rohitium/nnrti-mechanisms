@@ -172,13 +172,6 @@ def kabsch2d(A, B):
     return U @ Vt
 
 
-def face_on(P):
-    """Project a group onto its own best plane, centred: a readable depiction."""
-    c = P.mean(axis=0)
-    _, _, vt = np.linalg.svd(P - c)
-    return np.column_stack([(P - c) @ vt[0], (P - c) @ vt[1]])
-
-
 class LabelPlacer:
     """Place text so it never overlaps an atom, a bond, or another label.
 
@@ -274,31 +267,6 @@ def rot(theta):
     return np.array([[c, -s], [s, c]])
 
 
-def draw_group(ax, P2, elements, colour, lw, *, hetero=9.0, dot=170, zorder=3,
-               bonds=None, alpha=1.0):
-    """Draw a group. `bonds` MUST come from the 3D coordinates.
-
-    Inferring them from the projected 2D positions (as an earlier version did)
-    invents bonds between atoms that merely project close together and drops
-    real ones that project on top of each other -- which produced visibly wrong
-    connectivity for Tyr188 and Lys103.
-    """
-    if bonds is None:
-        raise ValueError("bonds must be supplied from 3D coordinates")
-    for i, j in bonds:
-        ax.plot(*zip(P2[i], P2[j]), color=colour, lw=lw, zorder=zorder,
-                solid_capstyle="round", alpha=alpha)
-    for i, el in enumerate(elements):
-        e = el.upper()
-        if e == "C":
-            continue
-        ax.scatter(*P2[i], s=dot, color="white", zorder=zorder + 1,
-                   edgecolors="none", alpha=alpha)
-        ax.text(*P2[i], "Cl" if e == "CL" else e, ha="center", va="center",
-                fontsize=hetero, fontweight="bold", zorder=zorder + 2,
-                color=HETERO_COLOR.get(e, "#333"), alpha=alpha)
-
-
 def main() -> int:
     import mdtraj as md
 
@@ -336,7 +304,7 @@ def main() -> int:
         for a in ring:
             rings2[a] = k
     cent2 = {m: D2[[i for i, v in rings2.items() if v == m]].mean(axis=0)
-             for m in set(rings2.values())}
+             for m in sorted(set(rings2.values()))}
 
     # ---------- real geometry: bearings measured in the plane of DOR
     t = md.load(str(args.structure))
@@ -350,7 +318,7 @@ def main() -> int:
     moi3 = ring_moieties([a.name for a in la], L)
     lig_xy3 = pr(L)
     cent3 = {m: lig_xy3[[i for i, v in moi3.items() if v == m]].mean(axis=0)
-             for m in set(moi3.values())}
+             for m in sorted(set(moi3.values()))}
 
     order = ["chlorocyanophenyl", "pyridinone", "triazolinone"]
     A = np.array([cent3[m] for m in order])
@@ -364,7 +332,7 @@ def main() -> int:
     placer.add_atoms(D2)
     placer.add_bonds(D2, [(b.GetBeginAtomIdx(), b.GetEndAtomIdx())
                           for b in mol.GetBonds()])
-    for m in set(rings2.values()):
+    for m in sorted(set(rings2.values())):
         ax.scatter(*cent2[m], s=2600, color=MOIETY_COLOR[m], alpha=0.16, zorder=0)
     # The chlorocyanophenyl ring is a plain benzene, so it is drawn with an
     # inner circle rather than alternating Kekule bonds -- the alternating form
@@ -399,7 +367,7 @@ def main() -> int:
         ax.text(*D2[i], el, ha="center", va="center", fontsize=10.5,
                 fontweight="bold", zorder=5,
                 color=HETERO_COLOR.get(el.upper(), "#333"))
-    for m in set(rings2.values()):
+    for m in sorted(set(rings2.values())):
         lx, ly, _ = MOIETY_LABEL_XY[m]
         anchor = cent2[m]
         direction = np.array([lx, ly]) - anchor

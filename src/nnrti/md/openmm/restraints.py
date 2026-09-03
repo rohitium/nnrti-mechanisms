@@ -37,32 +37,3 @@ def restrained_indices(
         if d > radius_nm:
             restrained.append(idx)
     return restrained
-
-
-def backbone_atom_indices(topology, exclude_resname: str) -> list[int]:
-    backbone_names = {
-        "N",
-        "CA",
-        "C",
-        "O",
-        "P",
-        "OP1",
-        "OP2",
-        "O5'",
-        "C5'",
-        "C4'",
-        "O4'",
-        "C3'",
-        "O3'",
-        "C2'",
-        "C1'",
-    }
-    indices = []
-    for atom in topology.atoms():
-        if atom.residue.name == exclude_resname:
-            continue
-        if atom.element is None or atom.element.symbol == "H":
-            continue
-        if atom.name in backbone_names:
-            indices.append(atom.index)
-    return indices

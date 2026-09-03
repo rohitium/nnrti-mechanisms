@@ -2,7 +2,7 @@
 
 Active analysis folders:
 
-- `modern_md_suite/`
+- `pocket_volume/`
   NNIBP descriptor suite (H-bonds, ligand RMSF, pose clusters, pocket volume, PCA, DCCM, contact networks)
 - `md_convergence/`
   100 ns coordinate-vs-time convergence traces (RMSD / COM / reporter distances)
@@ -38,7 +38,7 @@ Each analysis folder follows the same container layout:
 | `binding_energy/` | Table 2 and Supp. Table 3, via `tables/ddg_full.csv` |
 | `fep_pmx/` | Table 2, Figure 2 and Supp. Figure 2; `legs/**/analysis/integ_*.dat` are the per-switch work values every ΔΔG is derived from |
 | `mechanisms/` | Figure 3 and Table 3 |
-| `modern_md_suite/` | Table 3's pocket volume |
+| `pocket_volume/` | Table 3's pocket volume |
 | `md_convergence/` | Supp. Figure 1 |
 | `classification_performance/` | The counts quoted in Results |
 

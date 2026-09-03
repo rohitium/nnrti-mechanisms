@@ -51,21 +51,3 @@ def normalize_mutation_token(text: str) -> str:
         return ""
     t = t.replace(" ", "").replace(",", "+")
     return re.sub(r"\++", "+", t)
-
-
-def category_of(mutation: str) -> str:
-    """Return ``"Susceptible"``, ``"Resistant"``, ``"Uncertain"`` or ``"WT"``.
-
-    Raises ``KeyError`` for anything outside the simulated panel, so a typo in a
-    genotype name fails loudly instead of silently dropping out of a figure.
-    """
-    m = normalize_mutation_token(mutation)
-    if m in ("WT", "WILDTYPE", "WILD-TYPE"):
-        return "WT"
-    if m in SUSCEPTIBLE:
-        return "Susceptible"
-    if m in RESISTANT:
-        return "Resistant"
-    if m in UNCERTAIN:
-        return "Uncertain"
-    raise KeyError(f"{mutation!r} is not part of the simulated genotype panel")
