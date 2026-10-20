@@ -1,0 +1,48 @@
+TY  - JOUR
+AU  - Kuhn, Bernd
+AU  - Gerber, Paul
+AU  - Schulz-Gasch, Tanja
+AU  - Stahl, Martin
+TI  - Validation and Use of the MM-PBSA Approach for Drug Discovery
+JO  - Journal of Medicinal Chemistry
+VL  - 48
+IS  - 12
+SP  - 4040
+EP  - 4048
+PY  - 2005
+DO  - 10.1021/jm049081q
+N1  - Cited in Methods (MM/GBSA) as precedent for minimization-based end-point calculations.
+ER  - 
+
+TY  - JOUR
+AU  - Rastelli, Giulio
+AU  - Del Rio, Alberto
+AU  - Degliesposti, Gianluca
+AU  - Sgobba, Miriam
+TI  - Fast and accurate predictions of binding free energies using MM-PBSA and MM-GBSA
+JO  - Journal of Computational Chemistry
+VL  - 31
+IS  - 4
+SP  - 797
+EP  - 810
+PY  - 2010
+DO  - 10.1002/jcc.21372
+N1  - Cited in Methods (MM/GBSA): minimization reproduces ensemble-averaging accuracy at lower cost.
+ER  - 
+
+TY  - JOUR
+AU  - Weis, Aaron
+AU  - Katebzadeh, Kaveh
+AU  - Söderhjelm, Pär
+AU  - Nilsson, Ingemar
+AU  - Ryde, Ulf
+TI  - Ligand Affinities Predicted with the MM/PBSA Method: Dependence on the Simulation Method and the Force Field
+JO  - Journal of Medicinal Chemistry
+VL  - 49
+IS  - 22
+SP  - 6596
+EP  - 6606
+PY  - 2006
+DO  - 10.1021/jm0608210
+N1  - Cited in Methods (MM/GBSA): minimizing from a series of MD snapshots; the study behind ref 34's claim.
+ER  - 
