@@ -80,14 +80,22 @@ if [ -z "${SLURM_JOB_ID:-}" ] && [ "${ALLOW_LOGIN_NODE:-0}" != "1" ]; then
     CPUS="${SBATCH_CPUS:-8}"
     if [ "$TIER" -ge 2 ]; then WALL="${SBATCH_TIME:-24:00:00}"; else WALL="${SBATCH_TIME:-04:00:00}"; fi
     mkdir -p logs/fep_backup
+    # Submit a frozen copy, not this file. bash reads a script incrementally as
+    # it executes, so replacing the file mid-run (an scp of a fix, an editor
+    # save) shifts byte offsets and the running shell fails to parse the rest.
+    # That is exactly how job 48676833 died at its final summary on 2026-10-20,
+    # after every archive had already been written and verified.
+    SNAPSHOT="$PROJECT_ROOT/logs/fep_backup/backup_fep_raw_${STAMP}_t${TIER}_$$.sh"
+    cp "$SELF" "$SNAPSHOT"
     echo "Submitting as a batch job (tier $TIER, ${CPUS} cpus, ${WALL} wall)."
     echo "Login nodes are shared and throttled; set ALLOW_LOGIN_NODE=1 to override."
     JOB=$(sbatch --parsable \
         -p "${SBATCH_PARTITION:-normal}" -t "$WALL" -c "$CPUS" --mem "${SBATCH_MEM:-8G}" \
         -J "fep_backup_t${TIER}" \
         -o "logs/fep_backup/fep_backup_t${TIER}_%j.log" \
-        --wrap "cd '$PROJECT_ROOT' && TIER='$TIER' STAMP='$STAMP' LEGS='$LEGS' DEST='$DEST' PIGZ_THREADS='$CPUS' bash '$SELF'")
+        --wrap "cd '$PROJECT_ROOT' && TIER='$TIER' STAMP='$STAMP' LEGS='$LEGS' DEST='$DEST' PIGZ_THREADS='$CPUS' bash '$SNAPSHOT'")
     echo "  job $JOB"
+    echo "  snapshot $SNAPSHOT"
     echo "  log logs/fep_backup/fep_backup_t${TIER}_${JOB}.log"
     echo "  watch: tail -f logs/fep_backup/fep_backup_t${TIER}_${JOB}.log"
     exit 0
