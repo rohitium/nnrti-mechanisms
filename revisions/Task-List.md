@@ -3,7 +3,7 @@
 Deadline **10-Nov-2026**. Tasks are ordered by increasing effort within each tier.
 Effort is focused working time, not wall clock. `R1.x` = Reviewer 1 point x.
 
-**Progress: 6 / 23 complete** — last updated 20-Oct-2026
+**Progress: 7 / 23 complete** — last updated 20-Oct-2026
 
 ---
 
@@ -72,7 +72,7 @@ Decide only after the matched-window analysis says whether a WT extension is nee
 
 - [x] **D.1** Audit Sherlock for data not present on the Mac. Found: **G190E apo, 100 ns × 3** (`results/md_runs/apo/g190e/`), absent locally; FEP end-state equilibrium trajectories for the five uncleaned legs (5 ns each, 20 ns for the G190E leg). The Mac held 13 GB of a ~555 GB dataset.
 - [x] **D.2** Pull G190E apo to the Mac — 3 × 200 frames, solvent-stripped, 112 MB, verified.
-- [ ] **D.3** Tier-3 FEP archive to `$GROUP_HOME` before the `$SCRATCH` purge. FEP leg mtime is 2026-08-13, so purge falls around **11 Nov 2026** — one day after the revision deadline. Job `48676833` submitted 20-Oct; covers all 19 legs with endpoint ensembles and switch seeds but not the redundant `equil.trr`. Check with `bash ops/slurm/cluster/check_backup_status.sh`.
+- [x] **D.3** Tier-3 FEP archive to `$GROUP_HOME` before the `$SCRATCH` purge. FEP leg mtime is 2026-08-13, so purge falls around **11 Nov 2026** — one day after the revision deadline. **Complete 20-Oct:** job `48676833` wrote all 19 legs (endpoint ensembles and switch seeds, no `equil.trr`) to `$GROUP_HOME/nnrti-mechanisms/fep_raw/2026-10-20` — 72 GB, each archive with a sha256 and tar entry count in `BACKUP_MANIFEST.csv`. The job exited nonzero only because the script file was replaced mid-run; the archives were already complete. Check state with `bash ops/slurm/cluster/check_backup_status.sh` (works from the Mac or a login node).
 
 > A tier-1 backup from 2026-08-28 already covers four legs. It does **not** cover
 > `wt_to_G190E` (158 GB, the largest, excluded at the time because it was still running)
