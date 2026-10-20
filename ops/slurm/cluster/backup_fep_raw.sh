@@ -212,7 +212,10 @@ for leg in $LEGS; do
         rm -f "$LIST"; continue
     fi
 
-    SRC_BYTES="$(xargs -a "$LIST" du -cb 2>/dev/null | tail -1 | cut -f1 || echo 0)"
+    # Sum per-file sizes rather than reading du's "total" line: xargs splits a
+    # long file list into batches, each du emits its own total, and taking the
+    # last one silently reports only the final batch.
+    SRC_BYTES="$(xargs -a "$LIST" stat -c %s 2>/dev/null | awk '{s+=$1} END{printf "%d", s}' || echo 0)"
 
     echo "-> $leg : $NFILES files, $(numfmt --to=iec "$SRC_BYTES" 2>/dev/null || echo "$SRC_BYTES B") uncompressed"
     _progress "START $leg : $NFILES files, $(numfmt --to=iec "$SRC_BYTES" 2>/dev/null || echo "$SRC_BYTES B") uncompressed"

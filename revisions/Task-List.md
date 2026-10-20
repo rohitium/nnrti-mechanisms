@@ -3,7 +3,7 @@
 Deadline **10-Nov-2026**. Tasks are ordered by increasing effort within each tier.
 Effort is focused working time, not wall clock. `R1.x` = Reviewer 1 point x.
 
-**Progress: 2 / 23 complete**
+**Progress: 6 / 23 complete** — last updated 20-Oct-2026
 
 ---
 
@@ -20,11 +20,11 @@ Effort is focused working time, not wall clock. `R1.x` = Reviewer 1 point x.
 
 ## Tier 1 — Text-only scientific revisions
 
-- [ ] **1.1** Define "correctly predicted" quantitatively: state the ΔΔG_bind cutoff in Abstract, Results and Methods and give the explicit confusion matrix. Numbers exist in `results/analysis/classification_performance/classification_metrics.json` (TP 7, TN 3, FP 1, FN 2; MCC 0.50; AUC 0.78, p = 0.074). _(R3.1 · 2–3 h)_
+- [x] **1.1** Define "correctly predicted" quantitatively: state the ΔΔG_bind cutoff in Abstract, Results and Methods and give the explicit confusion matrix. Numbers exist in `results/analysis/classification_performance/classification_metrics.json` (TP 7, TN 3, FP 1, FN 2; MCC 0.50; AUC 0.78, p = 0.074). _(R3.1 · 2–3 h)_
 - [ ] **1.2** Full proofread / English-language pass; state in the response that this was done. _(Editor, R3.2 · 1 day or outsourced)_
-- [ ] **1.3** Gasteiger discussion: DOR is neutral, so the charge model perturbs ΔE_elec and ΔE_GB far more than ΔΔG_bind, which largely cancels in the thermodynamic cycle. Write regardless of whether 4.1 is done — it frames that result. _(R2.5 part · 2 h)_
-- [ ] **1.4** FEP Methods expansion: titratable NNIBP residues assigned identically in WT and mutant; pmx hybrid-residue construction; Gapsys soft-core parameters (α, σ, λ-schedule) as actually run. _(R2.4 part · 3–4 h)_
-- [ ] **1.5** Limitations paragraph on the binary RT–DOR system: no nucleic acid, no incoming dNTP; name the foreclosed mechanisms (primer grip for M230L, the K103N closed-pocket/entry-rate argument) and connect them to the specific false negatives. _(R2.2, R1.1 · 3–4 h)_
+- [x] **1.3** Gasteiger discussion: DOR is neutral, so the charge model perturbs ΔE_elec and ΔE_GB far more than ΔΔG_bind, which largely cancels in the thermodynamic cycle. Write regardless of whether 4.1 is done — it frames that result. _(R2.5 part · 2 h)_
+- [x] **1.4** FEP Methods expansion: titratable NNIBP residues assigned identically in WT and mutant; pmx hybrid-residue construction; Gapsys soft-core parameters (α, σ, λ-schedule) as actually run. _(R2.4 part · 3–4 h)_
+- [x] **1.5** Limitations paragraph on the binary RT–DOR system: no nucleic acid, no incoming dNTP; name the foreclosed mechanisms (primer grip for M230L, the K103N closed-pocket/entry-rate argument) and connect them to the specific false negatives. _(R2.2, R1.1 · 3–4 h)_
 - [ ] **1.6** Discussion rewrite on the mismatches (K103N+M230L, A98G+F227C, G190E). Draft as text first; strengthen once 2.7 lands. _(R1.3, R1.1 · 4–6 h)_
 
 ## Tier 2 — Reanalysis of data already on disk, no new MD
@@ -39,8 +39,8 @@ Effort is focused working time, not wall clock. `R1.x` = Reviewer 1 point x.
 
 ## Tier 3 — Reruns of existing pipelines with changed settings
 
-- [ ] **3.1** MM/GBSA relaxation sensitivity. All 60 published rows used `snapshot_relaxation=unrestrained`, 2000 iterations — exactly what R3.3 flags. Rerun a subset (WT + ~5 genotypes = 18 replicates) under `none` and `h_relax`, both already implemented in `src/nnrti/md/openmm/mmgbsa.py`, and report ΔΔE_Total and components side by side. CPU only (OpenCL is unsafe here). _(R3.3 · 1 day setup + 2–3 days compute)_
-- [ ] **3.2** Complete the finite-size correction. `src/nnrti/fep/charge_correction.py` implements only the periodicity self-energy term and its docstring states the higher-order Rocklin terms are omitted. Either add net-charge undersolvation and discrete-solvent terms for the two charge-changing legs (K103N, G190E), or compute and report their magnitude as a bounded error. _(R2.4 substantive · 1.5–2 days)_
+- [ ] **3.1** MM/GBSA relaxation sensitivity. All 60 published rows used `snapshot_relaxation=unrestrained`, 2000 iterations — exactly what R3.3 flags. Rerun a subset (WT + ~5 genotypes = 18 replicates) under `none` and `h_relax`, both already implemented in `src/nnrti/md/openmm/mmgbsa.py`, and report ΔΔE_Total and components side by side. CPU only (OpenCL is unsafe here). _(R3.3 · 1 day setup + 2–3 days compute)_ — part (a), the written justification, is already in the revised Methods; this covers part (b), the numbers.
+- [ ] **3.2** Complete the finite-size correction. `src/nnrti/fep/charge_correction.py` implements only the periodicity self-energy term and its docstring states the higher-order Rocklin terms are omitted. Either add net-charge undersolvation and discrete-solvent terms for the two charge-changing legs (K103N, G190E), or compute and report their magnitude as a bounded error. _(R2.4 substantive · 1.5–2 days)_ — the Methods now state plainly which terms were and were not applied; this task supplies the magnitude estimate.
 
 ## Tier 4 — New computation on existing trajectories
 
