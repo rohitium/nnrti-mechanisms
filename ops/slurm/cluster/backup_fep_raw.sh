@@ -24,6 +24,12 @@
 #                     Large (this is most of the 380 GB), but it is what lets
 #                     you re-extract snapshots and re-run switches WITHOUT
 #                     redoing equilibration.
+#   TIER=3            tier 1 + equil.xtc / .tpr / .cpt + the switch seed
+#                     snapshots, but NOT equil.trr. The .trr is full precision
+#                     with velocities and is ~2.0 GB per endpoint against the
+#                     .xtc's 313 MB; dropping it removes ~120 GB while keeping
+#                     every ensemble that is actually analysed. This is the
+#                     tier chosen for the JCIM revision archive (2026-10).
 #
 # USAGE
 #   bash ops/slurm/cluster/backup_fep_raw.sh                 # tier 1, 4 idle legs
@@ -47,7 +53,17 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+SELF="$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")"
+# Walk up to the repository root rather than assuming a fixed depth: this file
+# lives at ops/slurm/cluster/ in the current layout and scripts/sherlock/ in the
+# older checkout still on Sherlock.
+if [ -z "${PROJECT_ROOT:-}" ]; then
+    PROJECT_ROOT="$SCRIPT_DIR"
+    while [ "$PROJECT_ROOT" != "/" ] && [ ! -d "$PROJECT_ROOT/.git" ]; do
+        PROJECT_ROOT="$(dirname "$PROJECT_ROOT")"
+    done
+    [ -d "$PROJECT_ROOT/.git" ] || { echo "cannot locate repository root from $SCRIPT_DIR" >&2; exit 1; }
+fi
 cd "$PROJECT_ROOT"
 
 : "${GROUP_HOME:?GROUP_HOME is not set -- are you on Sherlock?}"
@@ -70,7 +86,7 @@ if [ -z "${SLURM_JOB_ID:-}" ] && [ "${ALLOW_LOGIN_NODE:-0}" != "1" ]; then
         -p "${SBATCH_PARTITION:-normal}" -t "$WALL" -c "$CPUS" --mem "${SBATCH_MEM:-8G}" \
         -J "fep_backup_t${TIER}" \
         -o "logs/fep_backup/fep_backup_t${TIER}_%j.log" \
-        --wrap "cd '$PROJECT_ROOT' && TIER='$TIER' STAMP='$STAMP' LEGS='$LEGS' DEST='$DEST' PIGZ_THREADS='$CPUS' bash ops/slurm/cluster/backup_fep_raw.sh")
+        --wrap "cd '$PROJECT_ROOT' && TIER='$TIER' STAMP='$STAMP' LEGS='$LEGS' DEST='$DEST' PIGZ_THREADS='$CPUS' bash '$SELF'")
     echo "  job $JOB"
     echo "  log logs/fep_backup/fep_backup_t${TIER}_${JOB}.log"
     echo "  watch: tail -f logs/fep_backup/fep_backup_t${TIER}_${JOB}.log"
@@ -105,6 +121,25 @@ if [ "${FORCE:-0}" != "1" ]; then
 fi
 
 mkdir -p "$DEST"
+
+# --- progress reporting -------------------------------------------------------
+# STATUS.txt answers "was it submitted / is it running / did it finish"; the
+# PROGRESS.log is append-only so it can be tailed from anywhere.
+STATUS_FILE="$DEST/STATUS.txt"
+PROGRESS_LOG="$DEST/PROGRESS.log"
+HEARTBEAT_SECONDS="${HEARTBEAT_SECONDS:-60}"
+
+_stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+_progress() { echo "$(_stamp) $*" >> "$PROGRESS_LOG"; }
+_status() {
+    printf 'state=%s\njob_id=%s\nnode=%s\ntier=%s\ndest=%s\nupdated=%s\n' \
+        "$1" "${SLURM_JOB_ID:-none}" "$(hostname)" "$TIER" "$DEST" "$(_stamp)" > "$STATUS_FILE"
+}
+trap '_status FAILED; _progress "FAILED (exit $?)"' ERR
+
+_status RUNNING
+_progress "=== tier $TIER backup started: job ${SLURM_JOB_ID:-none} on $(hostname)"
+_progress "legs: $LEGS"
 
 if [ ! -f "$MANIFEST" ]; then
     echo "leg,tier,archive,sha256,bytes,files,source_bytes,created_utc" > "$MANIFEST"
@@ -157,10 +192,19 @@ for leg in $LEGS; do
         -name 'results.txt' \
         \) -type f -print > "$LIST"
 
-    if [ "$TIER" -ge 2 ]; then
-        find "$SRC" \( -name 'equil.trr' -o -name 'equil.tpr' -o -name 'equil.xtc' \) \
-            -type f -print >> "$LIST"
-    fi
+    case "$TIER" in
+        2)
+            find "$SRC" \( -name 'equil.trr' -o -name 'equil.tpr' -o -name 'equil.xtc' \) \
+                -type f -print >> "$LIST"
+            ;;
+        3)
+            # Endpoint ensembles WITHOUT the redundant full-precision .trr,
+            # plus the snapshots that seeded each switch.
+            find "$SRC" \( -name 'equil.xtc' -o -name 'equil.tpr' -o -name 'equil.cpt' \) \
+                -type f -print >> "$LIST"
+            find "$SRC" -path '*/neq/snapshots/*' -type f -print >> "$LIST"
+            ;;
+    esac
 
     NFILES="$(wc -l < "$LIST" | tr -d ' ')"
     if [ "$NFILES" -eq 0 ]; then
@@ -171,14 +215,26 @@ for leg in $LEGS; do
     SRC_BYTES="$(xargs -a "$LIST" du -cb 2>/dev/null | tail -1 | cut -f1 || echo 0)"
 
     echo "-> $leg : $NFILES files, $(numfmt --to=iec "$SRC_BYTES" 2>/dev/null || echo "$SRC_BYTES B") uncompressed"
+    _progress "START $leg : $NFILES files, $(numfmt --to=iec "$SRC_BYTES" 2>/dev/null || echo "$SRC_BYTES B") uncompressed"
+    LEG_T0=$(date +%s)
 
     # pigz parallelises gzip across cores; dgdl.xvg is text, so -1 already gets
     # most of the ratio at a fraction of the CPU. Falls back to plain gzip.
+    # The tar runs in the background so the heartbeat can report the growing
+    # archive -- a tier-3 leg takes long enough that silence looks like a hang.
     if command -v pigz >/dev/null 2>&1; then
-        tar -cf - -T "$LIST" | pigz -1 -p "${PIGZ_THREADS:-8}" > "$PART"
+        ( tar -cf - -T "$LIST" | pigz -1 -p "${PIGZ_THREADS:-8}" > "$PART" ) &
     else
-        tar -cf - -T "$LIST" | gzip -1 > "$PART"
+        ( tar -cf - -T "$LIST" | gzip -1 > "$PART" ) &
     fi
+    TAR_PID=$!
+    while kill -0 "$TAR_PID" 2>/dev/null; do
+        sleep "$HEARTBEAT_SECONDS"
+        kill -0 "$TAR_PID" 2>/dev/null || break
+        NOW_BYTES="$(stat -c %s "$PART" 2>/dev/null || echo 0)"
+        _progress "  .. $leg $(numfmt --to=iec "$NOW_BYTES" 2>/dev/null || echo "${NOW_BYTES}B") written after $(( $(date +%s) - LEG_T0 ))s"
+    done
+    wait "$TAR_PID"
     mv "$PART" "$OUT"
 
     SHA="$(sha256sum "$OUT" | cut -d' ' -f1)"
@@ -193,6 +249,7 @@ for leg in $LEGS; do
     fi
 
     echo "$leg,$TIER,$(basename "$OUT"),$SHA,$OUT_BYTES,$NFILES,$SRC_BYTES,$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$MANIFEST"
+    _progress "DONE  $leg : $(numfmt --to=iec "$OUT_BYTES" 2>/dev/null || echo "$OUT_BYTES B") compressed, $TAR_N entries, $(( $(date +%s) - LEG_T0 ))s"
     echo "   OK  $(numfmt --to=iec "$OUT_BYTES" 2>/dev/null || echo "$OUT_BYTES B") compressed, $TAR_N entries verified"
     echo "   sha256 $SHA"
 
@@ -200,6 +257,9 @@ for leg in $LEGS; do
     TOTAL_OUT=$((TOTAL_OUT + OUT_BYTES))
     rm -f "$LIST"
 done
+
+_status DONE
+_progress "=== tier $TIER backup finished"
 
 echo ""
 echo "=========================================="
