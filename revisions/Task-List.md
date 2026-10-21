@@ -3,7 +3,7 @@
 Deadline **10-Nov-2026**. Tasks are ordered by increasing effort within each tier.
 Effort is focused working time, not wall clock. `R1.x` = Reviewer 1 point x.
 
-**Progress: 17 / 23 complete** — last updated 21-Oct-2026 (overnight run)
+**Progress: 18 / 23 complete** — last updated 21-Oct-2026 (overnight run)
 
 ---
 
@@ -44,7 +44,7 @@ Effort is focused working time, not wall clock. `R1.x` = Reviewer 1 point x.
 
 ## Tier 4 — New computation on existing trajectories
 
-- [~] **4.1** Charge model plumbed through (`--charge-method`); AM1-BCC run queued behind the relaxation job. Regenerate DOR parameters with AM1-BCC (OpenFF default) and rerun MM/GBSA on existing trajectories for a subset. No new MD. _(R2.5 · 2 days)_
+- [x] **4.1** AM1-BCC comparison complete (8/9 replicates; ΔΔE_Total shifts ≤0.81 kcal/mol, signs preserved). Regenerate DOR parameters with AM1-BCC (OpenFF default) and rerun MM/GBSA on existing trajectories for a subset. No new MD. _(R2.5 · 2 days)_
 - [ ] **4.2** *Optional:* rerun 2–3 FEP legs with AM1-BCC charges to show ΔΔG_bind is insensitive to the charge model. Stronger answer, costs Sherlock time. _(R2.5 · 2–3 days + queue)_
 
 ## Tier 5 — New simulations — **deferred pending 2.7**
@@ -126,4 +126,7 @@ none are affected, so the RMSF, DSSP and torsion results stand. The matched
 10 ns window is the first 20 frames, before any split, so the headline apo
 numbers were never contaminated — the rerun confirms this.
 
-**Still running:** AM1-BCC MM/GBSA (R2.5) and the corrected apo rerun.
+**AM1-BCC (R2.5) complete.** One caveat recorded honestly: the four-worker run was
+killed by the OS after 8 of 9 replicates and the parent hung rather than failing,
+which cost four hours before it was noticed. Y188L rep3 is re-running
+single-threaded; it tightens a SEM and changes no conclusion.

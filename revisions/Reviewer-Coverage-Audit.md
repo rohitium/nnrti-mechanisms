@@ -37,7 +37,7 @@ Status is judged on what is actually in the repository, not on what was planned.
 | 4 | Hybrid residue topologies | ✅ | Methods: pmx single-topology construction described |
 | 4 | Soft-core parameters | ✅ | Methods: α = 0.3, σ = 0.25 nm, power 1, sc-coul = yes |
 | 4 | Finite-size correction | ✅ | Leading term computed; omitted terms bounded at ≤0.003 kcal/mol |
-| 5 | Compare a more accurate charge model, or discuss | ✅ (both) | Charge sets compared directly (RMS 0.165 e, mean \|q\| 0.228 vs 0.138 e); MM/GBSA AM1-BCC rerun running |
+| 5 | Compare a more accurate charge model, or discuss | ✅ (both) | Charge sets compared (RMS 0.165 e, mean \|q\| 0.228 vs 0.138 e) **and** MM/GBSA recomputed with AM1-BCC: ΔΔE_Total shifts ≤0.81 kcal/mol, signs preserved, shift confined to charge-dependent components |
 
 ## Reviewer 3
 
@@ -68,11 +68,10 @@ Status is judged on what is actually in the repository, not on what was planned.
 ## What remains, in priority order
 
 1. **ORCID** and the **funding form field** — author actions, cannot be automated.
-2. **AM1-BCC MM/GBSA** — running; one `[PENDING]` marker in the response depends on it.
-3. **English-language pass over the pre-existing text** — editor-requested; my additions
+2. **English-language pass over the pre-existing text** — editor-requested; my additions
    have been audited but the rest of the manuscript has not.
-4. **R1.2a (independent starting poses)** — declined. The single remaining
+3. **R1.2a (independent starting poses)** — declined. The single remaining
    scientific request not acted on. If a second round pushes, this is what
    they will push on.
-5. **K103N+P225H apo** — no trajectory exists, so this P225 genotype is absent
+4. **K103N+P225H apo** — no trajectory exists, so this P225 genotype is absent
    from the apo comparison. V106A+P225H covers the P225 class.

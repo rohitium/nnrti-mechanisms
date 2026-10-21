@@ -22,6 +22,13 @@ Supplementary Tables 1–4 are unchanged; take them from `paper/submission/`.
 - **`Task-List.md`** — effort-ordered tracker with progress.
 - `Revision-Plan.md` — the original triage, kept for the reasoning.
 
+## Status
+
+All 12 reviewer points are addressed and every `[PENDING]` marker in the
+response is resolved. One number may still move slightly: the AM1-BCC
+comparison currently rests on 8 of 9 replicates (Y188L has 2 of 3; the third is
+computing). The conclusion does not depend on it.
+
 ## What needs you
 
 1. **ORCID iDs** — each author validates their own in Paragon Plus.
