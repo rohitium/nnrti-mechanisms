@@ -56,11 +56,27 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--output-dir", type=Path, default=Path("results/analysis/relaxation_sensitivity"))
     p.add_argument("--xlsx", type=Path,
                    default=Path("revisions/Supplementary-Table-5.xlsx"))
+    p.add_argument("--published", type=Path,
+                   default=Path("results/.checkpoints/.checkpoint_mmgbsa_cpu2000_2026-08-29.csv"),
+                   help="Main-text MM/GBSA checkpoint, used for the unrestrained column "
+                        "until a dedicated re-run exists.")
+    p.add_argument("--subset", nargs="*",
+                   default=["wt", "K103N", "V106A", "Y188L", "G190E", "V106I_F227C"])
     args = p.parse_args(argv)
 
     frames = []
     for proto in PROTOCOLS:
         d = load(args.checkpoint_dir / f".checkpoint_mmgbsa_relaxsens_{proto}.csv", proto)
+        if d is None and proto == "unrestrained" and args.published.exists():
+            # The unrestrained column is the main-text protocol, so the published
+            # computation is the right source for it: the table should report what
+            # was published rather than a re-run of it. A fresh re-run is kept as a
+            # reproducibility check and supersedes this when available.
+            pub = pd.read_csv(args.published)
+            d = pub[pub.safe_label.isin(args.subset)].copy()
+            d["protocol"] = proto
+            print(f"  {proto}: using the published checkpoint ({len(d)} rows, "
+                  "same settings as the main text)")
         if d is None:
             print(f"  missing: {proto} (skipped)")
             continue
