@@ -9,6 +9,7 @@ Operations
 ----------
 replace-paragraph   Replace the runs of the paragraph containing MATCH.
 append-to-paragraph Append a run to the paragraph containing MATCH.
+insert-after        Add a NEW paragraph directly after the one containing MATCH.
 
 Text added by this tool is red by default, matching the revision convention
 that every automated addition is visible as such.
@@ -51,7 +52,8 @@ def _para_text(p: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("op", choices=("replace-paragraph", "append-to-paragraph"))
+    ap.add_argument("op", choices=("replace-paragraph", "append-to-paragraph",
+                                   "insert-after"))
     ap.add_argument("docx", type=Path)
     ap.add_argument("--match", required=True, help="substring identifying the paragraph")
     ap.add_argument("--text", required=True)
@@ -86,6 +88,11 @@ def main(argv: list[str] | None = None) -> int:
         open_tag = target[:ppr.end()]
         if args.op == "replace-paragraph":
             new = open_tag + _runs(args.text, color, args.bold) + "</w:p>"
+        elif args.op == "insert-after":
+            # A fresh paragraph carrying the matched paragraph's own properties,
+            # so an inserted note inherits the surrounding body style rather
+            # than Word's default.
+            new = target + open_tag + _runs(args.text, color, args.bold) + "</w:p>"
         else:
             new = target[: -len("</w:p>")] + _runs(args.text, color, args.bold) + "</w:p>"
 

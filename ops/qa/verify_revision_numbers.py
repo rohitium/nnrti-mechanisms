@@ -28,7 +28,11 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def doc_text(path: Path) -> str:
     x = zipfile.ZipFile(path).read("word/document.xml").decode("utf-8")
-    return re.sub(r"\s+", " ", "".join(re.findall(r"<w:t[^>]*>(.*?)</w:t>", x, re.S)))
+    # <w:t[^>]*> also matches <w:tc>, <w:tbl>, <w:tcPr> ... so a document
+    # containing tables came back with markup in its "text". The space is what
+    # separates the text element from its attributes.
+    return re.sub(r"\s+", " ",
+                  "".join(re.findall(r"<w:t(?: [^>]*)?>(.*?)</w:t>", x, re.S)))
 
 
 def main() -> int:
@@ -107,8 +111,16 @@ def main() -> int:
     checks.append(("response no longer says a replicate is pending",
                    "still computing" not in resp))
 
-    for s in ("0.13 to 0.54", "0.003 kcal/mol", "0.019%", "1.85", "−1.35"):
+    for s in ("0.003 kcal/mol", "0.019%", "1.85", "−1.35"):
         checks.append((f"manuscript contains {s!r}", s in ms))
+    # The relaxation-protocol numbers moved out of Methods and into the SI in
+    # revision, so they are checked where they now live, not where they were.
+    checks.append(("supplementary carries the relaxation SEM range",
+                   "0.13 to 0.54" in supp))
+    checks.append(("methods no longer reports the sensitivity result",
+                   "materially sensitive" not in ms))
+    checks.append(("supplementary has the apo note and table",
+                   "Supplementary Note 3" in supp and "Supplementary Table 7" in supp))
 
     width = max(len(n) for n, _ in checks)
     for name, ok in checks:

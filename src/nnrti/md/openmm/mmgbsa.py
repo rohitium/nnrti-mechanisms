@@ -36,6 +36,14 @@ class MMGBSAResult:
     #: complex - receptor - ligand of these; kept separately so the raw phase
     #: energies can be inspected without recomputing.
     absolute_terms: tuple[tuple[str, tuple[float, float, float]], ...] = ()
+    #: Per-snapshot binding energy and its van der Waals part, in the same
+    #: order as snapshot_indices. The means above are outlier-sensitive: a
+    #: single snapshot carrying a steric contact contributes a 1/r^12 term
+    #: large enough to set the mean by itself, which is invisible once the
+    #: frames have been averaged. Kept so that behaviour can be shown rather
+    #: than inferred from the standard deviation.
+    per_frame_binding_dg: tuple[float, ...] = ()
+    per_frame_vdw: tuple[float, ...] = ()
 
 
 def _radius_from_symbol(symbol: str) -> float:
@@ -681,4 +689,6 @@ def compute_mmgbsa_from_trajectory(
         binding_dg_std=t_s,
         binding_dg_sem=t_se,
         absolute_terms=absolute_summary,
+        per_frame_binding_dg=tuple(float(x) for x in d_tot),
+        per_frame_vdw=tuple(float(x) for x in d_vdw),
     )
