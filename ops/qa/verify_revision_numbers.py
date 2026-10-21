@@ -122,6 +122,39 @@ def main() -> int:
     checks.append(("supplementary has the apo note and table",
                    "Supplementary Note 3" in supp and "Supplementary Table 7" in supp))
 
+    # Literal citation numbers in added (red) text. A digit typed after a word
+    # is not a Zotero field: it points at whatever reference held that number
+    # when it was typed, and it does not move when the bibliography renumbers.
+    # Three got in this way; "pmx,46" and "form48" pointed at MM-PBSA papers
+    # and "Rocklin scheme,53" pointed at Crooks.
+    import html as _html
+    for doc_name in ("Manuscript-Revision-1.docx", "Supplementary-Text-Revision-1.docx"):
+        raw = zipfile.ZipFile(ROOT / "revisions" / doc_name).read(
+            "word/document.xml").decode("utf-8")
+        stray = []
+        for m in re.finditer(
+                r"<w:r>(<w:rPr>(?:(?!</w:rPr>).)*<w:color w:val=\"FF0000\"/>.*?</w:rPr>)"
+                r"<w:t(?: [^>]*)?>(.*?)</w:t></w:r>", raw, re.S):
+            t = _html.unescape(m.group(2))
+            for c in re.finditer(r"(\S{0,12}?)(\d{1,3})(?=[ .,;:]|$)", t):
+                word, num = c.group(1), c.group(2)
+                # residue names (Ser105, Tyr188) and mutation codes (V106,
+                # G190E, K103N) end in digits without being citations
+                if re.search(r"(Ala|Arg|Asn|Asp|Cys|Gln|Glu|Gly|His|Ile|Leu|Lys|Met|"
+                             r"Phe|Pro|Ser|Thr|Trp|Tyr|Val)$", word):
+                    continue
+                if re.fullmatch(r"[A-Z]?", word) or re.search(r"[A-Z]$", word):
+                    continue
+                if not re.search(r"[a-z],?$", word):
+                    continue
+                ctx = t[max(0, c.start() - 45):c.end() + 10]
+                if re.search(r"\d\s*(ns|\u00c5|kcal|nm|%|\u00d7|fs|bar|K|genotypes|"
+                             r"replicates|frames|histidines|of|\u00b0)", ctx):
+                    continue
+                stray.append(ctx)
+        checks.append((f"{doc_name.split('-')[0]} has no literal citation numbers "
+                       f"in added text", not stray))
+
     width = max(len(n) for n, _ in checks)
     for name, ok in checks:
         print(f"{name:{width}s}  {'PASS' if ok else 'FAIL'}")
