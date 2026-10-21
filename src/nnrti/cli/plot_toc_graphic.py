@@ -38,23 +38,24 @@ PYMOL = Path("/Applications/PyMOL.app/Contents/bin/pymol")
 WIDTH_IN, HEIGHT_IN = 3.3, 1.8
 
 
-def panel_a(pdf: Path, dpi: int = 150) -> Path:
-    """Crop panel A, the thermodynamic cycle, out of Figure 2.
+def trim_white(path: Path, pad: int = 8) -> Path:
+    """Trim the white border off the schematic so the cycle fills its panel.
 
-    The whole four-panel figure cannot go in a TOC graphic: it is 13 in wide in
-    the paper and the TOC is 3.3 in, so its 8 pt labels would land near 1 pt and
-    fail the legibility requirement. Panel A alone carries the point -- the
-    alchemical cycle that makes ddG_bind an equilibrium quantity -- at a size
-    that reads.
+    The source render carries generous margins. Left in, they shrink the cycle
+    to the middle of the right-hand panel and waste the space the graphic has.
     """
+    import numpy as np
     from PIL import Image
-    out = Path("/tmp/toc_fig2_panelA.png")
-    full = Path("/tmp/toc_fig2_full.png")
-    subprocess.run(["pdftoppm", "-png", "-r", str(dpi), "-singlefile",
-                    str(pdf), str(full.with_suffix(""))], check=True)
-    im = Image.open(full)
-    w, h = im.size
-    im.crop((int(0.118 * w), int(0.020 * h), int(0.503 * w), int(0.492 * h))).save(out)
+    im = Image.open(path).convert("RGB")
+    a = np.asarray(im)
+    ink = (a < 245).any(axis=2)
+    rows, cols = np.where(ink.any(axis=1))[0], np.where(ink.any(axis=0))[0]
+    if not len(rows) or not len(cols):
+        return path
+    box = (max(int(cols[0]) - pad, 0), max(int(rows[0]) - pad, 0),
+           min(int(cols[-1]) + pad, im.width), min(int(rows[-1]) + pad, im.height))
+    out = Path("/tmp/toc_cycle_trimmed.png")
+    im.crop(box).save(out)
     return out
 
 
@@ -62,12 +63,12 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--pml", type=Path, default=Path("ops/figures/toc_graphic.pml"))
     p.add_argument("--scene", type=Path, default=Path("/tmp/toc_scene.png"))
-    p.add_argument("--figure2-pdf", type=Path,
-                   default=Path("paper/submission/figures/Fig2.pdf"),
-                   help="Figure 2 of the manuscript; panel A is cropped from it.")
-    p.add_argument("--figure2", type=Path, default=None,
-                   help="Use this image for the right-hand panel instead of cropping "
-                        "panel A from the Figure 2 PDF.")
+    p.add_argument("--cycle", type=Path,
+                   default=Path("results/analysis/fep_pmx/protocol_schematic/"
+                                "01_thermodynamic_cycle.png"),
+                   help="Thermodynamic cycle for the right-hand panel. The original "
+                        "200 dpi render, not a crop out of the figure PDF, which "
+                        "rasterises badly at TOC size.")
     p.add_argument("--output-dir", type=Path, default=Path("revisions"))
     p.add_argument("--dpi", type=int, default=600)
     p.add_argument("--skip-render", action="store_true",
@@ -96,7 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     ax.imshow(img, interpolation="lanczos")
     ax.axis("off")
 
-    fig2 = mpimg.imread(str(args.figure2 or panel_a(args.figure2_pdf)))
+    fig2 = mpimg.imread(str(trim_white(args.cycle)))
     h, w = fig2.shape[:2]
     box_w = 0.555
     box_h = box_w * (h / w) * (WIDTH_IN / HEIGHT_IN)
@@ -104,17 +105,13 @@ def main(argv: list[str] | None = None) -> int:
     ax2.imshow(fig2, interpolation="lanczos")
     ax2.axis("off")
 
-    # The one label on the graphic, bottom right and wrapped so it sits clear
-    # of both the structure and the cycle. Its own axes keeps the marker round;
-    # a patch placed in figure coordinates gets stretched by the aspect ratio.
-    lg = fig.add_axes([0.735, 0.012, 0.255, 0.14])
-    lg.set_xlim(0, 1)
-    lg.set_ylim(0, 1)
-    lg.axis("off")
-    lg.scatter([0.08], [0.55], s=28, color="#f08c1b", edgecolor="#6b3300",
-               linewidths=0.4, zorder=5)
-    lg.text(0.20, 0.55, "substituted\npositions", fontsize=5.2, color="#3d3d3d",
-            va="center", ha="left", linespacing=1.35)
+    # The one label on the graphic. Bottom left over the structure, on a single
+    # line: "mutated" rather than "substituted" so it matches the Mut RT states
+    # in the cycle beside it.
+    ax.scatter([0.045], [0.055], s=30, color="#f08c1b", edgecolor="#6b3300",
+               linewidths=0.45, transform=ax.transAxes, zorder=9, clip_on=False)
+    ax.text(0.095, 0.055, "mutated positions", transform=ax.transAxes,
+            fontsize=6.0, color="#2e2e2e", va="center", ha="left", zorder=9)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     for ext in ("pdf", "png"):
