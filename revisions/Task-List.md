@@ -3,7 +3,7 @@
 Deadline **10-Nov-2026**. Tasks are ordered by increasing effort within each tier.
 Effort is focused working time, not wall clock. `R1.x` = Reviewer 1 point x.
 
-**Progress: 15 / 23 complete** — last updated 20-Oct-2026 (overnight run)
+**Progress: 17 / 23 complete** — last updated 21-Oct-2026 (overnight run)
 
 ---
 
@@ -11,7 +11,7 @@ Effort is focused working time, not wall clock. `R1.x` = Reviewer 1 point x.
 
 - [ ] **0.1** Funding (NIAID R24AI136618) present in both the manuscript file and the Paragon submission form — already in the manuscript as of commit `3eed59d`, needs confirming on the form. _(Editor · 10 min)_
 - [ ] **0.2** ORCID iDs validated and attached to each author's Paragon profile — each author must do their own. _(Editor · 15 min + co-authors)_
-- [ ] **0.3** SI cover page: "Supporting Information" header, title, full author list and affiliations exactly as in the manuscript, then a contents list of the SI files. _(Editor #2 · 45 min)_
+- [x] **0.3** SI cover page: "Supporting Information" header, title, full author list and affiliations exactly as in the manuscript, then a contents list of the SI files. _(Editor #2 · 45 min)_
 
 > **Dropped:** the "NRNTI" / "APPROVAL" / "hinges on" typos (R3.2). None of these strings
 > exists in `DorDRM-MD-09-02-26-ACS.docx` or the SI, and the ACS-generated reviewer PDF is
@@ -61,7 +61,7 @@ Decide only after the matched-window analysis says whether a WT extension is nee
 
 ## Tier 6 — Assembly and submission (last)
 
-- [ ] **6.1** TOC graphic: .tif or .pdf, last page, labelled "TOC Graphic", no caption, legible text, original artwork. _(Editor · 4–6 h)_
+- [x] **6.1** TOC graphic: .tif or .pdf, last page, labelled "TOC Graphic", no caption, legible text, original artwork. _(Editor · 4–6 h)_
 - [ ] **6.2** Point-by-point response covering all 12 scientific points. _(All · 1–1.5 days)_
 - [ ] **6.3** Clean manuscript + tracked/highlighted copy as "Supporting Information for Review Only" + clean SI for publication. Regenerate Tables 2–4 and the SI tables from whatever reruns land. _(Editor · 1 day)_
 - [ ] **6.4** *Optional:* cover art + 80-word caption. _(Editor · 2–3 h)_
@@ -106,3 +106,24 @@ Findings that changed what the manuscript claims, rather than only adding to it:
 
 Open: AM1-BCC comparison (queued), unrestrained re-run (running), and the
 items needing the authors — TOC graphic, ORCID, SI cover page, English pass.
+
+
+## Later in the overnight run
+
+Added: TOC graphic (built, and placed on the last page of both manuscript
+copies), SI cover page, clean unmarked manuscript and SI, a coverage audit of
+every reviewer point, and `ops/qa/verify_revision_numbers.py`, which re-derives
+every number quoted in the documents from its source file (20/20 consistent).
+
+**A bug I introduced and caught.** My first `compare_apo_ensembles` run applied
+no periodic-boundary correction. In the G190E apo replicates the protein drifts
+across the box after frame 36, which inflated the pocket-lining radius of
+gyration from 31 Å to 79 Å and the measured pocket volume past 2000 Å³. I had
+flagged those values as "the proxy losing its footing" and excluded them, which
+was the right call for the wrong reason. The script now makes molecules whole
+and images them against the protein; all 60 holo replicates were checked and
+none are affected, so the RMSF, DSSP and torsion results stand. The matched
+10 ns window is the first 20 frames, before any split, so the headline apo
+numbers were never contaminated — the rerun confirms this.
+
+**Still running:** AM1-BCC MM/GBSA (R2.5) and the corrected apo rerun.
