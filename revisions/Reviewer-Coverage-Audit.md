@@ -52,7 +52,7 @@ Status is judged on what is actually in the repository, not on what was planned.
 
 | Item | Status | Note |
 |---|---|---|
-| TOC graphic (.tif/.pdf, last page, labelled, no caption) | ✅ | `TOC-Graphic.pdf/.tif`, 600 dpi, 3.3 × 1.8 in. **Still needs pasting into the manuscript's last page** |
+| TOC graphic (.tif/.pdf, last page, labelled, no caption) | ✅ | `TOC-Graphic.pdf/.tif`, 600 dpi, 3.3 × 1.8 in, and placed on the last page of both manuscript copies, labelled "TOC Graphic" |
 | SI cover page | ✅ | `Supporting-Information-Cover-Page.docx` |
 | Clean unmarked manuscript | ✅ | `Manuscript-Revision-1-CLEAN.docx`, text verified identical to the marked copy |
 | Marked manuscript for review | ✅ | `Manuscript-Revision-1.docx`, all additions in red |
@@ -60,7 +60,7 @@ Status is judged on what is actually in the repository, not on what was planned.
 | Point-by-point response | ✅ | `Response-to-Reviewers.docx` |
 | Funding (NIAID R24AI136618) | ⚠️ | In the manuscript; **confirm on the submission form** |
 | ORCID iDs validated | ❌ | **Each author must do their own** |
-| English-language editing | ❌ | The editor raised it; an authoring service is an author decision |
+| English-language editing | ⚠️ | The ~1,100 words added in this revision were audited and two faults fixed. A pass over the **existing** manuscript text is an author decision; consider ACS Authoring Services |
 | Cover art (optional) | ❌ | Not attempted |
 
 ---
@@ -68,11 +68,11 @@ Status is judged on what is actually in the repository, not on what was planned.
 ## What remains, in priority order
 
 1. **ORCID** and the **funding form field** — author actions, cannot be automated.
-2. **Paste the TOC graphic** onto the manuscript's last page, labelled "TOC Graphic".
-3. **AM1-BCC MM/GBSA** — running; one `[PENDING]` marker in the response depends on it.
-4. **English-language pass** — editor-requested; consider ACS Authoring Services.
-5. **R1.2a (independent starting poses)** — declined. The single remaining
+2. **AM1-BCC MM/GBSA** — running; one `[PENDING]` marker in the response depends on it.
+3. **English-language pass over the pre-existing text** — editor-requested; my additions
+   have been audited but the rest of the manuscript has not.
+4. **R1.2a (independent starting poses)** — declined. The single remaining
    scientific request not acted on. If a second round pushes, this is what
    they will push on.
-6. **K103N+P225H apo** — no trajectory exists, so this P225 genotype is absent
+5. **K103N+P225H apo** — no trajectory exists, so this P225 genotype is absent
    from the apo comparison. V106A+P225H covers the P225 class.
