@@ -38,21 +38,49 @@ PYMOL = Path("/Applications/PyMOL.app/Contents/bin/pymol")
 WIDTH_IN, HEIGHT_IN = 3.3, 1.8
 
 
-def trim_white(path: Path, pad: int = 8) -> Path:
-    """Trim the white border off the schematic so the cycle fills its panel.
+def trim_white(path: Path, pad: int = 8, drop_title: bool = True) -> Path:
+    """Trim the schematic's white border, and drop its title band.
 
-    The source render carries generous margins. Left in, they shrink the cycle
-    to the middle of the right-hand panel and waste the space the graphic has.
+    Two reasons. The source render carries generous margins, which would shrink
+    the cycle to the middle of its panel and waste the space. And the figure's
+    own "Thermodynamic cycle" heading is redundant here: a JCIM reader
+    recognises the construction on sight, and the TOC graphic takes no caption,
+    so the words only cost space the diagram can use.
+
+    The title is found structurally rather than by pixel offset: rows are
+    grouped into bands of ink separated by blank gaps, and a short leading band
+    is the heading. That survives a re-render at a different size.
     """
     import numpy as np
     from PIL import Image
+
     im = Image.open(path).convert("RGB")
     a = np.asarray(im)
     ink = (a < 245).any(axis=2)
     rows, cols = np.where(ink.any(axis=1))[0], np.where(ink.any(axis=0))[0]
     if not len(rows) or not len(cols):
         return path
-    box = (max(int(cols[0]) - pad, 0), max(int(rows[0]) - pad, 0),
+
+    top = int(rows[0])
+    if drop_title:
+        filled = ink.any(axis=1)
+        bands, run = [], None
+        for y, on in enumerate(filled):
+            if on and run is None:
+                run = y
+            elif not on and run is not None:
+                bands.append((run, y - 1))
+                run = None
+        if run is not None:
+            bands.append((run, len(filled) - 1))
+        # A short first band with a real gap after it is the heading.
+        if len(bands) >= 2:
+            h0 = bands[0][1] - bands[0][0]
+            gap = bands[1][0] - bands[0][1]
+            if h0 < 0.15 * im.height and gap > 0.02 * im.height:
+                top = bands[1][0]
+
+    box = (max(int(cols[0]) - pad, 0), max(top - pad, 0),
            min(int(cols[-1]) + pad, im.width), min(int(rows[-1]) + pad, im.height))
     out = Path("/tmp/toc_cycle_trimmed.png")
     im.crop(box).save(out)
