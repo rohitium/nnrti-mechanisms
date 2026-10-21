@@ -3,7 +3,7 @@
 Deadline **10-Nov-2026**. Tasks are ordered by increasing effort within each tier.
 Effort is focused working time, not wall clock. `R1.x` = Reviewer 1 point x.
 
-**Progress: 7 / 23 complete** — last updated 20-Oct-2026
+**Progress: 15 / 23 complete** — last updated 20-Oct-2026 (overnight run)
 
 ---
 
@@ -29,22 +29,22 @@ Effort is focused working time, not wall clock. `R1.x` = Reviewer 1 point x.
 
 ## Tier 2 — Reanalysis of data already on disk, no new MD
 
-- [ ] **2.1** Mutation-map figure: all 18 genotypes on the RT–DOR structure, positions relative to DOR and the NNIBP. Built from 4NCG. _(R1.4 · 4–6 h)_
-- [ ] **2.2** WT-referenced heatmap of the Table 3 structural metrics, from `paper/tables/Table-3-structural.csv` and `results/analysis/mechanisms/`. _(R1.4 · 3–4 h)_
-- [ ] **2.3** Bootstrap confidence intervals on the key pairwise contrasts (V106A vs V106I/M, G190A vs G190E) from the per-replicate tables and Supplementary Table 4. Effect sizes with CIs, not means ± SEM. _(R2.3 part · 1 day)_
-- [ ] **2.4** Autocorrelation times and effective sample size for the structural observables, and the same for the MM/GBSA and FEP estimates. Block averaging already exists in `results/analysis/md_convergence/tables/block_averages.csv`; this extends `compute_md_convergence`. _(R2.1 · 1–1.5 days)_
-- [ ] **2.5** Restore the DOR torsion CLI (τ1–τ4) from git history and rerun on current holo trajectories. No PBC correction needed (intramolecular). _(R2.3 part · 1 day)_
-- [ ] **2.6** Restore RMSF and DCCM code from history (`ce2dccb`, `967a600`, `bf3eb23`); rerun on local holo DCDs; add secondary-structure analysis and pocket conformational distributions. _(R1.4 · 1.5–2 days)_
-- [ ] **2.7** Matched-window apo comparison, WT-referenced. Truncate all mutant apo trajectories to their first 10 ns to match the WT apo reference, then compare pocket volume, RMSF and loop conformations across G190E, A98G+F227C, F227C, K103N+M230L, V106A, V106A+P225H, V106I+F227C. Then ask separately whether the mutant observables drift between 10 ns and 100 ns — that determines whether a WT extension is needed and how long it must be. _(R1.2(b), R1.3 · 1.5 days)_
+- [x] **2.1** Mutation-map figure: all 18 genotypes on the RT–DOR structure, positions relative to DOR and the NNIBP. Built from 4NCG. _(R1.4 · 4–6 h)_
+- [x] **2.2** WT-referenced heatmap of the Table 3 structural metrics, from `paper/tables/Table-3-structural.csv` and `results/analysis/mechanisms/`. _(R1.4 · 3–4 h)_
+- [x] **2.3** Bootstrap confidence intervals on the key pairwise contrasts (V106A vs V106I/M, G190A vs G190E) from the per-replicate tables and Supplementary Table 4. Effect sizes with CIs, not means ± SEM. _(R2.3 part · 1 day)_
+- [x] **2.4** Autocorrelation times and effective sample size for the structural observables, and the same for the MM/GBSA and FEP estimates. Block averaging already exists in `results/analysis/md_convergence/tables/block_averages.csv`; this extends `compute_md_convergence`. _(R2.1 · 1–1.5 days)_
+- [x] **2.5** Restore the DOR torsion CLI (τ1–τ4) from git history and rerun on current holo trajectories. No PBC correction needed (intramolecular). _(R2.3 part · 1 day)_
+- [x] **2.6** Restore RMSF and DCCM code from history (`ce2dccb`, `967a600`, `bf3eb23`); rerun on local holo DCDs; add secondary-structure analysis and pocket conformational distributions. _(R1.4 · 1.5–2 days)_
+- [x] **2.7** Matched-window apo comparison, WT-referenced. Truncate all mutant apo trajectories to their first 10 ns to match the WT apo reference, then compare pocket volume, RMSF and loop conformations across G190E, A98G+F227C, F227C, K103N+M230L, V106A, V106A+P225H, V106I+F227C. Then ask separately whether the mutant observables drift between 10 ns and 100 ns — that determines whether a WT extension is needed and how long it must be. _(R1.2(b), R1.3 · 1.5 days)_
 
 ## Tier 3 — Reruns of existing pipelines with changed settings
 
-- [ ] **3.1** MM/GBSA relaxation sensitivity. All 60 published rows used `snapshot_relaxation=unrestrained`, 2000 iterations — exactly what R3.3 flags. Rerun a subset (WT + ~5 genotypes = 18 replicates) under `none` and `h_relax`, both already implemented in `src/nnrti/md/openmm/mmgbsa.py`, and report ΔΔE_Total and components side by side. CPU only (OpenCL is unsafe here). _(R3.3 · 1 day setup + 2–3 days compute)_ — part (a), the written justification, is already in the revised Methods; this covers part (b), the numbers.
-- [ ] **3.2** Complete the finite-size correction. `src/nnrti/fep/charge_correction.py` implements only the periodicity self-energy term and its docstring states the higher-order Rocklin terms are omitted. Either add net-charge undersolvation and discrete-solvent terms for the two charge-changing legs (K103N, G190E), or compute and report their magnitude as a bounded error. _(R2.4 substantive · 1.5–2 days)_ — the Methods now state plainly which terms were and were not applied; this task supplies the magnitude estimate.
+- [~] **3.1** MM/GBSA relaxation sensitivity. **Table 5 built and committed**; the `unrestrained` column uses the published checkpoint (the main-text protocol) and a dedicated re-run is still in progress as a reproducibility check. All 60 published rows used `snapshot_relaxation=unrestrained`, 2000 iterations — exactly what R3.3 flags. Rerun a subset (WT + ~5 genotypes = 18 replicates) under `none` and `h_relax`, both already implemented in `src/nnrti/md/openmm/mmgbsa.py`, and report ΔΔE_Total and components side by side. CPU only (OpenCL is unsafe here). _(R3.3 · 1 day setup + 2–3 days compute)_ — part (a), the written justification, is already in the revised Methods; this covers part (b), the numbers.
+- [x] **3.2** Complete the finite-size correction. `src/nnrti/fep/charge_correction.py` implements only the periodicity self-energy term and its docstring states the higher-order Rocklin terms are omitted. Either add net-charge undersolvation and discrete-solvent terms for the two charge-changing legs (K103N, G190E), or compute and report their magnitude as a bounded error. _(R2.4 substantive · 1.5–2 days)_ — the Methods now state plainly which terms were and were not applied; this task supplies the magnitude estimate.
 
 ## Tier 4 — New computation on existing trajectories
 
-- [ ] **4.1** Regenerate DOR parameters with AM1-BCC (OpenFF default) and rerun MM/GBSA on existing trajectories for a subset. No new MD. _(R2.5 · 2 days)_
+- [~] **4.1** Charge model plumbed through (`--charge-method`); AM1-BCC run queued behind the relaxation job. Regenerate DOR parameters with AM1-BCC (OpenFF default) and rerun MM/GBSA on existing trajectories for a subset. No new MD. _(R2.5 · 2 days)_
 - [ ] **4.2** *Optional:* rerun 2–3 FEP legs with AM1-BCC charges to show ΔΔG_bind is insensitive to the charge model. Stronger answer, costs Sherlock time. _(R2.5 · 2–3 days + queue)_
 
 ## Tier 5 — New simulations — **deferred pending 2.7**
@@ -77,3 +77,32 @@ Decide only after the matched-window analysis says whether a WT extension is nee
 > A tier-1 backup from 2026-08-28 already covers four legs. It does **not** cover
 > `wt_to_G190E` (158 GB, the largest, excluded at the time because it was still running)
 > or the 14 small legs.
+
+
+---
+
+## Overnight run, 20–21 Oct 2026
+
+Completed without needing new simulation: effect sizes with CIs (2.3),
+autocorrelation/ESS (2.4), WT-referenced heatmap (2.2), mutation map (2.1),
+finite-size bound (3.2), apo matched-window comparison (2.7), DOR torsions
+(2.5), protein-level RMSF and DSSP (2.6), and Supplementary Table 5 (3.1).
+
+Sherlock: tier-3 FEP archive verified, 19/19 sha256 OK, 72 GB in GROUP_HOME.
+
+Findings that changed what the manuscript claims, rather than only adding to it:
+
+- The classification rule in the code is `(estimate − SEM) > 0.5`, not `> 0.5`.
+  The Methods text was wrong and is corrected.
+- MM/GBSA ΔΔE is materially sensitive to the relaxation protocol. Stated now,
+  rather than letting the minimised values read as protocol-independent.
+- V106A vs V106M is within error on every metric, and the V106A pyridinone
+  contact change is not resolved at three replicates. The Discussion now rests
+  the V106 argument on the Ser105 displacement, which is resolved (g ≈ 9).
+- Two of the three mismatch genotypes have markedly collapsed apo pockets,
+  which is positive evidence for the pre-binding mechanism Reviewer 1 proposed.
+- M230L and A98G are the only substituted positions that cannot touch DOR
+  (6.9 and 8.2 Å), and they belong to two of the three mismatch genotypes.
+
+Open: AM1-BCC comparison (queued), unrestrained re-run (running), and the
+items needing the authors — TOC graphic, ORCID, SI cover page, English pass.
