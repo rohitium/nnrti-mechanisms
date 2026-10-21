@@ -79,6 +79,34 @@ def main() -> int:
                     checks.append((f"apo dVolume {g} {v}",
                                    abs(float(a.loc[g, "dVolume_vs_WT"]) - v) < 0.6))
 
+    # Charge-model comparison. The headline claim is a bound on how far the
+    # WT-referenced ddE moves between charge sets, so the bound is checked
+    # against the table rather than against a remembered value.
+    cm = pd.read_csv(ROOT / "results/analysis/relaxation_sensitivity/tables/"
+                     "charge_model_comparison.csv")
+    tot = cm[cm.component == "ddE_Total"]
+    checks += [
+        ("charge model: all legs have 3 replicates",
+         bool((cm.n_gast == 3).all() and (cm.n_am1bcc == 3).all())),
+        ("charge model: ddE_Total shift at most 0.81",
+         abs(tot.difference.abs().max() - 0.807) < 0.005),
+        ("charge model: sign preserved both genotypes",
+         bool((tot.mean_gast * tot.mean_am1bcc > 0).all())),
+        ("charge model: Y188L 2.78 -> 2.34",
+         abs(float(tot[tot.genotype == "Y188L"].mean_am1bcc.iloc[0]) - 2.337) < 0.005),
+        ("charge model: V106A 1.73 -> 2.54",
+         abs(float(tot[tot.genotype == "V106A"].mean_am1bcc.iloc[0]) - 2.537) < 0.005),
+    ]
+
+    supp = doc_text(ROOT / "revisions/Supplementary-Text-Revision-1.docx")
+    resp = doc_text(ROOT / "revisions/Response-to-Reviewers.docx")
+    for s in ("2.78 \u2192 2.34", "up to 1.17", "0.23\u20130.29"):
+        checks.append((f"supplementary contains {s!r}", s in supp))
+    for s in ("2.78 to 2.34", "up to 1.17", "0.23 to 0.29"):
+        checks.append((f"response contains {s!r}", s in resp))
+    checks.append(("response no longer says a replicate is pending",
+                   "still computing" not in resp))
+
     for s in ("0.13 to 0.54", "0.003 kcal/mol", "0.019%", "1.85", "−1.35"):
         checks.append((f"manuscript contains {s!r}", s in ms))
 

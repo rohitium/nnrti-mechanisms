@@ -25,9 +25,10 @@ Supplementary Tables 1–4 are unchanged; take them from `paper/submission/`.
 ## Status
 
 All 12 reviewer points are addressed and every `[PENDING]` marker in the
-response is resolved. One number may still move slightly: the AM1-BCC
-comparison currently rests on 8 of 9 replicates (Y188L has 2 of 3; the third is
-computing). The conclusion does not depend on it.
+response is resolved. No number is outstanding: the AM1-BCC comparison now
+rests on the full 3 x 3 (the last Y188L replicate landed 21-Oct). It tightened
+one SEM and left the conclusion where it was -- the WT-referenced dE_Total
+shifts by at most 0.81 kcal/mol between charge sets, with the sign preserved.
 
 ## What needs you
 

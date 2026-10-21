@@ -126,7 +126,11 @@ none are affected, so the RMSF, DSSP and torsion results stand. The matched
 10 ns window is the first 20 frames, before any split, so the headline apo
 numbers were never contaminated — the rerun confirms this.
 
-**AM1-BCC (R2.5) complete.** One caveat recorded honestly: the four-worker run was
-killed by the OS after 8 of 9 replicates and the parent hung rather than failing,
-which cost four hours before it was noticed. Y188L rep3 is re-running
-single-threaded; it tightens a SEM and changes no conclusion.
+**AM1-BCC (R2.5) complete**, all 9 replicates. One caveat recorded honestly: the
+four-worker run was killed by the OS after 8 of 9 replicates and the parent hung
+rather than failing, which cost four hours before it was noticed. Y188L rep3 was
+re-run single-threaded and finished 21-Oct. It moved Y188L dE_Total from
+2.46 to 2.34 kcal/mol and its SEM from 0.13 to 0.15; the bound on the
+charge-model shift (0.81, set by V106A) and the sign preservation are unchanged.
+The charge-model numbers are now checked by `ops/qa/verify_revision_numbers.py`
+rather than only being written down.
