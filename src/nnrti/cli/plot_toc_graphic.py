@@ -35,7 +35,9 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 
 PYMOL = Path("/Applications/PyMOL.app/Contents/bin/pymol")
-WIDTH_IN, HEIGHT_IN = 3.3, 1.8
+#: ACS gives 3.25 x 1.75 in as the maximum TOC size. The height here is
+#: derived from the panel band rather than fixed, so it comes out under it.
+WIDTH_IN = 3.25
 
 
 def trim_white(path: Path, pad: int = 8, drop_title: bool = True) -> Path:
@@ -113,24 +115,36 @@ def main(argv: list[str] | None = None) -> int:
 
     img = mpimg.imread(args.scene)
 
-    fig = plt.figure(figsize=(WIDTH_IN, HEIGHT_IN))
+    cycle = mpimg.imread(str(trim_white(args.cycle)))
+
+    # Both panels share one vertical band, so their tops and bottoms line up.
+    # Centring each independently leaves mismatched margins, because the
+    # molecular render is square and the cycle is about 1.5:1 wide. The canvas
+    # height is then derived from the content rather than fixed in advance: a
+    # fixed height taller than the band would simply reinstate the whitespace
+    # this is removing. ACS gives a maximum TOC size, not a required one.
+    a_mol = img.shape[1] / img.shape[0]
+    a_cyc = cycle.shape[1] / cycle.shape[0]
+
+    margin, gap = 0.022, 0.018                       # figure fractions of width
+    usable_w_in = WIDTH_IN * (1.0 - 2 * margin - gap)
+    band_h_in = usable_w_in / (a_mol + a_cyc)        # common panel height
+    height_in = band_h_in + 2 * (margin * WIDTH_IN)  # equal margins top/bottom
+
+    fig = plt.figure(figsize=(WIDTH_IN, height_in))
     fig.patch.set_facecolor("white")
 
-    # Left: the molecular scene. Right: Figure 2 of the paper, the alchemical
-    # free energy protocol. The protocol is the point of the work -- it is what
-    # makes the binding free energy an equilibrium quantity rather than an
-    # end-point score -- so it earns the second half of the graphic. MM/GBSA is
-    # a secondary comparison in the paper and does not belong here.
-    ax = fig.add_axes([0.005, 0.02, 0.43, 0.96])
+    band_h = band_h_in / height_in
+    y0 = (1.0 - band_h) / 2.0
+    w_mol = (band_h_in * a_mol) / WIDTH_IN
+    w_cyc = (band_h_in * a_cyc) / WIDTH_IN
+
+    ax = fig.add_axes([margin, y0, w_mol, band_h])
     ax.imshow(img, interpolation="lanczos")
     ax.axis("off")
 
-    fig2 = mpimg.imread(str(trim_white(args.cycle)))
-    h, w = fig2.shape[:2]
-    box_w = 0.555
-    box_h = box_w * (h / w) * (WIDTH_IN / HEIGHT_IN)
-    ax2 = fig.add_axes([0.44, 0.575 - box_h / 2, box_w, box_h])
-    ax2.imshow(fig2, interpolation="lanczos")
+    ax2 = fig.add_axes([margin + w_mol + gap, y0, w_cyc, band_h])
+    ax2.imshow(cycle, interpolation="lanczos")
     ax2.axis("off")
 
     # The one label on the graphic. Bottom left over the structure, on a single
@@ -149,7 +163,8 @@ def main(argv: list[str] | None = None) -> int:
                 bbox_inches="tight", pad_inches=0.02,
                 pil_kwargs={"compression": "tiff_lzw"})
     print(f"wrote {args.output_dir}/TOC-Graphic.pdf|tif|png at "
-          f"{WIDTH_IN} x {HEIGHT_IN} in, {args.dpi} dpi")
+          f"{WIDTH_IN:.2f} x {height_in:.2f} in, {args.dpi} dpi "
+          f"(panel band {band_h_in:.2f} in, both panels aligned)")
     return 0
 
 

@@ -19,6 +19,7 @@ import argparse
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import zipfile
 from pathlib import Path
@@ -43,7 +44,42 @@ def main(argv: list[str] | None = None) -> int:
             z.extractall(work)
         doc = (work / DOC).read_text(encoding="utf-8")
         if "TOC Graphic" in doc:
-            print("already present; nothing to do")
+            # Already inserted: swap the image and resize that one drawing.
+            #
+            # The extent must be edited inside the TOC drawing ONLY. A regex of
+            # the form <wp:inline ... name="TOC Graphic" ... </wp:inline> with a
+            # lazy quantifier starts at the FIRST drawing in the document and
+            # runs to the TOC one, rewriting every figure's extent on the way --
+            # which silently resized Figures 1-3 when it was tried.
+            from PIL import Image
+            im = Image.open(args.image)
+            dpi = im.info.get("dpi", (600, 600))[0]
+            cx = int(round(im.width / dpi * EMU_PER_INCH))
+            cy = int(round(im.height / dpi * EMU_PER_INCH))
+
+            media = work / "word" / "media"
+            existing = list(media.glob("toc_graphic.*"))
+            if not existing:
+                print("TOC label present but no media file; nothing to do")
+                return 0
+            shutil.copy(args.image, existing[0])
+
+            parts = doc.split("<wp:inline")
+            hits = [i for i, c in enumerate(parts) if 'name="TOC Graphic"' in c]
+            if len(hits) != 1:
+                print(f"expected one TOC drawing, found {len(hits)}", file=sys.stderr)
+                return 2
+            parts[hits[0]] = re.sub(r'cx="\d+" cy="\d+"', f'cx="{cx}" cy="{cy}"',
+                                    parts[hits[0]])
+            (work / DOC).write_text("<wp:inline".join(parts), encoding="utf-8")
+
+            tmp = args.docx.with_suffix(".tmp.docx")
+            if tmp.exists():
+                tmp.unlink()
+            subprocess.run(["zip", "-Xrq", str(tmp.resolve()), "."], cwd=work, check=True)
+            shutil.move(str(tmp), str(args.docx))
+            print(f"updated existing TOC graphic in {args.docx} "
+                  f"({im.width / dpi:.2f} x {im.height / dpi:.2f} in)")
             return 0
 
         ext = args.image.suffix.lstrip(".").lower()
