@@ -88,6 +88,19 @@ def main(argv: list[str] | None = None) -> int:
     rows = []
     for label, rep, dcd, top, total_ns in runs:
         t = md.load(str(dcd), top=str(top))
+        # Make the protein whole before measuring anything. Without this a
+        # chain that drifts across the box boundary is recorded as scattered
+        # fragments: in the G190E apo runs that inflated the pocket-lining
+        # radius of gyration from 31 A to 79 A and the measured pocket volume
+        # past 2000 A^3, which looks like a conformational change and is not.
+        try:
+            t.make_molecules_whole(inplace=True)
+            prot = t.topology.select("protein")
+            if len(prot):
+                t.image_molecules(inplace=True,
+                                  anchor_molecules=[{t.topology.atom(i) for i in prot}])
+        except Exception as exc:
+            print(f"  {d}: PBC correction failed ({exc})", flush=True)
         dt = total_ns / t.n_frames
         n_match = max(1, int(round(args.match_ns / dt)))
         u = mda.Universe(str(top))
@@ -104,6 +117,10 @@ def main(argv: list[str] | None = None) -> int:
                 "time_ns": (i + 1) * dt, "window": window,
                 "total_ns": total_ns,
                 "pocket_volume": pocket_volume_proxy_from_universe(u, ""),
+                "pocket_rg": float(np.sqrt((
+                    (u.select_atoms(f"segid {seg} and name CA and resid "
+                                    + " ".join(str(r + RESID_OFFSET) for r in NNIBP_P66)).positions
+                     - ca.positions.mean(0)) ** 2).sum(-1).mean())),
                 "chi1_Y181": chi1(u, 181 + RESID_OFFSET, seg),
                 "chi1_Y188": chi1(u, 188 + RESID_OFFSET, seg),
             })
