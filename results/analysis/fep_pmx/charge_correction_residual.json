@@ -1,0 +1,22 @@
+{
+  "ligand_excluded_volume_nm3": 0.32,
+  "assumed_per_phase_kcal": 1.0,
+  "legs": {
+    "wt_to_K103N": {
+      "volume_holo_nm3": 1700.9435345569525,
+      "volume_apo_nm3": 1698.742703015419,
+      "box_mismatch_fraction": 0.0012947262704484438,
+      "ligand_volume_fraction": 0.00018885934028384935,
+      "leading_ddg_kcal": -1.7562176664903673e-05,
+      "residual_bound_kcal": 0.001483585610732293
+    },
+    "wt_to_G190E": {
+      "volume_holo_nm3": 1708.1283179332263,
+      "volume_apo_nm3": 1702.7628092423238,
+      "box_mismatch_fraction": 0.0031461037546194107,
+      "ligand_volume_fraction": 0.00018823893113576785,
+      "leading_ddg_kcal": -4.262825404718895e-05,
+      "residual_bound_kcal": 0.0033343426857551785
+    }
+  }
+}
