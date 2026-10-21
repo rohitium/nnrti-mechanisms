@@ -17,7 +17,6 @@ remove hydrogens
 
 select p66, polymer and chain A
 select dor, resn 2KW
-select lining, byres (p66 within 5.0 of dor)
 
 # Substituted positions, topology numbering (canonical - 3). Split into their
 # own object so colouring the spheres cannot bleed into the cartoon ribbon.
@@ -40,13 +39,6 @@ show cartoon, p66
 color grey85, p66
 set cartoon_transparency, 0.52, p66
 
-# Only the residues the paper actually argues about, as thin sticks. Showing
-# every pocket-lining side chain buried the ligand in line noise.
-select keyres, p66 and resi 100+103+178+185+187 and sidechain
-show sticks, keyres
-color palecyan, keyres and elem C
-set stick_radius, 0.085, keyres
-
 # Doravirine: the subject of the figure, so it gets the strongest contrast.
 show sticks, dor
 set stick_radius, 0.21, dor
@@ -62,10 +54,10 @@ color orange, sites
 set sphere_transparency, 0.0, sites
 
 orient dor
-zoom dor, 10
+zoom dor, 11
 turn x, -6
 turn y, 20
 set field_of_view, 20
 
-ray 1180, 1050
+ray 1150, 1150
 png /tmp/toc_scene.png, dpi=600

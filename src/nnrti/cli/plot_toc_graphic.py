@@ -38,10 +38,36 @@ PYMOL = Path("/Applications/PyMOL.app/Contents/bin/pymol")
 WIDTH_IN, HEIGHT_IN = 3.3, 1.8
 
 
+def panel_a(pdf: Path, dpi: int = 150) -> Path:
+    """Crop panel A, the thermodynamic cycle, out of Figure 2.
+
+    The whole four-panel figure cannot go in a TOC graphic: it is 13 in wide in
+    the paper and the TOC is 3.3 in, so its 8 pt labels would land near 1 pt and
+    fail the legibility requirement. Panel A alone carries the point -- the
+    alchemical cycle that makes ddG_bind an equilibrium quantity -- at a size
+    that reads.
+    """
+    from PIL import Image
+    out = Path("/tmp/toc_fig2_panelA.png")
+    full = Path("/tmp/toc_fig2_full.png")
+    subprocess.run(["pdftoppm", "-png", "-r", str(dpi), "-singlefile",
+                    str(pdf), str(full.with_suffix(""))], check=True)
+    im = Image.open(full)
+    w, h = im.size
+    im.crop((int(0.118 * w), int(0.020 * h), int(0.503 * w), int(0.492 * h))).save(out)
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--pml", type=Path, default=Path("ops/figures/toc_graphic.pml"))
     p.add_argument("--scene", type=Path, default=Path("/tmp/toc_scene.png"))
+    p.add_argument("--figure2-pdf", type=Path,
+                   default=Path("paper/submission/figures/Fig2.pdf"),
+                   help="Figure 2 of the manuscript; panel A is cropped from it.")
+    p.add_argument("--figure2", type=Path, default=None,
+                   help="Use this image for the right-hand panel instead of cropping "
+                        "panel A from the Figure 2 PDF.")
     p.add_argument("--output-dir", type=Path, default=Path("revisions"))
     p.add_argument("--dpi", type=int, default=600)
     p.add_argument("--skip-render", action="store_true",
@@ -61,30 +87,34 @@ def main(argv: list[str] | None = None) -> int:
     fig = plt.figure(figsize=(WIDTH_IN, HEIGHT_IN))
     fig.patch.set_facecolor("white")
 
-    ax = fig.add_axes([0.0, 0.0, 0.545, 1.0])
+    # Left: the molecular scene. Right: Figure 2 of the paper, the alchemical
+    # free energy protocol. The protocol is the point of the work -- it is what
+    # makes the binding free energy an equilibrium quantity rather than an
+    # end-point score -- so it earns the second half of the graphic. MM/GBSA is
+    # a secondary comparison in the paper and does not belong here.
+    ax = fig.add_axes([0.005, 0.02, 0.43, 0.96])
     ax.imshow(img, interpolation="lanczos")
     ax.axis("off")
 
-    # Text lives in its own axes in data coordinates. Figure-fraction placement
-    # stretches a circle into an ellipse and makes it easy to run a title off
-    # the canvas, both of which happened in the first attempt.
-    tb = fig.add_axes([0.555, 0.0, 0.445, 1.0])
-    tb.set_xlim(0, 1)
-    tb.set_ylim(0, 1)
-    tb.axis("off")
+    fig2 = mpimg.imread(str(args.figure2 or panel_a(args.figure2_pdf)))
+    h, w = fig2.shape[:2]
+    box_w = 0.555
+    box_h = box_w * (h / w) * (WIDTH_IN / HEIGHT_IN)
+    ax2 = fig.add_axes([0.44, 0.575 - box_h / 2, box_w, box_h])
+    ax2.imshow(fig2, interpolation="lanczos")
+    ax2.axis("off")
 
-    tb.text(0.0, 0.93, "Doravirine resistance in\nHIV-1 reverse transcriptase",
-            fontsize=7.6, fontweight="bold", color="#141414", va="top", linespacing=1.3)
-    tb.text(0.0, 0.645,
-            "18 clinical genotypes scored by\nalchemical free energy perturbation\n"
-            "and MM/GBSA, 3 \u00d7 100 ns each",
-            fontsize=5.8, color="#3d3d3d", va="top", linespacing=1.65)
-    tb.scatter([0.028], [0.215], s=48, color="#f08c1b", edgecolor="#6b3300",
-               linewidths=0.5, zorder=5)
-    tb.text(0.095, 0.215, "substituted positions", fontsize=5.8, color="#3d3d3d",
-            va="center")
-    tb.text(0.0, 0.075, "doravirine bound in the NNIBP", fontsize=5.6,
-            color="#6a6a6a", va="center")
+    # The one label on the graphic, bottom right and wrapped so it sits clear
+    # of both the structure and the cycle. Its own axes keeps the marker round;
+    # a patch placed in figure coordinates gets stretched by the aspect ratio.
+    lg = fig.add_axes([0.735, 0.012, 0.255, 0.14])
+    lg.set_xlim(0, 1)
+    lg.set_ylim(0, 1)
+    lg.axis("off")
+    lg.scatter([0.08], [0.55], s=28, color="#f08c1b", edgecolor="#6b3300",
+               linewidths=0.4, zorder=5)
+    lg.text(0.20, 0.55, "substituted\npositions", fontsize=5.2, color="#3d3d3d",
+            va="center", ha="left", linespacing=1.35)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     for ext in ("pdf", "png"):
