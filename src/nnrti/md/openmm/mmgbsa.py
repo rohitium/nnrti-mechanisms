@@ -475,6 +475,7 @@ def compute_mmgbsa_from_trajectory(
     analysis_topology_pdb_path: Path | None = None,
     allowed_frames: Iterable[int] | None = None,
     snapshot_relaxation: str = "unrestrained",
+    charge_method: str = "gasteiger",
     relaxation_iterations: int = 100,
     frame_sampling: str = "terminal",
 ) -> MMGBSAResult:
@@ -502,8 +503,8 @@ def compute_mmgbsa_from_trajectory(
     with open(topology_pdb_path, "r") as handle:
         solute_pdb = app.PDBFile(handle)
 
-    ligand = load_ligand_molecule(ligand_sdf)
-    forcefield = build_forcefield([ligand])
+    ligand = load_ligand_molecule(ligand_sdf, charge_method=charge_method)
+    forcefield = build_forcefield([ligand], charge_method=charge_method)
 
     complex_top = solute_pdb.topology
 

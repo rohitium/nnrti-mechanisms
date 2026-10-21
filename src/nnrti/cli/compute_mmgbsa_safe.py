@@ -149,6 +149,7 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
             trajectory_dcd_path=Path(task["dcd"]),
             ligand_resname=task["ligand_resname"],
             ligand_sdf=Path(task["ligand_sdf"]),
+            charge_method=task.get("charge_method", "gasteiger"),
             n_snapshots=int(task["snapshots"]),
             discard_fraction=float(task["discard_fraction"]),
             sample_window_ns=task["sample_window_ns"],
@@ -202,6 +203,7 @@ def _compute_one_task(task: dict) -> tuple[bool, dict | None, str]:
             "mmgbsa_frame_sampling": task["frame_sampling"],
             "mmgbsa_snapshot_relaxation": task["snapshot_relaxation"],
             "mmgbsa_relaxation_iterations": int(task["relaxation_iterations"]),
+            "mmgbsa_charge_method": task.get("charge_method", "gasteiger"),
             "mmgbsa_contact_screened": bool(task.get("allowed_frames") is not None),
             "mmgbsa_clean_frames_available": (
                 int(len(task["allowed_frames"])) if task.get("allowed_frames") is not None else float("nan")
@@ -282,6 +284,16 @@ def main() -> int:
     )
     parser.add_argument("--timestep-fs", type=float, default=2.0)
     parser.add_argument("--ligand-resname", type=str, default="2KW")
+    parser.add_argument(
+        "--charge-method",
+        choices=("gasteiger", "am1bcc", "am1bccelf10"),
+        default="gasteiger",
+        help=(
+            "Ligand partial charge model. 'gasteiger' reproduces the production MD and "
+            "every number in the main text; the others are for the sensitivity comparison "
+            "requested by review and re-score existing trajectories with different charges."
+        ),
+    )
     parser.add_argument("--workers", type=int, default=1, help="Parallel workers for per-replicate MM/GBSA")
     parser.add_argument("--force", action="store_true", help="Recompute even if checkpoint exists")
     args = parser.parse_args()
@@ -429,6 +441,7 @@ def main() -> int:
                 "dcd": str(dcd),
                 "analysis_topo": str(analysis_topo),
                 "ligand_sdf": str(ligand_sdf),
+                "charge_method": args.charge_method,
                 "ligand_resname": args.ligand_resname,
                 "snapshots": int(args.snapshots),
                 "discard_fraction": discard_fraction,

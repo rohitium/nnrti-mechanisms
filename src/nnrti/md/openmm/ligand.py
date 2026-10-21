@@ -5,7 +5,15 @@ from pathlib import Path
 from .require import require_module
 
 
-def load_ligand_molecule(ligand_sdf: Path):
+#: Charge model used for the production MD and for every number in the main
+#: text. Reviewer 2 (comment 5) asked how much this choice matters, so it is a
+#: parameter rather than a constant -- but the default must stay "gasteiger",
+#: because changing it silently would reparameterise the ligand away from the
+#: MD that produced the trajectories being scored.
+DEFAULT_CHARGE_METHOD = "gasteiger"
+
+
+def load_ligand_molecule(ligand_sdf: Path, charge_method: str = DEFAULT_CHARGE_METHOD):
     openff = require_module("openff.toolkit")
     mols = openff.topology.Molecule.from_file(
         str(ligand_sdf), allow_undefined_stereo=True
@@ -14,7 +22,7 @@ def load_ligand_molecule(ligand_sdf: Path):
     if not molecules:
         raise ValueError(f"No molecules found in {ligand_sdf}")
     for mol in molecules:
-        mol.assign_partial_charges(partial_charge_method="gasteiger")
+        mol.assign_partial_charges(partial_charge_method=charge_method)
     return molecules[0]
 
 
@@ -23,7 +31,8 @@ def load_ligand_molecule(ligand_sdf: Path):
 SMIRNOFF_FORCEFIELD = "openff-2.0.0"
 
 
-def build_forcefield(ligand_molecules) -> "openmm.app.ForceField":
+def build_forcefield(ligand_molecules,
+                     charge_method: str = DEFAULT_CHARGE_METHOD) -> "openmm.app.ForceField":
     app = require_module("openmm.app")
     generators = require_module("openmmforcefields.generators")
 
@@ -42,7 +51,7 @@ def build_forcefield(ligand_molecules) -> "openmm.app.ForceField":
     generator = generators.SMIRNOFFTemplateGenerator(
         molecules=ligand_molecules,
         forcefield=SMIRNOFF_FORCEFIELD,
-        template_generator_kwargs={"partial_charge_method": "gasteiger"},
+        template_generator_kwargs={"partial_charge_method": charge_method},
     )
     forcefield.registerTemplateGenerator(generator.generator)
     return forcefield
