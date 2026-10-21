@@ -26,9 +26,10 @@ Supplementary Tables 1–4 are unchanged; take them from `paper/submission/`.
 
 1. **ORCID iDs** — each author validates their own in Paragon Plus.
 2. **Funding** — NIAID R24AI136618 is in the manuscript; confirm it on the form.
-3. **Zotero** — three references are marked `[[CITE: ...]]` in the MM/GBSA Methods
-   paragraph. Insert them through the Word plugin and refresh; the third is one
-   citation covering two items (Genheden & Ryde, already ref 34, plus Weis 2006).
+3. ~~Zotero citations~~ — **done.** You inserted them in Word on 20-Oct; the
+   manuscript now carries 96 Zotero fields (was 93) and they renumbered into ACS
+   order as 46 (Kuhn 2005), 47 (Rastelli 2010) and 34,48 (Genheden & Ryde with
+   Weis 2006). Nothing further needed.
 4. **English-language pass** — the ~1,100 words added here were audited; the
    pre-existing text has not been. The editor raised it, so consider a service.
 5. **Decide on R1.2a** — independent starting poses is the one scientific request
