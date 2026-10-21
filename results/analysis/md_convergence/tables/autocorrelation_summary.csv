@@ -1,0 +1,7 @@
+metric,tau_frames_median,tau_ns_median,ess_median,ess_min,n_series
+chl_ring_burial,5.13,2.27,22.27,2.86,60
+dor_to_S105_mindist,8.69,3.65,13.75,2.17,60
+dor_to_res106_mindist,4.76,2.5,20.1,1.54,60
+res103_bb_to_triazN,4.72,2.01,25.1,1.9,60
+res179_to_dor_mindist,5.42,2.58,19.46,2.12,60
+y188_interplanar_deg,2.09,1.01,49.67,1.91,60
