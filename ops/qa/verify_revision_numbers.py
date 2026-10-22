@@ -111,8 +111,15 @@ def main() -> int:
     checks.append(("response no longer says a replicate is pending",
                    "still computing" not in resp))
 
-    for s in ("0.003 kcal/mol", "0.019%", "1.85", "−1.35"):
+    for s in ("1.85", "−1.35"):
         checks.append((f"manuscript contains {s!r}", s in ms))
+    # The finite-size derivation lives in Supplementary Note 1; Methods keeps
+    # only the bound and a pointer to it, so these are checked there. That
+    # way shortening Methods does not fail the check.
+    for s in ("0.003 kcal/mol", "0.019%", "0.13%", "0.31%"):
+        checks.append((f"supplementary contains {s!r}", s in supp))
+    checks.append(("manuscript keeps the finite-size bound or a pointer",
+                   "0.003 kcal/mol" in ms or "Supplementary Note 1" in ms))
     # The relaxation-protocol numbers moved out of Methods and into the SI in
     # revision, so they are checked where they now live, not where they were.
     checks.append(("supplementary carries the relaxation SEM range",
