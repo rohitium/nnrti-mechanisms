@@ -78,6 +78,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--metric", choices=sorted(METRICS), default="ca_rmsd")
     p.add_argument("--output", type=Path, default=None,
                    help="Defaults to the metric's conventional filename under md_convergence/plots.")
+    p.add_argument("--title", default=None,
+                   help=(
+                       "Override the metric's title. Used to reproduce a panel as it was "
+                       "published when the wording has since been revised."
+                   ))
     p.add_argument("--inset-headroom", type=float, default=0.62,
                    help=(
                        "Blank vertical space added below the data, as a fraction of the data "
@@ -142,7 +147,8 @@ def main() -> int:
 
     args = parse_args()
     spec = METRICS[args.metric]
-    column, ylabel, title = spec["column"], spec["ylabel"], spec["title"]
+    column, ylabel = spec["column"], spec["ylabel"]
+    title = args.title or spec["title"]
     stem, default_rect = spec["stem"], spec["inset_rect"]
     output = args.output or (
         repo_root() / "results/analysis/md_convergence/plots" / f"{stem}.png"

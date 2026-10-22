@@ -13,6 +13,9 @@ Usage
 from __future__ import annotations
 
 import argparse
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -126,9 +129,19 @@ def _fold_map(xlsx: Path) -> dict:
 #: and never rewritten: compositing the published PNGs is the only way to
 #: guarantee the top row is identical to what was submitted, rather than a
 #: re-plot that happens to look the same.
+#:
+#: One exception. The DOR RMSD panel on disk was re-rendered after submission,
+#: when 25cbea8 retitled the metric from "pose convergence" to "internal
+#: conformational stability"; only the COM panel was re-pasted into the Word
+#: file, so the submitted figure still carries the older DOR title. Reusing the
+#: file as it stands would quietly change a title the reviewer has seen, so the
+#: panel is re-rendered with the submitted wording instead. Regeneration is
+#: pixel-exact against the file on disk, so the title is the only difference.
+SUBMITTED_DOR_TITLE = "Doravirine pose convergence across the genotype panel"
+
 SUBMITTED_PANELS = [
-    ("dor_rmsd_convergence.png", "DOR RMSD"),
-    ("com_distance_convergence.png", "DOR\u2013RT COM distance"),
+    ("dor_rmsd_convergence.png", "DOR RMSD", "dor_rmsd", SUBMITTED_DOR_TITLE),
+    ("com_distance_convergence.png", "DOR\u2013RT COM distance", None, None),
 ]
 
 
@@ -284,14 +297,27 @@ def figure1(plt, out: Path) -> None:
     ramp = plt.get_cmap("Blues")
     colour = lambda m: (ramp(0.35 + 0.65 * norm(folds[m])) if m in folds else "0.6")
 
-    TITLES = {"dor_rmsd_angstrom": "Autocorrelation of doravirine internal RMSD",
+    TITLES = {"dor_rmsd_angstrom": "Autocorrelation of doravirine pose RMSD",
               "com_distance_angstrom": "Autocorrelation of the doravirine\u2013RT separation"}
-    SE_TITLES = {"dor_rmsd_angstrom": "Blocked standard error of doravirine internal RMSD",
+    SE_TITLES = {"dor_rmsd_angstrom": "Blocked standard error of doravirine pose RMSD",
                  "com_distance_angstrom": "Blocked standard error of the doravirine\u2013RT separation"}
     YL = {"dor_rmsd_angstrom": "DOR RMSD (\u00c5)",
           "com_distance_angstrom": "DOR\u2013RT COM distance (\u00c5)"}
 
-    paths = [plot_dir / SUBMITTED_PANELS[0][0], plot_dir / SUBMITTED_PANELS[1][0]]
+    paths = []
+    for name, _label, metric, title in SUBMITTED_PANELS:
+        if title is None:
+            paths.append(plot_dir / name)
+            continue
+        q = scratch / f"submitted_{name}"
+        subprocess.run(
+            [sys.executable, "-m", "nnrti.cli.plot_convergence_panel",
+             "--metric", metric, "--title", title, "--output", str(q)],
+            check=True, cwd=ROOT,
+            env={**os.environ, "PYTHONPATH": str(ROOT / "src")},
+            stdout=subprocess.DEVNULL,
+        )
+        paths.append(q)
     for kind, titles in (("acf", TITLES), ("se", SE_TITLES)):
         for col in PANEL_METRICS:
             stats = _series_stats(tr, col)
