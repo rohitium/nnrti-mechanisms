@@ -29,8 +29,8 @@ APO_CRYSTAL = (101.7, 103.8)
 #: once a block is longer than that. At 60 frames (~25 ns) this still leaves
 #: only 9 blocks, so the far end of the curve stays noisy by construction --
 #: the trajectories are not long enough for it to be otherwise.
-MIN_BLOCKS = 9
-BLOCKS = [1, 2, 3, 4, 6, 8, 12, 16, 20, 25, 30, 36, 45, 60]
+MIN_BLOCKS = 6
+BLOCKS = [1, 2, 3, 4, 6, 8, 12, 16, 20, 25, 30, 36, 45, 60, 75, 90]
 
 METRIC_LABEL = {
     "chl_ring_burial": "chlorocyanophenyl burial",
@@ -152,8 +152,15 @@ def figure3(plt, out: Path) -> None:
         bl = np.array(BLOCKS) * dt
         B = np.vstack(list(blk_by_g.values()))
         for row in B:
-            a_blk.plot(bl, row, color="#55A868", lw=0.5, alpha=0.35)
-        a_blk.plot(bl, np.median(B, axis=0), color="#C44E52", lw=1.4)
+            a_blk.plot(bl, row, color="#55A868", lw=0.5, alpha=0.3)
+        med = np.median(B, axis=0)
+        a_blk.plot(bl, med, color="#C44E52", lw=1.4)
+        # The estimated standard deviation of M blocks carries a relative
+        # uncertainty of about 1/sqrt(2(M-1)). Drawing it keeps the long-block
+        # end of the curve honest rather than simply truncating it.
+        rel = np.array([1.0 / np.sqrt(2 * max(m - 1, 1)) for m in n_blocks])
+        a_blk.fill_between(bl, med * (1 - rel), med * (1 + rel),
+                           color="#C44E52", alpha=0.18, lw=0)
         a_blk.axhline(1.0, color="0.6", lw=0.6, ls=":")
         a_blk.set_xlabel("block length (ns)")
         if j == 0:
@@ -162,8 +169,9 @@ def figure3(plt, out: Path) -> None:
         # say how many blocks each end of the curve rests on
         a_blk.text(bl[0], a_blk.get_ylim()[1] * 0.97, f"{n_blocks[0]} blocks",
                    fontsize=5.5, color="0.4", va="top")
-        a_blk.text(bl[-1], a_blk.get_ylim()[1] * 0.97, f"{n_blocks[-1]}",
-                   fontsize=5.5, color="0.4", va="top", ha="right")
+        a_blk.text(bl[-1], a_blk.get_ylim()[1] * 0.97,
+                   f"{n_blocks[-1]} blocks", fontsize=5.5, color="0.4",
+                   va="top", ha="right")
 
     axes[0, 0].plot([], [], color="#4C72B0", lw=0.8, alpha=0.6, label="genotype")
     axes[0, 0].plot([], [], color="#C44E52", lw=1.4, label="median")
