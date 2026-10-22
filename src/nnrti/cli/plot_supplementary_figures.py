@@ -89,57 +89,73 @@ def block_sem(x: np.ndarray, block: int) -> float:
     return float(means.std(ddof=1) / np.sqrt(m))
 
 
+#: the three observables shown per-genotype: ligand-internal, ligand-to-protein
+#: and protein-global. Ser105 distance behaves between the first two.
+PANEL_METRICS = {
+    "dor_rmsd_angstrom": "DOR RMSD",
+    "com_distance_angstrom": "DOR\u2013RT COM distance",
+    "ca_rmsd_angstrom": "C\u03b1 RMSD",
+}
+
+
 def figure3(plt, out: Path) -> None:
     tr = pd.read_csv(RES / "md_convergence/tables/frame_traces.csv")
-    dt = float(tr.total_ns.median() / tr.n_frames.median())      # ns per frame
+    dt = float(tr.total_ns.median() / tr.n_frames.median())
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.2, 3.0))
-    colours = ["#4C72B0", "#DD8452", "#55A868", "#C44E52"]
+    fig, axes = plt.subplots(2, 3, figsize=(7.2, 4.4))
+    n_g = 0
+    for j, (col, label) in enumerate(PANEL_METRICS.items()):
+        a_acf, a_blk = axes[0, j], axes[1, j]
+        acf_by_g, blk_by_g = {}, {}
+        for g, s in tr.groupby("safe_label"):
+            acfs, ratios = [], []
+            for _, r in s.groupby("replicate"):
+                x = r.sort_values("frame_index")[col].to_numpy(dtype=float)
+                if x.size < 40 or np.allclose(x, x[0]):
+                    continue
+                acfs.append(autocorrelation(x))
+                base = block_sem(x, 1)
+                if base and np.isfinite(base) and x.size // max(BLOCKS) >= MIN_BLOCKS:
+                    ratios.append([block_sem(x, b) / base for b in BLOCKS])
+            if acfs:
+                L = min(len(a) for a in acfs)
+                acf_by_g[g] = np.vstack([a[:L] for a in acfs]).mean(axis=0)
+            if ratios:
+                blk_by_g[g] = np.vstack(ratios).mean(axis=0)
+        n_g = max(n_g, len(acf_by_g))
 
-    n_series = 0
-    for (col, label), c in zip(TRACE_METRICS.items(), colours):
-        acfs, ratios = [], []
-        for _, s in tr.groupby(["safe_label", "replicate"]):
-            x = s.sort_values("frame_index")[col].to_numpy(dtype=float)
-            if x.size < 40 or np.allclose(x, x[0]):
-                continue
-            acfs.append(autocorrelation(x))
-            base = block_sem(x, 1)
-            usable = [b for b in BLOCKS if x.size // b >= MIN_BLOCKS]
-            if base and np.isfinite(base) and len(usable) == len(BLOCKS):
-                ratios.append([block_sem(x, b) / base for b in BLOCKS])
-        if not acfs:
-            continue
-        n_series = max(n_series, len(acfs))
-        L = min(len(a) for a in acfs)
-        A = np.vstack([a[:L] for a in acfs])
+        L = min(len(v) for v in acf_by_g.values())
         lag = np.arange(L) * dt
         keep = lag <= 30
-        ax1.plot(lag[keep], np.nanmean(A, axis=0)[keep], color=c, lw=1.3, label=label)
-        ax1.fill_between(lag[keep],
-                         np.nanpercentile(A, 25, axis=0)[keep],
-                         np.nanpercentile(A, 75, axis=0)[keep],
-                         color=c, alpha=0.15, lw=0)
+        M = np.vstack([v[:L] for v in acf_by_g.values()])
+        for row in M:
+            a_acf.plot(lag[keep], row[keep], color="#4C72B0", lw=0.5, alpha=0.35)
+        a_acf.plot(lag[keep], np.median(M, axis=0)[keep], color="#C44E52", lw=1.4)
+        a_acf.axhline(0, color="0.6", lw=0.6)
+        a_acf.set_title(label, loc="left", fontsize=8)
+        a_acf.set_xlabel("lag (ns)")
+        if j == 0:
+            a_acf.set_ylabel("autocorrelation C(\u03c4)")
 
-        R = np.vstack([r for r in ratios if np.all(np.isfinite(r))])
-        ax2.plot(np.array(BLOCKS) * dt, R.mean(axis=0), color=c, lw=1.3,
-                 marker="o", ms=2.5, label=label)
+        bl = np.array(BLOCKS) * dt
+        B = np.vstack(list(blk_by_g.values()))
+        for row in B:
+            a_blk.plot(bl, row, color="#55A868", lw=0.5, alpha=0.35)
+        a_blk.plot(bl, np.median(B, axis=0), color="#C44E52", lw=1.4)
+        a_blk.axhline(1.0, color="0.6", lw=0.6, ls=":")
+        a_blk.set_xlabel("block length (ns)")
+        if j == 0:
+            a_blk.set_ylabel("blocked / naive SEM")
+        a_blk.set_ylim(0.8, max(4.4, B.max() * 1.05))
 
-    ax1.axhline(0, color="0.6", lw=0.6)
-    ax1.set_xlabel("lag (ns)")
-    ax1.set_ylabel("autocorrelation C(\u03c4)")
-    ax1.set_title(f"A  Autocorrelation, {n_series} replicates", loc="left")
-    ax1.legend(frameon=False, fontsize=6.5)
-
-    ax2.axhline(1.0, color="0.6", lw=0.6, ls=":")
-    ax2.set_xlabel("block length (ns)")
-    ax2.set_ylabel("blocked SEM / naive SEM")
-    ax2.set_title("B  Block averaging", loc="left")
-
+    axes[0, 0].plot([], [], color="#4C72B0", lw=0.8, alpha=0.6, label="genotype")
+    axes[0, 0].plot([], [], color="#C44E52", lw=1.4, label="median")
+    axes[0, 0].legend(frameon=False, fontsize=6.5, loc="upper right")
     fig.tight_layout()
     fig.savefig(out / "supplementary_figure_3_convergence.png")
     plt.close(fig)
-    print(f"  Figure 3: {n_series} replicates, {len(TRACE_METRICS)} observables")
+    print(f"  Figure 3: one line per genotype ({n_g}), "
+          f"{len(PANEL_METRICS)} observables")
 
 
 def figure4(plt, out: Path) -> None:
