@@ -22,6 +22,8 @@ ROOT = Path(__file__).resolve().parents[3]
 RES = ROOT / "results/analysis"
 #: unliganded crystal structures, for the reference line in Figure 5
 APO_CRYSTAL = (101.7, 103.8)
+#: shared lag axis in ns for the autocorrelation panels
+LAG_GRID = np.arange(0.0, 30.01, 0.25)
 #: Block lengths in frames. Block means are pooled across a genotype's three
 #: replicates, so a block of n frames yields 3 * (N // n) blocks rather than
 #: N // n, which is what makes the longer blocks usable at all: the
@@ -29,8 +31,14 @@ APO_CRYSTAL = (101.7, 103.8)
 #: once a block is longer than that. At 60 frames (~25 ns) this still leaves
 #: only 9 blocks, so the far end of the curve stays noisy by construction --
 #: the trajectories are not long enough for it to be otherwise.
+#: Block lengths in NANOSECONDS, not frames. The series do not share a frame
+#: rate -- the same 100 ns appears as 139, 180, 238, 360 or 540 frames -- so a
+#: fixed frame count would mean 50 ns for one replicate and 25 ns for another,
+#: and the curve would mix durations. Each series converts these to its own
+#: frame count. At 50 ns a 100 ns replicate yields 2 blocks, so 6 across the
+#: three replicates, which is the longest block the data can support.
 MIN_BLOCKS = 6
-BLOCKS = [1, 2, 3, 4, 6, 8, 12, 16, 20, 25, 30, 36, 45, 60, 75, 90]
+BLOCKS_NS = [0.5, 1, 2, 3, 5, 7, 10, 14, 20, 25, 33, 40, 50]
 
 METRIC_LABEL = {
     "chl_ring_burial": "chlorocyanophenyl burial",
@@ -112,34 +120,44 @@ def figure3(plt, out: Path) -> None:
         a_acf, a_blk = axes[0, j], axes[1, j]
         acf_by_g, blk_by_g, block_counts = {}, {}, []
         for g, s in tr.groupby("safe_label"):
-            acfs, series = [], []
+            acfs, series, dts = [], [], []
             for _, r in s.groupby("replicate"):
-                x = r.sort_values("frame_index")[col].to_numpy(dtype=float)
+                r = r.sort_values("frame_index")
+                x = r[col].to_numpy(dtype=float)
                 if x.size < 40 or np.allclose(x, x[0]):
                     continue
-                acfs.append(autocorrelation(x))
+                d = float(r.total_ns.iloc[0]) / float(x.size)
+                # resample each series' ACF onto a shared lag grid in ns,
+                # because the frame rates differ between replicates
+                a = autocorrelation(x)
+                acfs.append(np.interp(LAG_GRID, np.arange(a.size) * d, a,
+                                      left=np.nan, right=np.nan))
                 series.append(x)
+                dts.append(d)
             if acfs:
-                L = min(len(a) for a in acfs)
-                acf_by_g[g] = np.vstack([a[:L] for a in acfs]).mean(axis=0)
+                acf_by_g[g] = np.nanmean(np.vstack(acfs), axis=0)
             if series:
                 ratio, counts = [], []
                 base = np.mean([block_sem(x, 1) for x in series])
-                for b in BLOCKS:
-                    means = np.concatenate(
-                        [x[: (x.size // b) * b].reshape(-1, b).mean(axis=1)
-                         for x in series])
+                for b_ns in BLOCKS_NS:
+                    chunks = []
+                    for x, d in zip(series, dts):
+                        b = max(1, int(round(b_ns / d)))
+                        if x.size // b < 2:       # need two blocks to vary
+                            continue
+                        chunks.append(
+                            x[: (x.size // b) * b].reshape(-1, b).mean(axis=1))
+                    means = np.concatenate(chunks) if chunks else np.array([])
                     counts.append(means.size)
                     ratio.append(means.std(ddof=1) / np.sqrt(means.size) / base
-                                 if means.size >= 2 and base else np.nan)
+                                 if means.size >= MIN_BLOCKS and base else np.nan)
                 blk_by_g[g] = np.array(ratio)
                 block_counts.append(counts)
         n_g = max(n_g, len(acf_by_g))
 
-        L = min(len(v) for v in acf_by_g.values())
-        lag = np.arange(L) * dt
-        keep = lag <= 30
-        M = np.vstack([v[:L] for v in acf_by_g.values()])
+        lag = LAG_GRID
+        keep = np.ones(lag.size, dtype=bool)
+        M = np.vstack(list(acf_by_g.values()))
         for row in M:
             a_acf.plot(lag[keep], row[keep], color="#4C72B0", lw=0.5, alpha=0.35)
         a_acf.plot(lag[keep], np.median(M, axis=0)[keep], color="#C44E52", lw=1.4)
@@ -149,12 +167,12 @@ def figure3(plt, out: Path) -> None:
         if j == 0:
             a_acf.set_ylabel("autocorrelation C(\u03c4)")
 
-        bl = np.array(BLOCKS) * dt
-        n_blocks = np.median(np.vstack(block_counts), axis=0)
+        bl = np.array(BLOCKS_NS)
+        n_blocks = np.nanmedian(np.vstack(block_counts), axis=0)
         B = np.vstack(list(blk_by_g.values()))
         for row in B:
             a_blk.plot(bl, row, color="#55A868", lw=0.5, alpha=0.3)
-        med = np.median(B, axis=0)
+        med = np.nanmedian(B, axis=0)
         a_blk.plot(bl, med, color="#C44E52", lw=1.4)
         # 95% interval on the blocked SEM. The blocked error is an estimated
         # standard deviation, so (M-1)s^2/sigma^2 follows chi-square with M-1
