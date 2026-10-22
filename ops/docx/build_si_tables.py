@@ -105,15 +105,15 @@ def relaxation_correlations() -> pd.DataFrame:
                     "relaxation_protocol_agreement.csv")
     ph = pd.read_csv(ROOT / "results/analysis/relaxation_sensitivity/tables/"
                      "relaxation_phenotype_correlation.csv")
-    rows = [["Component", "Protocols agree (Spearman)", "Sign agreement",
+    rows = [["Component", "Protocols agree (Spearman)",
              "vs phenotype (H-only)", "vs phenotype (full min)"]]
     for _, r in a.iterrows():
         h = ph[(ph.component == r.component) & (ph.protocol == "h_relax")].iloc[0]
         f = ph[(ph.component == r.component) & (ph.protocol == "full_min")].iloc[0]
         rows.append([str(r.component).replace("ddE_", "\u0394\u0394E "),
                      f"{r.protocol_spearman:.2f} (p = {r.protocol_p:.3f})",
-                     r.sign_agreement,
-                     f"{h.spearman:+.2f}", f"{f.spearman:+.2f}"])
+                     f"{h.spearman:+.2f} (p = {h.spearman_p:.3f})",
+                     f"{f.spearman:+.2f} (p = {f.spearman_p:.3f})"])
     return pd.DataFrame(rows[1:], columns=rows[0])
 
 

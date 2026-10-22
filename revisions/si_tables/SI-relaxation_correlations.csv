@@ -1,5 +1,5 @@
-Component,Protocols agree (Spearman),Sign agreement,vs phenotype (H-only),vs phenotype (full min)
-ΔΔE Total,0.09 (p = 0.700),11/19,-0.32,+0.45
-ΔΔE vdW,0.26 (p = 0.286),11/19,-0.27,+0.01
-ΔΔE elec,0.69 (p = 0.001),13/19,+0.36,+0.63
-ΔΔE GB,0.81 (p = 0.000),17/19,+0.21,+0.08
+Component,Protocols agree (Spearman),vs phenotype (H-only),vs phenotype (full min)
+ΔΔE Total,0.09 (p = 0.700),-0.32 (p = 0.289),+0.45 (p = 0.128)
+ΔΔE vdW,0.26 (p = 0.286),-0.27 (p = 0.364),+0.01 (p = 0.986)
+ΔΔE elec,0.69 (p = 0.001),+0.36 (p = 0.231),+0.63 (p = 0.021)
+ΔΔE GB,0.81 (p = 0.000),+0.21 (p = 0.494),+0.08 (p = 0.803)

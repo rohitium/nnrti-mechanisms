@@ -92,8 +92,9 @@ def main(argv: list[str] | None = None) -> int:
             sp = stats.spearmanr(x, y)
             pheno.append({"component": name, "protocol": label, "n": len(k),
                           "R2_vs_log10_fold": round(float(lr.rvalue ** 2), 3),
-                          "p": round(float(lr.pvalue), 3),
-                          "spearman": round(float(sp.statistic), 2)})
+                          "ols_p": round(float(lr.pvalue), 3),
+                          "spearman": round(float(sp.statistic), 2),
+                          "spearman_p": round(float(sp.pvalue), 3)})
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(args.output_dir / "relaxation_panel_long.csv", index=False)
