@@ -24,6 +24,8 @@ RES = ROOT / "results/analysis"
 APO_CRYSTAL = (101.7, 103.8)
 #: shared lag axis in ns for the autocorrelation panels
 LAG_GRID = np.arange(0.0, 30.01, 0.25)
+#: shared time axis in ns for the raw traces
+TIME_GRID = np.arange(0.0, 100.01, 0.5)
 #: Block lengths in frames. Block means are pooled across a genotype's three
 #: replicates, so a block of n frames yields 3 * (N // n) blocks rather than
 #: N // n, which is what makes the longer blocks usable at all: the
@@ -110,102 +112,103 @@ PANEL_METRICS = {
 }
 
 
-def figure3(plt, out: Path) -> None:
+def figure1(plt, out: Path) -> None:
+    """Nine panels: traces, autocorrelation, statistical inefficiency."""
     tr = pd.read_csv(RES / "md_convergence/tables/frame_traces.csv")
-    dt = float(tr.total_ns.median() / tr.n_frames.median())
 
-    fig, axes = plt.subplots(2, 3, figsize=(7.2, 4.4))
-    n_g = 0
+    fig, axes = plt.subplots(3, 3, figsize=(7.2, 6.4))
     for j, (col, label) in enumerate(PANEL_METRICS.items()):
-        a_acf, a_blk = axes[0, j], axes[1, j]
-        acf_by_g, blk_by_g, block_counts = {}, {}, []
-        for g, s in tr.groupby("safe_label"):
-            acfs, series, dts = [], [], []
-            for _, r in s.groupby("replicate"):
+        a_raw, a_acf, a_g = axes[0, j], axes[1, j], axes[2, j]
+        acf_by_g, g_by_g, raw_by_g, block_counts = {}, {}, {}, []
+
+        for gen, sub in tr.groupby("safe_label"):
+            acfs, series, dts, traces = [], [], [], []
+            for _, r in sub.groupby("replicate"):
                 r = r.sort_values("frame_index")
                 x = r[col].to_numpy(dtype=float)
                 if x.size < 40 or np.allclose(x, x[0]):
                     continue
                 d = float(r.total_ns.iloc[0]) / float(x.size)
-                # resample each series' ACF onto a shared lag grid in ns,
-                # because the frame rates differ between replicates
                 a = autocorrelation(x)
                 acfs.append(np.interp(LAG_GRID, np.arange(a.size) * d, a,
                                       left=np.nan, right=np.nan))
+                traces.append(np.interp(TIME_GRID, np.arange(x.size) * d, x,
+                                        left=np.nan, right=np.nan))
                 series.append(x)
                 dts.append(d)
-            if acfs:
-                acf_by_g[g] = np.nanmean(np.vstack(acfs), axis=0)
-            if series:
-                ratio, counts = [], []
-                base = np.mean([block_sem(x, 1) for x in series])
-                for b_ns in BLOCKS_NS:
-                    chunks = []
-                    for x, d in zip(series, dts):
-                        b = max(1, int(round(b_ns / d)))
-                        if x.size // b < 2:       # need two blocks to vary
-                            continue
-                        chunks.append(
-                            x[: (x.size // b) * b].reshape(-1, b).mean(axis=1))
-                    means = np.concatenate(chunks) if chunks else np.array([])
-                    counts.append(means.size)
-                    ratio.append(means.std(ddof=1) / np.sqrt(means.size) / base
-                                 if means.size >= MIN_BLOCKS and base else np.nan)
-                blk_by_g[g] = np.array(ratio)
-                block_counts.append(counts)
-        n_g = max(n_g, len(acf_by_g))
+            if not series:
+                continue
+            raw_by_g[gen] = np.nanmean(np.vstack(traces), axis=0)
+            acf_by_g[gen] = np.nanmean(np.vstack(acfs), axis=0)
 
-        lag = LAG_GRID
-        keep = np.ones(lag.size, dtype=bool)
+            base = np.mean([block_sem(x, 1) for x in series])
+            ratio, counts = [], []
+            for b_ns in BLOCKS_NS:
+                chunks = []
+                for x, d in zip(series, dts):
+                    b = max(1, int(round(b_ns / d)))
+                    if x.size // b < 2:
+                        continue
+                    chunks.append(
+                        x[: (x.size // b) * b].reshape(-1, b).mean(axis=1))
+                means = np.concatenate(chunks) if chunks else np.array([])
+                counts.append(means.size)
+                # statistical inefficiency g = (blocked SEM / naive SEM)^2
+                ratio.append((means.std(ddof=1) / np.sqrt(means.size) / base) ** 2
+                             if means.size >= MIN_BLOCKS and base else np.nan)
+            g_by_g[gen] = np.array(ratio)
+            block_counts.append(counts)
+
+        R = np.vstack(list(raw_by_g.values()))
+        for row in R:
+            a_raw.plot(TIME_GRID, row, color="#937860", lw=0.5, alpha=0.35)
+        a_raw.plot(TIME_GRID, np.nanmedian(R, axis=0), color="#C44E52", lw=1.4)
+        a_raw.set_title(label, loc="left", fontsize=8.5)
+        a_raw.set_xlabel("time (ns)")
+        if j == 0:
+            a_raw.set_ylabel("value (\u00c5)")
+
         M = np.vstack(list(acf_by_g.values()))
         for row in M:
-            a_acf.plot(lag[keep], row[keep], color="#4C72B0", lw=0.5, alpha=0.35)
-        a_acf.plot(lag[keep], np.median(M, axis=0)[keep], color="#C44E52", lw=1.4)
+            a_acf.plot(LAG_GRID, row, color="#4C72B0", lw=0.5, alpha=0.35)
+        a_acf.plot(LAG_GRID, np.nanmedian(M, axis=0), color="#C44E52", lw=1.4)
         a_acf.axhline(0, color="0.6", lw=0.6)
-        a_acf.set_title(label, loc="left", fontsize=8)
-        a_acf.set_xlabel("lag (ns)")
+        a_acf.set_xlabel("lag \u03c4 (ns)")
         if j == 0:
-            a_acf.set_ylabel("autocorrelation C(\u03c4)")
+            a_acf.set_ylabel("C(\u03c4)")
 
         bl = np.array(BLOCKS_NS)
         n_blocks = np.nanmedian(np.vstack(block_counts), axis=0)
-        B = np.vstack(list(blk_by_g.values()))
+        B = np.vstack(list(g_by_g.values()))
         for row in B:
-            a_blk.plot(bl, row, color="#55A868", lw=0.5, alpha=0.3)
+            a_g.plot(bl, row, color="#55A868", lw=0.5, alpha=0.3)
         med = np.nanmedian(B, axis=0)
-        a_blk.plot(bl, med, color="#C44E52", lw=1.4)
-        # 95% interval on the blocked SEM. The blocked error is an estimated
-        # standard deviation, so (M-1)s^2/sigma^2 follows chi-square with M-1
-        # degrees of freedom and the interval is asymmetric: at M = 9 it runs
-        # from 0.68 to 1.92 times the estimate, and at M = 3 from 0.52 to 6.3.
-        # A symmetric +/- 1/sqrt(2(M-1)) band understates the upper tail badly
-        # at the long-block end, which is exactly where it matters.
+        a_g.plot(bl, med, color="#C44E52", lw=1.4)
         from scipy import stats as _st
-        m_arr = np.array(n_blocks, dtype=float)
-        lo = np.sqrt((m_arr - 1) / _st.chi2.ppf(0.975, m_arr - 1))
-        hi = np.sqrt((m_arr - 1) / _st.chi2.ppf(0.025, m_arr - 1))
-        a_blk.fill_between(bl, med * lo, med * hi,
-                           color="#C44E52", alpha=0.16, lw=0)
-        a_blk.axhline(1.0, color="0.6", lw=0.6, ls=":")
-        a_blk.set_xlabel("block length (ns)")
+        m_arr = np.asarray(n_blocks, dtype=float)
+        # g is the square of a ratio of standard deviations, so the chi-square
+        # limits on the standard deviation are squared too
+        lo = (m_arr - 1) / _st.chi2.ppf(0.975, m_arr - 1)
+        hi = (m_arr - 1) / _st.chi2.ppf(0.025, m_arr - 1)
+        a_g.fill_between(bl, med * lo, med * hi, color="#C44E52",
+                         alpha=0.16, lw=0)
+        a_g.axhline(1.0, color="0.6", lw=0.6, ls=":")
+        a_g.set_xlabel("block length (ns)")
         if j == 0:
-            a_blk.set_ylabel("blocked / naive SEM")
-        a_blk.set_ylim(0.8, max(4.4, np.nanmax(B) * 1.05))
-        # say how many blocks each end of the curve rests on
-        a_blk.text(bl[0], a_blk.get_ylim()[1] * 0.97, f"{int(n_blocks[0])} blocks",
-                   fontsize=5.5, color="0.4", va="top")
-        a_blk.text(bl[-1], a_blk.get_ylim()[1] * 0.97,
-                   f"{int(n_blocks[-1])} blocks", fontsize=5.5, color="0.4",
-                   va="top", ha="right")
+            a_g.set_ylabel("statistical inefficiency $g$")
+        a_g.text(bl[-1], a_g.get_ylim()[1] * 0.96, f"{int(n_blocks[-1])} blocks",
+                 fontsize=5.5, color="0.4", va="top", ha="right")
 
-    axes[0, 0].plot([], [], color="#4C72B0", lw=0.8, alpha=0.6, label="genotype")
+    axes[0, 0].plot([], [], color="0.5", lw=0.8, alpha=0.6, label="genotype")
     axes[0, 0].plot([], [], color="#C44E52", lw=1.4, label="median")
-    axes[0, 0].legend(frameon=False, fontsize=6.5, loc="upper right")
+    axes[0, 0].legend(frameon=False, fontsize=6.5, loc="best")
+    for ax, tag in zip(axes.ravel(), "ABCDEFGHI"):
+        ax.text(-0.17, 1.04, tag, transform=ax.transAxes,
+                fontsize=9, fontweight="bold", va="bottom")
     fig.tight_layout()
-    fig.savefig(out / "supplementary_figure_3_convergence.png")
+    fig.savefig(out / "supplementary_figure_1_convergence.png")
     plt.close(fig)
-    print(f"  Figure 3: one line per genotype ({n_g}), "
-          f"{len(PANEL_METRICS)} observables")
+    print(f"  Figure 1: 9 panels, {len(raw_by_g)} genotypes")
 
 
 def figure4(plt, out: Path) -> None:
@@ -306,7 +309,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     plt = _style()
-    figure3(plt, args.output_dir)
+    figure1(plt, args.output_dir)
     figure4(plt, args.output_dir)
     figure5(plt, args.output_dir)
     print(f"wrote to {args.output_dir.relative_to(ROOT)}")
