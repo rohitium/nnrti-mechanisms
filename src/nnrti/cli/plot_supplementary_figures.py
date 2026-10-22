@@ -110,7 +110,7 @@ def figure3(plt, out: Path) -> None:
     n_g = 0
     for j, (col, label) in enumerate(PANEL_METRICS.items()):
         a_acf, a_blk = axes[0, j], axes[1, j]
-        acf_by_g, blk_by_g = {}, {}
+        acf_by_g, blk_by_g, block_counts = {}, {}, []
         for g, s in tr.groupby("safe_label"):
             acfs, series = [], []
             for _, r in s.groupby("replicate"):
@@ -133,7 +133,7 @@ def figure3(plt, out: Path) -> None:
                     ratio.append(means.std(ddof=1) / np.sqrt(means.size) / base
                                  if means.size >= 2 and base else np.nan)
                 blk_by_g[g] = np.array(ratio)
-                n_blocks = counts
+                block_counts.append(counts)
         n_g = max(n_g, len(acf_by_g))
 
         L = min(len(v) for v in acf_by_g.values())
@@ -150,27 +150,34 @@ def figure3(plt, out: Path) -> None:
             a_acf.set_ylabel("autocorrelation C(\u03c4)")
 
         bl = np.array(BLOCKS) * dt
+        n_blocks = np.median(np.vstack(block_counts), axis=0)
         B = np.vstack(list(blk_by_g.values()))
         for row in B:
             a_blk.plot(bl, row, color="#55A868", lw=0.5, alpha=0.3)
         med = np.median(B, axis=0)
         a_blk.plot(bl, med, color="#C44E52", lw=1.4)
-        # The estimated standard deviation of M blocks carries a relative
-        # uncertainty of about 1/sqrt(2(M-1)). Drawing it keeps the long-block
-        # end of the curve honest rather than simply truncating it.
-        rel = np.array([1.0 / np.sqrt(2 * max(m - 1, 1)) for m in n_blocks])
-        a_blk.fill_between(bl, med * (1 - rel), med * (1 + rel),
-                           color="#C44E52", alpha=0.18, lw=0)
+        # 95% interval on the blocked SEM. The blocked error is an estimated
+        # standard deviation, so (M-1)s^2/sigma^2 follows chi-square with M-1
+        # degrees of freedom and the interval is asymmetric: at M = 9 it runs
+        # from 0.68 to 1.92 times the estimate, and at M = 3 from 0.52 to 6.3.
+        # A symmetric +/- 1/sqrt(2(M-1)) band understates the upper tail badly
+        # at the long-block end, which is exactly where it matters.
+        from scipy import stats as _st
+        m_arr = np.array(n_blocks, dtype=float)
+        lo = np.sqrt((m_arr - 1) / _st.chi2.ppf(0.975, m_arr - 1))
+        hi = np.sqrt((m_arr - 1) / _st.chi2.ppf(0.025, m_arr - 1))
+        a_blk.fill_between(bl, med * lo, med * hi,
+                           color="#C44E52", alpha=0.16, lw=0)
         a_blk.axhline(1.0, color="0.6", lw=0.6, ls=":")
         a_blk.set_xlabel("block length (ns)")
         if j == 0:
             a_blk.set_ylabel("blocked / naive SEM")
         a_blk.set_ylim(0.8, max(4.4, np.nanmax(B) * 1.05))
         # say how many blocks each end of the curve rests on
-        a_blk.text(bl[0], a_blk.get_ylim()[1] * 0.97, f"{n_blocks[0]} blocks",
+        a_blk.text(bl[0], a_blk.get_ylim()[1] * 0.97, f"{int(n_blocks[0])} blocks",
                    fontsize=5.5, color="0.4", va="top")
         a_blk.text(bl[-1], a_blk.get_ylim()[1] * 0.97,
-                   f"{n_blocks[-1]} blocks", fontsize=5.5, color="0.4",
+                   f"{int(n_blocks[-1])} blocks", fontsize=5.5, color="0.4",
                    va="top", ha="right")
 
     axes[0, 0].plot([], [], color="#4C72B0", lw=0.8, alpha=0.6, label="genotype")
