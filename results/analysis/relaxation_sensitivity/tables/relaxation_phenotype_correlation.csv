@@ -1,9 +1,9 @@
 component,protocol,n,R2_vs_log10_fold,p,spearman
-ddE_Total,h_relax,11,0.054,0.49,-0.35
+ddE_Total,h_relax,13,0.044,0.493,-0.32
 ddE_Total,full_min,13,0.126,0.234,0.45
-ddE_vdW,h_relax,11,0.072,0.425,-0.34
+ddE_vdW,h_relax,13,0.063,0.409,-0.27
 ddE_vdW,full_min,13,0.015,0.69,0.01
-ddE_elec,h_relax,11,0.058,0.474,0.18
+ddE_elec,h_relax,13,0.056,0.435,0.36
 ddE_elec,full_min,13,0.136,0.216,0.63
-ddE_GB,h_relax,11,0.0,0.95,0.16
+ddE_GB,h_relax,13,0.007,0.789,0.21
 ddE_GB,full_min,13,0.006,0.794,0.08

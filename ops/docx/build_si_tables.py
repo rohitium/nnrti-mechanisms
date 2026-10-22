@@ -84,11 +84,46 @@ def relaxation() -> pd.DataFrame:
     return pd.DataFrame(rows[1:], columns=rows[0])
 
 
+def relaxation_panel() -> pd.DataFrame:
+    """Replacement Table 5: both relaxed protocols across the whole panel."""
+    d = pd.read_csv(ROOT / "results/analysis/relaxation_sensitivity/tables/"
+                    "relaxation_panel_long.csv")
+    order = ["ddE_Total", "ddE_vdW", "ddE_elec", "ddE_GB"]
+    d["component"] = pd.Categorical(d.component, order, ordered=True)
+    d = d.sort_values(["genotype", "component"])
+    rows = [["Genotype", "Component", "H-only relaxation", "Full minimization"]]
+    for _, r in d.iterrows():
+        rows.append([r.genotype, str(r.component).replace("ddE_", "\u0394\u0394E "),
+                     f"{r.h_relax_mean:.2f} \u00b1 {r.h_relax_sem:.2f}",
+                     f"{r.full_min_mean:.2f} \u00b1 {r.full_min_sem:.2f}"])
+    return pd.DataFrame(rows[1:], columns=rows[0])
+
+
+def relaxation_correlations() -> pd.DataFrame:
+    """Agreement between protocols, and each protocol against phenotype."""
+    a = pd.read_csv(ROOT / "results/analysis/relaxation_sensitivity/tables/"
+                    "relaxation_protocol_agreement.csv")
+    ph = pd.read_csv(ROOT / "results/analysis/relaxation_sensitivity/tables/"
+                     "relaxation_phenotype_correlation.csv")
+    rows = [["Component", "Protocols agree (Spearman)", "Sign agreement",
+             "vs phenotype (H-only)", "vs phenotype (full min)"]]
+    for _, r in a.iterrows():
+        h = ph[(ph.component == r.component) & (ph.protocol == "h_relax")].iloc[0]
+        f = ph[(ph.component == r.component) & (ph.protocol == "full_min")].iloc[0]
+        rows.append([str(r.component).replace("ddE_", "\u0394\u0394E "),
+                     f"{r.protocol_spearman:.2f} (p = {r.protocol_p:.3f})",
+                     r.sign_agreement,
+                     f"{h.spearman:+.2f}", f"{f.spearman:+.2f}"])
+    return pd.DataFrame(rows[1:], columns=rows[0])
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     for name, fn in (("charge_model", charge_model),
                      ("apo_pocket", apo_pocket),
-                     ("relaxation", relaxation)):
+                     ("relaxation", relaxation),
+                     ("relaxation_panel", relaxation_panel),
+                     ("relaxation_correlations", relaxation_correlations)):
         df = fn()
         p = OUT / f"SI-{name}.csv"
         df.to_csv(p, index=False)
