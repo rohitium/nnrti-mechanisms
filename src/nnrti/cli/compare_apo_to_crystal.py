@@ -69,9 +69,18 @@ def main(argv: list[str] | None = None) -> int:
     for pdb_id, state, fname in STRUCTURES:
         p = args.structure_dir / fname
         if not p.exists():
-            print(f"missing {p}; fetch with "
-                  f"curl -L -o {p} https://files.rcsb.org/download/{fname}")
-            continue
+            # *.pdb is gitignored, so these are fetched on demand rather than
+            # committed. MDAnalysis cannot read the mmCIF form, so the PDB
+            # format is the one that has to be present.
+            import urllib.request
+            url = f"https://files.rcsb.org/download/{fname}"
+            print(f"fetching {pdb_id} from RCSB")
+            p.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                urllib.request.urlretrieve(url, p)
+            except Exception as exc:
+                print(f"  could not fetch {url}: {exc}")
+                continue
         v, n, bad = measure(p)
         if bad:
             raise SystemExit(f"{pdb_id}: residue numbering mismatch {bad}")
