@@ -22,6 +22,11 @@ ROOT = Path(__file__).resolve().parents[3]
 RES = ROOT / "results/analysis"
 #: unliganded crystal structures, for the reference line in Figure 5
 APO_CRYSTAL = (101.7, 103.8)
+#: Block lengths in frames. Capped so that every point still averages at
+#: least MIN_BLOCKS blocks: with 180 frames a block of 45 leaves only four,
+#: and the standard error of four numbers is too noisy to read a plateau off.
+MIN_BLOCKS = 10
+BLOCKS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 18]
 
 METRIC_LABEL = {
     "chl_ring_burial": "chlorocyanophenyl burial",
@@ -46,43 +51,95 @@ def _style():
     return plt
 
 
+#: per-frame observables worth a convergence diagnostic, with display labels
+TRACE_METRICS = {
+    "ca_rmsd_angstrom": "C\u03b1 RMSD",
+    "dor_rmsd_angstrom": "DOR RMSD",
+    "com_distance_angstrom": "DOR\u2013RT COM distance",
+    "ser105_min_angstrom": "DOR\u2013Ser105 distance",
+}
+
+
+def autocorrelation(x: np.ndarray) -> np.ndarray:
+    """Normalised autocorrelation function, C(0) = 1."""
+    x = np.asarray(x, dtype=float)
+    x = x - x.mean()
+    if np.allclose(x, 0):
+        return np.full(x.size, np.nan)
+    n = x.size
+    # FFT route; the series are short but this keeps it exact and quick
+    f = np.fft.rfft(x, 2 * n)
+    acf = np.fft.irfft(f * np.conjugate(f), 2 * n)[:n].real
+    return acf / acf[0]
+
+
+def block_sem(x: np.ndarray, block: int) -> float:
+    """Standard error from the means of non-overlapping blocks of `block`.
+
+    Flyvbjerg and Petersen: for correlated data this grows with block size and
+    plateaus once a block is longer than the correlation time. The plateau is
+    the honest standard error; the naive value at block = 1 is an
+    underestimate by the square root of the statistical inefficiency.
+    """
+    x = np.asarray(x, dtype=float)
+    m = x.size // block
+    if m < 2:
+        return np.nan
+    means = x[: m * block].reshape(m, block).mean(axis=1)
+    return float(means.std(ddof=1) / np.sqrt(m))
+
+
 def figure3(plt, out: Path) -> None:
-    blocks = pd.read_csv(RES / "md_convergence/tables/block_averages.csv")
-    summ = pd.read_csv(RES / "md_convergence/tables/autocorrelation_summary.csv")
+    tr = pd.read_csv(RES / "md_convergence/tables/frame_traces.csv")
+    dt = float(tr.total_ns.median() / tr.n_frames.median())      # ns per frame
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.2, 2.9),
-                                   gridspec_kw={"width_ratios": [1.25, 1]})
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.2, 3.0))
+    colours = ["#4C72B0", "#DD8452", "#55A868", "#C44E52"]
 
-    # A: block averages of Ca RMSD, one line per genotype, mean over replicates
-    g = (blocks.groupby(["mutation", "block_id"])
-         .agg(t=("t_end_ns", "mean"), v=("ca_rmsd_angstrom_mean", "mean"))
-         .reset_index())
-    for mut, s in g.groupby("mutation"):
-        ax1.plot(s.t, s.v, lw=0.8, alpha=0.55, color="#4C72B0")
-    pooled = g.groupby("block_id").agg(t=("t", "mean"), v=("v", "mean"))
-    ax1.plot(pooled.t, pooled.v, lw=2.0, color="#C44E52", label="panel mean")
-    ax1.set_xlabel("block end time (ns)")
-    ax1.set_ylabel("Cα RMSD (Å)")
-    ax1.set_title("A  Block averages, 20 genotypes", loc="left")
-    ax1.legend(frameon=False, loc="lower right")
+    n_series = 0
+    for (col, label), c in zip(TRACE_METRICS.items(), colours):
+        acfs, ratios = [], []
+        for _, s in tr.groupby(["safe_label", "replicate"]):
+            x = s.sort_values("frame_index")[col].to_numpy(dtype=float)
+            if x.size < 40 or np.allclose(x, x[0]):
+                continue
+            acfs.append(autocorrelation(x))
+            base = block_sem(x, 1)
+            usable = [b for b in BLOCKS if x.size // b >= MIN_BLOCKS]
+            if base and np.isfinite(base) and len(usable) == len(BLOCKS):
+                ratios.append([block_sem(x, b) / base for b in BLOCKS])
+        if not acfs:
+            continue
+        n_series = max(n_series, len(acfs))
+        L = min(len(a) for a in acfs)
+        A = np.vstack([a[:L] for a in acfs])
+        lag = np.arange(L) * dt
+        keep = lag <= 30
+        ax1.plot(lag[keep], np.nanmean(A, axis=0)[keep], color=c, lw=1.3, label=label)
+        ax1.fill_between(lag[keep],
+                         np.nanpercentile(A, 25, axis=0)[keep],
+                         np.nanpercentile(A, 75, axis=0)[keep],
+                         color=c, alpha=0.15, lw=0)
 
-    # B: autocorrelation time and effective sample size per observable
-    s = summ.sort_values("tau_ns_median")
-    y = np.arange(len(s))
-    ax2.barh(y, s.tau_ns_median, color="#4C72B0", height=0.6)
-    ax2.set_yticks(y)
-    ax2.set_yticklabels([METRIC_LABEL.get(m, m) for m in s.metric])
-    ax2.set_xlabel("integrated autocorrelation time (ns)")
-    ax2.set_title("B  Autocorrelation and sampling", loc="left")
-    for i, (t, e) in enumerate(zip(s.tau_ns_median, s.ess_median)):
-        ax2.text(t + 0.06, i, f"ESS {e:.0f}", va="center", fontsize=6.5)
-    ax2.set_xlim(0, s.tau_ns_median.max() * 1.45)
+        R = np.vstack([r for r in ratios if np.all(np.isfinite(r))])
+        ax2.plot(np.array(BLOCKS) * dt, R.mean(axis=0), color=c, lw=1.3,
+                 marker="o", ms=2.5, label=label)
+
+    ax1.axhline(0, color="0.6", lw=0.6)
+    ax1.set_xlabel("lag (ns)")
+    ax1.set_ylabel("autocorrelation C(\u03c4)")
+    ax1.set_title(f"A  Autocorrelation, {n_series} replicates", loc="left")
+    ax1.legend(frameon=False, fontsize=6.5)
+
+    ax2.axhline(1.0, color="0.6", lw=0.6, ls=":")
+    ax2.set_xlabel("block length (ns)")
+    ax2.set_ylabel("blocked SEM / naive SEM")
+    ax2.set_title("B  Block averaging", loc="left")
 
     fig.tight_layout()
     fig.savefig(out / "supplementary_figure_3_convergence.png")
     plt.close(fig)
-    print(f"  Figure 3: {len(g.mutation.unique())} genotypes, "
-          f"{len(s)} observables")
+    print(f"  Figure 3: {n_series} replicates, {len(TRACE_METRICS)} observables")
 
 
 def figure4(plt, out: Path) -> None:
