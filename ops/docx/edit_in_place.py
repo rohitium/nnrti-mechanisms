@@ -71,7 +71,12 @@ def main(argv: list[str] | None = None) -> int:
             z.extractall(work)
         x = (work / DOC).read_text(encoding="utf-8")
 
-        paras = re.findall(r"<w:p\b.*?</w:p>", x, re.S)
+        # <w:p .../> is an empty paragraph and is complete on its own. Without
+        # the first alternative, a non-greedy match starting at one runs on to
+        # the next </w:p> and returns two paragraphs glued together; editing
+        # that emits an orphan run and an unmatched </w:p>.
+        PARA_RE = r"<w:p\b[^>]*/>|<w:p\b[^>]*>.*?</w:p>"
+        paras = re.findall(PARA_RE, x, re.S)
         hits = [p for p in paras if args.match in _para_text(p)]
         if not hits:
             print(f"no paragraph contains {args.match!r}", file=sys.stderr)
@@ -84,8 +89,14 @@ def main(argv: list[str] | None = None) -> int:
             print("target paragraph is not unique in the document", file=sys.stderr)
             return 2
 
-        ppr = re.match(r"<w:p\b[^>]*>(<w:pPr>.*?</w:pPr>)?", target, re.S)
-        open_tag = target[:ppr.end()]
+        # Word writes an empty paragraph as a self-closing <w:p .../>. Reusing
+        # that as an opening tag emits an orphan run and an unmatched </w:p>,
+        # which is a mismatched-tag error Word will not open.
+        if target.endswith("/>"):
+            open_tag = "<w:p>"          # empty source paragraph; start a fresh one
+        else:
+            ppr = re.match(r"<w:p\b[^>]*>(<w:pPr>.*?</w:pPr>)?", target, re.S)
+            open_tag = target[:ppr.end()]
         if args.op == "replace-paragraph":
             new = open_tag + _runs(args.text, color, args.bold) + "</w:p>"
         elif args.op == "insert-after":
