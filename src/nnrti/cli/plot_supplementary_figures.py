@@ -179,7 +179,7 @@ def _series_stats(tr, col):
         if not series:
             continue
         A = np.vstack(acfs)
-        se = []
+        se, counts = [], []
         for b_ns in BLOCKS_NS:
             chunks = []
             for x, d in zip(series, dts):
@@ -188,11 +188,29 @@ def _series_stats(tr, col):
                     continue
                 chunks.append(x[: (x.size // b) * b].reshape(-1, b).mean(axis=1))
             m = np.concatenate(chunks) if chunks else np.array([])
+            counts.append(m.size)
             se.append(m.std(ddof=1) / np.sqrt(m.size)
                       if m.size >= MIN_BLOCKS else np.nan)
         out[gen] = (np.nanmean(A, 0),
-                    np.nanstd(A, 0, ddof=1) / np.sqrt(A.shape[0]), np.array(se))
+                    np.nanstd(A, 0, ddof=1) / np.sqrt(A.shape[0]),
+                    np.array(se), np.array(counts, dtype=float))
     return out
+
+
+def chi2_band(se: np.ndarray, counts: np.ndarray) -> tuple:
+    """95% interval on a blocked standard error.
+
+    SEM(n) is an estimated standard deviation divided by sqrt(M), so
+    (M-1)s^2/sigma^2 follows chi-square on M-1 degrees of freedom and the
+    interval is asymmetric. At M = 6 it runs from 0.62 to 2.45 times the
+    estimate, so the long-block end of the curve is far less determined than
+    the line alone suggests.
+    """
+    from scipy import stats as _st
+    m = np.clip(counts, 2, None)
+    lo = se * np.sqrt((m - 1) / _st.chi2.ppf(0.975, m - 1))
+    hi = se * np.sqrt((m - 1) / _st.chi2.ppf(0.025, m - 1))
+    return lo, hi
 
 
 def _render_panel(plt, path, kind, stats, mutants, colour, title, ylabel):
@@ -202,21 +220,27 @@ def _render_panel(plt, path, kind, stats, mutants, colour, title, ylabel):
     for gen in mutants:
         if gen not in stats:
             continue
-        mean, sem, se = stats[gen]
+        mean, sem, se, cnt = stats[gen]
         c = colour(gen)
         if kind == "acf":
             ax.fill_between(x, mean - sem, mean + sem, color=c, alpha=0.10,
                             lw=0, zorder=2)
             ax.plot(x, mean, color=c, lw=1.4, zorder=3)
         else:
+            # The chi-square band is drawn for wild type only. Nineteen
+            # overlapping bands cover the panel and force the y axis from 0.35
+            # to 0.9, hiding the curves they are meant to qualify; the spread
+            # between genotypes is already visible in the lines themselves.
             ax.plot(x, se, color=c, lw=1.4, marker="o", ms=4, zorder=3)
     if "WT" in stats:
-        mean, sem, se = stats["WT"]
+        mean, sem, se, cnt = stats["WT"]
         if kind == "acf":
             ax.fill_between(x, mean - sem, mean + sem, color=WT_C, alpha=0.18,
                             lw=0, zorder=4)
             ax.plot(x, mean, color=WT_C, lw=2.6, zorder=5, label="WT")
         else:
+            lo, hi = chi2_band(se, cnt)
+            ax.fill_between(x, lo, hi, color=WT_C, alpha=0.18, lw=0, zorder=4)
             ax.plot(x, se, color=WT_C, lw=2.6, marker="o", ms=5, zorder=5,
                     label="WT")
     if kind == "acf":
@@ -232,6 +256,9 @@ def _render_panel(plt, path, kind, stats, mutants, colour, title, ylabel):
     ax.set_axisbelow(True)
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
+    if kind == "se":
+        finite = np.concatenate([v[2][np.isfinite(v[2])] for v in stats.values()])
+        ax.set_ylim(0, finite.max() * 1.12)
     ax.legend(fontsize=PANEL_LEGEND_FS, frameon=False, loc="best")
     fig.tight_layout()
     fig.savefig(path, dpi=300)
