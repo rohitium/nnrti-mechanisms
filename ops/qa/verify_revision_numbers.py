@@ -104,8 +104,19 @@ def main() -> int:
 
     supp = doc_text(ROOT / "revisions/Supplementary-Text-Revision-1.docx")
     resp = doc_text(ROOT / "revisions/Response-to-Reviewers.docx")
-    for s in ("2.78 \u2192 2.34", "up to 1.17", "0.23\u20130.29"):
-        checks.append((f"supplementary contains {s!r}", s in supp))
+    # The per-component charge-model numbers moved out of the Supplementary
+    # Text and into the Table 6 workbook when the SI was restructured, so they
+    # are checked at their source rather than as prose.
+    cmp_csv = ROOT / ("results/analysis/relaxation_sensitivity/tables/"
+                      "charge_model_comparison.csv")
+    cm = pd.read_csv(cmp_csv).set_index(["genotype", "component"])
+    checks += [
+        ("charge model: Y188L ddE_Total 2.34 under AM1-BCC",
+         abs(float(cm.loc[("Y188L", "ddE_Total"), "mean_am1bcc"]) - 2.337) < 0.005),
+        ("charge model: largest elec shift 1.17",
+         abs(cm.xs("ddE_elec", level="component").difference.abs().max()
+             - 1.167) < 0.005),
+    ]
     for s in ("2.78 to 2.34", "up to 1.17", "0.23 to 0.29"):
         checks.append((f"response contains {s!r}", s in resp))
     checks.append(("response no longer says a replicate is pending",
@@ -142,8 +153,18 @@ def main() -> int:
     ]
     checks.append(("methods no longer reports the sensitivity result",
                    "materially sensitive" not in ms))
-    checks.append(("supplementary has the apo note and table",
-                   "Supplementary Note 3" in supp and "Supplementary Table 7" in supp))
+    # After the restructure the notes are numbered sections and the tables are
+    # workbooks, so the check follows the content rather than the old labels.
+    checks += [
+        ("supplementary has the unliganded-pocket section",
+         "Conformation of the unliganded binding pocket" in supp),
+        ("supplementary still points at Table 7",
+         "Supplementary Table 7" in supp),
+        ("supplementary has a title page and contents",
+         "Supporting Information" in supp and "Contents" in supp),
+        ("supplementary reports the hydration bracket",
+         "70" in supp and "142" in supp),
+    ]
 
     # Literal citation numbers in added (red) text. A digit typed after a word
     # is not a Zotero field: it points at whatever reference held that number
