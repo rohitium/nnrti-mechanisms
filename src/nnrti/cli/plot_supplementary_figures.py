@@ -105,10 +105,12 @@ def block_sem(x: np.ndarray, block: int) -> float:
 
 #: the three observables shown per-genotype: ligand-internal, ligand-to-protein
 #: and protein-global. Ser105 distance behaves between the first two.
+#: Ca RMSD is deliberately absent. The reviewer asked about the sampled DOR
+#: pose, and a protein-global coordinate answers a different question while
+#: making the figure harder to read.
 PANEL_METRICS = {
     "dor_rmsd_angstrom": "DOR RMSD",
     "com_distance_angstrom": "DOR\u2013RT COM distance",
-    "ca_rmsd_angstrom": "C\u03b1 RMSD",
 }
 
 
@@ -120,127 +122,172 @@ def _fold_map(xlsx: Path) -> dict:
     return dict(zip(k, t["dor_fold"].astype(float)))
 
 
-def figure1(plt, out: Path) -> None:
-    """Traces, autocorrelation and blocked standard error, in the house style.
+#: The submitted manuscript's convergence panels, reused as-is. These are read
+#: and never rewritten: compositing the published PNGs is the only way to
+#: guarantee the top row is identical to what was submitted, rather than a
+#: re-plot that happens to look the same.
+SUBMITTED_PANELS = [
+    ("dor_rmsd_convergence.png", "DOR RMSD"),
+    ("com_distance_convergence.png", "DOR\u2013RT COM distance"),
+]
 
-    Colouring, the across-replicate band and the F227C exclusion follow
-    plot_convergence_panel, so this figure sits beside the others rather than
-    introducing a second visual language. F227C is dropped because its
-    replicate 2 profile is an alignment artefact and it is outside the
-    18-genotype panel.
-    """
+
+def _fold_map(xlsx: Path) -> dict:
+    t = pd.read_excel(xlsx, header=1)
+    t.columns = ["mutation", "rpv_fold", "dor_fold"]
+    t = t.dropna(subset=["mutation", "dor_fold"])
+    k = t["mutation"].astype(str).str.replace(r",\s*", "+", regex=True).str.strip()
+    return dict(zip(k, t["dor_fold"].astype(float)))
+
+
+#: Exactly the settings plot_convergence_panel used for the submitted panels.
+#: The new panels are rendered as their own 10 x 6 figures with these values
+#: and then composited, so every panel in the finished figure carries the same
+#: typeface at the same physical size. Matching by eye in a shared grid cannot
+#: do that, because the submitted panels are images and scale with the cell.
+PANEL_FIGSIZE = (10.0, 6.0)
+PANEL_LABEL_FS = 14
+PANEL_TICK_FS = 12
+PANEL_LEGEND_FS = 11
+PANEL_TITLE_FS = 15
+
+
+def _fold_map(xlsx: Path) -> dict:
+    t = pd.read_excel(xlsx, header=1)
+    t.columns = ["mutation", "rpv_fold", "dor_fold"]
+    t = t.dropna(subset=["mutation", "dor_fold"])
+    k = t["mutation"].astype(str).str.replace(r",\s*", "+", regex=True).str.strip()
+    return dict(zip(k, t["dor_fold"].astype(float)))
+
+
+def _series_stats(tr, col):
+    """Per-genotype autocorrelation and blocked standard error."""
+    out = {}
+    for gen, sub in tr.groupby("mutation"):
+        acfs, series, dts = [], [], []
+        for _, r in sub.groupby("replicate"):
+            r = r.sort_values("frame_index")
+            x = r[col].to_numpy(dtype=float)
+            if x.size < 40 or np.allclose(x, x[0]):
+                continue
+            d = float(r.total_ns.iloc[0]) / float(x.size)
+            a = autocorrelation(x)
+            acfs.append(np.interp(LAG_GRID, np.arange(a.size) * d, a,
+                                  left=np.nan, right=np.nan))
+            series.append(x)
+            dts.append(d)
+        if not series:
+            continue
+        A = np.vstack(acfs)
+        se = []
+        for b_ns in BLOCKS_NS:
+            chunks = []
+            for x, d in zip(series, dts):
+                b = max(1, int(round(b_ns / d)))
+                if x.size // b < 2:
+                    continue
+                chunks.append(x[: (x.size // b) * b].reshape(-1, b).mean(axis=1))
+            m = np.concatenate(chunks) if chunks else np.array([])
+            se.append(m.std(ddof=1) / np.sqrt(m.size)
+                      if m.size >= MIN_BLOCKS else np.nan)
+        out[gen] = (np.nanmean(A, 0),
+                    np.nanstd(A, 0, ddof=1) / np.sqrt(A.shape[0]), np.array(se))
+    return out
+
+
+def _render_panel(plt, path, kind, stats, mutants, colour, title, ylabel):
+    WT_C = "#B2182B"
+    fig, ax = plt.subplots(figsize=PANEL_FIGSIZE)
+    x = LAG_GRID if kind == "acf" else np.array(BLOCKS_NS)
+    for gen in mutants:
+        if gen not in stats:
+            continue
+        mean, sem, se = stats[gen]
+        c = colour(gen)
+        if kind == "acf":
+            ax.fill_between(x, mean - sem, mean + sem, color=c, alpha=0.10,
+                            lw=0, zorder=2)
+            ax.plot(x, mean, color=c, lw=1.4, zorder=3)
+        else:
+            ax.plot(x, se, color=c, lw=1.4, marker="o", ms=4, zorder=3)
+    if "WT" in stats:
+        mean, sem, se = stats["WT"]
+        if kind == "acf":
+            ax.fill_between(x, mean - sem, mean + sem, color=WT_C, alpha=0.18,
+                            lw=0, zorder=4)
+            ax.plot(x, mean, color=WT_C, lw=2.6, zorder=5, label="WT")
+        else:
+            ax.plot(x, se, color=WT_C, lw=2.6, marker="o", ms=5, zorder=5,
+                    label="WT")
+    if kind == "acf":
+        ax.axhline(0, color="0.5", lw=0.8)
+        ax.set_xlim(0, LAG_GRID[-1])
+        ax.set_xlabel("Time lag (ns)", fontsize=PANEL_LABEL_FS)
+    else:
+        ax.set_xlabel("Block length (ns)", fontsize=PANEL_LABEL_FS)
+    ax.set_ylabel(ylabel, fontsize=PANEL_LABEL_FS)
+    ax.set_title(title, fontsize=PANEL_TITLE_FS, pad=12)
+    ax.tick_params(labelsize=PANEL_TICK_FS)
+    ax.grid(alpha=0.25, lw=0.6)
+    ax.set_axisbelow(True)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.legend(fontsize=PANEL_LEGEND_FS, frameon=False, loc="best")
+    fig.tight_layout()
+    fig.savefig(path, dpi=300)
+    plt.close(fig)
+
+
+def figure1(plt, out: Path) -> None:
+    """Submitted traces on top; new panels rendered to match, then composited."""
     from matplotlib.colors import LogNorm
+    import matplotlib.image as mpimg
+
+    plot_dir = RES / "md_convergence/plots"
+    scratch = out / "_panels"
+    scratch.mkdir(parents=True, exist_ok=True)
 
     tr = pd.read_csv(RES / "md_convergence/tables/frame_traces.csv")
     tr = tr[tr.mutation != "F227C"]
     folds = _fold_map(ROOT / "data/DRM-susceptibilities.csv.xlsx")
-
     mutants = sorted((m for m in tr.mutation.unique() if m != "WT"),
                      key=lambda m: folds.get(m, np.nan))
     vals = np.array([folds[m] for m in mutants if m in folds], dtype=float)
     norm = LogNorm(vmin=vals.min(), vmax=vals.max())
     ramp = plt.get_cmap("Blues")
     colour = lambda m: (ramp(0.35 + 0.65 * norm(folds[m])) if m in folds else "0.6")
-    WT_C = "#B2182B"
 
-    fig, axes = plt.subplots(3, 3, figsize=(13.5, 11.0))
+    TITLES = {"dor_rmsd_angstrom": "Autocorrelation of doravirine internal RMSD",
+              "com_distance_angstrom": "Autocorrelation of the doravirine\u2013RT separation"}
+    SE_TITLES = {"dor_rmsd_angstrom": "Blocked standard error of doravirine internal RMSD",
+                 "com_distance_angstrom": "Blocked standard error of the doravirine\u2013RT separation"}
+    YL = {"dor_rmsd_angstrom": "DOR RMSD (\u00c5)",
+          "com_distance_angstrom": "DOR\u2013RT COM distance (\u00c5)"}
 
-    for j, (col, label) in enumerate(PANEL_METRICS.items()):
-        a_raw, a_acf, a_se = axes[0, j], axes[1, j], axes[2, j]
-        store = {}
-        for gen, sub in tr.groupby("mutation"):
-            traces, acfs, series, dts = [], [], [], []
-            for _, r in sub.groupby("replicate"):
-                r = r.sort_values("frame_index")
-                x = r[col].to_numpy(dtype=float)
-                if x.size < 40 or np.allclose(x, x[0]):
-                    continue
-                d = float(r.total_ns.iloc[0]) / float(x.size)
-                t = np.arange(x.size) * d
-                traces.append(np.interp(TIME_GRID, t, x, left=np.nan, right=np.nan))
-                a = autocorrelation(x)
-                acfs.append(np.interp(LAG_GRID, np.arange(a.size) * d, a,
-                                      left=np.nan, right=np.nan))
-                series.append(x)
-                dts.append(d)
-            if not series:
-                continue
-            T, A = np.vstack(traces), np.vstack(acfs)
-            n = T.shape[0]
-            se = []
-            for b_ns in BLOCKS_NS:
-                chunks = []
-                for x, d in zip(series, dts):
-                    b = max(1, int(round(b_ns / d)))
-                    if x.size // b < 2:
-                        continue
-                    chunks.append(x[: (x.size // b) * b].reshape(-1, b).mean(axis=1))
-                m = np.concatenate(chunks) if chunks else np.array([])
-                se.append(m.std(ddof=1) / np.sqrt(m.size)
-                          if m.size >= MIN_BLOCKS else np.nan)
-            store[gen] = (np.nanmean(T, 0), np.nanstd(T, 0, ddof=1) / np.sqrt(n),
-                          np.nanmean(A, 0), np.nanstd(A, 0, ddof=1) / np.sqrt(n),
-                          np.array(se))
+    paths = [plot_dir / SUBMITTED_PANELS[0][0], plot_dir / SUBMITTED_PANELS[1][0]]
+    for kind, titles in (("acf", TITLES), ("se", SE_TITLES)):
+        for col in PANEL_METRICS:
+            stats = _series_stats(tr, col)
+            q = scratch / f"{kind}_{col}.png"
+            _render_panel(plt, q, kind, stats, mutants, colour, titles[col],
+                          "Autocorrelation" if kind == "acf" else YL[col])
+            paths.append(q)
 
-        def draw(ax, x, idx, band_idx, lw, wt_lw):
-            for gen in mutants:
-                if gen not in store:
-                    continue
-                v = store[gen]
-                c = colour(gen)
-                ax.fill_between(x, v[idx] - v[band_idx], v[idx] + v[band_idx],
-                                color=c, alpha=0.10, lw=0, zorder=2)
-                ax.plot(x, v[idx], color=c, lw=lw, zorder=3)
-            if "WT" in store:
-                v = store["WT"]
-                ax.fill_between(x, v[idx] - v[band_idx], v[idx] + v[band_idx],
-                                color=WT_C, alpha=0.18, lw=0, zorder=4)
-                ax.plot(x, v[idx], color=WT_C, lw=wt_lw, zorder=5, label="WT")
-            ax.grid(alpha=0.25, lw=0.6)
-            ax.set_axisbelow(True)
-
-        draw(a_raw, TIME_GRID, 0, 1, 1.4, 2.6)
-        a_raw.set_title(label, fontsize=14, pad=10)
-        a_raw.set_xlabel("Time (ns)", fontsize=12)
-        a_raw.set_xlim(0, TIME_GRID[-1])
-        if j == 0:
-            a_raw.set_ylabel("Value (\u00c5)", fontsize=12)
-            a_raw.legend(fontsize=11, frameon=False, loc="upper left")
-
-        draw(a_acf, LAG_GRID, 2, 3, 1.4, 2.6)
-        a_acf.axhline(0, color="0.5", lw=0.8)
-        a_acf.set_xlabel("Lag \u03c4 (ns)", fontsize=12)
-        a_acf.set_xlim(0, LAG_GRID[-1])
-        if j == 0:
-            a_acf.set_ylabel("Autocorrelation C(\u03c4)", fontsize=12)
-
-        bl = np.array(BLOCKS_NS)
-        for gen in mutants:
-            if gen in store:
-                a_se.plot(bl, store[gen][4], color=colour(gen), lw=1.4,
-                          marker="o", ms=3, zorder=3)
-        if "WT" in store:
-            a_se.plot(bl, store["WT"][4], color=WT_C, lw=2.6, marker="o", ms=4,
-                      zorder=5, label="WT")
-        a_se.grid(alpha=0.25, lw=0.6)
-        a_se.set_axisbelow(True)
-        a_se.set_xlabel("Block length (ns)", fontsize=12)
-        if j == 0:
-            a_se.set_ylabel("Blocked standard error (\u00c5)", fontsize=12)
-
-        for ax in (a_raw, a_acf, a_se):
-            ax.tick_params(labelsize=11)
-            for side in ("top", "right"):
-                ax.spines[side].set_visible(False)
-
-    for ax, tag in zip(axes.ravel(), "ABCDEFGHI"):
-        ax.text(-0.14, 1.03, tag, transform=ax.transAxes,
-                fontsize=15, fontweight="bold", va="bottom")
-    fig.tight_layout()
-    fig.savefig(out / "supplementary_figure_1_convergence.png")
+    imgs = [mpimg.imread(str(q)) for q in paths]
+    ar = imgs[0].shape[0] / imgs[0].shape[1]
+    W = 6.0
+    fig, axes = plt.subplots(3, 2, figsize=(2 * W, 3 * W * ar))
+    for ax, im, tag in zip(axes.ravel(), imgs, "ABCDEF"):
+        ax.imshow(im)
+        ax.set_axis_off()
+        ax.text(-0.02, 1.0, tag, transform=ax.transAxes, fontsize=18,
+                fontweight="bold", va="top", ha="right")
+    fig.subplots_adjust(left=0.03, right=0.995, top=0.99, bottom=0.005,
+                        wspace=0.02, hspace=0.04)
+    fig.savefig(out / "supplementary_figure_1_convergence.png", dpi=300)
     plt.close(fig)
-    print(f"  Figure 1: {len(store)} genotypes, house style, "
-          f"blocked SE to {BLOCKS_NS[-1]:.0f} ns")
+    print(f"  Figure 1: 6 panels composited, all rendered at "
+          f"{PANEL_FIGSIZE[0]:.0f}x{PANEL_FIGSIZE[1]:.0f} in with matching fonts")
 
 
 def figure4(plt, out: Path) -> None:
