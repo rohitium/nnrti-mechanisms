@@ -1,0 +1,5 @@
+component,n,protocol_spearman,protocol_p,sign_agreement
+ddE_Total,16,0.2,0.458,8/16
+ddE_vdW,16,0.34,0.192,8/16
+ddE_elec,16,0.69,0.003,12/16
+ddE_GB,16,0.81,0.0,14/16
