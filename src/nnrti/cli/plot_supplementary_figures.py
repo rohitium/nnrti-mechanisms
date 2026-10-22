@@ -22,11 +22,15 @@ ROOT = Path(__file__).resolve().parents[3]
 RES = ROOT / "results/analysis"
 #: unliganded crystal structures, for the reference line in Figure 5
 APO_CRYSTAL = (101.7, 103.8)
-#: Block lengths in frames. Capped so that every point still averages at
-#: least MIN_BLOCKS blocks: with 180 frames a block of 45 leaves only four,
-#: and the standard error of four numbers is too noisy to read a plateau off.
-MIN_BLOCKS = 10
-BLOCKS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 18]
+#: Block lengths in frames. Block means are pooled across a genotype's three
+#: replicates, so a block of n frames yields 3 * (N // n) blocks rather than
+#: N // n, which is what makes the longer blocks usable at all: the
+#: autocorrelation of Ca RMSD runs to 20-30 ns, and a plateau can only appear
+#: once a block is longer than that. At 60 frames (~25 ns) this still leaves
+#: only 9 blocks, so the far end of the curve stays noisy by construction --
+#: the trajectories are not long enough for it to be otherwise.
+MIN_BLOCKS = 9
+BLOCKS = [1, 2, 3, 4, 6, 8, 12, 16, 20, 25, 30, 36, 45, 60]
 
 METRIC_LABEL = {
     "chl_ring_burial": "chlorocyanophenyl burial",
@@ -108,20 +112,28 @@ def figure3(plt, out: Path) -> None:
         a_acf, a_blk = axes[0, j], axes[1, j]
         acf_by_g, blk_by_g = {}, {}
         for g, s in tr.groupby("safe_label"):
-            acfs, ratios = [], []
+            acfs, series = [], []
             for _, r in s.groupby("replicate"):
                 x = r.sort_values("frame_index")[col].to_numpy(dtype=float)
                 if x.size < 40 or np.allclose(x, x[0]):
                     continue
                 acfs.append(autocorrelation(x))
-                base = block_sem(x, 1)
-                if base and np.isfinite(base) and x.size // max(BLOCKS) >= MIN_BLOCKS:
-                    ratios.append([block_sem(x, b) / base for b in BLOCKS])
+                series.append(x)
             if acfs:
                 L = min(len(a) for a in acfs)
                 acf_by_g[g] = np.vstack([a[:L] for a in acfs]).mean(axis=0)
-            if ratios:
-                blk_by_g[g] = np.vstack(ratios).mean(axis=0)
+            if series:
+                ratio, counts = [], []
+                base = np.mean([block_sem(x, 1) for x in series])
+                for b in BLOCKS:
+                    means = np.concatenate(
+                        [x[: (x.size // b) * b].reshape(-1, b).mean(axis=1)
+                         for x in series])
+                    counts.append(means.size)
+                    ratio.append(means.std(ddof=1) / np.sqrt(means.size) / base
+                                 if means.size >= 2 and base else np.nan)
+                blk_by_g[g] = np.array(ratio)
+                n_blocks = counts
         n_g = max(n_g, len(acf_by_g))
 
         L = min(len(v) for v in acf_by_g.values())
@@ -146,7 +158,12 @@ def figure3(plt, out: Path) -> None:
         a_blk.set_xlabel("block length (ns)")
         if j == 0:
             a_blk.set_ylabel("blocked / naive SEM")
-        a_blk.set_ylim(0.8, max(4.4, B.max() * 1.05))
+        a_blk.set_ylim(0.8, max(4.4, np.nanmax(B) * 1.05))
+        # say how many blocks each end of the curve rests on
+        a_blk.text(bl[0], a_blk.get_ylim()[1] * 0.97, f"{n_blocks[0]} blocks",
+                   fontsize=5.5, color="0.4", va="top")
+        a_blk.text(bl[-1], a_blk.get_ylim()[1] * 0.97, f"{n_blocks[-1]}",
+                   fontsize=5.5, color="0.4", va="top", ha="right")
 
     axes[0, 0].plot([], [], color="#4C72B0", lw=0.8, alpha=0.6, label="genotype")
     axes[0, 0].plot([], [], color="#C44E52", lw=1.4, label="median")
