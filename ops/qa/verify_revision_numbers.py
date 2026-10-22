@@ -122,8 +122,24 @@ def main() -> int:
                    "0.003 kcal/mol" in ms or "Supplementary Note 1" in ms))
     # The relaxation-protocol numbers moved out of Methods and into the SI in
     # revision, so they are checked where they now live, not where they were.
-    checks.append(("supplementary carries the relaxation SEM range",
-                   "0.13 to 0.54" in supp))
+    rel = pd.read_csv(ROOT / "results/analysis/relaxation_sensitivity/tables/"
+                      "relaxation_protocol_agreement.csv").set_index("component")
+    ph = pd.read_csv(ROOT / "results/analysis/relaxation_sensitivity/tables/"
+                     "relaxation_phenotype_correlation.csv")
+    tot = ph[ph.component == "ddE_Total"].set_index("protocol").spearman
+    checks += [
+        ("relaxation: protocols agree on elec and GB",
+         rel.loc["ddE_elec", "protocol_spearman"] >= 0.6
+         and rel.loc["ddE_GB", "protocol_spearman"] >= 0.6),
+        ("relaxation: protocols disagree on Total",
+         abs(rel.loc["ddE_Total", "protocol_spearman"]) < 0.3),
+        ("relaxation: phenotype correlations have opposite sign",
+         float(tot["full_min"]) > 0 > float(tot["h_relax"])),
+        ("supplementary quotes the protocol correlations",
+         "0.69" in supp and "0.81" in supp),
+        ("supplementary quotes the phenotype correlations",
+         "+0.45" in supp and "-0.32" in supp),
+    ]
     checks.append(("methods no longer reports the sensitivity result",
                    "materially sensitive" not in ms))
     checks.append(("supplementary has the apo note and table",
@@ -149,6 +165,8 @@ def main() -> int:
                 # G190E, K103N) end in digits without being citations
                 if re.search(r"(Ala|Arg|Asn|Asp|Cys|Gln|Glu|Gly|His|Ile|Leu|Lys|Met|"
                              r"Phe|Pro|Ser|Thr|Trp|Tyr|Val)$", word):
+                    continue
+                if re.search(r"log$", word, re.I):      # log10, log2
                     continue
                 if re.fullmatch(r"[A-Z]?", word) or re.search(r"[A-Z]$", word):
                     continue
