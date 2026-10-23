@@ -2,7 +2,10 @@
 # Emit one line per actionable change in the apo queue. Silence = steady state.
 SINCE="${SINCE:-$(date -u -v-1d +%Y-%m-%dT%H:%M:%S 2>/dev/null || date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%S)}"
 prev_sig=""
-seen_bad=""
+# Reported failures persist across re-arms, otherwise every restart of this
+# watcher re-reports every failure inside the SINCE window.
+SEEN_FILE="${SEEN_FILE:-$HOME/.apo_watch_seen}"
+touch "$SEEN_FILE"
 while true; do
   q=$(ssh -o BatchMode=yes -o ConnectTimeout=30 sherlock 'squeue -u $USER -h -o "%j|%T|%r"' 2>/dev/null)
   if [ -z "$q" ]; then
@@ -22,7 +25,9 @@ while true; do
   while IFS= read -r line; do
     [ -z "$line" ] && continue
     id=${line%%|*}
-    case "$seen_bad" in *"[$id]"*) ;; *) echo "JOB FAILED: $line"; seen_bad="$seen_bad[$id]";; esac
+    grep -qx "$id" "$SEEN_FILE" 2>/dev/null && continue
+    echo "JOB FAILED: $line"
+    echo "$id" >> "$SEEN_FILE"
   done <<< "$bad"
 
   sig="R=$run ELIG=$elig HELD=$held"
