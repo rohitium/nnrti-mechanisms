@@ -147,6 +147,28 @@ node-specific (those nodes ran other jobs fine); not genotype-specific
 (v106a rep01 fine, rep02/03 died); not the DCD append path. `0874a62` adds
 `-X faulthandler` and an `nvidia-smi` probe so the next one prints a traceback.
 
+### Barostat instability after checkpoint resume — open lead
+
+**Two of 28 replicates** have now failed this way, both on resumed runs, both
+with otherwise-normal potential energy (so not unfolding):
+
+- `k103n_m230l_01` — box swinging +/-8% (healthy is +/-0.1%), T 306-329 K,
+  rho down to 0.904 against a population of 1.016. Cancelled; see below.
+- `v106a_l234i_03` (job 49140469, died 2026-10-22T23:30) — the opposite
+  direction, box *contracted*:
+  `openmm.OpenMMException: The periodic box size has decreased to less than
+  twice the nonbonded cutoff.` Resubmitted as **49215618**.
+
+Both suggest the barostat/thermostat coupling is not being restored cleanly
+from the checkpoint. Worth checking how `MonteCarloBarostat` state is
+serialised and whether the resume path in `md_protocol.py` reattaches it.
+Unproven -- two incidents is a pattern worth testing, not a diagnosis.
+
+**Process note:** `v106a_l234i_03` sat dead for ~10 h because the failed jobs
+were found by grepping logs for `Segmentation fault`, and this one threw a
+Python exception instead. When resubmitting after a batch failure, enumerate
+from `sacct` state, not from log greps.
+
 ### `k103n_m230l_01` — cancelled, needs a decision
 
 Barostat went unstable on resume: box swinging ±8% (healthy is ±0.1%), T
