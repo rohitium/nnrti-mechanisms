@@ -268,7 +268,14 @@ python3 -c "import openmm, nnrti" || {
     exit 1
 }
 
-python3 -m nnrti.md.sherlock.run_md_job \
+# Four of 27 resumed jobs died with SIGSEGV 7-18 ms after loading the 10 ns
+# checkpoint, before a single integration step. The checkpoints are healthy
+# (no NaN, potential and kinetic energy matching replicates that run fine) and
+# the nodes went on to run other jobs, so record what the GPU looked like and
+# make Python print a traceback from the signal handler rather than dying mute.
+nvidia-smi --query-gpu=name,memory.total,memory.used,compute_mode --format=csv,noheader 2>&1 | sed "s/^/[gpu] /" || true
+
+python3 -X faulthandler -m nnrti.md.sherlock.run_md_job \
     --mutation "${MUTATION}" \
     --replicate ${REP_INT} \
     --task-id ${TASK_ID} \
