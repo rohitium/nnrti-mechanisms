@@ -208,6 +208,24 @@ is therefore **the barostat's first Monte Carlo volume move after a resume**,
 which collapses the box past `2 x cutoff` -- cleanly (exception) or not
 (segfault). That also explains `k103n_m230l_01`'s +/-8% swings.
 
+**This is now the dominant failure mode, not an edge case.** Because every job
+hits the 12 h wall at ~38% (see above), *every replicate must resume*, and
+resumes are dying:
+
+```
+died on resume:  apo_wt_02            00:00:28
+died on resume:  apo_v106a_l234i_03   00:00:35
+died on resume:  apo_k103n_m230l_02   00:00:26
+```
+
+`k103n_m230l_02` is the clearest case: it ran **12 h cleanly**, timed out, and
+segfaulted 26 s into its resume. `wt_02` has now failed on resume **twice**, so
+it is not simply a stochastic unlucky Monte Carlo move.
+
+Until this is fixed, the 100 ns target may be unreachable by resuming --
+raising the walltime to 48 h reduces the number of resumes but does not
+remove them for jobs that have already timed out.
+
 **Where to look:** whether `MonteCarloBarostat`'s adaptive volume-scale state
 survives `loadCheckpoint`, and whether re-creating the barostat with a fresh
 seed on every resume is safe. A plausible mitigation is to re-equilibrate
