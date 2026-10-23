@@ -147,6 +147,30 @@ node-specific (those nodes ran other jobs fine); not genotype-specific
 (v106a rep01 fine, rep02/03 died); not the DCD append path. `0874a62` adds
 `-X faulthandler` and an `nvidia-smi` probe so the next one prints a traceback.
 
+### Walltime: 12 h default vs 48 h available — change this
+
+`submit_apo_md_groupsrc.sh` defaults to `SHERLOCK_TIME=12:00:00`. The `gpu`
+partition allows **`2-00:00:00`** (`sinfo -p gpu -o "%l"`).
+
+At the observed 33-61 ns/day a replicate needs ~44 h for 100 ns, so **every job
+times out at roughly 38%** and needs ~4 allocations instead of 1. First
+confirmed case: `apo_k103n_m230l_02`, `TIMEOUT` at `12:00:33`, 38.1% of target,
+checkpoint intact and healthy (T 299.4, rho 1.0162). Resubmitted with
+`SHERLOCK_TIME=2-00:00:00` as **49219330**.
+
+This matters beyond wasted queue time: each resume is another exposure to the
+barostat instability below, which has already ruined 2 of 28 replicates.
+Fewer resumes, fewer chances to hit it.
+
+**Suggested (not done, needs the author's call):** resubmit the *queued and
+held* jobs at `2-00:00:00` — free, since they have not started — and let the
+running ones time out naturally rather than discarding their progress.
+
+**Watch out:** `MUTATION_ALLOWLIST` is per-genotype, not per-replicate.
+Resubmitting `k103n_m230l` pulled in rep_01, the replicate deliberately
+cancelled for barostat instability; it is now **held as 49219329** pending the
+checkpoint-vs-36.9 ns decision.
+
 ### Barostat instability after checkpoint resume — open lead
 
 **Two of 28 replicates** have now failed this way, both on resumed runs, both
