@@ -76,7 +76,10 @@ for (label, rep), (jobname, age) in sorted(running.items()):
     # Only a stall if the step has not moved AND enough wall time has elapsed.
     # Without the clock, re-arming the monitor right after a manual run compares
     # two samples seconds apart and every job looks stalled.
-    if key in prev and step <= prev[key]:
+    # A *decrease* means the replicate restarted from scratch (e.g. its
+    # checkpoint was moved aside) -- that is not a stall, so just rebaseline.
+    # Only an unchanged counter, for long enough, is a stall.
+    if key in prev and step == prev[key]:
         age = time.time() - prev.get(key + "_t", 0)
         if age > 240:
             alerts.append(f"ALERT {jobname}: STALLED, step {int(step)} unchanged "
