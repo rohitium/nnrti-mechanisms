@@ -98,15 +98,20 @@ try:
          f"xargs -r grep -lE 'Traceback|Segmentation fault|Particle coordinate is nan|"
          f"Energy is NaN|CUDA error|out of memory' 2>/dev/null | tail -8"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=90).stdout.split()
+    reported = set(prev.get("_logs_seen", []))
     for h in hits:
+        if h in reported:
+            continue
+        reported.add(h)
         sig = subprocess.run(["bash", "-lc",
               f"grep -hoE 'Traceback|Segmentation fault|Particle coordinate is nan|"
               f"Energy is NaN|CUDA error|out of memory' {h} | sort -u | tr '\\n' ' '"],
               stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=30).stdout.strip()
         alerts.append(f"ALERT log {Path(h).name}: {sig}")
 except Exception:
-    pass
+    reported = set(prev.get("_logs_seen", []))
 
+cur["_logs_seen"] = sorted(reported)
 STATE.write_text(json.dumps({**prev, **cur}))
 for a in alerts:
     print(a)
