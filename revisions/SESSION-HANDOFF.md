@@ -1,0 +1,275 @@
+# Session handoff — JCIM revision, 22–23 Oct 2026
+
+Written for the agent picking this up. Everything below is verified state, not
+plan. Where something is uncertain it says so.
+
+**Manuscript:** JCIM ci-2026-030865, *Molecular Simulation of Doravirine
+Resistance in HIV-1 Reverse Transcriptase*. Major revision, deadline
+**10-Nov-2026**. Corresponding author: Rohit Satija.
+
+---
+
+## 1. How the author wants to work — read this first
+
+These are standing instructions, repeated and emphatic. Violating them has
+caused real friction.
+
+- **The author writes the prose.** "I will do all the writing, can you just
+  help me write?" Supply numbers, technical content, and flag downstream
+  breakage. Do not produce paragraphs of manuscript text unprompted.
+- **Edit documents in place.** Never rebuild a `.docx` from scratch — the
+  author edits them in Word between automated passes. Ask before changing
+  anything they wrote.
+- **Dropbox holds only files the author has created and vetted.** Never write
+  there.
+- **Do not produce analysis nobody asked for.** This was said after a response
+  letter padded a non-answer with unrequested analysis. It was a fair hit.
+- **Answer the reviewer's actual question.** Same incident. Check the verbatim
+  comment before claiming something addresses it.
+- **Test Sherlock jobs on a dev node before submitting**, reproducing how the
+  job is really launched, environment inheritance included.
+- **Don't saturate the Sherlock quota.** See §5.
+
+---
+
+## 2. What was done this session (all committed)
+
+```
+0874a62  faulthandler + GPU probe on the apo segfault
+b4fe34a  Methods: FEP charge model is AM1-BCC, not Gasteiger   <- see §4
+1aa2fdd  Track apo submit script; fix heredoc that killed 55 jobs
+4200f2e  Supplementary Tables 6 and 7; cover page corrected
+80a7d6e  Supplementary Text restructured to the reference SI layout
+60043db  Supp Fig 3 showed the rejected block-average plot, not the RMSF
+715930f  Drop the standalone convergence figure (merged into Supp Fig 1)
+3a39d6f  Restore the DOR title the reviewer saw: "pose convergence"
+2fe8e8b  Chi-square interval on the blocked standard error
+```
+
+Uncommitted in the working tree, deliberately — the author was mid-edit:
+`revisions/Manuscript-Revision-1.docx`, `revisions/Response-to-Reviewers.docx`.
+Untracked: `results/md_runs/apo_collapse_solvated/` (22 GB, see §3).
+
+QA: `PYTHONPATH=src python ops/qa/verify_revision_numbers.py` → **45/45**.
+
+---
+
+## 3. Data pulled off Sherlock
+
+`results/md_runs/apo_collapse_solvated/` — 181 files, 22 GB, the 2 ns
+water-filled apo collapse runs (array 48943745, 60/60 COMPLETED). Verified:
+every file byte-size identical to the remote, all 60 coord arrays load as
+`(2001, 16070, 3) float32`. This existed **only on `$SCRATCH`** until now.
+
+---
+
+## 4. The charge-model finding (significant, and in our favour)
+
+The FEP ligand topology `results/analysis/fep_pmx/inputs/dor_openff/dor.top`
+— which `fep/config.py` points at as the production input — carries DOR
+charges that are **bit-identical to AM1-BCC** (RMS 0.00000) and differ from
+Gasteiger by RMS 0.165 e, max 0.390 e. `export_dor_itp.py` hands
+`Interchange.from_smirnoff` a molecule with no partial charges, so Sage 2.0.0
+assigns AM1-BCC afresh. Confirmed by two independent routes (AmberTools
+`assign_partial_charges` and SMIRNOFF), so not circular.
+
+**Consequence:** the alchemical ΔΔG_bind — the paper's principal claim —
+*sampled and scored* with AM1-BCC. Gasteiger is confined to the equilibrium MD
+and the MM/GBSA column. Methods said parameters were "carried over from the
+OpenFF 2.0.0 assignment", implying Gasteiger; corrected in `b4fe34a`.
+
+**The Response-to-Reviewers has not been updated for this** and currently makes
+three claims that need rework (Reviewer 2, comment 5):
+1. "We have done both of the things the reviewer offers as alternatives" —
+   under the author's reading, the first alternative was not done.
+2. The "ligand contribution largely cancels" argument is unnecessary and
+   implies the FEP used Gasteiger.
+3. "The only difference between the two sets of numbers is the ligand charge
+   model" — true of the numbers, but implies the charge model's *effect* was
+   measured when only the scoring channel was.
+
+**The author's critique, which is correct:** re-scoring existing frames changes
+the energy function at fixed configurations. It cannot see the ensemble
+change a different charge model would produce. Single-step reweighting can't
+rescue it either — with RMS Δq = 0.165 e over 40 atoms the phase-space overlap
+is too poor. Only new sampling answers it. The proposed test is short AM1-BCC
+MD for WT + two genotypes (9 GPU jobs), comparing pocket volume, DOR RMSD and
+key contacts against the Gasteiger ensembles. **Not yet started.**
+
+---
+
+## 5. Sherlock: live state
+
+Queue as of handoff — 16 running, 4 eligible, 8 held:
+
+```
+RUNNING   k103n_m230l_02  k103n_p225h_02  v106a_01  v106a_l234i_01/02
+          v106a_p225h_01/02/03  v106i_01  v106i_f227c_01/02/03
+          wt_01  wt_03  y181c_01  y181c_02
+
+ELIGIBLE  49145187 k103n_m230l_03   49152325 k103n_p225h_01
+          49152333 k103n_p225h_03   49145190 wt_02
+
+HELD      49145188/89 v106a_02/03   49140567/86 v106i_02/03
+          49140897 y181c_03         49140899/904/906 y188l_01/02/03
+```
+
+Held via `scontrol hold` to stop my jobs backfilling the author's entire GPU
+quota. Release with `scontrol release <ids>`. **Do not flood the queue** — at
+16 jobs the author could not get a 1-CPU, 8 GB dev allocation (`QOSMaxCpuPerUserLimit`,
+then `QOSMaxMemoryPerUser`).
+
+Progress: 17–50% of the 100 ns target at 33–61 ns/day. **This is a multi-day
+run.** The matched-window analysis is gated by the slowest replicate per
+genotype, and `wt_03` (34.6 ns/day) matters most since WT is the reference.
+
+All healthy: T 299–302 K, ρ 1.014–1.019.
+
+### The heredoc bug (fixed, `1aa2fdd`)
+
+55 of 55 apo jobs died in 6–20 s with `No module named openmm`.
+`submit_apo_md_groupsrc.sh` builds the job with an **unquoted** heredoc, so
+`${PYTHONPATH:-}` expanded on the *login node* (empty) and the job exported
+`.../src:` over the top of py-openmm's path — py-openmm ships openmm **on
+PYTHONPATH**, not in site-packages. The guard above that line passed because
+it ran before the export. Fixed with `\${PYTHONPATH:-}`, guard moved below the
+export. Verified on a dev GPU node.
+
+The script was **only in the `$SCRATCH` checkout** and is now tracked at
+`ops/slurm/cluster/submit_apo_md_groupsrc.sh`.
+
+### Unresolved: the resume segfault
+
+4 of 27 resumed jobs died with SIGSEGV 7–18 ms after loading the 10 ns
+checkpoint, before any integration step. Ruled out: checkpoints are healthy
+(no NaN, PE within 0.1% of working replicates, loads onto CUDA); not
+node-specific (those nodes ran other jobs fine); not genotype-specific
+(v106a rep01 fine, rep02/03 died); not the DCD append path. `0874a62` adds
+`-X faulthandler` and an `nvidia-smi` probe so the next one prints a traceback.
+
+### `k103n_m230l_01` — cancelled, needs a decision
+
+Barostat went unstable on resume: box swinging ±8% (healthy is ±0.1%), T
+306–329 K, ρ down to 0.904 against a population of 1.016. **PE was normal, so
+not unfolding.** Cancelled (job 49140426) to free a GPU; checkpoint preserved.
+Its *pre-restart* run had reached **36.9 ns in perfect condition** before the
+resume broke it — that earlier trajectory may be the better asset.
+**Decision needed:** restart from checkpoint, or recover the 36.9 ns run.
+
+### G190E apo — the important one, not yet rerun
+
+Reviewer 1 **comment 3** (not comment 2) asks directly:
+
+> G190E is particularly notable because it produces the largest pocket
+> expansion, yet no binding penalty. The authors should examine whether
+> mutation-induced changes occur in both apo and holo RT…
+
+Our response's central mechanistic claim rests on the G190E apo ensemble. All
+three G190E apo replicates **unfolded** (RT extended after 18.5, 23, 71 ns;
+bonds intact; author confirmed in PyMOL and said to drop and rerun). They have
+**not** been rerun and are not queued, because they report `status=ok,
+steps=50000000` and `SKIP_IF_AT_TARGET=1` filters them out. T and ρ look
+normal — those observables do not detect unfolding.
+
+Supp Table 7's G190E number (apo 42.0 Å³, opening 242.3 Å³) comes from the
+matched **10 ns** window, which precedes the unfolding, so it is defensible —
+but it is the weakest trajectory supporting the strongest claim.
+
+**Decision needed:** resubmit with `SKIP_IF_AT_TARGET=0`, and whether to move
+the existing trajectories aside first.
+
+---
+
+## 6. AM1-BCC re-scoring — killed, do not naively restart
+
+Ran ~8.5 h across two attempts (6 then 12 workers) and completed **zero** of 51
+replicates. Killed at the author's instruction. Checkpoint intact at **9 rows**
+(WT, V106A, Y188L) — nothing lost.
+
+Unreconciled: a standalone run of Y188L rep3 completed in **20.6 CPU-minutes**
+(`.checkpoint_mmgbsa_am1bcc_y188l_rep3.csv`, Oct 21 14:37). Each parallel
+worker spent **4.5 CPU-hours** without finishing one. Same protocol, same
+settings.
+
+Investigated and **ruled out**:
+- Not hung — stack sampling showed time inside `libOpenMM`/`libOpenMMCPU`.
+- Not scheduling contention — each worker held 95–99% of a full core.
+- Thread oversubscription was real (348 threads on 14 cores; numpy's macOS
+  Accelerate backend spawns ~29 per worker and **ignores
+  `OPENMM_CPU_THREADS`**, which OpenMM's CPU platform does honour). Pinning
+  `OMP/MKL/OPENBLAS/VECLIB/NUMEXPR/RAYON_NUM_THREADS=1` dropped it to 37, but
+  it climbed back to 180 once numerical work began, **and it made no
+  difference** — cores were never the bottleneck.
+
+**Untested lead:** memory bandwidth. MD force evaluation is bandwidth-bound,
+and 12 concurrent 16k-atom minimizations can saturate it while every core
+still reports ~98% busy. If so, *fewer* workers would finish sooner.
+
+**Second untested lead:** the first tasks dispatched include **G190E**, whose
+trajectories are unfolded — an extended protein would hit the 2000-iteration
+ceiling on all 300 minimizations per replicate.
+
+**Strategic note:** even if it ran, this only bounds the *scoring* channel
+(§4). The manuscript's claim is already correctly scoped ("for every genotype
+tested") and the Supplementary Text carries an honest
+`[PENDING: extended to all genotypes]` marker. The 9-job AM1-BCC MD comparison
+is the better use of compute.
+
+---
+
+## 7. Open decisions for the author
+
+1. **Reviewer 1, comment 2** — "test representative systems from independent
+   starting poses" is **not done**, and the response buries that admission
+   mid-paragraph. The author wanted to think about what "independent starting
+   poses" should mean before anything is run. **This conversation was
+   interrupted and never resumed — pick it up here.**
+2. Rework the Response for Reviewer 2 comment 5 around the AM1-BCC finding (§4).
+3. Resubmit G190E apo (§5).
+4. `k103n_m230l_01`: checkpoint or the 36.9 ns run (§5).
+5. Whether to run the 9-job AM1-BCC MD comparison (§4).
+6. Convert `submit_apo_md_*` to a Slurm array with `%N` throttling, matching
+   `ops/slurm/apo_collapse/submit_collapse_solvated.sh` (`--array=1-N%12`).
+   Server-side, no login-node polling loop. Needs the author's N.
+
+---
+
+## 8. Traps found this session
+
+- **`$SCRATCH` purge** has eaten Python sources, venv `bin/`, git objects, and
+  `submit_apo_md_groupsrc.sh`. Use `$GROUP_HOME/nnrti-repo`.
+- **Submitted figure artwork lives in the submitted `.docx`**, not in
+  `results/`. The PNGs were regenerated post-submission and a panel title
+  drifted from what the reviewer saw ("pose convergence" →
+  "internal conformational stability"). Extract `word/media/` instead.
+- **`SKIP_IF_AT_TARGET` cannot tell "finished" from "finished badly."** The one
+  genotype most needing a rerun is the one it filters out.
+- **Piping `module load` runs it in a subshell** — the environment change is
+  discarded and `module list` then shows nothing.
+- **openrsync** (macOS default) rejects `--info=progress2`. Use
+  `rsync -rltvz --partial`.
+- **Login-node `python3` is 3.6.8** — no `capture_output`, no `text=`.
+- **Health-check calibration:** thresholds set from textbook expectations were
+  useless. The population is T = 300.3 ± 0.3 and ρ = 1.016 ± 0.002; a window of
+  0.95–1.08 hid a 6% error for two hours. Box-volume swing (>3% between polls)
+  is the most sensitive barostat signal.
+
+## 9. Monitoring scripts (in the repo, usable from any session)
+
+- `ops/slurm/cluster/apo_health.py` — run **on Sherlock**. Reads each running
+  replicate's live `*_md_state.csv` and prints one line per unhealthy run;
+  silence means all healthy. Checks step advancing (needs >4 min elapsed),
+  T 295-307 K, rho 0.99-1.04, box swing >3% between polls, speed, and greps
+  logs for `Traceback|Segmentation fault|Particle coordinate is nan|CUDA error`.
+  Keeps per-replicate state in `~/.apo_health_state.json`. Needs py3.6 on the
+  login node, so no f-string-only features beyond 3.6.
+  Deploy: `scp ops/slurm/cluster/apo_health.py sherlock:~/`
+- `ops/slurm/cluster/watch_apo_runs.sh` — run **locally**. Polls every 5 min
+  and emits only actionable lines: terminal job failures, R/ELIG/HELD changes,
+  capacity free with held work, queue empty. Calls `apo_health.py` over ssh
+  each cycle. Override the failure-scan window with `SINCE=<ISO8601>`.
+
+Caveat worth knowing: the health checker was wrong three times before it was
+calibrated (too loose on density, too eager on startup, and a timing race when
+run manually just before arming it). Do not run it by hand immediately before
+starting the watcher — it writes the baseline the watcher compares against.
