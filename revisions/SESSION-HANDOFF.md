@@ -183,10 +183,39 @@ with otherwise-normal potential energy (so not unfolding):
   `openmm.OpenMMException: The periodic box size has decreased to less than
   twice the nonbonded cutoff.` Resubmitted as **49215618**.
 
-Both suggest the barostat/thermostat coupling is not being restored cleanly
-from the checkpoint. Worth checking how `MonteCarloBarostat` state is
-serialised and whether the resume path in `md_protocol.py` reattaches it.
-Unproven -- two incidents is a pattern worth testing, not a diagnosis.
+**Diagnosed 2026-10-23.** `-X faulthandler` (commit 0874a62) caught it. Both
+crashes die at the *same line* -- `md_protocol.py:445` `prod.step()` ->
+`integrator.step(10)` -- on the first integration step after resume, not in
+the DCD reporter:
+
+- `wt_02`  -> `Fatal Python error: Segmentation fault`
+- `v106a_l234i_03` -> `OpenMMException: The periodic box size has decreased to
+  less than twice the nonbonded cutoff`
+
+Loading the same checkpoints on a dev node **without** a barostat separates
+the two cases:
+
+```
+wt_02            box 12.625 nm   stepped 10 OK    <- fine without barostat
+v106a_l234i_03   getState() threw box-too-small   <- checkpoint truly corrupt
+wt_01            box 12.577 nm   stepped 10 OK
+```
+
+The apo `system.xml` contains **no barostat** (`barostat=[]`);
+`_create_production_simulation()` adds a `MonteCarloBarostat` at runtime
+before `loadCheckpoint`, so the System does match the checkpoint. The failure
+is therefore **the barostat's first Monte Carlo volume move after a resume**,
+which collapses the box past `2 x cutoff` -- cleanly (exception) or not
+(segfault). That also explains `k103n_m230l_01`'s +/-8% swings.
+
+**Where to look:** whether `MonteCarloBarostat`'s adaptive volume-scale state
+survives `loadCheckpoint`, and whether re-creating the barostat with a fresh
+seed on every resume is safe. A plausible mitigation is to re-equilibrate
+briefly under NVT after a resume before re-enabling the barostat.
+
+**Action taken:** `v106a_l234i_03`'s checkpoint was corrupt beyond recovery and
+was moved to `*.chk.corrupt-box-collapse` so it restarts from scratch (only
+1.1% lost).
 
 **Process note:** `v106a_l234i_03` sat dead for ~10 h because the failed jobs
 were found by grepping logs for `Segmentation fault`, and this one threw a
