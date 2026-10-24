@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -64,6 +66,46 @@ def _min_ligand_protein_distance_from_topology_positions(topology, positions, li
     prot = pos_nm[np.array(prot_idx, dtype=int)]
     d2 = ((lig[:, None, :] - prot[None, :, :]) ** 2).sum(axis=2)
     return float(np.sqrt(d2.min()) * 10.0)
+
+
+def portable_state_paths(checkpoint_path: Path) -> tuple[Path, Path]:
+    """Sidecar paths for the portable resume state next to a binary checkpoint."""
+    return (checkpoint_path.with_suffix(".state.xml"),
+            checkpoint_path.with_suffix(".state.json"))
+
+
+class _PortableStateReporter:
+    """Write a serialized State as portable XML, beside the binary checkpoint.
+
+    OpenMM checkpoints are machine-, GPU- and version-specific. Loading one on
+    a different architecture is undefined and in practice segfaults: on
+    Sherlock a checkpoint written on Ampere kills the job on Pascal, Turing and
+    Volta alike, 20-30 s in, with no recoverable error. A serialized State is
+    plain XML and loads anywhere -- verified on the same TITAN Xp node where
+    loadCheckpoint segfaulted, at identical potential energy.
+
+    A State does not carry the step counter, so it is written beside a tiny
+    JSON holding it. Both are written to a temporary file and renamed, so a
+    job killed mid-write leaves the previous pair intact.
+    """
+
+    def __init__(self, checkpoint_path: Path, interval: int):
+        self._xml, self._json = portable_state_paths(checkpoint_path)
+        self._interval = max(1, int(interval))
+
+    def describeNextReport(self, simulation):
+        steps = self._interval - simulation.currentStep % self._interval
+        # positions and velocities are required to serialize a usable State
+        return (steps, True, True, False, False, None)
+
+    def report(self, simulation, state):
+        import json as _json
+        tmp_xml = self._xml.with_suffix(".xml.tmp")
+        simulation.saveState(str(tmp_xml))
+        tmp_xml.replace(self._xml)
+        tmp_json = self._json.with_suffix(".json.tmp")
+        tmp_json.write_text(_json.dumps({"step": int(simulation.currentStep)}))
+        tmp_json.replace(self._json)
 
 
 class _StrippedDCDReporter:
@@ -327,7 +369,32 @@ def run_prepared_md(
         return _make_simulation(pdb.topology, prod_system, prod_integrator)
 
     prod = None
-    if checkpoint_path is not None and resume_from_checkpoint and checkpoint_path.exists():
+    state_xml = state_json = None
+    if checkpoint_path is not None:
+        state_xml, state_json = portable_state_paths(checkpoint_path)
+
+    # Prefer the portable State: a binary checkpoint only loads on the GPU
+    # architecture that wrote it, and a mismatch segfaults rather than raising,
+    # so it cannot be caught and retried.
+    if (resume_from_checkpoint and state_xml is not None
+            and state_xml.exists() and state_json is not None and state_json.exists()):
+        try:
+            prod = _create_production_simulation()
+            prod.loadState(str(state_xml))
+            prod.currentStep = int(json.loads(state_json.read_text())["step"])
+            resumed_from_ckpt = True
+            logger.info("Resumed production from portable state %s at step %d",
+                        state_xml, int(prod.currentStep))
+        except Exception as exc:
+            logger.warning("Failed to load portable state %s (%s); trying the checkpoint.",
+                           state_xml, exc)
+            resumed_from_ckpt = False
+            if prod is not None:
+                del prod
+                prod = None
+
+    if (not resumed_from_ckpt and checkpoint_path is not None
+            and resume_from_checkpoint and checkpoint_path.exists()):
         try:
             prod = _create_production_simulation()
             prod.loadCheckpoint(str(checkpoint_path))
@@ -397,6 +464,10 @@ def run_prepared_md(
                 str(checkpoint_path),
                 max(1, int(checkpoint_interval_steps)),
             )
+        )
+        # Portable twin of the checkpoint, so a resume can land on any GPU.
+        prod.reporters.append(
+            _PortableStateReporter(checkpoint_path, max(1, int(checkpoint_interval_steps)))
         )
 
     if state_csv_path is not None:
