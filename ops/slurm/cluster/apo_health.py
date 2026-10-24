@@ -11,7 +11,9 @@ from pathlib import Path
 
 ROOT = Path("/scratch/users/rsatija/nnrti-mechanisms-git")
 APO = ROOT / "results/md_runs/apo"
+POSE = ROOT / "results/md_runs/pose_test"
 LOGS = ROOT / "logs/apo_md"
+POSE_LOGS = ROOT / "logs/pose_test"
 STATE = Path.home() / ".apo_health_state.json"
 
 prev = json.loads(STATE.read_text()) if STATE.exists() else {}
@@ -44,9 +46,12 @@ for row in rows:
     m = re.match(r"apo_(.+)_(\d+)$", n)
     if m:
         running[(m.group(1), int(m.group(2)))] = (n, elapsed_s(el))
+    mp = re.match(r"pt_(pose_.+)$", n)          # pose-independence test jobs
+    if mp:
+        running[(mp.group(1), 1)] = (n, elapsed_s(el))
 
 for (label, rep), (jobname, age) in sorted(running.items()):
-    d = APO / label / f"rep_{rep:02d}"
+    d = (POSE if label.startswith("pose_") else APO) / label / f"rep_{rep:02d}"
     csvs = list(d.glob("*_md_state.csv"))
     if not csvs:
         if age > 1800:
@@ -97,7 +102,7 @@ for (label, rep), (jobname, age) in sorted(running.items()):
 try:
     hits = subprocess.run(
         ["bash", "-lc",
-         f"find {LOGS} -name '*.log' -mmin -30 -newermt '-30 minutes' 2>/dev/null | "
+         f"find {LOGS} {POSE_LOGS} -name '*.log' -mmin -30 -newermt '-30 minutes' 2>/dev/null | "
          f"xargs -r grep -lE 'Traceback|Segmentation fault|Particle coordinate is nan|"
          f"Energy is NaN|CUDA error|out of memory' 2>/dev/null | tail -8"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=90).stdout.split()
