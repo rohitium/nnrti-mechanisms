@@ -183,53 +183,51 @@ with otherwise-normal potential energy (so not unfolding):
   `openmm.OpenMMException: The periodic box size has decreased to less than
   twice the nonbonded cutoff.` Resubmitted as **49215618**.
 
-**Diagnosed 2026-10-23.** `-X faulthandler` (commit 0874a62) caught it. Both
-crashes die at the *same line* -- `md_protocol.py:445` `prod.step()` ->
-`integrator.step(10)` -- on the first integration step after resume, not in
-the DCD reporter:
+**Partly diagnosed; the barostat theory below WAS WRONG — see the retraction.**
+`-X faulthandler` (commit 0874a62) showed both crashes die at the same line,
+`md_protocol.py:445` `prod.step()` -> `integrator.step(10)`, on the first
+integration step after resume -- not in the DCD reporter:
 
 - `wt_02`  -> `Fatal Python error: Segmentation fault`
 - `v106a_l234i_03` -> `OpenMMException: The periodic box size has decreased to
   less than twice the nonbonded cutoff`
 
-Loading the same checkpoints on a dev node **without** a barostat separates
-the two cases:
+### RETRACTION: it is not the barostat
 
-```
-wt_02            box 12.625 nm   stepped 10 OK    <- fine without barostat
-v106a_l234i_03   getState() threw box-too-small   <- checkpoint truly corrupt
-wt_01            box 12.577 nm   stepped 10 OK
-```
+I asserted the cause was "the barostat's first Monte Carlo volume move after a
+resume". **That is disproven.** On a dev node, loading the known-bad checkpoint
+(`wt_rep02_md.chk.segfaults-on-resume`, preserved) and stepping 191 steps works
+identically with and without a `MonteCarloBarostat`: box steady at 12.625 nm,
+PE ~-2712500 both ways.
 
-The apo `system.xml` contains **no barostat** (`barostat=[]`);
-`_create_production_simulation()` adds a `MonteCarloBarostat` at runtime
-before `loadCheckpoint`, so the System does match the checkpoint. The failure
-is therefore **the barostat's first Monte Carlo volume move after a resume**,
-which collapses the box past `2 x cutoff` -- cleanly (exception) or not
-(segfault). That also explains `k103n_m230l_01`'s +/-8% swings.
+Also ruled out, each tested rather than argued:
 
-**This is now the dominant failure mode, not an edge case.** Because every job
-hits the 12 h wall at ~38% (see above), *every replicate must resume*, and
-resumes are dying:
+| hypothesis | test | verdict |
+|---|---|---|
+| barostat volume move | load ckpt +/- barostat, 191 steps | NO, identical |
+| stripped-DCD append | construct reporter on the real 37 MB DCD | NO, modelCount 200, atoms match |
+| GPU memory / contention | `[gpu]` probe in a failed job | NO, 1 MiB used of 11264, Exclusive_Process |
+| GPU model | node features, failed vs healthy | NO, sh03-12n08 both segfaults and runs fine |
+| the code path as a whole | real `run_prepared_md` on the bad checkpoint, dev node | **SURVIVES** -- 10,000 steps, 110 s, all reporters |
 
-```
-died on resume:  apo_wt_02            00:00:28
-died on resume:  apo_v106a_l234i_03   00:00:35
-died on resume:  apo_k103n_m230l_02   00:00:26
-```
+### What the evidence actually says
 
-`k103n_m230l_02` is the clearest case: it ran **12 h cleanly**, timed out, and
-segfaulted 26 s into its resume. `wt_02` has now failed on resume **twice**, so
-it is not simply a stochastic unlucky Monte Carlo move.
+`wt_rep02` is **deterministic, not intermittent**: it failed on `sh02-15n09`
+(V100_SXM2), `sh03-12n04`, `sh03-12n09` and `sh03-12n08` (RTX 2080Ti) -- four
+nodes, two GPU architectures, every attempt. The same checkpoint then resumed
+first try on a dev node. A fault that is 100% reproducible in the `gpu`
+partition and 0% on `dev` is about the execution environment, not the
+checkpoint contents or the code.
 
-Until this is fixed, the 100 ns target may be unreachable by resuming --
-raising the walltime to 48 h reduces the number of resumes but does not
-remove them for jobs that have already timed out.
+Probe `49303053` runs the identical script via `sbatch -p gpu` to test exactly
+that. Scripts kept for reuse on Sherlock: `~/resume_debug.py`,
+`~/full_resume_test.py`, `~/resume_gpu_batch.sh`.
 
-**Where to look:** whether `MonteCarloBarostat`'s adaptive volume-scale state
-survives `loadCheckpoint`, and whether re-creating the barostat with a fresh
-seed on every resume is safe. A plausible mitigation is to re-equilibrate
-briefly under NVT after a resume before re-enabling the barostat.
+Worth checking next if the probe survives: diff the real submit script's
+environment against the probe's, since the probe reproduces everything else.
+Also worth knowing that OpenMM documents `loadCheckpoint` as machine-, GPU- and
+version-specific, and recommends `saveState`/`loadState` (portable XML) when
+resumes may land on different hardware -- which is exactly our situation.
 
 **Action taken:** `v106a_l234i_03`'s checkpoint was corrupt beyond recovery and
 was moved to `*.chk.corrupt-box-collapse` so it restarts from scratch (only
