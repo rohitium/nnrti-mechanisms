@@ -48,7 +48,12 @@ SHERLOCK_QOS="${SHERLOCK_QOS:-}"
 # has failed: 5 same / 0 failures against 6 different / 2 failures. The sample
 # is small, so this is a mitigation, not a proven fix. Empty disables it.
 # Cost: fewer eligible nodes, so longer queue waits.
-GPU_CONSTRAINT="${GPU_CONSTRAINT:-GPU_SKU:RTX_2080Ti}"
+# Default EMPTY. A blanket pin is worse than none: a checkpoint only loads on
+# the architecture that wrote it, and ours were written on a mix (V100_PCIE,
+# TITAN_Xp, RTX_2080Ti, and at least one on Ampere). Pinning every job to one
+# model guarantees a mismatch for the others -- it did, for all four jobs I
+# pinned. Set it per-submission only when you know the checkpoint's origin.
+GPU_CONSTRAINT="${GPU_CONSTRAINT:-}"
 
 MD_HEATING_PS="${MD_HEATING_PS:-25}"
 MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-100.0}"
