@@ -42,6 +42,13 @@ SHERLOCK_GRES="${SHERLOCK_GRES:-gpu:1}"
 SHERLOCK_TIME="${SHERLOCK_TIME:-12:00:00}"
 SHERLOCK_MEM="${SHERLOCK_MEM:-16G}"
 SHERLOCK_QOS="${SHERLOCK_QOS:-}"
+# OpenMM checkpoints are GPU- and machine-specific; loadCheckpoint on a
+# different architecture is undefined. Both observed resume segfaults crossed
+# architectures (V100 -> RTX_2080Ti, V100 -> TITAN_Xp) and no same-model resume
+# has failed: 5 same / 0 failures against 6 different / 2 failures. The sample
+# is small, so this is a mitigation, not a proven fix. Empty disables it.
+# Cost: fewer eligible nodes, so longer queue waits.
+GPU_CONSTRAINT="${GPU_CONSTRAINT:-GPU_SKU:RTX_2080Ti}"
 
 MD_HEATING_PS="${MD_HEATING_PS:-25}"
 MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-100.0}"
@@ -240,6 +247,9 @@ submit_job() {
     fi
     if [ -n "${SHERLOCK_QOS}" ]; then
         SBATCH_ARGS+=(--qos="${SHERLOCK_QOS}")
+    fi
+    if [ -n "${GPU_CONSTRAINT}" ]; then
+        SBATCH_ARGS+=(--constraint="${GPU_CONSTRAINT}")
     fi
 
     sbatch "${SBATCH_ARGS[@]}" <<SBATCH_EOF
