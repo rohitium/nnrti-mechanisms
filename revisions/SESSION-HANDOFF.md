@@ -308,6 +308,46 @@ is the better use of compute.
 
 ---
 
+## 6b. Pose-independence test — RESULT (2026-10-24)
+
+All four 2 ns triage runs finished. Reviewer 1 comment 2 asked whether the
+same DOR-bound state is recovered from independent starting poses. **It is
+not, on this timescale.**
+
+```
+pose      prep RMSD |  2 ns RMSD (med)   disp    tilt  | in WT basin
+alt_01         0.92 |  0.37-1.45  0.90   0.29     7.0  | YES
+alt_05         5.50 |  5.05-6.42  5.99   3.68    56.7  | no
+tilt_02        6.60 |  5.99-6.74  6.34   0.80   132.6  | no
+alt_02         8.22 |  8.94-9.85  9.35   5.41   170.7  | no
+
+WT basin: RMSD 0.34-1.78 A | displacement <=0.80 A | tilt <=15.1 deg
+contact artifact: 0 of 800 frames below 2.2 A -- clean, no filtering needed
+```
+
+The only pose ending in the WT basin is `alt_01`, and it was already there
+before any dynamics: it collapsed 2.46 -> 0.92 A during **minimisation**.
+Every genuinely independent start stays where it began, plateauing within
+0.4-0.8 ns. `tilt_02` is the sharpest case -- centroid displacement 0.80 A,
+exactly at the WT limit, so the ligand is in nearly the right *place* while
+flipped 133 degrees, and stays flipped.
+
+**What to tell the reviewer.** This is the handoff's outcome 2: 2 ns cannot
+discriminate poses, so the stability of our production replicates is not
+evidence the pose is correct. The criticism is confirmed, not deflected. It
+is also a finding in its own right: the NNIBP accommodates grossly non-native
+poses, including a near-inverted doravirine 9 A away, without strain.
+
+**Extension running:** `alt_02` only, job **49338492**, 100 ns, 48 h, pinned
+to `GPU_SKU:TITAN_Xp` (the architecture that wrote its 2 ns checkpoint). It
+tests whether the 9.3 A plateau is a true second minimum or a slow escape.
+`alt_05` and `tilt_02` are NOT extended -- that is a further multi-day
+commitment and depends on what `alt_02` shows.
+
+Analysis: `nnrti.cli.compute_pose_coordinates --run-dir ... --label ...`
+**overwrites** `sampled_frames.csv` each call, so run one pose at a time and
+accumulate if you want all four in one table.
+
 ## 7. Open decisions for the author
 
 1. **Reviewer 1, comment 2** — "test representative systems from independent
