@@ -13,7 +13,24 @@ from pathlib import Path
 
 from ..analysis.pbc import apply_mdtraj_pbc_correction, load_mdtraj_trajectory, pbcfix_dcd_for, topology_for_analysis_dcd
 
-SKIP_PARTS = {"_archive", "apo", "sherlock_rerun"}
+LIGAND_RESNAME = "2KW"
+
+
+def dcd_frame_count(path: Path) -> int:
+    """Frame count from the DCD header, or -1 if it cannot be read.
+
+    Comparing frame counts is the only reliable staleness test here: rsync -t
+    preserves the source mtime, so a freshly pulled raw DCD can look older
+    than the pbcfix written from its shorter predecessor.
+    """
+    try:
+        with path.open("rb") as handle:
+            handle.read(8)
+            return int(struct.unpack("<i", handle.read(4))[0])
+    except Exception:
+        return -1
+
+SKIP_PARTS = {"_archive", "sherlock_rerun"}
 
 
 def _copy_timing_header(src: Path, dest: Path) -> None:
@@ -37,7 +54,14 @@ def _correct_one(dcd_path: str, topo_path: str, out_path: str) -> tuple[int, int
     traj = load_mdtraj_trajectory(dcd_path=src, topo_path=Path(topo_path))
     if traj.n_atoms < 1:
         raise ValueError(f"No atoms in topology for {src}")
-    apply_mdtraj_pbc_correction(traj, anchor_selection="protein", ligand_resname="2KW")
+    # apo systems carry no ligand; selecting one there is a silent no-op, so
+    # resolve it from the topology rather than assuming the holo case.
+    has_ligand = len(traj.topology.select(f"resname '{LIGAND_RESNAME}'")) > 0
+    apply_mdtraj_pbc_correction(
+        traj,
+        anchor_selection="protein",
+        ligand_resname=LIGAND_RESNAME if has_ligand else None,
+    )
     write_to = dest
     tmp_path = None
     if dest.resolve() == src.resolve():
@@ -93,8 +117,12 @@ def main() -> int:
         else:
             out_path = pbcfix_dcd_for(dcd_path)
             if out_path.exists() and not args.force:
-                skipped += 1
-                continue
+                raw_frames = dcd_frame_count(dcd_path)
+                fix_frames = dcd_frame_count(out_path)
+                if fix_frames >= raw_frames:
+                    skipped += 1
+                    continue
+                print(f"[stale] {out_path.name}: {fix_frames} frames < raw {raw_frames}, regenerating")
         jobs.append((str(dcd_path), str(topo_path), str(out_path)))
 
     print(f"imaging {len(jobs)} DCDs ({skipped} already present) with {args.workers} workers")

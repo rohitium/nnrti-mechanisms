@@ -10,7 +10,7 @@ while true; do
   q=$(ssh -o BatchMode=yes -o ConnectTimeout=30 sherlock 'squeue -u $USER -h -o "%j|%T|%r"' 2>/dev/null)
   if [ -z "$q" ]; then
     bad=$(ssh -o BatchMode=yes -o ConnectTimeout=30 sherlock "sacct -u \$USER -S $SINCE -X -P -n --format=JobID,JobName,State" 2>/dev/null \
-          | grep -E "FAILED|TIMEOUT|NODE_FAIL" | grep "apo_")
+          | grep -E "FAILED|TIMEOUT|NODE_FAIL" | grep -E "apo_|pt_pose")
     [ -n "$bad" ] && echo "QUEUE EMPTY. terminal failures since $SINCE:" && echo "$bad"
     echo "QUEUE EMPTY - all apo jobs finished or died; check and release held work"
     exit 0
@@ -21,7 +21,7 @@ while true; do
 
   # Terminal failures we have not reported yet
   bad=$(ssh -o BatchMode=yes -o ConnectTimeout=30 sherlock "sacct -u \$USER -S $SINCE -X -P -n --format=JobID,JobName,State,Elapsed" 2>/dev/null \
-        | grep -E "FAILED|TIMEOUT|NODE_FAIL" | grep "apo_")
+        | grep -E "FAILED|TIMEOUT|NODE_FAIL" | grep -E "apo_|pt_pose")
   while IFS= read -r line; do
     [ -z "$line" ] && continue
     id=${line%%|*}
