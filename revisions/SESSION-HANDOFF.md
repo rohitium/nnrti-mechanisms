@@ -440,12 +440,43 @@ rho 1.016 throughout.
   Keeps per-replicate state in `~/.apo_health_state.json`. Needs py3.6 on the
   login node, so no f-string-only features beyond 3.6.
   Deploy: `scp ops/slurm/cluster/apo_health.py sherlock:~/`
-- `ops/slurm/cluster/watch_apo_runs.sh` — run **locally**. Polls every 5 min
-  and emits only actionable lines: terminal job failures, R/ELIG/HELD changes,
-  capacity free with held work, queue empty. Calls `apo_health.py` over ssh
-  each cycle. Override the failure-scan window with `SINCE=<ISO8601>`.
+- `ops/slurm/cluster/watch_apo_runs.sh` — **do not leave this running.** It
+  polls every 5 min and emits only actionable lines: terminal job failures,
+  R/ELIG/HELD changes, capacity free with held work, queue empty. Sherlock's
+  rules for automated tools (below) forbid leaving an unattended loop polling
+  the scheduler, so run `apo_health.py` and `squeue` from your own turns, at
+  least 60 s apart, instead. The script is kept for an attended watch only.
 
 Caveat worth knowing: the health checker was wrong three times before it was
 calibrated (too loose on density, too eager on startup, and a timing race when
 run manually just before arming it). Do not run it by hand immediately before
 starting the watcher — it writes the baseline the watcher compares against.
+
+## 10. Sherlock's rules for automated tools — MANDATORY, re-read every time
+
+Sherlock installs binding instructions for AI agents at
+`/etc/agents/AGENTS.md`, with topic files beside it (`slurm.md`, `storage.md`,
+`software.md`, `policy.md`). The SSH banner points at it on every login. It
+applies whether the tool runs on a Sherlock node **or drives Sherlock remotely
+over SSH**, so it governs this workflow from the Mac too.
+
+**Rule 12 requires reading it at the start of each Sherlock session and again
+after any summary or context compaction.** An earlier read does not count, and
+neither does this note or a memory file. Keep this paragraph in any future
+handoff: preserving the requirement is itself part of the rule.
+
+The rules that bite this project in particular:
+
+- **No unattended polling loops** (rule 10). Status checks at least 60 s apart;
+  prefer `sbatch --dependency=afterok:<id>` or `sbatch --wait` over polling.
+  This is why `watch_apo_runs.sh` must not be left running.
+- **Never resubmit a failed job without finding the cause**, and never submit a
+  duplicate because one is pending. `QOSMaxGRESPerUser` means wait, not retry.
+- **`--exclude`/`-x` is unsupported**; select hardware with `-C` from
+  `sh_node_feat`. (Pinning the GPU is still usually the wrong fix — §5.)
+- **Nothing may exist only on `$SCRATCH`** (90-day purge), and artificially
+  refreshing files to dodge the purge is an account-termination offence.
+- **A faulty node is reported to the author**, who decides about contacting
+  srcc-support@stanford.edu. Stop jobs with `scancel`, never by killing
+  processes on compute nodes.
+- **Scope `find`/`du` to our own directories**; never scan filesystem roots.
