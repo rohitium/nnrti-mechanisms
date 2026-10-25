@@ -338,15 +338,36 @@ evidence the pose is correct. The criticism is confirmed, not deflected. It
 is also a finding in its own right: the NNIBP accommodates grossly non-native
 poses, including a near-inverted doravirine 9 A away, without strain.
 
-**Extension running:** `alt_02` only, job **49338492**, 100 ns, 48 h, pinned
-to `GPU_SKU:TITAN_Xp` (the architecture that wrote its 2 ns checkpoint). It
-tests whether the 9.3 A plateau is a true second minimum or a slow escape.
-`alt_05` and `tilt_02` are NOT extended -- that is a further multi-day
-commitment and depends on what `alt_02` shows.
+**Extension result at 27.7 ns (2026-10-25): the plateau is a true second
+minimum.** `alt_02` (job 49404002, running) has added 25 ns beyond the 2 ns
+trial and has not moved:
+
+```
+window                 frames  pose RMSD (med)   disp        tilt      in WT basin
+first 2 ns                200  8.94-9.85  9.35  4.64-6.25  147.7-177.9       0%
+extension 2 -> 27.7 ns     51  8.82-9.77  9.36  4.61-6.11  155.2-174.6       0%
+```
+
+Median pose RMSD 9.35 -> 9.36 A. Twelve times the sampling changes nothing,
+so the near-inverted pose is kinetically trapped rather than slowly relaxing,
+and the answer to the reviewer stands as written above: unbiased MD on any
+timescale we can afford does not discriminate poses. Three of the 51
+extension frames fail the 2.2 A contact filter; excluding them changes
+nothing.
+
+`alt_05` (49522753) and `tilt_02` (49522757) extensions are now queued too,
+so all three independent poses will have the same test.
+
+**Watch the frame spacing.** An extension appends to the existing analysis
+DCD at the *new* run's stride, so `alt_02`'s 251 frames are 200 at 0.01 ns
+(the 2 ns trial, interval = 1e6/200) followed by 51 at 0.5 ns (the 100 ns
+extension, interval = 5e7/200). Any code assuming uniform spacing will
+mis-assign time by a factor of 50. Split at frame 200.
 
 Analysis: `nnrti.cli.compute_pose_coordinates --run-dir ... --label ...`
-**overwrites** `sampled_frames.csv` each call, so run one pose at a time and
-accumulate if you want all four in one table.
+**overwrites** `sampled_frames.csv`, so pass a per-pose `--output-dir`; the
+four tables are now under
+`results/analysis/pose_coordinates/tables/{alt_01,alt_02,alt_05,tilt_02}/`.
 
 ## 6c. Trajectory QC — the test that actually works (2026-10-25)
 
