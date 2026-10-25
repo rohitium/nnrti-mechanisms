@@ -573,6 +573,7 @@ def compute_boundness_qc(
     traj_frame_stride: int = 20,
     traj_max_frames: int = 50,
     bound_threshold_angstrom: float = 6.0,
+    clash_threshold_angstrom: float = 2.2,
 ) -> pd.DataFrame:
     if run_df.empty:
         return pd.DataFrame()
@@ -604,6 +605,7 @@ def compute_boundness_qc(
         start_min_dist = float("nan")
         traj_min_dist = float("nan")
         n_frames = 0
+        n_clash_frames = 0
 
         if has_mda and topo is not None and topo.exists():
             try:
@@ -638,16 +640,26 @@ def compute_boundness_qc(
                         mins.append(float(np.min(dists)) if len(dists) else 30.0)
                     if mins:
                         traj_min_dist = float(np.min(mins))
+                        n_clash_frames = int(sum(1 for m in mins if m < clash_threshold_angstrom))
             except Exception:
                 pass
 
         bound_start = bool(np.isfinite(start_min_dist) and start_min_dist <= bound_threshold_angstrom)
         bound_traj = bool(np.isfinite(traj_min_dist) and traj_min_dist <= bound_threshold_angstrom)
 
+        # The 6 A test asks only whether the ligand is still in the pocket.
+        # It cannot see the opposite failure: a heavy-atom contact far inside
+        # van der Waals contact. Those frames are not equilibrated structures
+        # and they corrupt any energy or geometry computed from them, so give
+        # them a flag of their own rather than calling them OK.
+        has_clash = bool(np.isfinite(traj_min_dist) and traj_min_dist < clash_threshold_angstrom)
+
         if not bound_start:
             qc_flag = "UNBOUND_START"
         elif np.isfinite(traj_min_dist) and not bound_traj:
             qc_flag = "UNBOUND_TRAJECTORY"
+        elif has_clash:
+            qc_flag = "CLASH"
         else:
             qc_flag = "OK"
 
@@ -661,6 +673,9 @@ def compute_boundness_qc(
                 "min_distance_trajectory_angstrom": traj_min_dist,
                 "trajectory_frames_sampled": n_frames,
                 "bound_threshold_angstrom": float(bound_threshold_angstrom),
+                "clash_threshold_angstrom": float(clash_threshold_angstrom),
+                "n_frames_below_clash_threshold": n_clash_frames,
+                "has_clash": has_clash,
                 "is_bound_start": bound_start,
                 "is_bound_trajectory": bound_traj if np.isfinite(traj_min_dist) else np.nan,
                 "qc_flag": qc_flag,
