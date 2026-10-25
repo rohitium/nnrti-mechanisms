@@ -348,6 +348,51 @@ Analysis: `nnrti.cli.compute_pose_coordinates --run-dir ... --label ...`
 **overwrites** `sampled_frames.csv` each call, so run one pose at a time and
 accumulate if you want all four in one table.
 
+## 6c. Trajectory QC — the test that actually works (2026-10-25)
+
+**Screen unfolding with the radius of gyration of the LARGEST BONDED MOLECULE,
+never all-atom Rg.** RT is a heterodimer: p66, p51 and DOR are three separate
+molecules, so all-atom Rg conflates subunit *imaging* with conformational
+change and gave me four false "unfolding" calls. p66 alone cannot be inflated
+by imaging.
+
+```
+                Rg(all)        Rg(p66 alone)   verdict
+g190e/rep_01   34.1 - 35.2     33.1 - 35.0     healthy
+g190e/rep_02   34.1 - 92.9     31.9 - 72.6     GENUINELY UNFOLDED
+g190e/rep_03   34.2 - 35.4     32.7 - 34.4     healthy
+```
+
+Screening all 36: **2 genuinely unfolded** — `g190e/rep_02` (rerunning, job
+49513580) and `k103n_m230l/rep_01` (restarted from scratch; its checkpoint
+also gave unstable barostat behaviour). Everything else sits at ratio <= 1.08.
+
+**So G190E does NOT need a full rerun**: rep_01 and rep_03 are usable, only
+rep_02 was bad. The claim that all three were unfolded, and the PyMOL look at
+"frame 199", were both the imaging artifact.
+
+Temperature and density see none of this: `g190e/rep_02` ran at 300 K and
+rho 1.016 throughout.
+
+## 6d. Operational notes from the unattended run
+
+- **A GPU can die with Slurm still reporting RUNNING.** `sh03-13n06` logged
+  `NVML: GPU is lost` at 06:00 and the job sat "running" for five more hours
+  producing nothing. Grep job logs for `GPU is lost`; `squeue` will not tell
+  you.
+- **Legacy checkpoints can be migrated** rather than discarded: load on the
+  architecture that wrote them (`sacct ... NodeList` + `scontrol show node`)
+  and `saveState` to portable XML. `$HOME/migrate_ckpt.py` on Sherlock does
+  this; it rescued `k103n_p225h/rep_03` at 77%.
+- **The portable-state fix is live in production** — pose extension runs are
+  writing `*_md.state.xml` and `*_md.state.json` beside the binary checkpoint.
+- **`$SCRATCH` purge also eats assets**: y188l lost its `*_start.pdb` files
+  and three jobs died with `FileNotFoundError`. Restored from `$GROUP_HOME`.
+- Apo systems for 7 genotypes (g190a, g190s, k103n, l100i_k103n, v106a_f227l,
+  v106m, y318f) were **never built** — start PDBs existed, system XMLs did
+  not. Built and submitted, 21 replicates; the apo panel now covers all 20
+  genotypes rather than 8.
+
 ## 7. Open decisions for the author
 
 1. **Reviewer 1, comment 2** — "test representative systems from independent
