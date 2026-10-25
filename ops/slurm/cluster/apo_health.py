@@ -46,7 +46,7 @@ for row in rows:
     m = re.match(r"apo_(.+)_(\d+)$", n)
     if m:
         running[(m.group(1), int(m.group(2)))] = (n, elapsed_s(el))
-    mp = re.match(r"pt_(pose_.+)$", n)          # pose-independence test jobs
+    mp = re.match(r"pt_(pose_.+?)(?:_ext)?$", n)   # pose jobs; _ext is the same run dir
     if mp:
         running[(mp.group(1), 1)] = (n, elapsed_s(el))
 
@@ -95,7 +95,9 @@ for (label, rep), (jobname, age) in sorted(running.items()):
         alerts.append(f"ALERT {jobname}: density {dens:.3f} g/mL out of range")
     if pe > -1.0e6:
         alerts.append(f"ALERT {jobname}: potential energy {pe:.0f} kJ/mol implausibly high")
-    if speed < 5.0:
+    # The first state row reports speed 0 before any rate is computed, so only
+    # judge speed once the job has been up long enough to have a real one.
+    if speed < 5.0 and age > 1800:
         alerts.append(f"ALERT {jobname}: speed {speed:.1f} ns/day, abnormally slow")
 
 # Crash signatures in logs touched recently
