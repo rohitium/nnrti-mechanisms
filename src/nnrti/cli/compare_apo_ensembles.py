@@ -210,17 +210,22 @@ def main(argv: list[str] | None = None) -> int:
     # 2303 A^3, which on its own moved the G190E genotype mean from ~30 to
     # 868 A^3. Excluding these is a judgement about the simulation, not the
     # biology, so record it in the frame table and say so out loud.
-    rep_rg = d.groupby(["safe_label", "replicate"]).pocket_rg.median()
-    unfolded = set(rep_rg[rep_rg > POCKET_RG_MAX_A].index)
-    d["pocket_intact"] = [
-        (lbl, rep) not in unfolded for lbl, rep in zip(d.safe_label, d.replicate)
-    ]
+    # Exclude per FRAME, not per replicate. A replicate's median hides both
+    # failures: G190E rep_02 is sound for its first 10 ns and comes apart only
+    # later, so excluding the whole replicate discards good data the matched
+    # window depends on; K103N+M230L rep_01 is sound for 200 frames and has 9
+    # catastrophic ones, whose contribution a median cannot see at all -- those
+    # 9 frames alone moved the genotype's drift by +87 A^3.
+    d["pocket_intact"] = d.pocket_rg <= POCKET_RG_MAX_A
     d.to_csv(out / "apo_frame_metrics.csv", index=False)
-    if unfolded:
-        print(f"\n=== excluded: pocket Ca Rg > {POCKET_RG_MAX_A:.0f} A (pocket destroyed) ===")
-        for lbl, rep in sorted(unfolded):
-            print(f"  {lbl:14s} rep{rep}  pocket_rg={rep_rg[(lbl, rep)]:.1f} A  "
-                  f"median volume={d[(d.safe_label == lbl) & (d.replicate == rep)].pocket_volume.median():.0f} A^3")
+    dropped = d[~d.pocket_intact]
+    if len(dropped):
+        print(f"\n=== excluded frames: pocket Ca Rg > {POCKET_RG_MAX_A:.0f} A (pocket not intact) ===")
+        for (lbl, rep), g in dropped.groupby(["safe_label", "replicate"]):
+            tot = int((d.safe_label == lbl).__and__(d.replicate == rep).sum())
+            print(f"  {lbl:14s} rep{rep}  {len(g):4d} of {tot:4d} frames  "
+                  f"rg {g.pocket_rg.min():.1f}-{g.pocket_rg.max():.1f} A  "
+                  f"median volume {g.pocket_volume.median():.0f} A^3")
 
     d = d[d.pocket_intact]
 
