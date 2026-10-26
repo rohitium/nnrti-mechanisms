@@ -1,0 +1,6 @@
+structure,pdb_id,ligand,method,resolution_A,nucleic_acid,pocket_ca_rmsd_vs_ref_A,Tyr181_residue,Tyr181_chi1_deg,Tyr181_chi2_deg,Tyr181_dchi1_vs_ref_deg,Tyr181_ring_shift_vs_ref_A,Tyr181_min_dist_to_ligand_A,Tyr188_residue,Tyr188_chi1_deg,Tyr188_chi2_deg,Tyr188_dchi1_vs_ref_deg,Tyr188_ring_shift_vs_ref_A,Tyr188_min_dist_to_ligand_A,nnibp_volume_A3
+DOR (4NCG),4NCG,2KW,X-ray,2.58,no,0.0,TYR,-96.0,79.3,0.0,0.0,3.12,TYR,-49.4,-51.7,0.0,0.0,3.15,198.3
+DOR (7Z2G),7Z2G,2KW,cryo-EM,3.65,38-mer DNA,0.49,TYR,-86.4,53.1,9.6,0.48,3.17,TYR,-46.1,-49.0,3.3,0.22,2.81,194.1
+RPV (2ZD1),2ZD1,T27,X-ray,1.8,no,1.195,TYR,170.8,76.3,-93.2,4.93,3.43,TYR,-63.2,74.0,-13.8,2.62,3.46,257.8
+EFV (1FK9),1FK9,EFZ,X-ray,2.5,no,0.543,TYR,168.9,-87.7,-95.0,4.18,3.49,TYR,-62.4,-100.7,-13.0,1.29,3.39,181.0
+NVP (1VRT),1VRT,NVP,X-ray,2.2,no,0.7,TYR,173.8,66.5,-90.2,4.17,3.04,TYR,-69.1,87.2,-19.7,1.87,3.54,216.0
