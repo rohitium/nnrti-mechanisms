@@ -545,21 +545,34 @@ do not re-propose either:
   `md_final.pdb` to 0.001 A on both, which is what makes the comparison
   interpretable -- and what shows it proves nothing here.
 
-**Why it matters.** Every ligand-protein quantity computed from these stripped
-DCDs inherits the affected frames: contacts, H-bonds, MM/GBSA, pose RMSD,
-pocket occupancy. This is almost certainly the same phenomenon as the single
-case already known in V106I+F227C rep_01 (TYR185:O <-> F3x at 1.87 A) -- the
-same ligand atom, F3x, recurs -- but at 38 replicates rather than one.
+**Scope -- narrower than it first looks, because this was already handled
+where it matters most.** MM/GBSA is *not* affected: `mmgbsa.py` defaults to
+`snapshot_relaxation="unrestrained"` and runs a capped all-atom minimisation
+on every snapshot before evaluating the energy, precisely to relieve steric
+overlap (its docstring notes that the older hydrogen-only relaxation could
+not). That is the pipeline that 1/r^12 repulsion would otherwise have
+poisoned, and it is protected.
+
+What reads the frames as stored, with no relaxation, is the geometric side in
+`result_collector.py`: contacts, H-bonds, pocket volume, pose RMSD. Even there
+do not overstate it -- a contact count with a 4 A cutoff still counts an
+over-close atom once, so the effect is distorted geometry rather than a wrong
+count, and whether any published number actually moves is something to
+measure rather than assert.
+
+This is almost certainly the same phenomenon as the single case already known
+in V106I+F227C rep_01 (TYR185:O <-> F3x at 1.87 A) -- the same ligand atom,
+F3x, recurs -- but at 38 replicates rather than one.
 
 **Done:** `compute_boundness_qc` now has a lower bound and emits a `CLASH`
 flag (commit 9e57d1f). It previously tested only the 6 A upper bound and
 called every one of these `OK`. It still samples 50 frames at stride 20, so
 it under-counts; the full measurement is the CSV.
 
-**Needs the author's decision:** whether published numbers get recomputed with
-clashing frames excluded, and whether the mechanism is worth chasing into the
-reporter before the resubmission. Excluding frames is cheap; finding the cause
-may not be.
+**Needs the author's decision:** whether the geometric metrics are worth
+recomputing with clashing frames excluded -- measure the difference first,
+it may be negligible -- and whether the mechanism is worth chasing into the
+reporter before the resubmission. The energies need nothing.
 
 ## 12. compare_apo_ensembles was reporting nonsense (fixed, 2026-10-25)
 
