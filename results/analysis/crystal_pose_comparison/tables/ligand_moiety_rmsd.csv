@@ -1,0 +1,5 @@
+moiety,n_atoms,atoms,rmsd_nnibp_frame_A,centroid_shift_A
+chlorocyanophenyl,8,C C1 C2 C3 C4 C5 CL N,0.776,0.609
+pyridinone,11,C10 C12 C13 C7 C8 C9 F F14 F15 N11 O16,0.472,0.361
+triazolinone,8,C17 C18 C21 C24 N19 N20 N22 O23,0.542,0.42
+linker,2,C6 O,0.866,0.58

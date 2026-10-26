@@ -1,0 +1,5 @@
+frame,n_ligand_atoms,ligand_rmsd_A,ligand_centroid_shift_A
+whole,29,1.256,1.08
+palm,29,1.02,0.856
+nnibp,29,0.619,0.299
+ligand-on-ligand (internal conformation only),29,0.44,0.0

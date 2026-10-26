@@ -1,0 +1,5 @@
+torsion,atoms,4NCG_deg,7Z2G_deg,delta_deg,WT_MD_circmean_deg,WT_MD_circsd_deg,4NCG_z_in_WT_MD,7Z2G_z_in_WT_MD
+tau1,C12-C7-O-C2,-56.2,-60.2,-4.0,-62.3,10.0,0.61,0.21
+tau2,C7-O-C2-C1,-58.2,-69.6,-11.4,-43.1,12.3,-1.23,-2.16
+tau3,C10-N11-C17-C18,87.4,77.0,-10.4,78.1,7.9,1.18,-0.13
+tau4,N11-C17-C18-N22,95.5,110.3,14.8,94.2,10.6,0.12,1.51

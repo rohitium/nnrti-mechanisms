@@ -1,0 +1,4 @@
+frame,n_fit_residues,fit_ca_rmsd_A,p66_ca_rmsd_A,p51_ca_rmsd_A,nnibp_ca_rmsd_A
+whole,923,1.483,1.458,1.516,1.178
+palm,293,1.57,1.389,2.234,0.954
+nnibp,16,0.49,1.6,2.549,0.49

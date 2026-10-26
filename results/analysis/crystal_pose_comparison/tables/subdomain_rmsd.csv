@@ -1,0 +1,8 @@
+subdomain,n_residues,ca_rmsd_palm_frame_A
+p66 fingers,103,1.833
+p66 palm,112,1.208
+p66 thumb,81,1.622
+p66 connection,108,0.766
+p66 RNase H,123,1.369
+p51,396,2.234
+p66 NNIBP lining (15 residues),15,0.975
