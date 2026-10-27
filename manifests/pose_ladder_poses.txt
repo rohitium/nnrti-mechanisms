@@ -1,0 +1,12 @@
+pose_alt_06
+pose_alt_09
+pose_alt_10
+pose_ladr10_01
+pose_ladr10_02
+pose_ladr15_01
+pose_ladr15_02
+pose_ladr20_01
+pose_ladr25_01
+pose_tilt_01
+pose_tilt_03
+pose_tilt_04

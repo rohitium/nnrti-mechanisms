@@ -1,0 +1,13 @@
+pose,family,rmsd_angstrom,long_axis_tilt_deg,centroid_shift_angstrom,min_contact_angstrom,n_contacts_below_2.0,n_contacts_below_2.5,n_contacts_below_3.0
+crystal,reference,0.0,0.0,0.0,2.791,0,0,1
+rot_pa1_45,rotation,1.815,14.78,0.0,1.872,4,17,37
+rot_pa1_60,rotation,2.371,19.35,0.0,1.69,5,16,49
+rot_pa1_90,rotation,3.353,27.5,0.0,1.032,10,17,42
+rot_pa2_45,rotation,2.556,44.37,0.0,0.807,12,37,74
+rot_pa2_60,rotation,3.339,59.12,0.0,0.957,19,49,75
+rot_pa2_90,rotation,4.722,88.49,0.0,0.698,17,37,75
+rot_pa3_45,rotation,2.91,42.91,0.0,0.838,8,30,59
+rot_pa3_60,rotation,3.802,57.09,0.0,0.925,16,37,69
+rot_pa3_90,rotation,5.377,85.03,0.0,0.666,11,31,64
+ladr15_01,alternative,1.926,11.78,1.416,2.528,0,0,13
+ladr15_02,alternative,1.502,23.45,0.562,2.213,0,6,25
