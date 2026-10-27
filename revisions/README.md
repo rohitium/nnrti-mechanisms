@@ -1,74 +1,53 @@
 # JCIM ci-2026-030865 — Revision 1
 
-Deadline **10-Nov-2026**. Everything for the resubmission lives here.
+"Molecular Simulation of Doravirine Resistance in HIV-1 Reverse Transcriptase".
+Satija, Tao, Shafer. **Due 10-Nov-2026.**
 
-## Files to submit
+## Live documents
 
-| File | Upload as |
+| file | state |
 |---|---|
-| `Manuscript-Revision-1-CLEAN.docx` | the manuscript (clean, unmarked) |
-| `Manuscript-Revision-1.docx` | Supporting Information for Review Only (changes in red) |
+| `Manuscript-Revision-1.docx` | the working copy — all additions in **red** |
+| `Supplementary-Text-Revision-1.docx` | ditto |
 | `Response-to-Reviewers.docx` | point-by-point response |
-| `Supplementary-Text-Revision-1-CLEAN.docx` | Supporting Information for publication |
-| `Supporting-Information-Cover-Page.docx` | SI cover page |
-| `Supplementary-Table-5.xlsx` | new SI table (MM/GBSA relaxation sensitivity) |
-| `TOC-Graphic.pdf` or `.tif` | TOC graphic (also already on the manuscript's last page) |
+| `Supplementary-Table-*.xlsx` | tables 5–9 |
+| `Supporting-Information-Cover-Page.docx` | editorial requirement |
+| `TOC-Graphic.{pdf,tif,png}` | 600 dpi, on the last page of the manuscript |
 
-Supplementary Tables 1–4 are unchanged; take them from `paper/submission/`.
+The CLEAN copies are **set aside** in `_stale-clean-copies/`. They are
+regenerated at the end from the marked copies by stripping the red colour,
+which makes them identical by construction. Do not edit them by hand.
 
-## Read these first
+## The three files worth reading
 
-- **`Reviewer-Coverage-Audit.md`** — every reviewer point against what exists.
-- **`Task-List.md`** — effort-ordered tracker with progress.
-- `Revision-Plan.md` — the original triage, kept for the reasoning.
+1. `Reviewer-Coverage-Audit.md` — every reviewer point and its status. **Start here.**
+2. `TECHNICAL-NOTES.md` — pitfalls and data issues that have cost time or produced wrong numbers.
+3. `R1-crystal-representativeness.md` — the 4NCG vs 7Z2G evidence, behind SI section 2.
 
-## Status
+`_archive/` holds superseded planning and session notes.
 
-All 12 reviewer points are addressed and every `[PENDING]` marker in the
-response is resolved. No number is outstanding: the AM1-BCC comparison now
-rests on the full 3 x 3 (the last Y188L replicate landed 21-Oct). It tightened
-one SEM and left the conclusion where it was -- the WT-referenced dE_Total
-shifts by at most 0.81 kcal/mol between charge sets, with the sign preserved.
+## House rules
 
-## What needs you
+- **The author writes the prose.** Supply numbers and technical content; keep
+  inserted manuscript text minimal and flag it as draft.
+- **Edit the documents in place.** Never rebuild a `.docx`. The author edits
+  them in Word between passes.
+- **Every change goes in red** in the marked copies.
+- **Citations are live Zotero fields**, not plain text. Never renumber by hand;
+  insert a `ZOTERO_ITEM` field and let Zotero renumber on refresh.
+- **Answer the reviewer's actual question.** Check the verbatim comment first,
+  and read the manuscript before drafting — most of what reviewers ask for is
+  already there in compressed form.
 
-1. **ORCID iDs** — each author validates their own in Paragon Plus.
-2. **Funding** — NIAID R24AI136618 is in the manuscript; confirm it on the form.
-3. ~~Zotero citations~~ — **done.** You inserted them in Word on 20-Oct; the
-   manuscript now carries 96 Zotero fields (was 93) and they renumbered into ACS
-   order as 46 (Kuhn 2005), 47 (Rastelli 2010) and 34,48 (Genheden & Ryde with
-   Weis 2006). Nothing further needed.
-4. **English-language pass** — the ~1,100 words added here were audited; the
-   pre-existing text has not been. The editor raised it, so consider a service.
-5. **Decide on R1.2a** — independent starting poses is the one scientific request
-   not acted on. See the audit for the argument we make instead.
+## Response format
 
-## What changed in the science
+Every response follows one shape:
 
-Most of the revision is new analysis on existing data. Five results changed what
-the manuscript claims rather than only adding to it:
+> To address this comment, we have added/modified this paragraph in the
+> \<section\> section(s):
+>
+> *\<the exact manuscript text, verbatim\>*
 
-- The classification rule is `(estimate − SEM) > 0.5 kcal/mol`, not `> 0.5`.
-  The Methods said the latter, which was wrong and looser than what was run.
-- MM/GBSA ΔΔE is **materially sensitive** to the snapshot relaxation protocol
-  (Supplementary Table 5). The manuscript now says so.
-- **V106A vs V106M is within error on every metric**, and the V106A pyridinone
-  contact change is not resolved at three replicates. The Discussion now rests
-  the V106 argument on the Ser105 displacement, which is resolved (g ≈ 9).
-- All three genotypes where ΔΔG_bind misses the phenotype have a larger
-  induced-fit gap than WT, and M230L and A98G are the only substituted positions
-  that cannot contact DOR. Reviewer 1's pre-binding hypothesis now has positive
-  evidence, not just a plausible story.
-- DOR stays within 0.64–0.93 Å of the crystallographic pose in every genotype.
-  That is reported because it cuts against us: the complexes are stable, but the
-  ensembles never visit an alternative pose, which is Reviewer 1's objection
-  stated numerically.
-
-## Reproducing
-
-```bash
-PYTHONPATH=src python ops/qa/verify_revision_numbers.py
-```
-
-Re-derives every number quoted in the documents from its source file. Run it
-before submitting — the data files get regenerated and the prose does not.
+Spread each edit across the sections it belongs in — method in Methods, numbers
+in Results, interpretation in Discussion. Never introduce a result for the
+first time in the Discussion.
