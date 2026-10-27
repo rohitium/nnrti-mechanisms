@@ -165,6 +165,25 @@ def main(argv: list[str] | None = None) -> int:
                                      "y": round(float(xyz[1]), 3),
                                      "z": round(float(xyz[2]), 3)})
 
+        # write the superposed coordinates so a render and the numbers come
+        # from one and the same fit
+        struct_dir = args.output_dir / "structures"
+        struct_dir.mkdir(parents=True, exist_ok=True)
+        import gemmi
+        gst = gemmi.read_structure(str(args.structure_dir / f"{pdb_id}.cif"))
+        gst.setup_entities(); gst.remove_alternative_conformations()
+        gst.remove_hydrogens(); gst.remove_waters()
+        R, t = rt
+        for model in gst:
+            for chain in model:
+                for res in chain:
+                    for atom in res:
+                        v = np.array([atom.pos.x, atom.pos.y, atom.pos.z])
+                        w = R @ v + t
+                        atom.pos = gemmi.Position(*w)
+        gst.setup_entities()
+        gst.write_pdb(str(struct_dir / f"{pdb_id}_on_4NCG_nnibp_frame.pdb"))
+
         pdb = ensure_pdb(args.structure_dir, pdb_id)
         try:
             row["nnibp_volume_A3"] = round(pocket_volume(pdb), 1)
