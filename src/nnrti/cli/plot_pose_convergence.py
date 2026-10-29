@@ -41,6 +41,7 @@ CRYSTAL = "#1a1a1a"
 LANDED = "#2b8a3e"      # converged into the wild-type region
 STUCK = "#c92a2a"       # did not
 TAIL = "#9e9e9e"
+LABEL_INK = "#404040"
 
 
 def density_contours(ax, x, y, fractions=(0.50, 0.90, 0.99)):
@@ -88,7 +89,8 @@ def main(argv: list[str] | None = None) -> int:
         wt = wt[wt["min_contact_angstrom"] >= 2.2]
     lad = pd.read_csv(args.ladder)
 
-    fig, ax = plt.subplots(figsize=(8.8, 7.0))
+    fig, (ax, axz) = plt.subplots(1, 2, figsize=(13.6, 6.4),
+                                  gridspec_kw={"width_ratios": [1.25, 1.0]})
 
     x = wt["centroid_displacement_angstrom"].to_numpy()
     y = wt["long_axis_tilt_deg"].to_numpy()
@@ -101,25 +103,28 @@ def main(argv: list[str] | None = None) -> int:
                edgecolor="white", linewidth=1.5, zorder=9,
                label="Crystallographic pose (4NCG)")
 
-    for _, r in lad.sort_values("start_rmsd_angstrom").iterrows():
-        landed = bool(r["end_rmsd_angstrom"] <= args.basin_rmsd)
-        colour = LANDED if landed else STUCK
-        ax.annotate(
-            "", xy=(r["end_displacement_angstrom"], r["end_tilt_deg"]),
-            xytext=(r["start_displacement_angstrom"], r["start_tilt_deg"]),
-            arrowprops=dict(arrowstyle="-|>", color=TAIL, linewidth=1.1,
-                            shrinkA=4, shrinkB=5, alpha=0.9), zorder=4,
-        )
-        ax.scatter([r["start_displacement_angstrom"]], [r["start_tilt_deg"]],
-                   marker="o", s=70, facecolor="white", edgecolor=colour,
-                   linewidth=1.8, zorder=6)
-        ax.scatter([r["end_displacement_angstrom"]], [r["end_tilt_deg"]],
-                   marker="o", s=95, color=colour, edgecolor="white",
-                   linewidth=1.2, zorder=7)
-        ax.annotate(f"{r['start_rmsd_angstrom']:.1f}",
-                    xy=(r["start_displacement_angstrom"], r["start_tilt_deg"]),
-                    xytext=(5, 6), textcoords="offset points",
-                    fontsize=8, color=colour, zorder=8)
+    def draw_ladder(target, label=True, scale=1.0):
+        for _, r in lad.sort_values("start_rmsd_angstrom").iterrows():
+            colour = LANDED if r["end_rmsd_angstrom"] <= args.basin_rmsd else STUCK
+            target.annotate(
+                "", xy=(r["end_displacement_angstrom"], r["end_tilt_deg"]),
+                xytext=(r["start_displacement_angstrom"], r["start_tilt_deg"]),
+                arrowprops=dict(arrowstyle="-|>", color=TAIL, linewidth=1.1 * scale,
+                                shrinkA=4, shrinkB=5, alpha=0.9), zorder=4,
+            )
+            target.scatter([r["start_displacement_angstrom"]], [r["start_tilt_deg"]],
+                           marker="o", s=70 * scale**2, facecolor="white",
+                           edgecolor=colour, linewidth=1.8 * scale, zorder=6)
+            target.scatter([r["end_displacement_angstrom"]], [r["end_tilt_deg"]],
+                           marker="o", s=95 * scale**2, color=colour,
+                           edgecolor="white", linewidth=1.2 * scale, zorder=7)
+            if label:
+                target.annotate(f"{r['start_rmsd_angstrom']:.1f}",
+                                xy=(r["start_displacement_angstrom"], r["start_tilt_deg"]),
+                                xytext=(5, 6), textcoords="offset points",
+                                fontsize=8 * scale, color=colour, zorder=8)
+
+    draw_ladder(ax)
 
     # legend proxies
     from matplotlib.lines import Line2D
@@ -133,13 +138,30 @@ def main(argv: list[str] | None = None) -> int:
         Line2D([], [], marker="o", linestyle="none", color=STUCK, markersize=9,
                label="End, outside"),
     ]
-    ax.legend(handles=handles, loc="upper left", fontsize=8.5, framealpha=0.95)
+    ax.legend(handles=handles, loc="lower right", fontsize=8.0,
+              framealpha=0.95, borderpad=0.5)
 
-    ax.set_xlabel("DOR centroid displacement from the crystallographic pose (Å)")
+
+    ax.set_xlabel("DOR centroid displacement (Å)")
     ax.set_ylabel("DOR long-axis tilt from the crystallographic pose (°)")
-    ax.set_title("Perturbed doravirine poses against the wild-type sampled basin")
+    ax.set_title("All starting poses", fontsize=11)
     ax.margins(0.06)
     ax.spines[["top", "right"]].set_visible(False)
+
+    # Right panel: the same thing at the scale where convergence is visible.
+    density_contours(axz, x, y)
+    axz.scatter(x, y, s=4, color=DENSITY, alpha=0.22, linewidths=0, zorder=3)
+    axz.scatter([0.0], [0.0], marker="*", s=520, color=CRYSTAL,
+                edgecolor="white", linewidth=1.5, zorder=9)
+    draw_ladder(axz)
+    axz.set_xlim(-0.10, 2.65)
+    axz.set_ylim(-1.5, 40.0)
+    axz.set_xlabel("DOR centroid displacement (Å)")
+    axz.set_title("The convergent region", fontsize=11)
+    axz.spines[["top", "right"]].set_visible(False)
+
+    fig.suptitle("Perturbed doravirine poses against the wild-type sampled basin",
+                 fontsize=13, y=0.98)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
