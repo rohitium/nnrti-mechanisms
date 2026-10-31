@@ -82,6 +82,19 @@ on `$SCRATCH` are purged 90 days after last modification and are not backed up.
 - No unattended polling loops against the scheduler or a filesystem.
 - Two machines push to `main`; fetch before pushing.
 
+## Durability
+
+`$SCRATCH` is purged 90 days after last modification and is not backed up, and
+there is no Oak allocation. Durable copies live in `$GROUP_HOME/nnrti-mechanisms`:
+`fep_raw/<date>/` holds per-leg `.tar.gz` archives with sha256 manifests, and
+`md_runs/` mirrors the MD runs. Never archive or copy a replicate or FEP leg
+that has a job writing to it — the copy captures half-written files. Resolve
+live slots from `squeue` first.
+
+`docs/methods/md-run-data.md` is the full reference: every data location, which
+copies are durable, the FEP backup tiers and what tier 3 deliberately omits, and
+how to tell a finished run from an interrupted one.
+
 ## Authoritative data sources
 
 - DOR fold-resistance values: `data/DRM-susceptibilities.csv.xlsx`. The
