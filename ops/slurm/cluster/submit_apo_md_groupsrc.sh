@@ -27,7 +27,7 @@ cleanup_and_exit() {
 trap cleanup_and_exit INT TERM
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 cd "$PROJECT_ROOT"
 
 LOG_DIR="${PROJECT_ROOT}/logs/apo_md"
@@ -64,6 +64,8 @@ MD_FORCE_RERUN="${MD_FORCE_RERUN:-1}"
 SKIP_IF_AT_TARGET="${SKIP_IF_AT_TARGET:-1}"
 SKIP_IF_RUNNING="${SKIP_IF_RUNNING:-1}"
 MUTATION_ALLOWLIST="${MUTATION_ALLOWLIST:-}"
+# Comma-separated mutation:rep pairs, e.g. "g190a:01,v106a:02". Empty = no filter.
+REPLICATE_ALLOWLIST="${REPLICATE_ALLOWLIST:-}"
 
 APO_RUNS_ROOT="${APO_RUNS_ROOT:-results/md_runs/apo}"
 
@@ -108,7 +110,7 @@ echo ""
 # stale state.csv files on 2026-08-17 (halving md_production_steps_completed and so
 # every analysis time axis derived from it). A submission must never mutate run
 # metadata as a side effect; run reconcile deliberately if you want it to write.
-"${PYTHON}" scripts/sherlock/reconcile_md_metadata.py \
+"${PYTHON}" ops/slurm/cluster/reconcile_md_metadata.py \
     --root . \
     --include-apo \
     --target-ns "${MD_PRODUCTION_NS}" >/dev/null
@@ -120,6 +122,17 @@ SKIPPED_MISSING=0
 SKIPPED_RUNNING=0
 SKIPPED_FILTERED=0
 TOTAL_PREPARED=0
+
+declare -A ALLOWED_REPLICATES=()
+if [ -n "${REPLICATE_ALLOWLIST}" ]; then
+    IFS=',' read -r -a _rep_tokens <<< "${REPLICATE_ALLOWLIST}"
+    for tok in "${_rep_tokens[@]}"; do
+        t="$(echo "$tok" | tr -d '[:space:]')"
+        if [ -n "$t" ]; then
+            ALLOWED_REPLICATES["$t"]=1
+        fi
+    done
+fi
 
 declare -A ALLOWED_MUTATIONS=()
 if [ -n "${MUTATION_ALLOWLIST}" ]; then
@@ -156,6 +169,11 @@ while IFS= read -r -d '' SYSTEM_XML; do
     JOB_NAME="apo_${MUTATION}_${REP}"
 
     if [ -n "${MUTATION_ALLOWLIST}" ] && [ -z "${ALLOWED_MUTATIONS[$MUTATION]+x}" ]; then
+        SKIPPED_FILTERED=$((SKIPPED_FILTERED + 1))
+        continue
+    fi
+
+    if [ -n "${REPLICATE_ALLOWLIST}" ] && [ -z "${ALLOWED_REPLICATES[${MUTATION}:${REP}]+x}" ]; then
         SKIPPED_FILTERED=$((SKIPPED_FILTERED + 1))
         continue
     fi
@@ -273,7 +291,7 @@ cd ${PROJECT_ROOT}
 # would expand on the login node, where it is empty, and the job would export
 # ".../src:" over the top of openmm's path. That is exactly how 55 of 55 jobs
 # died with No module named openmm. Escape it so the JOB expands it.
-export PYTHONPATH="$GROUP_HOME/nnrti-mechanisms/src:\${PYTHONPATH:-}"
+export PYTHONPATH="$GROUP_HOME/nnrti-mechanisms-repo/src:\${PYTHONPATH:-}"
 
 # Guard AFTER the export, so it tests the environment the run actually gets.
 # Before, it sat above this line, passed, and the run failed anyway.
