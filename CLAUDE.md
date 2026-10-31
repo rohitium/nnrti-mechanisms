@@ -45,7 +45,29 @@ Compare their frame counts against the raw `*_analysis.dcd` before use. DCDs
 are gitignored, so back originals up before passing `--force` — git cannot
 recover them.
 
-## Sherlock
+## Sherlock — where the data actually is
+
+There are two directories under `$SCRATCH/` with confusingly similar names.
+**Sweep both, and every other path under `/scratch/users/$USER/`, before
+concluding that anything is missing.**
+
+| path | what it is |
+|---|---|
+| `$SCRATCH/nnrti-mechanisms-git` | **the canonical working tree.** 549 GB: all 60 apo replicates, `results/analysis/fep_pmx` (536 GB of raw pmx FEP), holo runs, pose ladders |
+| `$SCRATCH/nnrti-mechanisms` | a purged shell. Held zero real files as of 2026-10-31 apart from a temporary apo staging copy |
+| `$GROUP_HOME/nnrti-mechanisms-repo` | the durable **code** checkout, kept in sync with GitHub |
+| `$GROUP_HOME/nnrti-mechanisms` | older data archive: `fep_raw` (77 GB) and an `md_runs` snapshot that stopped at 2026-10-25 |
+
+On 2026-10-31 I searched only `$SCRATCH/nnrti-mechanisms` and reported that two
+days of apo simulation "left no recoverable output." It was all in
+`nnrti-mechanisms-git`, and four replicates there were further along than the
+local copies. Never draw a conclusion about missing runs from one directory.
+
+Note also that `$GROUP_HOME/nnrti-mechanisms-repo` is a code checkout, so it
+protects code, not simulation output — git ignores every `.dcd`. Trajectories
+on `$SCRATCH` are purged 90 days after last modification and are not backed up.
+
+## Sherlock — rules
 
 - `/etc/agents/AGENTS.md` is binding. Read it at the start of every session and
   again after any context compaction.
