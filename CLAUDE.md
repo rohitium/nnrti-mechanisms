@@ -54,7 +54,7 @@ concluding that anything is missing.**
 | path | what it is |
 |---|---|
 | `$SCRATCH/nnrti-mechanisms-git` | **the canonical working tree.** 549 GB: all 60 apo replicates, `results/analysis/fep_pmx` (536 GB of raw pmx FEP), holo runs, pose ladders |
-| `$SCRATCH/nnrti-mechanisms` | a purged shell. Held zero real files as of 2026-10-31 apart from a temporary apo staging copy |
+| `$SCRATCH/nnrti-mechanisms` | mostly a purged shell, but **not empty and not disposable**: see the warning below |
 | `$GROUP_HOME/nnrti-mechanisms-repo` | the durable **code** checkout, kept in sync with GitHub |
 | `$GROUP_HOME/nnrti-mechanisms` | older data archive: `fep_raw` (77 GB) and an `md_runs` snapshot that stopped at 2026-10-25 |
 
@@ -62,6 +62,22 @@ On 2026-10-31 I searched only `$SCRATCH/nnrti-mechanisms` and reported that two
 days of apo simulation "left no recoverable output." It was all in
 `nnrti-mechanisms-git`, and four replicates there were further along than the
 local copies. Never draw a conclusion about missing runs from one directory.
+
+**The trap runs both ways.** On 2026-11-01, five apo jobs that were still
+running turned out to be resuming from and writing into
+`$SCRATCH/nnrti-mechanisms`, not the canonical tree — they were submitted
+before the two trees were consolidated, and the resume path is baked into a
+running job and cannot be changed. Read a job's own log line
+(`Resumed production from portable state <path> at step N`) to learn which tree
+it writes to; never assume it is the canonical one. Consequences:
+
+- Judging those runs by the canonical tree's files makes a healthy job look
+  dead: its files there sit untouched at the step it resumed from while the
+  real progress accumulates in the staging tree.
+- Do not delete `$SCRATCH/nnrti-mechanisms` while any apo job is in the queue.
+  Check `squeue` and each running job's log first.
+- When those jobs finish, merge their slots into the canonical tree, keeping
+  whichever copy has the higher max `Step`.
 
 Note also that `$GROUP_HOME/nnrti-mechanisms-repo` is a code checkout, so it
 protects code, not simulation output — git ignores every `.dcd`. Trajectories
