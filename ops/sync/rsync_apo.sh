@@ -26,7 +26,11 @@ SLEEP_SECONDS="${SLEEP_SECONDS:-10}"
 COMPLETE_ONLY="${COMPLETE_ONLY:-0}"
 PARALLEL_JOBS="${PARALLEL_JOBS:-6}"
 MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-100.0}"
-REMOTE_BASE="/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms"
+# Default to the CANONICAL tree. $SCRATCH/nnrti-mechanisms (no -git suffix) is the
+# staging tree: it holds only slots that a job happened to resume into, and the
+# copies there can be either ahead of or behind canonical. Pulling from it gives a
+# partial, mixed-vintage picture of the apo runs. Override only deliberately.
+REMOTE_BASE="${REMOTE_BASE:-/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms-git}"
 REMOTE_HOST="${SHERLOCK_USER}@login.sherlock.stanford.edu"
 LOCAL_APO_RUNS="results/md_runs/apo/"
 LOCAL_MANIFEST="manifests/apo_md_manifest.csv"
@@ -34,7 +38,9 @@ REMOTE_APO_RUNS="${REMOTE_HOST}:${REMOTE_BASE}/results/md_runs/apo/"
 REMOTE_MANIFEST="${REMOTE_HOST}:${REMOTE_BASE}/manifests/apo_md_manifest.csv"
 
 # SSH ControlMaster socket — one Duo auth shared across all parallel rsync workers.
-SSH_CTL="${TMPDIR:-/tmp}/nnrti_sherlock_ctl_${SHERLOCK_USER}.sock"
+# Overridable so an already-authenticated socket can be reused instead of forcing a
+# second Duo approval, e.g. SSH_CTL=~/.ssh/cm-rsatija@login.sherlock.stanford.edu:22
+SSH_CTL="${SSH_CTL:-${TMPDIR:-/tmp}/nnrti_sherlock_ctl_${SHERLOCK_USER}.sock}"
 
 mkdir -p "${LOCAL_APO_RUNS}"
 mkdir -p "$(dirname "${LOCAL_MANIFEST}")"

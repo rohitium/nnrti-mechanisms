@@ -37,7 +37,11 @@ SYNC_LOGS="${SYNC_LOGS:-0}"
 COMPLETE_ONLY="${COMPLETE_ONLY:-0}"
 PARALLEL_JOBS="${PARALLEL_JOBS:-6}"
 MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-100.0}"
-REMOTE_BASE="/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms"
+# Default to the CANONICAL tree. $SCRATCH/nnrti-mechanisms (no -git suffix) is the
+# staging tree and holds only a partial, mixed-vintage subset of the runs. This
+# script pulls all of results/md_runs/, holo included, so pointing it at staging
+# would overwrite good holo data with whatever happens to be sitting there.
+REMOTE_BASE="${REMOTE_BASE:-/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms-git}"
 REMOTE_HOST="${SHERLOCK_USER}@login.sherlock.stanford.edu"
 LOCAL_MD_RUNS="results/md_runs/"
 LOCAL_MANIFEST="manifests/md_manifest.csv"
@@ -47,7 +51,9 @@ REMOTE_MANIFEST="${REMOTE_HOST}:${REMOTE_BASE}/manifests/md_manifest.csv"
 REMOTE_LOGS="${REMOTE_HOST}:${REMOTE_BASE}/logs/"
 
 # SSH ControlMaster socket — one Duo auth shared across all parallel rsync workers.
-SSH_CTL="${TMPDIR:-/tmp}/nnrti_sherlock_ctl_${SHERLOCK_USER}.sock"
+# Overridable so an already-authenticated socket can be reused instead of forcing a
+# second Duo approval, e.g. SSH_CTL=~/.ssh/cm-rsatija@login.sherlock.stanford.edu:22
+SSH_CTL="${SSH_CTL:-${TMPDIR:-/tmp}/nnrti_sherlock_ctl_${SHERLOCK_USER}.sock}"
 
 mkdir -p "${LOCAL_MD_RUNS}" "${LOCAL_LOGS}"
 mkdir -p "$(dirname "${LOCAL_MANIFEST}")"
