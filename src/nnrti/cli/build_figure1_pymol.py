@@ -44,6 +44,7 @@ NNIBP_P51 = (138,)
 #: Chain IDs in the analysis topology.
 CHAIN_P66, CHAIN_P51, CHAIN_DOR = "A", "B", "E"
 
+
 PYMOL_APP = Path("/Applications/PyMOL.app/Contents/MacOS/PyMOL")
 
 
@@ -72,7 +73,77 @@ def mutated_positions(manifest: Path) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def write_pml(pml: Path, structure: Path, muts: pd.DataFrame) -> None:
+
+def best_view(structure: Path, muts: pd.DataFrame,
+              n_directions: int = 4000) -> tuple[np.ndarray, np.ndarray, float]:
+    """Camera rotation that separates the labelled residues best on screen.
+
+    Labels collide when two mutated CA atoms project close together, which is a
+    property of the viewing direction and can be optimised rather than hunted
+    for by hand. Directions are sampled on a Fibonacci sphere; for each, the
+    twelve CA atoms are projected onto the image plane and scored by the
+    smallest pairwise separation. A direction that puts a label on top of the
+    ligand is penalised, since the drug has to stay readable too.
+
+    Returns the rotation matrix (world to camera, row-major), the centre to
+    rotate about, and the radius the camera needs to clear.
+    """
+    import mdtraj as md
+
+    t = md.load(str(structure))
+    top = t.topology
+    want = {r.topology for r in muts.itertuples()}
+    ca = [a.index for a in top.atoms
+          if a.name == "CA" and a.residue.chain.index == 0
+          and a.residue.resSeq in want]
+    lig = [a.index for a in top.atoms if a.residue.name == "2KW"]
+    if len(ca) != len(muts) or not lig:
+        raise SystemExit(f"expected {len(muts)} mutated CA atoms and a ligand; "
+                         f"found {len(ca)} and {len(lig)}")
+
+    xyz = t.xyz[0] * 10.0
+    pts = xyz[ca]
+    lig_c = xyz[lig].mean(axis=0)
+    centre = np.vstack([pts, xyz[lig]]).mean(axis=0)
+    radius = float(np.linalg.norm(np.vstack([pts, xyz[lig]]) - centre, axis=1).max())
+
+    # Fibonacci sphere: even coverage of directions without a pole bias.
+    i = np.arange(n_directions) + 0.5
+    phi = np.arccos(1.0 - 2.0 * i / n_directions)
+    theta = np.pi * (1.0 + 5.0 ** 0.5) * i
+    dirs = np.c_[np.cos(theta) * np.sin(phi), np.sin(theta) * np.sin(phi),
+                 np.cos(phi)]
+
+    best, best_R = -np.inf, None
+    for d in dirs:
+        z = d / np.linalg.norm(d)
+        up = np.array([0.0, 0.0, 1.0])
+        if abs(np.dot(up, z)) > 0.9:
+            up = np.array([0.0, 1.0, 0.0])
+        x = np.cross(up, z); x /= np.linalg.norm(x)
+        y = np.cross(z, x)
+        R = np.vstack([x, y, z])
+
+        proj = (pts - centre) @ R[:2].T
+        dists = np.linalg.norm(proj[:, None, :] - proj[None, :, :], axis=-1)
+        np.fill_diagonal(dists, np.inf)
+        min_sep = float(dists.min())
+
+        # Keep labels off the ligand: penalise any that lands within 4 A of it
+        # in projection, so the drug stays legible under its own labels.
+        lig_proj = (lig_c - centre) @ R[:2].T
+        clearance = float(np.linalg.norm(proj - lig_proj, axis=1).min())
+        score = min_sep + min(clearance, 6.0)
+
+        if score > best:
+            best, best_R = score, R
+    print(f"view search: {n_directions} directions, best label separation "
+          f"score {best:.1f} A")
+    return best_R, centre, radius, pts
+
+
+def write_pml(pml: Path, structure: Path, muts: pd.DataFrame,
+              view=None) -> None:
     nn66 = "+".join(str(r + RESID_OFFSET) for r in NNIBP_P66)
     nn51 = "+".join(str(r + RESID_OFFSET) for r in NNIBP_P51)
     mut_resi = "+".join(str(r.topology) for r in muts.itertuples())
@@ -104,16 +175,25 @@ def write_pml(pml: Path, structure: Path, muts: pd.DataFrame) -> None:
     L += ["", "# ---- representations -------------------------------------------------",
           "show cartoon, p66 or p51",
           "color grey80, p66",
-          "color grey60, p51",
-          "set cartoon_transparency, 0.55, p51",
+          "color grey70, p51",
+          # The surrounding fold is context, not subject. Fading it well back
+          # leaves DOR and the mutated side chains carrying the image, as in
+          # the TOC figure.
+          "set cartoon_transparency, 0.82, p66",
+          "set cartoon_transparency, 0.90, p51",
+          "set cartoon_transparency, 0.45, NNIBP",
           "",
+          # DOR carbons in a cool colour on purpose: the mutated sites are
+          # spectrum-coloured white->yellow->orange->red by phenotype, so a
+          # yellow ligand is indistinguishable from a low-fold residue.
+          "hide everything, DOR and hydro",
           "show sticks, DOR",
-          "color yellow, DOR and elem C",
+          "color deepteal, DOR and elem C",
           "util.cnc('DOR')",
           "show spheres, DOR",
-          "set sphere_scale, 0.22, DOR",
+          "set sphere_scale, 0.20, DOR",
           "",
-          "show sticks, mutations and not (name C+N+O)",
+          "show sticks, mutations and not (name C+N+O) and not hydro",
           "show spheres, mutations and name CA",
           "set sphere_scale, 0.45, mutations and name CA",
           "",
@@ -139,10 +219,25 @@ def write_pml(pml: Path, structure: Path, muts: pd.DataFrame) -> None:
     for r in muts.itertuples():
         L.append(f'label mut_{r.wt_aa}{r.canonical} and name CA, "{r.wt_aa}{r.canonical}"')
     L += [
-        "set label_size, 16",
+        "set label_size, 20",
+        # Black on the white background, with a white halo so a label crossing
+        # a dark side chain stays readable.
         "set label_color, black",
         "set label_outline_color, white",
-        "set label_position, (0, 0, 2.5)",
+        "set label_shadow_mode, 0",
+        "set label_bg_color, white",
+        "set label_bg_transparency, 0.25",
+        "set label_position, (0, 0, 3.0)",
+        "",
+        "# ---- label nudges: edit these ----------------------------------------",
+        "# One line per residue. The three numbers are a screen-space offset in",
+        "# angstroms: x right, y up, z toward the viewer. The anchor sphere does",
+        "# not move, so a nudged label still marks its own residue.",
+        "#",
+        "# In the GUI you can also drag a label directly: enable editing with",
+        "# the Mouse menu (3-Button Editing), then ctrl-shift-drag the label.",
+        "# PyMOL stores the result in these same settings, so File > Save",
+        "# Session keeps whatever you do by hand.",
         "",
         "# ---- scene -----------------------------------------------------------",
         "bg_color white",
@@ -150,8 +245,6 @@ def write_pml(pml: Path, structure: Path, muts: pd.DataFrame) -> None:
         "set cartoon_fancy_helices, 1",
         "set antialias, 2",
         "set ray_shadows, 0",
-        "orient (DOR or mutations)",
-        "zoom (DOR or mutations), 6",
         "deselect",
         "",
         "# Suggested extras, left off so the first view stays readable:",
@@ -159,6 +252,35 @@ def write_pml(pml: Path, structure: Path, muts: pd.DataFrame) -> None:
         "#   set transparency, 0.5",
         "#   show cartoon, p51   (p51 is already shown, semi-transparent)",
     ]
+    for r in muts.itertuples():
+        L.append(f'set label_position, (0, 0, 3.0), mut_{r.wt_aa}{r.canonical}')
+
+    if view is not None:
+        R, centre, radius, _ = view
+        # PyMOL's default field of view is 20 degrees, so a sphere of this
+        # radius only fits the frame beyond radius / tan(10 deg) = 5.7 x. The
+        # first attempt used 3.2 x and cropped A98, M230 and Y318 off-screen.
+        dist = 6.6 * radius
+        m = [f"{v:.6f}" for v in R.flatten()]
+        o = [f"{v:.6f}" for v in centre]
+        L += [
+            "",
+            "# Camera chosen by best_view(): of 4000 sampled directions, the",
+            "# one that maximises the smallest on-screen separation between",
+            "# labelled residues while keeping them clear of the ligand. It is",
+            "# a starting point, not a final answer -- P225/F227 and A98/Y318",
+            "# are only a few angstroms apart, so no direction separates them.",
+            "# Rotate as you like and re-save; nothing else depends on it.",
+            "set_view (\\",
+            f"  {m[0]}, {m[1]}, {m[2]},\\",
+            f"  {m[3]}, {m[4]}, {m[5]},\\",
+            f"  {m[6]}, {m[7]}, {m[8]},\\",
+            f"  0.0, 0.0, {-dist:.3f},\\",
+            f"  {o[0]}, {o[1]}, {o[2]},\\",
+            f"  {dist - radius:.3f}, {dist + radius:.3f}, -20.0 )",
+        ]
+    else:
+        L += ["orient (DOR or mutations)", "zoom (DOR or mutations), 6"]
     pml.write_text("\n".join(L) + "\n")
 
 
@@ -182,7 +304,8 @@ def main(argv: list[str] | None = None) -> int:
     pse = args.output_dir / "figure1_mutations.pse"
     table = args.output_dir / "figure1_mutated_positions.csv"
     muts.to_csv(table, index=False)
-    write_pml(pml, args.structure.resolve(), muts)
+    view = best_view(args.structure, muts)
+    write_pml(pml, args.structure.resolve(), muts, view)
 
     print(f"{len(muts)} mutated positions, "
           f"{int(muts.in_nnibp.sum())} of them NNIBP-lining:")

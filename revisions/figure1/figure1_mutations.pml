@@ -32,16 +32,19 @@ select mut_Y318, p66 and resi 315
 # ---- representations -------------------------------------------------
 show cartoon, p66 or p51
 color grey80, p66
-color grey60, p51
-set cartoon_transparency, 0.55, p51
+color grey70, p51
+set cartoon_transparency, 0.82, p66
+set cartoon_transparency, 0.90, p51
+set cartoon_transparency, 0.45, NNIBP
 
+hide everything, DOR and hydro
 show sticks, DOR
-color yellow, DOR and elem C
+color deepteal, DOR and elem C
 util.cnc('DOR')
 show spheres, DOR
-set sphere_scale, 0.22, DOR
+set sphere_scale, 0.20, DOR
 
-show sticks, mutations and not (name C+N+O)
+show sticks, mutations and not (name C+N+O) and not hydro
 show spheres, mutations and name CA
 set sphere_scale, 0.45, mutations and name CA
 
@@ -81,10 +84,23 @@ label mut_F227 and name CA, "F227"
 label mut_M230 and name CA, "M230"
 label mut_L234 and name CA, "L234"
 label mut_Y318 and name CA, "Y318"
-set label_size, 16
+set label_size, 20
 set label_color, black
 set label_outline_color, white
-set label_position, (0, 0, 2.5)
+set label_shadow_mode, 0
+set label_bg_color, white
+set label_bg_transparency, 0.25
+set label_position, (0, 0, 3.0)
+
+# ---- label nudges: edit these ----------------------------------------
+# One line per residue. The three numbers are a screen-space offset in
+# angstroms: x right, y up, z toward the viewer. The anchor sphere does
+# not move, so a nudged label still marks its own residue.
+#
+# In the GUI you can also drag a label directly: enable editing with
+# the Mouse menu (3-Button Editing), then ctrl-shift-drag the label.
+# PyMOL stores the result in these same settings, so File > Save
+# Session keeps whatever you do by hand.
 
 # ---- scene -----------------------------------------------------------
 bg_color white
@@ -92,11 +108,35 @@ set ray_opaque_background, 1
 set cartoon_fancy_helices, 1
 set antialias, 2
 set ray_shadows, 0
-orient (DOR or mutations)
-zoom (DOR or mutations), 6
 deselect
 
 # Suggested extras, left off so the first view stays readable:
 #   show surface, NNIBP
 #   set transparency, 0.5
 #   show cartoon, p51   (p51 is already shown, semi-transparent)
+set label_position, (0, 0, 3.0), mut_A98
+set label_position, (0, 0, 3.0), mut_L100
+set label_position, (0, 0, 3.0), mut_K103
+set label_position, (0, 0, 3.0), mut_V106
+set label_position, (0, 0, 3.0), mut_Y181
+set label_position, (0, 0, 3.0), mut_Y188
+set label_position, (0, 0, 3.0), mut_G190
+set label_position, (0, 0, 3.0), mut_P225
+set label_position, (0, 0, 3.0), mut_F227
+set label_position, (0, 0, 3.0), mut_M230
+set label_position, (0, 0, 3.0), mut_L234
+set label_position, (0, 0, 3.0), mut_Y318
+
+# Camera chosen by best_view(): of 4000 sampled directions, the
+# one that maximises the smallest on-screen separation between
+# labelled residues while keeping them clear of the ligand. It is
+# a starting point, not a final answer -- P225/F227 and A98/Y318
+# are only a few angstroms apart, so no direction separates them.
+# Rotate as you like and re-save; nothing else depends on it.
+set_view (\
+  -0.416037, 0.909348, 0.000000,\
+  -0.811820, -0.371417, 0.450552,\
+  0.409709, 0.187446, 0.892750,\
+  0.0, 0.0, -83.075,\
+  9.303982, 11.424402, 16.513615,\
+  70.488, 95.663, -20.0 )
