@@ -104,7 +104,7 @@ def build(root: Path) -> pd.DataFrame:
     holo_v = pd.read_csv(root / "results/analysis/pocket_volume/tables/pocket_volume_per_rep.csv")
     holo_v = pd.DataFrame({"structure_type": "holo", "genotype": holo_v.mutation,
                            "replicate": holo_v.replicate,
-                           "nnibp_volume_A3": holo_v.pocket_volume_mean.round(1)})
+                           "nnibp_volume_A3": holo_v.pocket_volume_mean.round(3)})
     apo_f = pd.read_csv(root / "results/analysis/apo_ensembles/tables/apo_frame_metrics.csv")
     # Drop frames whose pocket has come apart, at the threshold
     # compare_apo_ensembles.py and compute_protein_level_changes.py both use.
@@ -136,7 +136,7 @@ def build(root: Path) -> pd.DataFrame:
     apo_v = pd.DataFrame({"structure_type": "apo",
                           "genotype": apo_v.safe_label.map(_display),
                           "replicate": apo_v.replicate,
-                          "nnibp_volume_A3": apo_v.pocket_volume.round(1)})
+                          "nnibp_volume_A3": apo_v.pocket_volume.round(3)})
     out = out.merge(pd.concat([holo_v, apo_v], ignore_index=True),
                     on=["structure_type", "genotype", "replicate"], how="left")
 

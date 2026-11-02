@@ -16,8 +16,34 @@ re-reading.
 | `Manuscript-Revision-1.docx` | working copy, additions in **red**. Discussion rework pending (§4) |
 | `Supplementary-Text-Revision-1.docx` | apo numbers corrected 02-Nov |
 | `Response to Reviewers.docx` | apo numbers corrected 02-Nov |
-| `Supplementary-Table-*.xlsx` | tables 5–9. Table 6 needs the four-genotype AM1-BCC rebuild (§8) |
+| `Supplementary-Table-1..10.xlsx` | the complete set, all rebuilt or verified 02-Nov. See the table below |
 | `Supporting-Information-Cover-Page.docx`, `TOC-Graphic.{pdf,tif,png}` | done |
+
+### The Supplementary Table set
+
+All ten now live in `revisions/`, so there is one place to submit from.
+Previously Tables 1–4 existed only as the submitted copies and 5–9 only here.
+
+| # | contents | state on 02-Nov |
+|---|---|---|
+| 1 | isolate-level DOR susceptibility | unchanged. All 18 fold values re-verified against `data/DRM-susceptibilities.csv.xlsx`; `manifests/md_manifest.csv` agrees too |
+| 2 | RT p66 sequences | unchanged |
+| 3 | per-replicate MM/GBSA and per-leg FEP | unchanged, and the builder reproduces it to 0.0 on all 138 rows. This is where the §3(a) cancellation numbers live |
+| 4 | per-replicate structural observables | **rebuilt in both states.** The bound half reproduces the submitted workbook on all 180 summary cells; the unliganded half and the χ1, RMSF and secondary-structure metrics are new |
+| 5 | MM/GBSA relaxation sensitivity | rebuilt, unchanged |
+| 6 | ligand charge model | **rebuilt with four genotypes plus WT.** Was two. Largest ΔΔE_Total shift 1.33 kcal/mol (G190E), all signs preserved |
+| 7 | apo and holo NNIBP volume | **rebuilt from the 100 ns apo ensembles.** The previous build predated them and disagreed with the documents |
+| 8 | 4NCG vs 7Z2G | current against its sources (spot-checked: DOR 0.619 Å, pocket Cα 0.490 Å) |
+| 9 | Tyr181/Tyr188 across four NNRTIs | current against its sources |
+| 10 | **new.** Effect size and 95% interval behind every Figure 3 and Figure 4 cell | built. This is the "Supplementary Table X" the figure captions referred to |
+
+Builders: `ops/docx/build_si_workbooks.py` (5–7),
+`nnrti.cli.build_si_structural_tables` (4 and 10),
+`nnrti.cli.build_supplementary_table_3` (3). **Tables 8 and 9 have no builder** —
+they were written ad hoc, so they cannot be regenerated from a command. Worth
+fixing before any of their sources change.
+
+Previous copies: `_backups/20261102-xlsx/`.
 
 Clean copies sit in `_stale-clean-copies/` and get regenerated at the end by
 stripping the red colour, so they are identical by construction. Do not hand-edit them.
@@ -162,7 +188,7 @@ excluded zero are not shown; on this criterion the Tyr188 / chlorocyanophenyl
 interplanar angle was removed. Of the 126 genotype–metric comparisons plotted,
 21 have a 95% interval excluding zero. Per-comparison effect sizes, confidence
 intervals and p values for every metric, including those not plotted, are in
-Supplementary Table X.
+Supplementary Table 10.
 
 **Figure 4. Mutation-induced changes in RT's own conformation, as the difference
 between the bound and unliganded states, referenced to wild type.** Each cell
@@ -176,8 +202,9 @@ quadrature. Colour, grouping and ordering are as in Figure 3. Metrics for which
 no genotype's 95% confidence interval excluded zero are not shown; on this
 criterion the Cα RMSF of the YMDD motif, the p66 thumb and the p66 connection
 subdomains, and the β9–β10 strand content were all removed, and we report these
-as unresolved at three replicates rather than as unchanged. Of the 90
-genotype–metric comparisons plotted, 11 have a 95% interval excluding zero.
+as unresolved at three replicates rather than as unchanged. Of the 88
+non-blank genotype–metric comparisons plotted, 11 have a 95% interval
+excluding zero.
 
 ## 6. The numbers that matter now
 
@@ -195,12 +222,15 @@ mutant-vs-WT difference and 2.31× for Figure 4's difference of differences.
 - 66 of 1,287 reach 95%, the null expectation for that many tests.
 
 **Apo pocket and opening cost** (3 × 100 ns, all 20 genotypes;
-`pocket_opening_cost_100ns.csv`). The holo arm reproduces the published value to
-0.6 Å³ (227.4 against 228), so the recompute is trustworthy. Wild-type apo is
-**76 ± 9 Å³** and opening costs **147.5 Å³**, not 137. With errors propagated,
-only **G190E (+71 ± 26 Å³)** differs from wild type; A98G+F227C is +22 ± 19 and
-K103N+M230L is +2 ± 28, so the claim that all three mismatched genotypes pay
-more does not survive, and a large nominal cost is not peculiar to them.
+`results/analysis/apo_ensembles/tables/pocket_opening_cost.csv`). The holo arm
+reproduces the published value to 0.4 Å³ (228.4 against 228), so the recompute
+is trustworthy. Wild-type apo is **76.4 ± 9.4 Å³** and opening costs
+**152.1 ± 15.0 Å³**, not 137. With errors propagated,
+only **G190E (+70.7 ± 26.2 Å³)**, G190S (+65.1 ± 27.0) and V106A+P225H
+(−47.9 ± 18.3) differ from wild type. A98G+F227C is +22.5 ± 18.9 and
+K103N+M230L is +1.8 ± 28.4, so the claim that all three mismatched genotypes pay
+more does not survive, and a large nominal cost is not peculiar to them: G190S
+pays the second most and ΔΔGbind tracks its phenotype.
 
 Three genotypes differ from wild type in apo volume, all V106A-containing and
 all **more open**: V106A +52 ± 11 Å³ (p = 0.02), V106A+L234I, V106A+P225H. V106A
@@ -249,10 +279,11 @@ not depend on it, since three combination genotypes carry it at n = 3 each.
 - Supplementary Figure 5 caption still says "at most 0.25 Å … for Y181C and
   G190S". After the p66-anchored re-imaging fix the maximum is 0.193 Å, with
   G190S top and Y181C down at 0.116.
-- Supplementary Table 6 workbook needs rebuilding with the four-genotype AM1-BCC
-  data (`ops/docx/build_si_workbooks.py`).
-- Supplementary Table 4 workbook: the structural metrics table exists as CSV but
-  `build_supplementary_table_4.py` is still the holo-only builder.
+- The Figure 3 and Figure 4 captions, and any Results text that points at the
+  effect sizes, need "Supplementary Table X" changed to **Supplementary Table 10**,
+  and the Supporting Information list in the manuscript needs entries for
+  Tables 4 (now both states) and 10.
+- Tables 8 and 9 have no builder and cannot be regenerated from a command.
 - The apo under-solvation caveat still needs a home in the Supplementary Text.
 - `mutation_component_summary.csv` is stale and does not reconcile with the
   manuscript. Use `binding_energy/tables/ddg_full.csv`.
