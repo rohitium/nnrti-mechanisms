@@ -1,95 +1,106 @@
-# Discussion, reorganised
+# Discussion: reorganisation, and one claim that needs your decision
 
-Mechanisms separated from limitations, as you asked. This is a **rearrangement
-of your existing text**, not new prose: each block below names the paragraph it
-comes from and what was taken out of it. New connective sentences are marked
-`[NEW]` and there are only four of them.
+Updated 02-Nov-2026 after the apo tables were regenerated. Two parts: a claim
+the new numbers do not support, and the rearrangement you asked for.
 
-Current: 11 paragraphs, 1,436 words, with limitations embedded in five of them.
-Proposed: 12 paragraphs, roughly the same length, limitations in three.
+---
 
-## The problem being fixed
+## Part 1 — the cancellation argument in [114] is not supported
 
-The same limitation is currently stated more than once because it is attached
-to whichever mechanism raised it:
+Paragraph [114] currently says:
 
-| limitation | currently appears in |
-|---|---|
-| no nucleic acid / primer grip | **[112]** (G190E "might affect the primer grip, which is not modeled here") and **[115]** (K103N+M230L "no template/primer… absent from our simulations") |
-| sampling / timescales | **[116]**, and implicitly in [114] via "comparable distortion is present in the apo simulations" |
-| implicit solvent | **[114]** only, buried at the end of a mechanism paragraph |
-| three replicates not resolving a metric | **[113]**, as a 90-word statistical aside inside the V106 mechanism |
+> G190E and A98G+F227C both distort the DOR–RT interface (∆∆ETotal = 1.94 ±
+> 0.40 and 2.47 ± 0.24 kcal/mol), **but comparable distortion is present in the
+> apo simulations, so the penalty largely cancels in the thermodynamic cycle**
+> and the residual favors binding.
 
-## Proposed order
+Counting features whose 95% interval excludes zero, in each state:
+
+| | holo | apo |
+|---|---|---|
+| **G190E** | **8** resolved — pocket volume +55.8 ± 12.1 Å³, Val179 +2.84 ± 0.44 Å, and RMSF in the pocket lining, primer grip, β6, fingers and palm | **0** |
+| **A98G+F227C** | 2 resolved — Tyr181 χ1 −75.8 ± 12.0°, primer-grip RMSF +0.09 ± 0.03 Å | 2 resolved, but **different features** — palm helix content, connection RMSF |
+
+For G190E the distortion is a bound-state phenomenon and is absent from the
+unliganded enzyme, so there is nothing for it to cancel against. For
+A98G+F227C the two states are each perturbed, but not in the same way.
+
+Figure 4 says the same thing from the other direction: G190E's induced fit
+differs from wild type by **+71 ± 26 Å³**, which is a *discordant* change —
+precisely the case that should NOT cancel.
+
+So the mechanism and the observation now point opposite ways. G190E distorts
+the bound complex more than any genotype in the panel, that distortion does
+not cancel, and ΔΔGbind still comes out favourable (−1.02 ± 0.38). That is a
+sharper puzzle than the one the paragraph currently poses, and resolving it is
+an interpretation — yours, not mine. Three options, with no recommendation
+from me:
+
+1. Drop the cancellation sentence and state the puzzle plainly.
+2. Keep cancellation as a hypothesis, explicitly flagged as unsupported by the
+   apo data at three replicates.
+3. Point instead at the G190E-specific confounds already in [112] — the
+   replication-capacity problem and the single-isolate phenotype — and treat
+   the ΔΔGbind value as untestable for this genotype.
+
+The same sentence is quoted in the Reviewer 1 comment 3 and Reviewer 2 comment
+2 responses, so whatever you choose has to propagate to both.
+
+---
+
+## Part 2 — the rearrangement
+
+A note on how to apply it: **these paragraphs hold 26 live Zotero fields**
+(five in [107] alone), and moving them with a script risks orphaning
+citations. Cut-and-paste inside Word preserves fields. The list below is
+therefore ordered so you can do it top to bottom in a few minutes.
 
 ### Opening — unchanged
-1. **[106]** DOR's distinct resistance profile; sparse public phenotype data.
-2. **[107]** What we did and why; prior free-energy work in HIV and cancer.
-3. **[108]** Headline result: 3 of 4 Susceptible, 7 of 9 Resistant.
+1. **[106]** context. 2. **[107]** approach. 3. **[108]** headline result.
 
 ### Mechanisms — one per paragraph, limitations removed
-4. **K103N and the backbone anchor** — [109] as written. Already clean.
-5. **Tyr188 carries the aromatic packing alone** — [111] as written. Already
-   clean, and the strongest literature-anchored paragraph in the section.
-6. **The G190 series** — [112] **minus its final two sentences** (the
-   replication-capacity point and "might affect the primer grip, which is not
-   modeled here"). Those move to §11 and §12.
-7. **The V106 series** — [113] **minus the last 90 words** (from "We quantified
-   the uncertainty…" to "…which they do not"). The interval itself is worth
-   keeping in the mechanism; the methodological hedging is not. Replace with
-   one clause:
-   > …loses roughly a quarter of its pyridinone contacts. The displacement is
-   > well resolved (−1.35 Å [−1.73, −0.97] for V106A relative to wild type);
-   > the change in contact count is not, and the argument rests on the
-   > displacement. `[NEW — compressed from the deleted block]`
-8. **Where ΔΔETotal and ΔΔGbind disagree** — [114] **minus its final sentence**
-   on implicit solvent, which moves to §11.
-9. **K103N+M230L** — [115] **minus its last two sentences** on the binary
-   complex, which move to §11. What remains is the mechanism: Met230 sits in
-   the primer grip, M230L impairs replicative capacity, and the DOR interface
-   is unperturbed.
+4. **[109]** K103N and the backbone anchor. Unchanged.
+5. **[111]** Tyr188 carries the aromatic packing. Unchanged.
+6. **[112]** the G190 series — **delete the last two sentences** (replication
+   capacity; "might affect the primer grip, which is not modeled here"). They
+   move to §11 and §12.
+7. **[113]** the V106 series — **delete the last 90 words**, from "We
+   quantified the uncertainty…" to "…which they do not", and replace with:
+   > The displacement is well resolved (−1.35 Å [−1.73, −0.97] for V106A
+   > relative to wild type, Hedges' g = −9.5); the change in pyridinone contact
+   > count is not, and the argument rests on the displacement.
+8. **[114]** ΔΔETotal against ΔΔGbind — **delete the final sentence** on
+   implicit solvent, which moves to §11, and settle Part 1 above.
+9. **[115]** K103N+M230L — **delete the last two sentences** on the binary
+   complex, which move to §11.
 
 ### Limitations — one per paragraph, each stated once
-10. **Sampling.** `[NEW — one opening sentence]` Then the sampling material
-    from [116], plus the apo-equilibrium point. Covers: three replicates seeded
-    from one pose sample one basin; convergence within a basin is not evidence
-    that the basin is the only relevant one; the unliganded pocket equilibrium
-    is slower than we sample; and which structural features are unresolved at
-    three replicates.
-11. **A simplified model system.** `[NEW — one opening sentence]` Then, each
-    stated once: the binary RT–DOR complex omits template/primer and dNTP,
-    so primer-grip and assembly mechanisms are structurally absent (from [112]
-    and [115], now merged); MM/GBSA uses implicit solvent, which may
-    overestimate the desolvation penalty for a buried glutamate (from [114]);
-    the ligand charge model shifts ΔΔETotal by up to 1.33 kcal/mol without
-    changing its sign.
-12. **Mechanisms we cannot reach.** [116] as written, which already does this
-    job — allosteric change, unliganded equilibrium, processivity and fitness —
-    plus the replication-capacity sentence moved out of [112], and the closing
-    pointer to QM/MM, enhanced sampling and machine learning.
+10. **Sampling.** Three replicates from one seeded pose sample one basin;
+    convergence within a basin is not evidence the basin is the only relevant
+    one; the unliganded equilibrium is slower than 100 ns. Add: of 1,287
+    genotype-by-feature structural comparisons, 66 reach 95%, which is the
+    null expectation — most structural differences in the panel are
+    unresolved at three replicates.
+11. **A simplified model system.** The binary RT–DOR complex omits
+    template/primer and dNTP, so primer-grip and assembly mechanisms are
+    structurally absent (merged from [112] and [115], currently stated twice);
+    MM/GBSA uses implicit solvent, which may overestimate desolvation for a
+    buried glutamate (from [114]); the ligand charge model shifts ΔΔETotal by
+    up to 1.33 kcal/mol without changing its sign.
+12. **Mechanisms we cannot reach.** [116] as written, plus the
+    replication-capacity sentence moved out of [112].
 
-## What this costs
+### What leaves the Discussion
+- The 90-word statistical passage in [113] → Results or SI.
+- "comparable distortion is present in the apo simulations" → see Part 1.
+- [112]'s "pocket enlarged by ~25%" reads as a new result here; it is in
+  Table 3 and can be cited rather than restated.
 
-Three things leave the Discussion and should land elsewhere if you want to keep
-them:
+---
 
-- The 90-word statistical passage in [113]. It belongs in Results or the
-  Supporting Information, not in interpretation.
-- "comparable distortion is present in the apo simulations" in [114] is a
-  **result**, not an interpretation, and its number is stale — see the numbers
-  memo. It needs a Results sentence to point at.
-- [112]'s "pocket enlarged by ~25%" is also a result. The current figure is
-  from the holo pocket volumes and is fine, but it reads as new data here.
+## Verified while doing this
 
-## Numbers in the Discussion that need checking
-
-These are the ones I have not yet been able to confirm against regenerated
-tables — the apo analysis is still rerunning after a stale PBC sidecar was
-found and rebuilt:
-
-- [114] "comparable distortion is present in the apo simulations" — the apo
-  numbers behind this all predate the 100 ns runs.
-- [112] "pocket enlarged by ~25%" for G190E.
-
-Everything else in the Discussion cites ΔΔGbind, ΔΔETotal or Table 3 values,
-which are unaffected by the apo rerun.
+All 17 energetic and structural numbers quoted in the Discussion check out
+against Tables 2 and 3: every ΔΔGbind, ΔΔETotal, ΔΔEvdW and ΔΔEGB value, the
+chlorocyanophenyl burial counts for G190E, Y188L and wild type, and the Lys103
+anchor distance. Only the apo-derived claims needed attention.
