@@ -1,5 +1,5 @@
 {
-  "task_id": 12,
+  "task_id": 6,
   "structure": "v106a",
   "mutation": "v106a",
   "safe_label": "v106a",
@@ -15,11 +15,11 @@
   "state_csv": "results/md_runs/apo/v106a/rep_01/v106a_rep01_md_state.csv",
   "final_pdb": "results/md_runs/apo/v106a/rep_01/v106a_rep01_md_final.pdb",
   "checkpoint_path": "results/md_runs/apo/v106a/rep_01/v106a_rep01_md.chk",
-  "md_heating_steps": 12500,
+  "md_heating_steps": 0,
   "md_production_steps": 50000000,
-  "md_production_steps_completed": 5000000,
-  "md_total_steps": 5012500,
-  "resumed_from_checkpoint": false,
-  "elapsed_seconds": 25256.227494047955,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50000000,
+  "resumed_from_checkpoint": true,
+  "elapsed_seconds": 101752.48688324727,
   "status": "ok"
 }
