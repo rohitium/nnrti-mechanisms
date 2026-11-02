@@ -254,30 +254,7 @@ def main(argv: list[str] | None = None) -> int:
                 ax.set_ylabel(f"{TAU_LABELS[t]}\n(°)", fontsize=7)
             if i == 3:
                 ax.set_xlabel("time (ns)")
-            # escape rate annotation, at matched resolution for the free column
-            if j == 0:
-                vals = []
-                for rep, g in g_all.groupby("replicate"):
-                    a = g[t].to_numpy()
-                    idx = np.linspace(0, len(a) - 1, 180).astype(int)
-                    vals.append(count_escapes(a[idx], c)[0])
-                txt = f"{np.mean(vals):.0f} escapes/100 ns\n(at bound resolution)"
-            else:
-                vals = [count_escapes(g.sort_values("frame")[t].to_numpy(), c)[0]
-                        for _, g in bound_all.groupby(["safe_label", "replicate"])]
-                txt = f"{np.sum(vals):.0f} escape in 60 replicates" if np.sum(vals) == 1 \
-                    else f"{np.sum(vals):.0f} escapes in 60 replicates"
-            ax.text(0.98, 0.04, txt, transform=ax.transAxes, ha="right", va="bottom",
-                    fontsize=6, color="0.25")
     fig.suptitle("Binding abolishes rotamer exchange in doravirine", y=0.995, fontsize=10)
-    fig.text(0.5, -0.012,
-             "Shaded band: the bound rotamer basin (± %.0f° about the WT-bound circular mean); "
-             "it wraps the axis edge where the basin straddles the branch cut.\n"
-             "Free runs 50 ps/frame; bound 200–559 ps/frame. An angle is circular, so the "
-             "axis is cut open at %s — breaks in a trace are that seam, not gaps in the data."
-             % (BASIN_HALF_WIDTH,
-                "0°/360°" if args.angle_frame == "positive" else "its emptiest angle"),
-             ha="center", fontsize=6, color="0.35")
     fig.tight_layout()
     args.output_dir.mkdir(parents=True, exist_ok=True)
     f1 = args.output_dir / "dor_torsion_trajectories.png"
