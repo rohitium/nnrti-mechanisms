@@ -68,143 +68,78 @@ poses**: replicates differ only by 0.1 Å jitter, and the response says so
 plainly. The pose ladder tests pose sensitivity, not basin exploration, so it
 does not cover this. If there is a second round, this is where it comes from.
 
-## 3. Decisions waiting on you
+## 3. Decisions taken, and what is still yours
 
-**(a) The cancellation sentence in Discussion paragraph 595 is supported. Only
-the wording needs work.** The cancellation lives in the alchemical legs, where
-ΔΔG_bind = ΔG_holo(WT→Mut) − ΔG_apo(WT→Mut), so anything the mutation does to
-both legs cancels by construction. The per-leg values are already published in
-Supplementary Table 3, FEP sheet:
+All three of the decisions this file previously left open have been taken, with
+the reasoning recorded here so they can be reversed.
 
-| genotype | leg | ΔG holo | ΔG apo | residual | cancels |
-|---|---|---|---|---|---|
-| G190E | wt→G190E | −53.84 | −52.82 | **−1.02 ± 0.38** | 98% |
-| A98G+F227C | F227C→A98G+F227C | −8.97 | −7.75 | −1.22 ± 0.32 | 85% |
-| K103N+M230L | wt→K103N | −78.00 | −78.54 | +0.54 ± 0.23 | 99.3% |
-| | K103N→K103N+M230L | −14.09 | −14.14 | +0.05 ± 0.34 | 99.7% |
+**(a) The cancellation sentence is kept and corrected, not dropped.** It was
+right; it was only ambiguous. ΔΔGbind is the difference of the bound and
+unliganded alchemical legs, so anything the mutation does to both cancels by
+construction, and Supplementary Table 3 already carried the numbers: G190E
+costs −53.8 kcal/mol in the bound leg and −52.8 in the unliganded leg, leaving
+−1.02. Across the panel the residual is a median 9% of the leg magnitude, and
+for the three mismatched genotypes 0.3–2%. The phrase "the apo simulations"
+could only mean the alchemical leg when it was written, but the revision adds
+3 × 100 ns equilibrium apo ensembles and a Figure 4 built on holo − apo, so the
+sentence now names the leg and quantifies it.
 
-This is the answer to positive ΔΔE_Total with near-zero ΔΔG_bind. ΔΔE_Total is a
-single-trajectory interface energy of the bound complex and contains no apo leg
-at all, so it keeps the whole perturbation; ΔΔG_bind is a residual of a few per
-cent between two legs of tens of kcal/mol. Across the panel the median residual
-is 9% of the leg magnitude, and for the three mismatched genotypes it is
-0.3–2%, so these are the most completely cancelling cases in the study.
+**(b) Main-text Table 3 stays.** Figures 3 and 4 were added as Reviewer 1
+comment 4 asked, not substituted for the table, and the manuscript already
+referenced both. Keeping it leaves every existing `(Table 3)` pointer correct.
 
-**The problem is the phrase "the apo simulations".** Before this revision it
-could only mean the alchemical apo leg. The paper now also contains 3 × 100 ns
-equilibrium apo ensembles and a Figure 4 built on holo − apo, so a reviewer will
-read it as those, and on that reading it is false for G190E: 8 resolved holo
-features against 0 apo. Naming the leg fixes it, for instance "…but the same
-perturbation is present in the unliganded leg of the thermodynamic cycle
-(Supplementary Table 3), so it largely cancels…".
+**(c) The dropped-metric sentence stays in the Figure 4 caption,** and Methods
+now states the 95% criterion (2.78 standard errors for Figure 3, 2.31 for
+Figure 4), so a reader applying a mental factor of 2 is not misled.
 
-Worth considering: quantifying it would make the paragraph stronger than the
-qualitative "largely cancels", since 98% of a 53 kcal/mol perturbation is a more
-striking statement than the current wording, and it doubles as the precision
-caveat on ΔΔG_bind.
+**Still yours:** whether to say more about the primer-grip result in §6, and
+whether the G190E replication-capacity specifics belong in the paper — see §8.
 
-*(Correction to the overnight note: I tested this sentence against the
-equilibrium apo MD, which measures structure, not against the alchemical legs,
-which measure the free energy the sentence is about. The three options I laid
-out rested on that error and are withdrawn. The structural observation stands
-on its own — G190E's distortion is bound-state only — but it does not bear on
-the cancellation.)*
+## 4. The Discussion rework — applied
 
-**(b) The dropped-metric sentence in the Figure 4 caption.** The four metrics
-removed are the subdomain and catalytic-motif fluctuations, which is exactly the
-slow loop remodelling R1 asks about for the P225 and M230 genotypes. Saying so
-in the caption answers that part of the comment honestly, but it is also a
-concession and may read better in Results with a pointer in the caption.
+The Discussion now separates mechanism from limitation, so no caveat is stated
+more than once. Opening unchanged (context, approach, headline result), then
+one paragraph per mechanism (K103N, the tyrosines, the G190 series, the V106
+series, ΔΔETotal against ΔΔGbind, K103N+M230L), then three limitation
+paragraphs, then the closing paragraph on mechanisms out of reach.
 
-**(c) A Methods half-sentence on the 95% criterion.** Figure 3 needs 2.78 SEM,
-Figure 4 needs 2.31, because of the degrees of freedom (two groups of three
-against four). A reader applying a mental factor of 2 will think more cells are
-resolved than are.
+The three limitation paragraphs are **sampling** (one basin, 100 ns against a
+slower apo equilibrium, and 66 of 1,287 comparisons resolved), **the model
+system** (no template/primer or dNTP, with the cryo-EM evidence for why a
+binary model is still defensible at the drug site), and **the energy functions**
+— the new one, written for this revision. Nothing in the paper had interpreted
+the force field or the charge model as a limitation even though the
+charge-model sensitivity had been measured. It states that the two energetic
+methods do not share a ligand charge model, that re-scoring under AM1-BCC moves
+ΔΔETotal by up to 1.33 kcal/mol while changing no sign, and that 1.33 exceeds
+every gap between adjacent genotypes in the ΔΔETotal ranking (median gap 0.16,
+largest 1.29) — so the sign of an interface penalty survives the charge model
+but the rank of a genotype does not. It also carries the implicit-solvent point
+about G190E's buried glutamate, which used to sit in the mechanism paragraph.
 
-## 4. The Discussion rework
+Mechanism paragraphs lost their caveats; the 90-word statistics passage in the
+V106 paragraph is now one sentence and the method moved to Methods. The
+citations travelled with the sentences as field elements, so each is still
+bound to its Zotero item.
 
-Your structure: three opening paragraphs as they stand, then one paragraph per
-mechanism, then one paragraph per limitation. Real paragraph indices in
-`Manuscript-Revision-1.docx` (Discussion is 588–597, 26 Zotero fields):
+**Zotero must be refreshed in Word.** Moved citations are out of numerical
+order until then. The bibliography is a `ZOTERO_BIBL` field, so a refresh
+renumbers the in-text marks and rebuilds the reference list; nothing was
+renumbered by hand.
 
-**Opening, unchanged.** 588 context · 589 approach · 590 headline result.
+Applied by `ops/docx/apply_discussion_revision.py`, built on
+`ops/docx/docx_surgery.py`, which moves citation fields rather than merely
+avoiding them. Both scripts verify paragraph counts, field balance and that no
+field was split before writing.
 
-**Mechanisms, limitations stripped out.**
+## 5. Figure 3 and Figure 4 captions — in the manuscript
 
-| ¶ | topic | change |
-|---|---|---|
-| 591 | K103N and the backbone anchor | none |
-| 592 | Tyr181/Tyr188 aromatic packing | none |
-| 593 | the G190 series | delete the last two sentences (replication capacity; "might affect the primer grip, which is not modeled here") — they move to the limitations. "pocket enlarged by ~25%" reads as a new result; cite Table 3 instead |
-| 594 | the V106 series | delete the last 90 words, "We quantified the uncertainty…" to "…which they do not", and replace with the sentence below |
-| 595 | ΔΔETotal against ΔΔGbind | delete the final implicit-solvent sentence (moves to limitations); name the alchemical leg in the cancellation clause, per §3(a) |
-| 596 | K103N+M230L | delete the last two sentences on the binary complex (move to limitations) |
-
-Replacement for the end of 594:
-
-> The displacement is well resolved (−1.35 Å [−1.73, −0.97] for V106A relative
-> to wild type, Hedges' g = −9.5); the change in pyridinone contact count is
-> not, and the argument rests on the displacement.
-
-**Limitations, each stated once.**
-
-1. **Sampling.** Three replicates from one seeded pose sample one basin;
-   convergence within a basin is not evidence the basin is the only relevant
-   one; the unliganded equilibrium is slower than 100 ns. Add: of 1,287
-   genotype-by-feature comparisons, 66 reach 95%, which is the null
-   expectation, so most structural differences in the panel are unresolved at
-   three replicates.
-2. **A simplified model system.** The binary RT–DOR complex omits
-   template/primer and dNTP, so primer-grip and assembly mechanisms are
-   structurally absent (merge from 593 and 596, where it is currently stated
-   twice); MM/GBSA uses implicit solvent, which may overestimate desolvation
-   for a buried glutamate (from 595); the ligand charge model shifts ΔΔETotal
-   by up to 1.33 kcal/mol without changing its sign.
-3. **Mechanisms we cannot reach.** 597 as written, plus the
-   replication-capacity sentence moved out of 593.
-
-The 90-word statistical passage leaving 594 belongs in Results or the SI.
-
-All 17 energetic and structural numbers quoted in the Discussion were checked
-against Tables 2 and 3 and are correct. Only the apo-derived claims needed work.
-
-## 5. Figure 3 and Figure 4 captions
-
-Written against the figures as they stand: 18 genotypes, Figure 3 with 7 metrics,
-Figure 4 with 5. Both drop the Tyr188 interplanar angle, which no genotype
-resolves; reinstating it changes the dropped-metric sentence.
-
-**Figure 3. Changes in RT–DOR contacts across the genotype panel, referenced to
-wild type.** Each cell gives the shift of a structural metric from its wild-type
-value, in that metric's own units, above the standard error of the shift. Errors
-combine the genotype's and wild type's standard errors over three independent
-100 ns replicates in quadrature, since wild type is itself a three-replicate
-mean. Colour is scaled within each column, so the darkest cell in a column is
-the largest shift for that metric; it carries no meaning across columns, which
-are in ångström, degrees and counts. Genotypes are grouped by the resistance
-category of Table 1 and ordered by fold reduction in doravirine susceptibility
-within each group. Metrics for which no genotype's 95% confidence interval
-excluded zero are not shown; on this criterion the Tyr188 / chlorocyanophenyl
-interplanar angle was removed. Of the 126 genotype–metric comparisons plotted,
-21 have a 95% interval excluding zero. Per-comparison effect sizes, confidence
-intervals and p values for every metric, including those not plotted, are in
-Supplementary Table 10.
-
-**Figure 4. Mutation-induced changes in RT's own conformation, as the difference
-between the bound and unliganded states, referenced to wild type.** Each cell
-gives (holo − apo) for a genotype minus (holo − apo) for wild type: the extent
-to which binding doravirine reshapes the enzyme, and how far that reshaping
-differs from wild type's. A value near zero means the mutation moves the bound
-and unliganded states by the same amount, concordant remodelling, which cancels
-in a thermodynamic cycle and is therefore invisible to ΔΔGbind by construction.
-Errors propagate the standard errors of all four three-replicate means in
-quadrature. Colour, grouping and ordering are as in Figure 3. Metrics for which
-no genotype's 95% confidence interval excluded zero are not shown; on this
-criterion the Cα RMSF of the YMDD motif, the p66 thumb and the p66 connection
-subdomains, and the β9–β10 strand content were all removed, and we report these
-as unresolved at three replicates rather than as unchanged. Of the 88
-non-blank genotype–metric comparisons plotted, 11 have a 95% interval
-excluding zero.
+Both captions are written into `Manuscript-Revision-1.docx`, replacing the
+one-line stubs, and both reference Supplementary Table 10 for the per-comparison
+statistics. Figure 3 is 18 genotypes by 7 metrics with 21 of 126 cells resolved;
+Figure 4 is 18 by 5 with 11 of 88 non-blank cells resolved. Both drop the Tyr188
+interplanar angle, which no genotype resolves; reinstating it means changing the
+dropped-metric sentence with it.
 
 ## 6. The numbers that matter now
 
@@ -245,6 +180,17 @@ re-solvated before measurement, so apo volumes are biased low and openings are
 upper bounds. This is the one Methods caveat worth keeping. Delete the other,
 "apo replicates differ in length", which is no longer true.
 
+**The primer grip loosens, consistently.** Of the 171 genotype-by-region
+fluctuation comparisons in the bound state, 17 are resolved at 95%, and they are
+not scattered: the primer grip (225–235) becomes more mobile in **nine of the
+nineteen genotypes**, by 0.08 to 0.16 Å, always in the same direction. G190E is
+more mobile than wild type in four regions at once — pocket lining, primer grip,
+β6 and the p66 fingers, the last by 0.56 Å [0.12, 0.99]. Secondary structure
+moves by at most 0.11 of strand character and only 4 of 342 comparisons are
+resolved. This is the most direct thing the data says about Reviewer 1's
+question on the P225 and M230 genotypes, and a binary complex cannot connect it
+to a mechanism. It is currently only in the Supplementary Figure 5 caption.
+
 **DOR in water: binding stops the clock rather than narrowing the
 distribution.** Across 60 bound replicates × 4 torsions × 100 ns, 24 µs of
 cumulative torsion-time, DOR leaves its bound rotamer **three times**. Free in
@@ -276,21 +222,48 @@ not depend on it, since three combination genotypes carry it at n = 3 each.
 
 ## 8. Open work
 
-- Supplementary Figure 5 caption still says "at most 0.25 Å … for Y181C and
-  G190S". After the p66-anchored re-imaging fix the maximum is 0.193 Å, with
-  G190S top and Y181C down at 0.116.
-- The Figure 3 and Figure 4 captions, and any Results text that points at the
-  effect sizes, need "Supplementary Table X" changed to **Supplementary Table 10**,
-  and the Supporting Information list in the manuscript needs entries for
-  Tables 4 (now both states) and 10.
-- Tables 8 and 9 have no builder and cannot be regenerated from a command.
-- The apo under-solvation caveat still needs a home in the Supplementary Text.
+- **Refresh Zotero in Word** and check the reference list, as §4 says.
+- The G190E replication-capacity specifics the Response used to assert — 20–60%
+  of reference replication, compensatory L74V or V75 — are **not** in the
+  manuscript. I could not reach Huang 2003 to verify them, so the manuscript
+  states only what reference 76's own title supports plus the methodological
+  point that the clinical fold change is measured on viruses carrying other
+  substitutions. If you can confirm the numbers against the paper, they are
+  worth adding.
+- The primer-grip finding in §6 is not yet in the main text. It is the most
+  direct answer the data gives to Reviewer 1's question about the P225 and M230
+  genotypes, and it currently appears only in the Supplementary Figure 5
+  caption.
 - `mutation_component_summary.csv` is stale and does not reconcile with the
   manuscript. Use `binding_energy/tables/ddg_full.csv`.
-- Five `src/nnrti/cli/*.py` files are untracked.
+- Six `src/nnrti/cli/*.py` and `ops/docx/*.py` files are new this session and
+  are committed; nothing is untracked.
 - **Author actions:** ORCID iDs, the funding field (NIAID R24AI136618) on the
   submission form, and an English-language pass over the pre-existing text. The
-  ~1,100 added words were audited; the original text has not been.
+  added words were audited; the original text has not been.
+
+### Fixed this session
+
+- The Response quoted 19 sentences that appeared in neither the manuscript nor
+  the Supplementary Text, in four blocks drafted as answers to reviewers and
+  never inserted. Methods gained the rest of the unliganded-simulation
+  protocol, Results gained the subsection on the cost of opening the pocket,
+  and the Supplementary Text gained the sampling discussion. Every quoted
+  sentence now appears in the paper: **0 of 90**, checked by re-auditing.
+- The figure renumbering was half-done: the mechanism figure was Figure 5 in
+  Results but captioned Figure 3, which the new heatmaps also claimed, and the
+  Discussion still pointed at Figure 3A/3B. Both heatmap captions were stubs.
+- The Supporting Information list described the September submission: one
+  Supplementary Text with two figures and four tables, against nine sections,
+  six figures and ten tables.
+- `apo_crystal_reference.csv` still carried the pre-100 ns wild-type apo volume
+  of 91.0 Å³, which fed Supplementary Table 7. It is 76.4. The script that
+  writes it also printed a hardcoded "matched 10 ns" label; that is gone.
+- Supplementary Figure 5's caption claimed regional RMSF changes reach at most
+  0.25 Å for Y181C and G190S. Both the figure and my own earlier note were
+  wrong; see §6.
+- Supplementary Text section 9 named V106I+F227C as one of the three genotypes
+  whose ΔΔGbind misses the phenotype. It is K103N+M230L.
 
 ## 9. Where the detail went
 

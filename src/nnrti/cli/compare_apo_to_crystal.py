@@ -93,7 +93,11 @@ def main(argv: list[str] | None = None) -> int:
         wt = a[a.safe_label == "wt"]
         if len(wt):
             r = wt.iloc[0]
-            print(f"\nsimulated WT apo (matched 10 ns): "
+            # Never hardcode the window length here. A "10 ns" label outlived
+            # the 10 ns runs once already and was still being printed, and
+            # written into a table, after every apo replicate reached 100 ns.
+            window = f"{r.total_ns:.0f} ns" if "total_ns" in a.columns else "matched window"
+            print(f"\nsimulated WT apo ({window}): "
                   f"{r.pocket_volume:.1f} +/- {r.pocket_volume_sd:.1f} A^3")
             rows.append({"source": "this work, WT apo ensemble",
                          "state": "unliganded (apo)",
