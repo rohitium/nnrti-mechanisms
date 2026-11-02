@@ -26,6 +26,12 @@ import numpy as np
 import pandas as pd
 
 RESID_OFFSET = -3
+
+#: Frames with a pocket Ca radius of gyration above this are excluded, matching
+#: compare_apo_ensembles.py and compute_protein_level_changes.py so that every
+#: apo number in the paper rests on the same frames.
+POCKET_RG_MAX_A = 10.0
+
 NNIBP_P66 = (100, 101, 103, 106, 107, 108, 179, 181, 188, 189, 190, 227, 229, 234, 318)
 
 #: Column-safe region names, matching compute_protein_level_changes.REGIONS.
@@ -100,6 +106,16 @@ def build(root: Path) -> pd.DataFrame:
                            "replicate": holo_v.replicate,
                            "nnibp_volume_A3": holo_v.pocket_volume_mean.round(1)})
     apo_f = pd.read_csv(root / "results/analysis/apo_ensembles/tables/apo_frame_metrics.csv")
+    # Drop frames whose pocket has come apart, at the threshold
+    # compare_apo_ensembles.py and compute_protein_level_changes.py both use.
+    # Without it, apo g190e rep_02 averages 1871 A^3 (max 4172) instead of 103,
+    # because a disintegrated pocket has an enormous convex hull -- which
+    # reported G190E's apo pocket as +575 A^3 against WT.
+    before = len(apo_f)
+    apo_f = apo_f[apo_f.pocket_rg <= POCKET_RG_MAX_A]
+    if before != len(apo_f):
+        print(f"  dropped {before - len(apo_f)} of {before} apo frames with "
+              f"pocket Rg > {POCKET_RG_MAX_A:.0f} A")
     apo_v = (apo_f.groupby(["safe_label", "replicate"], as_index=False)
              .pocket_volume.mean())
     apo_v = pd.DataFrame({"structure_type": "apo",
