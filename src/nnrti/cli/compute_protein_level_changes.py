@@ -36,11 +36,28 @@ warnings.filterwarnings("ignore")
 
 RESID_OFFSET = -3
 NNIBP_P66 = (100, 101, 103, 106, 107, 108, 179, 181, 188, 189, 190, 227, 229, 234, 318)
+
+#: p66 subdomain boundaries, canonical numbering, as used in
+#: compare_dor_crystal_poses.py. Kept identical so the two analyses partition
+#: the enzyme the same way.
+_FINGERS = tuple(range(1, 86)) + tuple(range(118, 156))
+_PALM = tuple(range(86, 118)) + tuple(range(156, 237))
+_THUMB = tuple(range(237, 319))
+_CONNECTION = tuple(range(319, 427))
+
 REGIONS = {
     "NNIBP lining": NNIBP_P66,
     "primer grip 225-235": tuple(range(225, 236)),
     "beta6 100-110": tuple(range(100, 111)),
     "beta9-beta10 179-190": tuple(range(179, 191)),
+    # The catalytic motif and the subdomains whose relative motion defines the
+    # open/closed transition: a mutation can leave the pocket lining alone and
+    # still change how the enzyme breathes.
+    "YMDD 183-186": (183, 184, 185, 186),
+    "p66 fingers": _FINGERS,
+    "p66 palm": _PALM,
+    "p66 thumb": _THUMB,
+    "p66 connection": _CONNECTION,
 }
 
 
@@ -48,16 +65,32 @@ def main(argv: list[str] | None = None) -> int:
     import mdtraj as md
 
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--runs-root", type=Path, default=Path("results/md_runs"))
-    p.add_argument("--output-dir", type=Path, default=Path("results/analysis/protein_level"))
+    p.add_argument("--state", choices=("holo", "apo"), default="holo",
+                   help="Which leg to analyse. Sets the default runs-root and "
+                        "output-dir, and is recorded in a structure_type column "
+                        "so the two legs can be concatenated unambiguously.")
+    p.add_argument("--runs-root", type=Path, default=None)
+    p.add_argument("--output-dir", type=Path, default=None)
     p.add_argument("--max-frames", type=int, default=200,
                    help="Subsample to at most this many frames per replicate.")
     args = p.parse_args(argv)
 
+    # Defaults depend on the leg, and the apo runs live one level deeper. The
+    # holo filter must still exclude results/md_runs/apo, but that same test
+    # would reject every apo directory, so it is applied only for holo.
+    if args.runs_root is None:
+        args.runs_root = (Path("results/md_runs/apo") if args.state == "apo"
+                          else Path("results/md_runs"))
+    if args.output_dir is None:
+        args.output_dir = Path(f"results/analysis/protein_level"
+                               f"{'_apo' if args.state == 'apo' else ''}")
+
     dirs = sorted(d for d in args.runs_root.glob("*/rep_*")
-                  if "apo" not in d.parts and (list(d.glob("*analysis.dcd"))))
+                  if (args.state == "apo" or "apo" not in d.parts)
+                  and (list(d.glob("*analysis.dcd"))))
     if not dirs:
-        raise SystemExit("no holo replicates found")
+        raise SystemExit(f"no {args.state} replicates found under {args.runs_root}")
+    print(f"{args.state}: {len(dirs)} replicates under {args.runs_root}")
 
     rmsf_rows, ss_rows = [], []
     for d in dirs:
@@ -66,6 +99,24 @@ def main(argv: list[str] | None = None) -> int:
         top = sorted(d.glob("*analysis_topology.pdb"))[0]
         try:
             t = md.load(str(dcd), top=str(top))
+            # Re-image in memory, for BOTH legs, anchored on p66.
+            #
+            # make_molecules_whole is NOT enough here and is in fact a no-op on
+            # these trajectories: p66 and p51 are separate molecules, each
+            # already whole, that drift into different periodic images. The
+            # superposition this RMSF depends on then sees p51 displaced by a
+            # box vector. Measured on apo wt rep_02: raw and
+            # make_molecules_whole both give 24.1 A mean Ca RMSF with a 41 A
+            # maximum, while anchoring on p66 gives 1.59 A / 4.61 A -- matching
+            # that run's *_analysis_pbcfix.dcd sidecar exactly.
+            #
+            # Correcting here rather than reading sidecars matters because the
+            # apo runs have sidecars and the holo runs have none, so reading
+            # them would treat the two legs differently -- which is precisely
+            # the comparison this table exists to make. This writes nothing
+            # into the run directories, holo least of all.
+            t.image_molecules(inplace=True,
+                              anchor_molecules=[set(t.topology.chain(0).atoms)])
         except Exception as e:
             print(f"  {label} rep{rep}: load failed ({e})", flush=True)
             continue
@@ -85,7 +136,8 @@ def main(argv: list[str] | None = None) -> int:
         xyz = t.xyz[:, idx, :] * 10.0
         rmsf = np.sqrt(((xyz - xyz.mean(0)) ** 2).sum(-1).mean(0))
         for a, v in zip(ca, rmsf):
-            rmsf_rows.append({"safe_label": label, "replicate": rep,
+            rmsf_rows.append({"structure_type": args.state,
+                              "safe_label": label, "replicate": rep,
                               "resSeq": a.residue.resSeq,
                               "canonical": a.residue.resSeq - RESID_OFFSET,
                               "chain": a.residue.chain.index, "rmsf": float(v)})
@@ -95,7 +147,8 @@ def main(argv: list[str] | None = None) -> int:
             residues = [r for r in t.topology.residues if r.is_protein]
             for j, r in enumerate(residues):
                 col = dssp[:, j]
-                ss_rows.append({"safe_label": label, "replicate": rep,
+                ss_rows.append({"structure_type": args.state,
+                                "safe_label": label, "replicate": rep,
                                 "resSeq": r.resSeq, "canonical": r.resSeq - RESID_OFFSET,
                                 "chain": r.chain.index,
                                 "frac_helix": float((col == "H").mean()),
@@ -121,12 +174,12 @@ def main(argv: list[str] | None = None) -> int:
     for lbl, g in gm[gm.safe_label != "wt"].groupby("safe_label"):
         g = g.set_index(["chain", "canonical"])
         delta = (g.rmsf - wt).dropna()
-        row = {"safe_label": lbl}
+        row = {"structure_type": args.state, "safe_label": lbl}
         for name, resids in REGIONS.items():
             sel = delta[[i for i in delta.index if i[1] in resids and i[0] == 0]]
             row[name] = round(float(sel.mean()), 3) if len(sel) else float("nan")
         rows.append(row)
-    summ = pd.DataFrame(rows).set_index("safe_label").sort_index()
+    summ = pd.DataFrame(rows).set_index(["structure_type", "safe_label"]).sort_index()
     summ.to_csv(out / "rmsf_delta_by_region.csv")
 
     print("\n=== mean Ca RMSF change vs WT, by region (A) ===")
