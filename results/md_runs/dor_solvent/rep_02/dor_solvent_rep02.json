@@ -1,0 +1,16 @@
+{
+  "label": "dor_solvent_rep02",
+  "replicate": 2,
+  "ligand_resname": "2KW",
+  "ligand_sdf": "data/ligands/dor.sdf",
+  "prepared_topology_pdb": "/scratch/users/rsatija/nnrti-mechanisms-git/results/md_runs/dor_solvent/prepared/dor_solvent_topology.pdb",
+  "prepared_system_xml": "/scratch/users/rsatija/nnrti-mechanisms-git/results/md_runs/dor_solvent/prepared/dor_solvent_system.xml",
+  "md_heating_steps": 12500,
+  "md_production_steps": 50000000,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50012500,
+  "analysis_interval_steps": 25000,
+  "resumed_from_checkpoint": false,
+  "elapsed_seconds": 6708.266797710996,
+  "status": "ok"
+}
