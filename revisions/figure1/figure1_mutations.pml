@@ -3,31 +3,32 @@
 # Everything below is a starting point; adjust and re-save the session.
 
 reinitialize
-load /Users/rohitpro/Career/00_Github/nnrti-mechanisms/results/md_runs/wt/rep_01/wt_rep01_analysis_topology.pdb, RT_DOR
+load /Users/rohitpro/Career/00_Github/nnrti-mechanisms/revisions/figure1/4NCG_nosolvent.pdb, RT_DOR
+remove RT_DOR and solvent
 hide everything
 
 # ---- the three molecules -------------------------------------------
 select p66, RT_DOR and chain A and polymer
 select p51, RT_DOR and chain B and polymer
-select DOR, RT_DOR and chain E
+select DOR, RT_DOR and resn 2KW
 
 # ---- the pocket ------------------------------------------------------
-select NNIBP, (p66 and resi 97+98+100+103+104+105+176+178+185+186+187+224+226+231+315) or (p51 and resi 135)
+select NNIBP, (p66 and resi 100+101+103+106+107+108+179+181+188+189+190+227+229+234+318) or (p51 and resi 138)
 
 # ---- mutated positions ----------------------------------------------
-select mutations, p66 and resi 95+97+100+103+178+185+187+222+224+227+231+315
-select mut_A98, p66 and resi 95
-select mut_L100, p66 and resi 97
-select mut_K103, p66 and resi 100
-select mut_V106, p66 and resi 103
-select mut_Y181, p66 and resi 178
-select mut_Y188, p66 and resi 185
-select mut_G190, p66 and resi 187
-select mut_P225, p66 and resi 222
-select mut_F227, p66 and resi 224
-select mut_M230, p66 and resi 227
-select mut_L234, p66 and resi 231
-select mut_Y318, p66 and resi 315
+select mutations, p66 and resi 98+100+103+106+181+188+190+225+227+230+234+318
+select mut_A98, p66 and resi 98
+select mut_L100, p66 and resi 100
+select mut_K103, p66 and resi 103
+select mut_V106, p66 and resi 106
+select mut_Y181, p66 and resi 181
+select mut_Y188, p66 and resi 188
+select mut_G190, p66 and resi 190
+select mut_P225, p66 and resi 225
+select mut_F227, p66 and resi 227
+select mut_M230, p66 and resi 230
+select mut_L234, p66 and resi 234
+select mut_Y318, p66 and resi 318
 
 # ---- representations -------------------------------------------------
 show cartoon, p66 or p51
@@ -143,9 +144,9 @@ set label_position, (0, 0, 3.0), mut_Y318
 # are only a few angstroms apart, so no direction separates them.
 # Rotate as you like and re-save; nothing else depends on it.
 set_view (\
-  -0.416037, 0.909348, 0.000000,\
-  -0.811820, -0.371417, 0.450552,\
-  0.409709, 0.187446, 0.892750,\
-  0.0, 0.0, -83.075,\
-  9.303982, 11.424402, 16.513615,\
-  70.488, 95.663, -20.0 )
+  0.999570, -0.000000, 0.029335,\
+  -0.009914, 0.941155, 0.337830,\
+  -0.027609, -0.337975, 0.940750,\
+  0.0, 0.0, -79.280,\
+  9.006171, 11.636513, 16.846439,\
+  67.268, 91.293, -20.0 )

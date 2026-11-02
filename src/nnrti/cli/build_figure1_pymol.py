@@ -34,21 +34,25 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-#: Simulation topology numbering = canonical numbering + RESID_OFFSET.
-RESID_OFFSET = -3
+#: The crystal structure uses canonical HIV-1 RT numbering, so no offset. The
+#: simulation topology is shifted by -3, which --resid-offset handles if the
+#: figure is ever rebuilt from an MD frame instead.
+RESID_OFFSET = 0
 
 #: NNIBP-lining residues, canonical numbering (Cilento, Kirby & Sarafianos).
 NNIBP_P66 = (100, 101, 103, 106, 107, 108, 179, 181, 188, 189, 190, 227, 229, 234, 318)
 NNIBP_P51 = (138,)
 
-#: Chain IDs in the analysis topology.
-CHAIN_P66, CHAIN_P51, CHAIN_DOR = "A", "B", "E"
+#: Chain IDs. In 4NCG the ligand sits in chain A with p66, so DOR is selected
+#: by residue name rather than by chain.
+CHAIN_P66, CHAIN_P51 = "A", "B"
+LIGAND_RESN = "2KW"
 
 
 PYMOL_APP = Path("/Applications/PyMOL.app/Contents/MacOS/PyMOL")
 
 
-def mutated_positions(manifest: Path) -> pd.DataFrame:
+def mutated_positions(manifest: Path, offset: int) -> pd.DataFrame:
     """One row per mutated position, with the worst phenotype seen there."""
     m = pd.read_csv(manifest)
     seen: dict[int, dict] = {}
@@ -65,13 +69,56 @@ def mutated_positions(manifest: Path) -> pd.DataFrame:
             e["subs"].add(token.strip())
             e["max_fold"] = np.nanmax([e["max_fold"], fold])
     rows = [{"canonical": p, "wt_aa": e["wt_aa"],
-             "topology": p + RESID_OFFSET,
+             "topology": p + offset,
              "substitutions": ",".join(sorted(e["subs"])),
              "max_fold_reduction": e["max_fold"],
              "in_nnibp": p in NNIBP_P66}
             for p, e in sorted(seen.items())]
     return pd.DataFrame(rows)
 
+
+
+
+def prepare_structure(src: Path, out_dir: Path, pymol: Path) -> Path:
+    """Return a solvent-free PDB of `src`, converting from mmCIF if needed.
+
+    Everything downstream (mdtraj for the view search, PyMOL for the scene)
+    then reads one file in one format, instead of each needing its own mmCIF
+    support.
+    """
+    if src.suffix.lower() not in (".cif", ".mmcif"):
+        return src
+    dest = out_dir / f"{src.stem}_nosolvent.pdb"
+    script = out_dir / "_convert.pml"
+    script.write_text(
+        f"load {src.resolve()}, s\n"
+        f"remove s and solvent\n"
+        f"remove s and not (polymer or resn {LIGAND_RESN})\n"
+        f"save {dest.resolve()}, s\n")
+    r = subprocess.run([str(pymol), "-cq", str(script)],
+                       capture_output=True, text=True)
+    script.unlink(missing_ok=True)
+    if r.returncode != 0 or not dest.exists():
+        print(r.stdout[-1500:], r.stderr[-1500:])
+        raise SystemExit(f"could not convert {src}")
+    return dest
+
+
+def detect_offset(structure: Path) -> int:
+    """Residue numbering offset from canonical, read off the structure.
+
+    Canonical position 225 is a proline in HIV-1 RT, so whichever numbering
+    puts PRO at 225 is the canonical one. Guessing wrong would silently select
+    the wrong residues, so this checks rather than assumes.
+    """
+    import mdtraj as md
+    top = md.load(str(structure)).topology
+    for offset in (0, -3):
+        hit = [r for r in top.chain(0).residues if r.resSeq == 225 + offset]
+        if hit and hit[0].name == "PRO":
+            return offset
+    raise SystemExit(f"{structure}: cannot find PRO225 at offset 0 or -3; "
+                     "pass --resid-offset explicitly")
 
 
 def best_view(structure: Path, muts: pd.DataFrame,
@@ -143,9 +190,9 @@ def best_view(structure: Path, muts: pd.DataFrame,
 
 
 def write_pml(pml: Path, structure: Path, muts: pd.DataFrame,
-              view=None) -> None:
-    nn66 = "+".join(str(r + RESID_OFFSET) for r in NNIBP_P66)
-    nn51 = "+".join(str(r + RESID_OFFSET) for r in NNIBP_P51)
+              offset: int, view=None) -> None:
+    nn66 = "+".join(str(r + offset) for r in NNIBP_P66)
+    nn51 = "+".join(str(r + offset) for r in NNIBP_P51)
     mut_resi = "+".join(str(r.topology) for r in muts.itertuples())
 
     L: list[str] = [
@@ -154,13 +201,15 @@ def write_pml(pml: Path, structure: Path, muts: pd.DataFrame,
         "# Everything below is a starting point; adjust and re-save the session.",
         "",
         "reinitialize",
-        f'load {structure}, RT_DOR',
+        f"load {structure}, RT_DOR",
+        # Crystallographic waters are not part of this figure.
+        "remove RT_DOR and solvent",
         "hide everything",
         "",
         "# ---- the three molecules -------------------------------------------",
-        f'select p66, RT_DOR and chain {CHAIN_P66} and polymer',
-        f'select p51, RT_DOR and chain {CHAIN_P51} and polymer',
-        f'select DOR, RT_DOR and chain {CHAIN_DOR}',
+        f"select p66, RT_DOR and chain {CHAIN_P66} and polymer",
+        f"select p51, RT_DOR and chain {CHAIN_P51} and polymer",
+        f"select DOR, RT_DOR and resn {LIGAND_RESN}",
         "",
         "# ---- the pocket ------------------------------------------------------",
         f'select NNIBP, (p66 and resi {nn66}) or (p51 and resi {nn51})',
@@ -317,9 +366,13 @@ def write_pml(pml: Path, structure: Path, muts: pd.DataFrame,
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--structure", type=Path,
-                   default=Path("results/md_runs/wt/rep_01/wt_rep01_analysis_topology.pdb"),
-                   help="WT RT-DOR structure. Defaults to the analysis topology, "
-                        "i.e. the system actually simulated, stripped of solvent.")
+                   default=Path("data/structures/4NCG.cif"),
+                   help="WT RT-DOR structure. Defaults to the 4NCG crystal "
+                        "structure, which is what Figure 1 shows.")
+    p.add_argument("--resid-offset", type=int, default=None,
+                   help="Residue numbering offset from canonical. 0 for a "
+                        "crystal structure, -3 for the simulation topology. "
+                        "Detected from the structure when not given.")
     p.add_argument("--manifest", type=Path, default=Path("manifests/md_manifest.csv"))
     p.add_argument("--output-dir", type=Path, default=Path("revisions/figure1"))
     p.add_argument("--pymol", type=Path, default=PYMOL_APP)
@@ -327,15 +380,20 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.structure.exists():
         raise SystemExit(f"structure not found: {args.structure}")
-    muts = mutated_positions(args.manifest)
-
     args.output_dir.mkdir(parents=True, exist_ok=True)
+
+    structure = prepare_structure(args.structure, args.output_dir, args.pymol)
+    offset = args.resid_offset if args.resid_offset is not None \
+        else detect_offset(structure)
+    print(f"{args.structure.name}: residue numbering offset {offset:+d} "
+          f"({'canonical' if offset == 0 else 'simulation topology'})")
+    muts = mutated_positions(args.manifest, offset)
     pml = args.output_dir / "figure1_mutations.pml"
     pse = args.output_dir / "figure1_mutations.pse"
     table = args.output_dir / "figure1_mutated_positions.csv"
     muts.to_csv(table, index=False)
-    view = best_view(args.structure, muts)
-    write_pml(pml, args.structure.resolve(), muts, view)
+    view = best_view(structure, muts)
+    write_pml(pml, structure.resolve(), muts, offset, view)
 
     print(f"{len(muts)} mutated positions, "
           f"{int(muts.in_nnibp.sum())} of them NNIBP-lining:")
