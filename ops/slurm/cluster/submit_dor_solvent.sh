@@ -22,7 +22,12 @@ PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 cd "$PROJECT_ROOT"
 
 RUNS_ROOT="${DOR_SOLVENT_ROOT:-/scratch/users/${USER}/nnrti-mechanisms-git/results/md_runs/dor_solvent}"
-NAME_REFERENCE="${NAME_REFERENCE:-/scratch/users/${USER}/nnrti-mechanisms-git/results/md_runs/wt/rep_02/wt_rep02_analysis_topology.pdb}"
+# Optional. The ligand atom names the torsion analysis needs are pinned in
+# run_dor_solvent.PRODUCTION_ATOM_NAMES; set this to a holo
+# *_analysis_topology.pdb to read them from a run instead and cross-check.
+# Not defaulted to one: on the cluster those paths are symlinks into a
+# visualization directory that the purge has already broken.
+NAME_REFERENCE="${NAME_REFERENCE:-}"
 LOG_DIR="${PROJECT_ROOT}/logs/dor_solvent"
 mkdir -p "${LOG_DIR}"
 
@@ -36,12 +41,13 @@ SHERLOCK_TIME="${SHERLOCK_TIME:-16:00:00}"
 SHERLOCK_PARTITION="${SHERLOCK_PARTITION:-gpu}"
 SHERLOCK_MEM="${SHERLOCK_MEM:-16G}"
 
-if [ ! -f "${NAME_REFERENCE}" ]; then
-    echo "Name reference not found: ${NAME_REFERENCE}" >&2
-    echo "compute_dor_torsions selects dihedral atoms by name, so the solution" >&2
-    echo "topology has to carry the production names. Point NAME_REFERENCE at a" >&2
-    echo "holo *_analysis_topology.pdb." >&2
-    exit 1
+NAME_REFERENCE_ARG=()
+if [ -n "${NAME_REFERENCE}" ]; then
+    if [ ! -f "${NAME_REFERENCE}" ]; then
+        echo "NAME_REFERENCE set but not found: ${NAME_REFERENCE}" >&2
+        exit 1
+    fi
+    NAME_REFERENCE_ARG=(--name-reference "${NAME_REFERENCE}")
 fi
 
 # Prep once, here, rather than in the jobs: three jobs starting together would
@@ -54,7 +60,7 @@ if [ ! -f "${RUNS_ROOT}/prepared/dor_solvent_system.xml" ]; then
     PYTHONPATH="${GROUP_HOME}/nnrti-mechanisms-repo/src:${PYTHONPATH:-}" \
         python3 -m nnrti.cli.run_dor_solvent \
             --root "${RUNS_ROOT}" \
-            prep --name-reference "${NAME_REFERENCE}"
+            prep "${NAME_REFERENCE_ARG[@]+"${NAME_REFERENCE_ARG[@]}"}"
 else
     echo "[prep] reusing ${RUNS_ROOT}/prepared"
 fi

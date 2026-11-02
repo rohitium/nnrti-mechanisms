@@ -58,9 +58,23 @@ LIGAND_RESNAME = "2KW"
 SOLVENT_PADDING_NM = 1.5
 DEFAULT_LIGAND_SDF = Path("data/ligands/dor.sdf")
 DEFAULT_ROOT = Path("results/md_runs/dor_solvent")
-#: Production topology the atom names are copied from, so that the torsion
-#: analysis finds the same names in the solution runs as in the bound runs.
-NAME_REFERENCE_PDB = Path("results/md_runs/wt/rep_02/wt_rep02_analysis_topology.pdb")
+#: Ligand atom names as the production analysis topologies carry them, in SDF
+#: order. compute_dor_torsions selects its dihedral atoms by name, so the
+#: solution runs have to use these or the comparison silently finds nothing.
+#:
+#: Baked in rather than read from a holo topology: those are symlinks into a
+#: visualization directory that the $SCRATCH purge has already broken on the
+#: cluster, and the names are a property of the pinned parameterisation
+#: (data/ligands/dor.sdf + openff-2.0.0), not of any one run. Pass
+#: --name-reference to read them from a topology instead, which cross-checks
+#: against this list.
+PRODUCTION_ATOM_NAMES = [
+    "C1x", "C2x", "C3x", "C4x", "C5x", "C6x", "C7x", "C8x", "C9x", "C10x",
+    "C11x", "C12x", "C13x", "C14x", "C15x", "C16x", "C17x", "F1x", "N1x",
+    "O1x", "Cl1x", "N2x", "F2x", "F3x", "O2x", "N3x", "N4x", "N5x", "O3x",
+    "H1x", "H2x", "H3x", "H4x", "H5x", "H6x", "H7x", "H8x", "H9x", "H10x",
+    "H11x",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -114,8 +128,17 @@ def prep(args: argparse.Namespace) -> int:
     topology_pdb = out_dir / "dor_solvent_topology.pdb"
     system_xml = out_dir / "dor_solvent_system.xml"
 
-    names = _reference_atom_names(args.name_reference)
-    logger.info("Atom names taken from %s (%d atoms)", args.name_reference, len(names))
+    if args.name_reference is not None:
+        names = _reference_atom_names(args.name_reference)
+        if names != PRODUCTION_ATOM_NAMES:
+            raise AssertionError(
+                f"{args.name_reference} atom names differ from PRODUCTION_ATOM_NAMES; "
+                "one of them is wrong and the torsion comparison depends on which"
+            )
+        logger.info("Atom names read from %s and match the pinned list", args.name_reference)
+    else:
+        names = list(PRODUCTION_ATOM_NAMES)
+    logger.info("Ligand atom names: %d", len(names))
 
     molecule = load_ligand_molecule(args.ligand_sdf)
     forcefield = build_forcefield([molecule])
@@ -233,7 +256,9 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="command", required=True)
 
     sp = sub.add_parser("prep", help="solvate and minimize DOR in water")
-    sp.add_argument("--name-reference", type=Path, default=NAME_REFERENCE_PDB)
+    sp.add_argument("--name-reference", type=Path, default=None,
+                    help="holo *_analysis_topology.pdb to read atom names from and "
+                         "cross-check against the pinned list (default: use the list)")
     sp.add_argument("--padding-nm", type=float, default=SOLVENT_PADDING_NM)
     sp.set_defaults(func=prep)
 
