@@ -90,8 +90,21 @@ assert CIRCULAR, "no dihedral metrics found; check the chi1_ column prefix"
 #: category text adds its own height about its centre.
 CATEGORY_LABEL_PAD_PT = 400.0
 
-#: A shift must exceed this many standard errors to count as resolved.
-SIGNIFICANCE = 2.0
+#: Standard errors a shift must exceed for its 95% interval to exclude zero.
+#: The two panels differ because they are built from different numbers of
+#: groups, and using one value for both is wrong in a way that matters:
+#:
+#:   A  mutant minus WT, two groups of three replicates -> Welch df ~ 4,
+#:      t(0.975) = 2.776.
+#:   B  (holo - apo)_mut minus (holo - apo)_WT, four groups of three ->
+#:      df ~ 8, t(0.975) = 2.306.
+#:
+#: Applying A's 2.776 to panel B dropped G190E's +71 +/- 26 A^3 pocket
+#: expansion, which is 2.73 SEM and comfortably significant on 8 degrees of
+#: freedom. Twice the standard error, the obvious choice and the one used here
+#: first, is not a 95% criterion at either size: at df = 4 it is p = 0.12.
+#: Exact per-comparison p values are in structural_effect_sizes.csv.
+SIGNIFICANCE_BY_PANEL = {"A": 2.776, "B": 2.306}
 
 #: Category order of Table 1 in the manuscript.
 CATEGORY_ORDER = ("Susceptible", "Resistant", "Uncertain")
@@ -292,11 +305,12 @@ def main(argv: list[str] | None = None) -> int:
         they are named rather than quietly removed.
         """
         v, e = val.loc[rows], err.reindex(rows)
-        sig = (v.abs() > SIGNIFICANCE * e).sum()
+        crit = SIGNIFICANCE_BY_PANEL[tag]
+        sig = (v.abs() > crit * e).sum()
         drop = [c for c in v.columns if sig[c] == 0]
         if drop:
-            print(f"{tag}: dropped, no genotype clears {SIGNIFICANCE:g}x its "
-                  f"error -- {', '.join(drop)}")
+            print(f"{tag}: dropped, no genotype's 95% interval excludes zero "
+                  f"({crit:.3g}x SEM) -- {', '.join(drop)}")
         keep = [c for c in v.columns if sig[c] > 0]
         return val[keep], err[keep]
 
@@ -342,9 +356,9 @@ def main(argv: list[str] | None = None) -> int:
         v.round(3).to_csv(out / "tables" / f"{tstem}_shift_vs_wt.csv")
         e.round(3).to_csv(out / "tables" / f"{tstem}_shift_sem.csv")
         n = int(np.isfinite(v.to_numpy()).sum())
-        sig = int((v.abs() > 2 * e).to_numpy().sum())
+        sig = int((v.abs() > SIGNIFICANCE_BY_PANEL[tag] * e).to_numpy().sum())
         print(f"{tag}: {v.shape[0]} genotypes x {v.shape[1]} metrics, "
-              f"{sig}/{n} cells exceed 2x SEM")
+              f"{sig}/{n} cells with a 95% interval excluding zero")
 
     for f in written:
         print(f"wrote {f}")
