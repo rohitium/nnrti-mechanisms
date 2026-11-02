@@ -78,7 +78,11 @@ UNITS = {
 #: label ("V106I+F227C  105x", 17 characters at 10 pt) runs to about 102 pt, and
 #: the rotated category text is ~12 pt wide about its centre, so anything under
 #: ~115 pt overlaps and clips the first letter off the longest genotypes.
-CATEGORY_LABEL_PAD_PT = 205.0
+#: Clearance in points for the category label. It has to exceed the widest
+#: genotype tick label, which scales with the tick font: "V106A+P225H  153x"
+#: is 17 characters, so at 32 pt it runs to roughly 330 pt, and the rotated
+#: category text adds its own height about its centre.
+CATEGORY_LABEL_PAD_PT = 400.0
 
 #: A shift must exceed this many standard errors to count as resolved.
 SIGNIFICANCE = 2.0
@@ -92,8 +96,8 @@ def _style():
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     plt.rcParams.update({
-        "font.size": 17, "axes.labelsize": 17, "axes.titlesize": 22,
-        "xtick.labelsize": 16, "ytick.labelsize": 16,
+        "font.size": 34, "axes.labelsize": 34, "axes.titlesize": 44,
+        "xtick.labelsize": 32, "ytick.labelsize": 32,
         "figure.dpi": 300, "savefig.bbox": "tight",
     })
     return plt
@@ -183,22 +187,22 @@ def draw(ax, val, err, title, ylabels, show_y):
         for j, c in enumerate(val.columns):
             v = val.iat[i, j]
             if not np.isfinite(v):
-                ax.text(j, i, "·", ha="center", va="center", color="0.6", fontsize=16)
+                ax.text(j, i, "·", ha="center", va="center", color="0.6", fontsize=32)
                 continue
             colour = "white" if abs(float(scaled.iat[i, j])) > 0.65 else "0.12"
             ax.text(j, i - 0.15, f"{v:+.{dec[c]}f}", ha="center", va="center",
-                    fontsize=15, color=colour)
+                    fontsize=30, color=colour)
             e = err.iat[i, j]
             if np.isfinite(e):
                 ax.text(j, i + 0.24, f"±{e:.{dec[c]}f}", ha="center", va="center",
-                        fontsize=11.5, color=colour, alpha=0.9)
+                        fontsize=23, color=colour, alpha=0.9)
 
     ax.set_xticks(range(val.shape[1]))
     ax.set_xticklabels([f"{c}  ({UNITS.get(c, '')})" for c in val.columns],
-                       rotation=45, ha="right", rotation_mode="anchor", fontsize=16)
+                       rotation=45, ha="right", rotation_mode="anchor", fontsize=32)
     ax.set_yticks(range(val.shape[0]))
-    ax.set_yticklabels(ylabels if show_y else [], fontsize=16)
-    ax.set_title(title, fontsize=22, pad=18)
+    ax.set_yticklabels(ylabels if show_y else [], fontsize=32)
+    ax.set_title(title, fontsize=44, pad=32)
     ax.set_xticks(np.arange(-0.5, val.shape[1], 1), minor=True)
     ax.set_yticks(np.arange(-0.5, val.shape[0], 1), minor=True)
     ax.grid(which="minor", color="white", lw=1.0)
@@ -261,7 +265,7 @@ def main(argv: list[str] | None = None) -> int:
                             xycoords=("axes fraction", "data"),
                             xytext=(-CATEGORY_LABEL_PAD_PT, 0),
                             textcoords="offset points", rotation=90,
-                            ha="center", va="center", fontsize=12,
+                            ha="center", va="center", fontsize=34,
                             fontweight="bold", color="0.25", clip_on=False)
                 if i < len(cats):
                     seen, start_i = cats[i], i
@@ -301,9 +305,13 @@ def main(argv: list[str] | None = None) -> int:
     for tag, val, err, title, stem, tstem in panels:
         v = val.loc[mutants]
         e = err.reindex(mutants)
-        fig, ax = plt.subplots(figsize=(2.35 * v.shape[1] + 6.5,
-                                        1.00 * len(mutants) + 5.5))
-        im = draw(ax, v, e, f"{tag}   {title}", labels, True)
+        # Canvas deliberately NOT scaled with the font. Growing both together
+        # leaves the type the same size relative to the cells and only makes
+        # the file enormous -- doubling the fonts and the figure gave a 46 inch
+        # wide image that read exactly as before.
+        fig, ax = plt.subplots(figsize=(2.5 * v.shape[1] + 7.0,
+                                        1.05 * len(mutants) + 6.0))
+        im = draw(ax, v, e, title, labels, True)
         rule_and_label(ax, mutants)
         # Colour is normalised per column, so the bar is a relative scale: the
         # darkest cell in a column is that metric's largest shift. One bar in
@@ -313,8 +321,8 @@ def main(argv: list[str] | None = None) -> int:
         cb.set_ticks([-1, -0.5, 0, 0.5, 1])
         cb.set_ticklabels(["\u2212max", "", "0", "", "+max"])
         cb.set_label("shift, scaled within each column\n"
-                     "(max = largest shift in that metric)", fontsize=15)
-        cb.ax.tick_params(labelsize=15)
+                     "(max = largest shift in that metric)", fontsize=30)
+        cb.ax.tick_params(labelsize=30)
         f = out / "plots" / f"{stem}.png"
         fig.savefig(f, dpi=300, bbox_inches="tight", pad_inches=0.25)
         plt.close(fig)
