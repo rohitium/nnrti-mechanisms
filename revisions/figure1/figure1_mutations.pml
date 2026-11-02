@@ -44,7 +44,7 @@ util.cnc('DOR')
 show spheres, DOR
 set sphere_scale, 0.20, DOR
 
-show sticks, mutations and not (name C+N+O) and not hydro
+show sticks, mutations and not hydro and not (name C+O) and not (name N and not resn PRO)
 show spheres, mutations and name CA
 set sphere_scale, 0.45, mutations and name CA
 

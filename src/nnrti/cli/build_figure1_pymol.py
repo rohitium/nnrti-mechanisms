@@ -193,7 +193,14 @@ def write_pml(pml: Path, structure: Path, muts: pd.DataFrame,
           "show spheres, DOR",
           "set sphere_scale, 0.20, DOR",
           "",
-          "show sticks, mutations and not (name C+N+O) and not hydro",
+          # Keep the backbone N for proline only. P225's side chain is a ring
+          # that closes through its own N (N-CA-CB-CG-CD-N), so excluding N
+          # breaks two bonds and leaves CB-CG-CD dangling off CA. Every other
+          # residue drops N, which would otherwise draw a stub into the
+          # backbone. Glycine (G190) has no side chain at all and is shown by
+          # its CA sphere alone, which is correct rather than missing.
+          "show sticks, mutations and not hydro and not (name C+O) "
+          "and not (name N and not resn PRO)",
           "show spheres, mutations and name CA",
           "set sphere_scale, 0.45, mutations and name CA",
           "",
