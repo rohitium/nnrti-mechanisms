@@ -27,7 +27,13 @@ cleanup_and_exit() {
 trap cleanup_and_exit INT TERM
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+# ops/slurm/cluster -> three levels up is the repository root. It was
+# ../.. , which lands on ops/ , so every path built from PROJECT_ROOT
+# gained a second "ops/" and the submitter died on
+# ops/ops/slurm/cluster/reconcile_md_metadata.py. The September
+# reorganisation moved these scripts a level deeper and this did not
+# follow; it only worked while PROJECT_ROOT was set in the environment.
+PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 cd "$PROJECT_ROOT"
 
 LOG_DIR="${PROJECT_ROOT}/logs/apo_md"
