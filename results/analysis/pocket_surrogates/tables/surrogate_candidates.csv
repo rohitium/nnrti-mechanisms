@@ -1,0 +1,43 @@
+table3_column,coordinate,canonical_anchor,partner_resid,partner_canonical,partner_resname,partner_atom,mean_perp_angstrom,mean_reach_angstrom
+d(103 C=O...N4x),res103_bb_to_triazN,103,223,226,PRO,C,3.59,8.46
+d(103 C=O...N4x),res103_bb_to_triazN,103,224,227,PHE,N,2.5,8.59
+d(103 C=O...N4x),res103_bb_to_triazN,103,224,227,PHE,CA,2.21,9.52
+d(103 C=O...N4x),res103_bb_to_triazN,103,224,227,PHE,C,1.99,10.48
+d(103 C=O...N4x),res103_bb_to_triazN,103,224,227,PHE,O,2.07,10.1
+d(103 C=O...N4x),res103_bb_to_triazN,103,231,234,LEU,N,3.18,8.32
+d(103 C=O...N4x),res103_bb_to_triazN,103,231,234,LEU,CA,2.89,6.89
+d(103 C=O...N4x),res103_bb_to_triazN,103,231,234,LEU,C,2.8,6.41
+d(103 C=O...N4x),res103_bb_to_triazN,103,231,234,LEU,O,2.44,6.73
+d(103 C=O...N4x),res103_bb_to_triazN,103,232,235,HIS,N,3.69,5.66
+d(103 C=O...N4x),res103_bb_to_triazN,103,232,235,HIS,O,3.55,3.03
+d(103 sc...DOR),res103_sc_to_dor,103,225,228,LEU,N,3.99,9.12
+d(103 sc...DOR),res103_sc_to_dor,103,225,228,LEU,CA,3.55,10.08
+d(103 sc...DOR),res103_sc_to_dor,103,225,228,LEU,C,2.13,10.14
+d(103 sc...DOR),res103_sc_to_dor,103,225,228,LEU,O,1.65,10.39
+d(103 sc...DOR),res103_sc_to_dor,103,226,229,TRP,N,2.22,9.91
+d(103 sc...DOR),res103_sc_to_dor,103,226,229,TRP,CA,1.85,9.8
+d(103 sc...DOR),res103_sc_to_dor,103,226,229,TRP,C,3.23,10.21
+d(V179...DOR),res179_to_dor_mindist,179,223,226,PRO,C,3.39,8.2
+d(V179...DOR),res179_to_dor_mindist,179,224,227,PHE,N,2.18,7.88
+d(V179...DOR),res179_to_dor_mindist,179,224,227,PHE,CA,2.17,8.0
+d(V179...DOR),res179_to_dor_mindist,179,224,227,PHE,C,1.61,8.88
+d(V179...DOR),res179_to_dor_mindist,179,224,227,PHE,O,0.95,8.81
+d(V179...DOR),res179_to_dor_mindist,179,225,228,LEU,N,2.64,9.61
+d(V179...DOR),res179_to_dor_mindist,179,225,228,LEU,CA,3.27,10.19
+d(V179...DOR),res179_to_dor_mindist,179,230,233,GLU,CA,3.61,9.78
+d(V179...DOR),res179_to_dor_mindist,179,230,233,GLU,C,3.68,8.52
+d(V179...DOR),res179_to_dor_mindist,179,231,234,LEU,N,2.63,7.84
+d(V179...DOR),res179_to_dor_mindist,179,231,234,LEU,CA,2.81,6.57
+d(V179...DOR),res179_to_dor_mindist,179,231,234,LEU,C,2.99,6.73
+d(V179...DOR),res179_to_dor_mindist,179,231,234,LEU,O,2.47,6.9
+d(S105...DOR),dor_to_S105_mindist,105,92,95,PRO,C,3.74,9.66
+d(S105...DOR),dor_to_S105_mindist,105,92,95,PRO,O,2.74,10.3
+d(106...DOR),dor_to_res106_mindist,106,92,95,PRO,CA,3.75,9.53
+d(106...DOR),dor_to_res106_mindist,106,92,95,PRO,C,2.4,10.08
+d(106...DOR),dor_to_res106_mindist,106,92,95,PRO,O,2.12,10.45
+d(106...DOR),dor_to_res106_mindist,106,93,96,HIS,N,2.19,10.07
+d(106...DOR),dor_to_res106_mindist,106,93,96,HIS,CA,1.71,10.29
+d(106...DOR),dor_to_res106_mindist,106,93,96,HIS,C,2.19,9.01
+d(106...DOR),dor_to_res106_mindist,106,93,96,HIS,O,2.98,8.4
+d(106...DOR),dor_to_res106_mindist,106,94,97,PRO,N,2.41,8.58
+d(106...DOR),dor_to_res106_mindist,106,94,97,PRO,CA,3.01,7.28

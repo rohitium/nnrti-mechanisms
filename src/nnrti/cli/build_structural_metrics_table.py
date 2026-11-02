@@ -111,11 +111,26 @@ def build(root: Path) -> pd.DataFrame:
     # Without it, apo g190e rep_02 averages 1871 A^3 (max 4172) instead of 103,
     # because a disintegrated pocket has an enormous convex hull -- which
     # reported G190E's apo pocket as +575 A^3 against WT.
+    # The same three filters compare_apo_ensembles and the opening cost apply,
+    # in the same order. Using a different subset here is how three values for
+    # the same apo pocket volume ended up in circulation.
     before = len(apo_f)
-    apo_f = apo_f[apo_f.pocket_rg <= POCKET_RG_MAX_A]
+    if "pocket_intact" in apo_f.columns:
+        apo_f = apo_f[apo_f.pocket_intact]
+    else:
+        apo_f = apo_f[apo_f.pocket_rg <= POCKET_RG_MAX_A]
+    apo_f = apo_f[apo_f.window == "matched"]
+    total = apo_f.groupby(["safe_label", "replicate"]).total_ns.first()
+    window_ns = apo_f.time_ns.max()
+    keep = {k for k, v in total.items() if v >= window_ns * 0.98}
+    dropped_reps = sorted(set(total.index) - keep)
+    short_apo = {(_display(l), r) for l, r in dropped_reps}
+    apo_f = apo_f[[(l, r) in keep for l, r in zip(apo_f.safe_label, apo_f.replicate)]]
     if before != len(apo_f):
-        print(f"  dropped {before - len(apo_f)} of {before} apo frames with "
-              f"pocket Rg > {POCKET_RG_MAX_A:.0f} A")
+        print(f"  apo: kept {len(apo_f)} of {before} frames")
+        if dropped_reps:
+            print("  apo: excluded replicates shorter than the matched window: "
+                  + ", ".join(f"{l} rep{r}" for l, r in dropped_reps))
     apo_v = (apo_f.groupby(["safe_label", "replicate"], as_index=False)
              .pocket_volume.mean())
     apo_v = pd.DataFrame({"structure_type": "apo",
@@ -140,6 +155,20 @@ def build(root: Path) -> pd.DataFrame:
                           "mutation": "genotype"})
     c.insert(0, "structure_type", "holo")
     out = out.merge(c, on=["structure_type", "genotype", "replicate"], how="left")
+
+    # A replicate too short for the matched window cannot take part in ANY
+    # matched apo comparison, not just the volume one. Leaving its RMSF and
+    # secondary structure in would compare a 34 ns run against 100 ns ones.
+    if short_apo:
+        before_rows = len(out)
+        mask = pd.Series(
+            [(st == "apo" and (g, r) in short_apo)
+             for st, g, r in zip(out.structure_type, out.genotype, out.replicate)],
+            index=out.index)
+        out = out[~mask]
+        print(f"  apo: dropped {before_rows - len(out)} replicate row(s) too "
+              f"short for the matched window: "
+              + ", ".join(f"{g} rep{r}" for g, r in sorted(short_apo)))
 
     lead = ["structure_type", "genotype", "replicate"]
     contact_cols = [v for v in CONTACT_METRICS.values()] + ["pyridinone_contacts_n"]

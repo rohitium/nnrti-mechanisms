@@ -1,0 +1,7 @@
+table3_column,surrogate,anchor,partner,rho,p_naive,n_candidates,p_selection_corrected,note
+d(106...DOR),d(106...DOR)|sc|ASP186:CA,sc,ASP186:CA,0.749,0.0001,798,0.0455,Widened search; top 8 candidates are consecutive atoms of Asp185-Leu187.
+d(S105...DOR),d(S105...DOR)|as_table3|PRO95:C,as_table3,PRO95:C,0.699,0.0006,4,0.0018,Collinear construction; Ser105 not mutated in the panel.
+d(103 C=O...N4x),d(103 C=O...N4x)|as_table3|PRO226:C,as_table3,PRO226:C,0.573,0.0083,2,0.0118,Backbone anchor.
+d(103 sc...DOR),d(103 sc...DOR)|ca|LEU228:N,ca,LEU228:N,0.537,0.0147,7,0.0442,CA anchor.
+d(V179...DOR),d(V179...DOR)|as_table3|PHE227:O,as_table3,PHE227:O,0.478,0.0330,16,0.1178,Fails selection correction; R2 carried by G190E alone.
+V(NNIBP),DIRECT,,,1.000,0.0,0,0.0,Protein-only; measurable in apo without a surrogate.

@@ -1,0 +1,6 @@
+table3_column,partner,n_candidates,rho,p_naive,p_selection_corrected,survives
+d(S105...DOR),PRO95:C,4,0.699,0.0006,0.0012,yes
+d(103 C=O...N4x),PRO226:C,22,0.573,0.0083,0.0498,yes
+d(106...DOR),HIS96:O,9,-0.544,0.0131,0.0586,NO
+d(103 sc...DOR),LEU228:N,7,0.537,0.0147,0.0418,yes
+d(V179...DOR),PHE227:O,26,0.478,0.033,0.1274,NO
