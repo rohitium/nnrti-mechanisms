@@ -78,7 +78,10 @@ UNITS = {
 #: label ("V106I+F227C  105x", 17 characters at 10 pt) runs to about 102 pt, and
 #: the rotated category text is ~12 pt wide about its centre, so anything under
 #: ~115 pt overlaps and clips the first letter off the longest genotypes.
-CATEGORY_LABEL_PAD_PT = 132.0
+CATEGORY_LABEL_PAD_PT = 205.0
+
+#: A shift must exceed this many standard errors to count as resolved.
+SIGNIFICANCE = 2.0
 
 #: Category order of Table 1 in the manuscript.
 CATEGORY_ORDER = ("Susceptible", "Resistant", "Uncertain")
@@ -89,8 +92,8 @@ def _style():
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     plt.rcParams.update({
-        "font.size": 11, "axes.labelsize": 11, "axes.titlesize": 13,
-        "xtick.labelsize": 10, "ytick.labelsize": 10,
+        "font.size": 17, "axes.labelsize": 17, "axes.titlesize": 22,
+        "xtick.labelsize": 16, "ytick.labelsize": 16,
         "figure.dpi": 300, "savefig.bbox": "tight",
     })
     return plt
@@ -180,22 +183,22 @@ def draw(ax, val, err, title, ylabels, show_y):
         for j, c in enumerate(val.columns):
             v = val.iat[i, j]
             if not np.isfinite(v):
-                ax.text(j, i, "·", ha="center", va="center", color="0.6", fontsize=10)
+                ax.text(j, i, "·", ha="center", va="center", color="0.6", fontsize=16)
                 continue
             colour = "white" if abs(float(scaled.iat[i, j])) > 0.65 else "0.12"
-            ax.text(j, i - 0.16, f"{v:+.{dec[c]}f}", ha="center", va="center",
-                    fontsize=8.5, color=colour)
+            ax.text(j, i - 0.15, f"{v:+.{dec[c]}f}", ha="center", va="center",
+                    fontsize=15, color=colour)
             e = err.iat[i, j]
             if np.isfinite(e):
-                ax.text(j, i + 0.22, f"±{e:.{dec[c]}f}", ha="center", va="center",
-                        fontsize=6.8, color=colour, alpha=0.9)
+                ax.text(j, i + 0.24, f"±{e:.{dec[c]}f}", ha="center", va="center",
+                        fontsize=11.5, color=colour, alpha=0.9)
 
     ax.set_xticks(range(val.shape[1]))
     ax.set_xticklabels([f"{c}  ({UNITS.get(c, '')})" for c in val.columns],
-                       rotation=45, ha="right", rotation_mode="anchor", fontsize=10)
+                       rotation=45, ha="right", rotation_mode="anchor", fontsize=16)
     ax.set_yticks(range(val.shape[0]))
-    ax.set_yticklabels(ylabels if show_y else [], fontsize=10)
-    ax.set_title(title, fontsize=13, pad=12)
+    ax.set_yticklabels(ylabels if show_y else [], fontsize=16)
+    ax.set_title(title, fontsize=22, pad=18)
     ax.set_xticks(np.arange(-0.5, val.shape[1], 1), minor=True)
     ax.set_yticks(np.arange(-0.5, val.shape[0], 1), minor=True)
     ax.grid(which="minor", color="white", lw=1.0)
@@ -267,6 +270,26 @@ def main(argv: list[str] | None = None) -> int:
     (out / "plots").mkdir(parents=True, exist_ok=True)
     (out / "tables").mkdir(parents=True, exist_ok=True)
 
+    def keep_resolved(val, err, rows, tag):
+        """Drop metrics where not one genotype clears twice its own error.
+
+        A column of numbers that are all smaller than their uncertainty says
+        nothing about any genotype, and printing it invites the eye to read
+        structure into noise. Which metrics these are is itself a result, so
+        they are named rather than quietly removed.
+        """
+        v, e = val.loc[rows], err.reindex(rows)
+        sig = (v.abs() > SIGNIFICANCE * e).sum()
+        drop = [c for c in v.columns if sig[c] == 0]
+        if drop:
+            print(f"{tag}: dropped, no genotype clears {SIGNIFICANCE:g}x its "
+                  f"error -- {', '.join(drop)}")
+        keep = [c for c in v.columns if sig[c] > 0]
+        return val[keep], err[keep]
+
+    dor_v, dor_e = keep_resolved(dor_v, dor_e, mutants, "A")
+    rt_v, rt_e = keep_resolved(rt_v, rt_e, mutants, "B")
+
     panels = [
         ("A", dor_v, dor_e, "RT\u2013DOR contacts (holo): shift from wild type",
          "figure3A_rt_dor_contacts", "figure3A_dor"),
@@ -278,8 +301,8 @@ def main(argv: list[str] | None = None) -> int:
     for tag, val, err, title, stem, tstem in panels:
         v = val.loc[mutants]
         e = err.reindex(mutants)
-        fig, ax = plt.subplots(figsize=(1.55 * v.shape[1] + 5.0,
-                                        0.62 * len(mutants) + 4.0))
+        fig, ax = plt.subplots(figsize=(2.35 * v.shape[1] + 6.5,
+                                        1.00 * len(mutants) + 5.5))
         im = draw(ax, v, e, f"{tag}   {title}", labels, True)
         rule_and_label(ax, mutants)
         # Colour is normalised per column, so the bar is a relative scale: the
@@ -290,8 +313,8 @@ def main(argv: list[str] | None = None) -> int:
         cb.set_ticks([-1, -0.5, 0, 0.5, 1])
         cb.set_ticklabels(["\u2212max", "", "0", "", "+max"])
         cb.set_label("shift, scaled within each column\n"
-                     "(max = largest shift in that metric)", fontsize=10)
-        cb.ax.tick_params(labelsize=10)
+                     "(max = largest shift in that metric)", fontsize=15)
+        cb.ax.tick_params(labelsize=15)
         f = out / "plots" / f"{stem}.png"
         fig.savefig(f, dpi=300, bbox_inches="tight", pad_inches=0.25)
         plt.close(fig)
