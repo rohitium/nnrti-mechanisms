@@ -84,13 +84,30 @@ def true_steps_completed(rep_dir: Path, json_steps: int) -> int:
 
 
 def frame_times_ns(n_frames: int, total_ns: float) -> np.ndarray:
-    """Per-frame simulation time, honouring the two-stride schedule."""
+    """Per-frame simulation time, honouring the two-stride schedule.
+
+    The two-segment branch reconstructs the axis from the hardcoded strides and
+    so does not consult total_ns at all. That is only safe while every extended
+    run really is 200 frames of 0.05 ns followed by 0.5 ns frames -- true for
+    all 60 apo replicates as of 01-Nov-2026, including the three that do not
+    have 200 frames (380, 380 and 248). A third extension at another stride
+    would silently compress or stretch every time axis downstream, which is the
+    failure CLAUDE.md warns about, so the reconstruction is checked against the
+    step record instead of trusted.
+    """
     if n_frames <= FIRST_SEGMENT_FRAMES:
         dt = total_ns / max(1, n_frames)
         return np.arange(1, n_frames + 1) * dt
     head = np.arange(1, FIRST_SEGMENT_FRAMES + 1) * FIRST_SEGMENT_DT_NS
     tail = head[-1] + np.arange(1, n_frames - FIRST_SEGMENT_FRAMES + 1) * EXTENSION_DT_NS
-    return np.concatenate([head, tail])
+    times = np.concatenate([head, tail])
+    if total_ns > 0 and abs(times[-1] - total_ns) > EXTENSION_DT_NS * 1.5:
+        raise ValueError(
+            f"Reconstructed time axis ends at {times[-1]:.2f} ns but the step record "
+            f"says {total_ns:.2f} ns for {n_frames} frames. The frame schedule has "
+            "changed; fix FIRST_SEGMENT_*/EXTENSION_DT_NS rather than trusting this axis."
+        )
+    return times
 
 
 def chi1(u, resid: int, segid: str) -> float:
