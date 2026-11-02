@@ -20,6 +20,25 @@ Two traps this script is built around:
     defined as a basin centred on the bound circular mean, which has no edge
     near the populated region.
 
+  * An angle is circular, so a plot of it always has a branch cut somewhere and
+    the only question is where. Plotting the deviation from the bound value put
+    the cut 180 degrees from the bound rotamer -- which is exactly where tau3's
+    free rotamer sits, giving 594 seam crossings per 100 ns and a solid block of
+    ink. Measured over the free trajectories, crossings per 100 ns are:
+
+        frame          tau1  tau2  tau3  tau4
+        -180..180         2   342     5   860
+        0..360           53   286     0    75
+        deviation         6   220   594   258
+        emptiest cut      2    34     5    75
+
+    0..360 is the default: it is the convention a reader expects, it is the
+    best or near-best frame for three of the four, and tau1's 53 crossings are
+    visually harmless once the line is broken at the seam. ``--angle-frame
+    auto`` instead puts each torsion's cut at its emptiest angle. Neither helps
+    tau2 or tau4 much, and that is not a plotting defect: the free ligand
+    genuinely samples the whole circle on those two, so no cut is empty.
+
 Time axes come from each run's recorded ``analysis_dt_ps``, cross-checked
 against ``production_ns_completed``; never from the DCD header or frame index.
 
@@ -82,6 +101,40 @@ def circ_dist_deg(a, centre) -> np.ndarray:
 
 
 
+
+def _branch_cut(frame: str, angles_for_scan: np.ndarray | None = None) -> float:
+    """Lower edge of the plotted range, in degrees.
+
+    The plotted value is ``(angle - cut) % 360 + cut``, so the seam falls at
+    ``cut``. "auto" scans for the angle with the least density within +/-15
+    degrees, pooling free and bound so the cut is empty for both.
+    """
+    if frame == "positive":
+        return 0.0
+    if frame == "signed":
+        return -180.0
+    cands = np.arange(-180.0, 180.0, 5.0)
+    dens = [float((np.abs((angles_for_scan - c + 180.0) % 360.0 - 180.0) <= 15.0).mean())
+            for c in cands]
+    return float(cands[int(np.argmin(dens))])
+
+
+def _wrap(a: np.ndarray, cut: float) -> np.ndarray:
+    return (np.asarray(a, float) - cut) % 360.0 + cut
+
+
+
+def _basin_bands(centre: float, half: float, lo: float,
+                 hi: float) -> list[tuple[float, float]]:
+    """The basin as 1 or 2 spans, splitting it if it runs off the plotted range."""
+    a, b = centre - half, centre + half
+    if a < lo:
+        return [(lo, b), (a + 360.0, hi)]
+    if b > hi:
+        return [(a, hi), (lo, b - 360.0)]
+    return [(a, b)]
+
+
 def _break_at_seam(t: np.ndarray, y: np.ndarray,
                    jump_deg: float = 180.0) -> tuple[np.ndarray, np.ndarray]:
     """Insert NaN where consecutive angles wrap, so no false vertical stroke."""
@@ -134,6 +187,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--runs-root", type=Path, default=Path("results/md_runs"))
     p.add_argument("--output-dir", type=Path,
                    default=Path("results/analysis/dor_torsions_solution/plots"))
+    p.add_argument("--angle-frame", choices=("positive", "signed", "auto"),
+                   default="positive",
+                   help="positive: 0-360 (default). signed: -180..180. "
+                        "auto: per-torsion branch cut at the emptiest angle.")
     args = p.parse_args(argv)
 
     plt = _style()
@@ -148,37 +205,53 @@ def main(argv: list[str] | None = None) -> int:
     print(f"frame spacing: free {dt_free * 1000:.0f} ps; "
           f"WT bound " + ", ".join(f"rep{r} {v * 1000:.0f} ps" for r, v in dt_wt.items()))
 
+    # Branch cut per torsion, and the seam-crossing count it costs, so the
+    # choice is recorded in the output rather than argued about.
+    cuts, seam = {}, {}
+    for t in TAUS:
+        pool = np.concatenate([sol[t].to_numpy(), bound_all[t].to_numpy()])
+        cuts[t] = _branch_cut(args.angle_frame, pool)
+        seam[t] = int(np.mean([
+            np.sum(np.abs(np.diff(_wrap(g.sort_values("frame")[t].to_numpy(),
+                                        cuts[t]))) > 180.0)
+            for _, g in sol.groupby("replicate")]))
+    print(f"angle frame {args.angle_frame!r}: " + ", ".join(
+        f"{t} cut {cuts[t]:.0f}° ({seam[t]} seam crossings/100 ns free)" for t in TAUS))
+
     # ---------------- Figure 1: trajectories ----------------
-    fig, axes = plt.subplots(4, 2, figsize=(7.2, 7.6), sharex="col", sharey=True)
+    fig, axes = plt.subplots(4, 2, figsize=(7.2, 7.6), sharex="col")
     for i, t in enumerate(TAUS):
-        c = ref[t]
+        c, cut = ref[t], cuts[t]
+        lo, hi = cut, cut + 360.0
+        c_plot = float(_wrap(np.array([c]), cut)[0])
         for j, (which, g_all, colour, dts) in enumerate([
                 ("DOR free in water", sol, C_FREE, {r: dt_free for r in sol.replicate.unique()}),
                 ("DOR bound to WT RT", wt, C_BOUND, dt_wt)]):
             ax = axes[i, j]
-            # Plot the angle as a deviation from the bound rotamer centre, so a
-            # basin that straddles +/-180 is not split across the panel.
-            lo, hi = -180.0, 180.0
-            ax.axhspan(-BASIN_HALF_WIDTH, BASIN_HALF_WIDTH, color=colour, alpha=0.08, lw=0)
-            ax.axhline(0, color="0.4", lw=0.5, ls="--", zorder=1)
+            # The bound basin is a band about the bound value; if it runs off an
+            # edge of the plotted range the remainder is drawn at the other edge,
+            # because the axis is a circle cut open at `cut`.
+            for b0, b1 in _basin_bands(c_plot, BASIN_HALF_WIDTH, lo, hi):
+                ax.axhspan(b0, b1, color=colour, alpha=0.08, lw=0)
+            ax.axhline(c_plot, color="0.4", lw=0.5, ls="--", zorder=1)
             for rep, g in g_all.groupby("replicate"):
                 g = g.sort_values("frame")
                 dt = dts.get(rep) or dt_free
                 time_ns = (np.arange(len(g)) + 1) * dt
-                dev = ((g[t].to_numpy() - c + 180.0) % 360.0) - 180.0
-                # Break the line where it wraps the +/-180 seam, or matplotlib
-                # draws a vertical stroke across the whole panel and the
-                # plateaus between hops disappear into a solid block.
-                time_ns, dev = _break_at_seam(time_ns, dev)
-                ax.plot(time_ns, dev, lw=0.35, alpha=0.75, color=colour,
+                ang = _wrap(g[t].to_numpy(), cut)
+                # Break the line at the seam, or matplotlib draws a vertical
+                # stroke across the panel and the plateaus between hops vanish
+                # into a solid block.
+                time_ns, ang = _break_at_seam(time_ns, ang)
+                ax.plot(time_ns, ang, lw=0.35, alpha=0.75, color=colour,
                         rasterized=True)
             ax.set_ylim(lo, hi)
-            ax.set_yticks([-180, -90, 0, 90, 180])
+            ax.set_yticks(np.arange(lo, hi + 1, 90))
             ax.set_xlim(0, 100)
             if i == 0:
                 ax.set_title(which, color=colour)
             if j == 0:
-                ax.set_ylabel(f"{TAU_LABELS[t]}\ndeviation (°)", fontsize=7)
+                ax.set_ylabel(f"{TAU_LABELS[t]}\n(°)", fontsize=7)
             if i == 3:
                 ax.set_xlabel("time (ns)")
             # escape rate annotation, at matched resolution for the free column
@@ -198,9 +271,13 @@ def main(argv: list[str] | None = None) -> int:
                     fontsize=6, color="0.25")
     fig.suptitle("Binding abolishes rotamer exchange in doravirine", y=0.995, fontsize=10)
     fig.text(0.5, -0.012,
-             "Shaded band: the bound rotamer basin (± %.0f° about the WT-bound circular mean). "
-             "Free runs 50 ps/frame; bound 200–559 ps/frame."
-             % BASIN_HALF_WIDTH, ha="center", fontsize=6, color="0.35")
+             "Shaded band: the bound rotamer basin (± %.0f° about the WT-bound circular mean); "
+             "it wraps the axis edge where the basin straddles the branch cut.\n"
+             "Free runs 50 ps/frame; bound 200–559 ps/frame. An angle is circular, so the "
+             "axis is cut open at %s — breaks in a trace are that seam, not gaps in the data."
+             % (BASIN_HALF_WIDTH,
+                "0°/360°" if args.angle_frame == "positive" else "its emptiest angle"),
+             ha="center", fontsize=6, color="0.35")
     fig.tight_layout()
     args.output_dir.mkdir(parents=True, exist_ok=True)
     f1 = args.output_dir / "dor_torsion_trajectories.png"
@@ -209,20 +286,22 @@ def main(argv: list[str] | None = None) -> int:
 
     # ---------------- Figure 2: distributions ----------------
     fig, axes = plt.subplots(1, 4, figsize=(7.6, 2.1), sharey=True)
-    bins = np.arange(-180, 181, 7.5)
     for i, t in enumerate(TAUS):
         ax = axes[i]
-        c = ref[t]
+        c, cut = ref[t], cuts[t]
+        lo, hi = cut, cut + 360.0
+        c_plot = float(_wrap(np.array([c]), cut)[0])
+        bins = np.arange(lo, hi + 0.1, 7.5)
         for which, g, colour in [("free", sol, C_FREE), ("bound (all)", bound_all, C_BOUND)]:
-            dev = ((g[t].to_numpy() - c + 180.0) % 360.0) - 180.0
-            ax.hist(dev, bins=bins, density=True, color=colour, alpha=0.55,
-                    label=which, lw=0)
-        ax.axvspan(-BASIN_HALF_WIDTH, BASIN_HALF_WIDTH, color="0.5", alpha=0.07, lw=0)
-        ax.axvline(0, color="0.4", lw=0.5, ls="--")
-        ax.set_xlim(-180, 180)
-        ax.set_xticks([-180, -90, 0, 90, 180])
+            ax.hist(_wrap(g[t].to_numpy(), cut), bins=bins, density=True,
+                    color=colour, alpha=0.55, label=which, lw=0)
+        for b0, b1 in _basin_bands(c_plot, BASIN_HALF_WIDTH, lo, hi):
+            ax.axvspan(b0, b1, color="0.5", alpha=0.07, lw=0)
+        ax.axvline(c_plot, color="0.4", lw=0.5, ls="--")
+        ax.set_xlim(lo, hi)
+        ax.set_xticks(np.arange(lo, hi + 1, 90))
         ax.set_title(TAU_LABELS[t], fontsize=7)
-        ax.set_xlabel("deviation from bound value (°)", fontsize=7)
+        ax.set_xlabel("dihedral (°)", fontsize=7)
         if i == 0:
             ax.set_ylabel("density")
             ax.legend(frameon=False, loc="upper left", fontsize=6)
