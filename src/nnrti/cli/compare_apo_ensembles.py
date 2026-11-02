@@ -266,13 +266,28 @@ def main(argv: list[str] | None = None) -> int:
     ]
 
     m = d[(d.window == "matched") & d.in_matched_window]
-    summ = (m.groupby("safe_label")
+
+    # Average within a replicate first, then across replicates. Pooling frames
+    # instead weights a replicate by how many frames it kept, which is not a
+    # property of the genotype: after the Rg filter g190e rep_02 contributes 42
+    # frames against 200 for its siblings, so frame-pooling silently made it a
+    # fifth of a replicate. It also disagrees with the per-replicate means the
+    # effect sizes and the opening cost are built from, which is how three
+    # different values for the same quantity ended up in circulation.
+    per_rep = (m.groupby(["safe_label", "replicate"], as_index=False)
+                 .agg(pocket_volume=("pocket_volume", "mean"),
+                      chi1_Y181=("chi1_Y181", "mean"),
+                      chi1_Y188=("chi1_Y188", "mean")))
+    summ = (per_rep.groupby("safe_label")
               .agg(n_rep=("replicate", "nunique"),
                    pocket_volume=("pocket_volume", "mean"),
-                   pocket_volume_sd=("pocket_volume", "std"),
+                   pocket_volume_sem=("pocket_volume", "sem"),
                    chi1_Y181=("chi1_Y181", "mean"),
                    chi1_Y188=("chi1_Y188", "mean"))
               .round(1))
+    # Spread across frames, kept for the distribution plots.
+    summ["pocket_volume_sd"] = (m.groupby("safe_label").pocket_volume.std()
+                                .round(1))
     if "wt" in summ.index:
         summ["dVolume_vs_WT"] = (summ.pocket_volume - summ.loc["wt", "pocket_volume"]).round(1)
     summ.to_csv(out / "apo_matched_window_summary.csv")
