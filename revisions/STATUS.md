@@ -44,32 +44,45 @@ does not cover this. If there is a second round, this is where it comes from.
 
 ## 3. Decisions waiting on you
 
-**(a) The cancellation sentence in Discussion paragraph 595.** It says G190E and
-A98G+F227C distort the interface "but comparable distortion is present in the
-apo simulations, so the penalty largely cancels in the thermodynamic cycle."
-The 100 ns apo data does not support that. Counting features whose 95% interval
-excludes zero:
+**(a) The cancellation sentence in Discussion paragraph 595 is supported. Only
+the wording needs work.** The cancellation lives in the alchemical legs, where
+ΔΔG_bind = ΔG_holo(WT→Mut) − ΔG_apo(WT→Mut), so anything the mutation does to
+both legs cancels by construction. The per-leg values are already published in
+Supplementary Table 3, FEP sheet:
 
-| | holo | apo |
-|---|---|---|
-| **G190E** | **8** resolved: pocket +55.8 ± 12.1 Å³, Val179 +2.84 ± 0.44 Å, RMSF in pocket lining, primer grip, β6, fingers, palm | **0** |
-| **A98G+F227C** | 2: Tyr181 χ1 −75.8 ± 12.0°, primer-grip RMSF +0.09 ± 0.03 Å | 2, but **different features**: palm helix content, connection RMSF |
+| genotype | leg | ΔG holo | ΔG apo | residual | cancels |
+|---|---|---|---|---|---|
+| G190E | wt→G190E | −53.84 | −52.82 | **−1.02 ± 0.38** | 98% |
+| A98G+F227C | F227C→A98G+F227C | −8.97 | −7.75 | −1.22 ± 0.32 | 85% |
+| K103N+M230L | wt→K103N | −78.00 | −78.54 | +0.54 ± 0.23 | 99.3% |
+| | K103N→K103N+M230L | −14.09 | −14.14 | +0.05 ± 0.34 | 99.7% |
 
-For G190E the distortion is bound-state only, so there is nothing to cancel
-against. Figure 4 agrees from the other side: G190E's induced fit differs from
-wild type by **+71 ± 26 Å³**, a discordant change, which is the case that should
-*not* cancel. So G190E distorts the bound complex more than anything else in the
-panel, it does not cancel, and ΔΔGbind is still favourable at −1.02 ± 0.38.
-Three ways out, no recommendation from me:
+This is the answer to positive ΔΔE_Total with near-zero ΔΔG_bind. ΔΔE_Total is a
+single-trajectory interface energy of the bound complex and contains no apo leg
+at all, so it keeps the whole perturbation; ΔΔG_bind is a residual of a few per
+cent between two legs of tens of kcal/mol. Across the panel the median residual
+is 9% of the leg magnitude, and for the three mismatched genotypes it is
+0.3–2%, so these are the most completely cancelling cases in the study.
 
-1. Drop the cancellation clause and state the puzzle plainly.
-2. Keep cancellation as a hypothesis, flagged as unsupported by the apo data at
-   three replicates.
-3. Point at the G190E confounds already in paragraph 593 (replication capacity,
-   single-isolate phenotype) and treat ΔΔGbind as untestable for this genotype.
+**The problem is the phrase "the apo simulations".** Before this revision it
+could only mean the alchemical apo leg. The paper now also contains 3 × 100 ns
+equilibrium apo ensembles and a Figure 4 built on holo − apo, so a reviewer will
+read it as those, and on that reading it is false for G190E: 8 resolved holo
+features against 0 apo. Naming the leg fixes it, for instance "…but the same
+perturbation is present in the unliganded leg of the thermodynamic cycle
+(Supplementary Table 3), so it largely cancels…".
 
-The same sentence is quoted in the R1.3 and R2.2 responses, so the choice
-propagates to both.
+Worth considering: quantifying it would make the paragraph stronger than the
+qualitative "largely cancels", since 98% of a 53 kcal/mol perturbation is a more
+striking statement than the current wording, and it doubles as the precision
+caveat on ΔΔG_bind.
+
+*(Correction to the overnight note: I tested this sentence against the
+equilibrium apo MD, which measures structure, not against the alchemical legs,
+which measure the free energy the sentence is about. The three options I laid
+out rested on that error and are withdrawn. The structural observation stands
+on its own — G190E's distortion is bound-state only — but it does not bear on
+the cancellation.)*
 
 **(b) The dropped-metric sentence in the Figure 4 caption.** The four metrics
 removed are the subdomain and catalytic-motif fluctuations, which is exactly the
@@ -98,7 +111,7 @@ mechanism, then one paragraph per limitation. Real paragraph indices in
 | 592 | Tyr181/Tyr188 aromatic packing | none |
 | 593 | the G190 series | delete the last two sentences (replication capacity; "might affect the primer grip, which is not modeled here") — they move to the limitations. "pocket enlarged by ~25%" reads as a new result; cite Table 3 instead |
 | 594 | the V106 series | delete the last 90 words, "We quantified the uncertainty…" to "…which they do not", and replace with the sentence below |
-| 595 | ΔΔETotal against ΔΔGbind | delete the final implicit-solvent sentence (moves to limitations) and settle §3(a) |
+| 595 | ΔΔETotal against ΔΔGbind | delete the final implicit-solvent sentence (moves to limitations); name the alchemical leg in the cancellation clause, per §3(a) |
 | 596 | K103N+M230L | delete the last two sentences on the binary complex (move to limitations) |
 
 Replacement for the end of 594:
