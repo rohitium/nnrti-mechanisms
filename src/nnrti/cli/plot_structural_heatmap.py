@@ -129,18 +129,30 @@ def shift_vs_wt(per_rep, state, metrics):
     return pd.DataFrame(val), pd.DataFrame(err)
 
 
-def holo_minus_apo(per_rep, metrics):
-    """Induced fit: how far binding DOR moves each metric, per genotype."""
+def induced_fit_vs_wt(per_rep, metrics):
+    """How a genotype's induced fit differs from wild type's.
+
+    The induced fit is delta = holo - apo: how far binding DOR moves a metric.
+    Referencing that to wild type gives (holo - apo)_mut - (holo - apo)_WT, a
+    difference of differences. Zero means the mutation shifts the bound and
+    unliganded states by the same amount -- concordant remodelling, which
+    cancels in ddG_bind by construction and is exactly the case Reviewer 1
+    asks about. Four means are subtracted, so four SEMs add in quadrature.
+    """
     val, err = {}, {}
     for label, col in metrics.items():
         if col not in per_rep or per_rep[col].isna().all():
             continue
-        h = _stats(per_rep[per_rep.structure_type == "holo"], col, label in CIRCULAR)
-        a = _stats(per_rep[per_rep.structure_type == "apo"], col, label in CIRCULAR)
+        circ = label in CIRCULAR
+        h = _stats(per_rep[per_rep.structure_type == "holo"], col, circ)
+        a = _stats(per_rep[per_rep.structure_type == "apo"], col, circ)
         common = h.index.intersection(a.index)
-        val[label] = _wrap(h.loc[common, "mean"] - a.loc[common, "mean"],
-                           label in CIRCULAR)
-        err[label] = np.sqrt(h.loc[common, "sem"] ** 2 + a.loc[common, "sem"] ** 2)
+        if "WT" not in common:
+            continue
+        fit = _wrap(h.loc[common, "mean"] - a.loc[common, "mean"], circ)
+        fit_sem = np.sqrt(h.loc[common, "sem"] ** 2 + a.loc[common, "sem"] ** 2)
+        val[label] = _wrap(fit - fit["WT"], circ)
+        err[label] = np.sqrt(fit_sem ** 2 + float(fit_sem["WT"]) ** 2)
     return pd.DataFrame(val), pd.DataFrame(err)
 
 
@@ -153,8 +165,8 @@ def draw(ax, val, err, title, ylabels, show_y):
     for c in scaled.columns:
         m = float(np.nanmax(np.abs(scaled[c].to_numpy())))
         scaled[c] = scaled[c] / m if m else 0.0
-    ax.imshow(scaled.to_numpy(dtype=float), cmap="RdBu_r", vmin=-1, vmax=1,
-              aspect="auto")
+    im = ax.imshow(scaled.to_numpy(dtype=float), cmap="RdBu_r", vmin=-1, vmax=1,
+                   aspect="auto")
 
     dec = {c: _decimals(float(np.nanmax(np.abs(val[c].to_numpy()))))
            for c in val.columns}
@@ -182,6 +194,7 @@ def draw(ax, val, err, title, ylabels, show_y):
     ax.set_yticks(np.arange(-0.5, val.shape[0], 1), minor=True)
     ax.grid(which="minor", color="white", lw=1.0)
     ax.tick_params(which="minor", length=0)
+    return im
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -204,89 +217,84 @@ def main(argv: list[str] | None = None) -> int:
     fold = dict(zip(man.mutation, man.fold_reduction))
     cat = dict(pd.read_csv(args.table3_csv)[["Genotype", "Category"]].values)
 
-    # A genotype that is simulated but absent from Table 1 has no category, and
-    # silently sorting it into one would misrepresent the manuscript. Name it.
-    missing = sorted({g for g in per_rep.genotype.unique()
-                      if g not in cat and g != "WT"})
-    if missing:
-        print(f"NOT in Table 1, so shown in a separate block: {', '.join(missing)}")
 
     dor_v, dor_e = shift_vs_wt(per_rep, "holo", DOR_METRICS)
-    rt_v, rt_e = holo_minus_apo(per_rep, RT_METRICS)
+    rt_v, rt_e = induced_fit_vs_wt(per_rep, RT_METRICS)
 
-    # Category first, then fold-change within category, as Table 1 groups them.
-    def category(g: str) -> str:
-        return cat.get(g, "Not in Table 1")
+    # Genotypes absent from Table 1 are not part of the published panel and are
+    # not plotted. F227C is the only one; the build says so rather than
+    # dropping it silently.
+    uncategorised = sorted({g for g in per_rep.genotype.unique()
+                            if g not in cat and g != "WT"})
+    if uncategorised:
+        print(f"dropped, not in Table 1: {', '.join(uncategorised)}")
 
     def key(g):
-        c = category(g)
-        rank = CATEGORY_ORDER.index(c) if c in CATEGORY_ORDER else len(CATEGORY_ORDER)
+        rank = CATEGORY_ORDER.index(cat[g])
         return (rank, np.nan_to_num(fold.get(g, np.nan), nan=np.inf))
 
-    mutants = sorted((g for g in dor_v.index if g != "WT"), key=key)
-    labels_a = [f"{g}   {fold.get(g):g}×" if np.isfinite(fold.get(g, np.nan)) else g
-                for g in mutants]
-    # Panel B keeps WT: the question is whether a genotype's induced fit
-    # DIFFERS from wild type's, which needs wild type on the page.
-    rt_order = ["WT"] + [g for g in mutants if g in rt_v.index]
-    labels_b = ["WT (reference)"] + [l for g, l in zip(mutants, labels_a)
-                                     if g in rt_v.index]
+    mutants = sorted((g for g in dor_v.index if g != "WT" and g in cat), key=key)
+    labels = [f"{g}   {fold.get(g):g}\u00d7" if np.isfinite(fold.get(g, np.nan))
+              else g for g in mutants]
 
-    fig, axes = plt.subplots(
-        1, 2, figsize=(26, 0.62 * len(mutants) + 6.5),
-        gridspec_kw={"width_ratios": [dor_v.shape[1], rt_v.shape[1]], "wspace": 0.30})
-    draw(axes[0], dor_v.loc[mutants], dor_e.reindex(mutants),
-         "A   RT–DOR contacts (holo), shift from wild type", labels_a, True)
-    draw(axes[1], rt_v.loc[rt_order], rt_e.reindex(rt_order),
-         "B   RT conformation, Δ = holo − apo (induced fit)", labels_b, True)
-
-    # Rule between resistance categories, and name each block in the margin.
-    def rule_and_label(ax, rows, first_is_wt, label=True):
+    def rule_and_label(ax, rows):
         from matplotlib.transforms import blended_transform_factory
-        cats = ["WT"] + [category(g) for g in rows[1:]] if first_is_wt \
-            else [category(g) for g in rows]
+        cats = [cat[g] for g in rows]
         for i in range(1, len(cats)):
             if cats[i] != cats[i - 1]:
                 ax.axhline(i - 0.5, color="black", lw=2.4)
-        seen, start = cats[0], 0
+        seen, start_i = cats[0], 0
         for i in range(1, len(cats) + 1):
             if i == len(cats) or cats[i] != seen:
-                if seen != "WT" and label:
-                    # x in axes fraction so the label clears the genotype tick
-                    # labels whatever their length; y in data so it centres on
-                    # the block. A single transform cannot do both.
-                    tr = blended_transform_factory(ax.transAxes, ax.transData)
-                    ax.text(-0.30, (start + i - 1) / 2.0, seen, rotation=90,
-                            ha="center", va="center", fontsize=12,
-                            fontweight="bold", color="0.25",
-                            transform=tr, clip_on=False)
+                tr = blended_transform_factory(ax.transAxes, ax.transData)
+                ax.text(-0.33, (start_i + i - 1) / 2.0, seen, rotation=90,
+                        ha="center", va="center", fontsize=12, fontweight="bold",
+                        color="0.25", transform=tr, clip_on=False)
                 if i < len(cats):
-                    seen, start = cats[i], i
-    # Only the left panel is labelled: both share the row order, and panel B's
-    # labels would sit in the gap and read as part of panel A.
-    rule_and_label(axes[0], mutants, False, label=True)
-    rule_and_label(axes[1], rt_order, True, label=False)
+                    seen, start_i = cats[i], i
 
     out = args.output_dir
     (out / "plots").mkdir(parents=True, exist_ok=True)
     (out / "tables").mkdir(parents=True, exist_ok=True)
-    f = out / "plots" / "figure3_structural_heatmap.png"
-    fig.savefig(f, dpi=300)
-    plt.close(fig)
 
-    dor_v.loc[mutants].round(3).to_csv(out / "tables" / "figure3A_dor_shift_vs_wt.csv")
-    dor_e.reindex(mutants).round(3).to_csv(out / "tables" / "figure3A_dor_shift_sem.csv")
-    rt_v.loc[rt_order].round(3).to_csv(out / "tables" / "figure3B_rt_holo_minus_apo.csv")
-    rt_e.reindex(rt_order).round(3).to_csv(out / "tables" / "figure3B_rt_holo_minus_apo_sem.csv")
+    panels = [
+        ("A", dor_v, dor_e, "RT\u2013DOR contacts (holo): shift from wild type",
+         "figure3A_rt_dor_contacts", "figure3A_dor"),
+        ("B", rt_v, rt_e,
+         "RT conformation: induced fit (holo \u2212 apo), shift from wild type",
+         "figure3B_rt_induced_fit", "figure3B_rt"),
+    ]
+    written = []
+    for tag, val, err, title, stem, tstem in panels:
+        v = val.loc[mutants]
+        e = err.reindex(mutants)
+        fig, ax = plt.subplots(figsize=(1.55 * v.shape[1] + 5.0,
+                                        0.62 * len(mutants) + 4.0))
+        im = draw(ax, v, e, f"{tag}   {title}", labels, True)
+        rule_and_label(ax, mutants)
+        # Colour is normalised per column, so the bar is a relative scale: the
+        # darkest cell in a column is that metric's largest shift. One bar in
+        # real units would be a lie, since the columns are in A, degrees, A^3
+        # and counts.
+        cb = fig.colorbar(im, ax=ax, fraction=0.030, pad=0.02)
+        cb.set_ticks([-1, -0.5, 0, 0.5, 1])
+        cb.set_ticklabels(["\u2212max", "", "0", "", "+max"])
+        cb.set_label("shift, scaled within each column\n"
+                     "(max = largest shift in that metric)", fontsize=10)
+        cb.ax.tick_params(labelsize=10)
+        f = out / "plots" / f"{stem}.png"
+        fig.savefig(f, dpi=300)
+        plt.close(fig)
+        written.append(f)
+        v.round(3).to_csv(out / "tables" / f"{tstem}_shift_vs_wt.csv")
+        e.round(3).to_csv(out / "tables" / f"{tstem}_shift_sem.csv")
+        n = int(np.isfinite(v.to_numpy()).sum())
+        sig = int((v.abs() > 2 * e).to_numpy().sum())
+        print(f"{tag}: {v.shape[0]} genotypes x {v.shape[1]} metrics, "
+              f"{sig}/{n} cells exceed 2x SEM")
 
-    sig_a = int((dor_v.loc[mutants].abs() > 2 * dor_e.reindex(mutants)).to_numpy().sum())
-    n_a = int(np.isfinite(dor_v.loc[mutants].to_numpy()).sum())
-    body = rt_v.loc[mutants]
-    sig_b = int((body.abs() > 2 * rt_e.reindex(mutants)).to_numpy().sum())
-    n_b = int(np.isfinite(body.to_numpy()).sum())
-    print(f"A  RT–DOR contacts : {sig_a}/{n_a} cells exceed 2x SEM")
-    print(f"B  RT induced fit  : {sig_b}/{n_b} mutant cells exceed 2x SEM")
-    print(f"\nwrote {f}")
+    for f in written:
+        print(f"wrote {f}")
     return 0
 
 
