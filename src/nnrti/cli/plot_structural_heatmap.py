@@ -6,7 +6,10 @@ structural metrics, because they are currently spread across dense tables and
 patterns in DOR contacts, pocket size and remodelling are hard to see.
 
 Each cell is a genotype's shift from wild type IN ITS OWN UNITS, printed in
-the cell. Colour is scaled within each column, to that metric's largest shift
+the cell above its standard error. That error combines the genotype's SEM over
+three replicates with the wild-type reference's own SEM in quadrature, since
+the reference is a three-replicate mean too and quoting only the genotype's
+error would understate every cell. Colour is scaled within each column, to that metric's largest shift
 across the panel, so a column can be read down at a glance; it carries no
 meaning across columns, and the number is the quantity.
 
@@ -95,39 +98,57 @@ def _style():
     return plt
 
 
+def _circ_mean_sem(deg: np.ndarray) -> tuple[float, float]:
+    """Circular mean and its standard error, degrees."""
+    r = np.deg2rad(np.asarray(deg, float))
+    r = r[np.isfinite(r)]
+    if r.size == 0:
+        return np.nan, np.nan
+    s, c = np.sin(r).mean(), np.cos(r).mean()
+    mean = float(np.rad2deg(np.arctan2(s, c)))
+    R = float(np.hypot(s, c))
+    sd = float(np.rad2deg(np.sqrt(-2.0 * np.log(max(R, 1e-12)))))
+    return mean, sd / np.sqrt(r.size)
+
+
 def wt_referenced(per_rep: pd.DataFrame, state: str,
-                  metrics: dict[str, str]) -> pd.DataFrame:
-    """Shift from WT, in each metric's own units."""
+                  metrics: dict[str, str]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Shift from WT in each metric's own units, and its standard error.
+
+    The error on a shift is not the genotype's error alone: the WT reference
+    is itself a mean over three replicates and carries its own uncertainty, so
+    the two are added in quadrature. Reporting only the genotype's SEM would
+    understate every cell.
+    """
     d = per_rep[per_rep.structure_type == state]
-    raw = {}
+    raw, err = {}, {}
     for label, col in metrics.items():
         if col not in d or d[col].isna().all():
             continue
         if label in CIRCULAR:
-            rad = d.assign(_r=np.deg2rad(d[col]))
-            means = rad.groupby("genotype").apply(
-                lambda g: np.rad2deg(np.arctan2(np.sin(g._r).mean(),
-                                                np.cos(g._r).mean())),
-                include_groups=False)
+            stats = d.groupby("genotype")[col].apply(
+                lambda v: pd.Series(_circ_mean_sem(v.to_numpy()),
+                                    index=["mean", "sem"]))
+            stats = stats.unstack()
         else:
-            means = d.groupby("genotype")[col].mean()
-        wt = means.get("WT")
-        if wt is None or not np.isfinite(wt):
+            g = d.groupby("genotype")[col]
+            stats = pd.DataFrame({"mean": g.mean(), "sem": g.sem()})
+        if "WT" not in stats.index or not np.isfinite(stats.loc["WT", "mean"]):
             continue
+        wt_mean, wt_sem = stats.loc["WT", "mean"], stats.loc["WT", "sem"]
         if label in CIRCULAR:
             # Shortest rotation, so a dihedral that moved 82 degrees is never
             # reported as having moved 278 the other way round.
-            delta = ((means - wt + 180.0) % 360.0) - 180.0
+            delta = ((stats["mean"] - wt_mean + 180.0) % 360.0) - 180.0
         else:
-            delta = means - wt
-        # A metric that never moves has nothing to show and no scale to show it
-        # on; drop it rather than plot an all-zero column.
-        if not np.isfinite(delta.drop(index="WT", errors="ignore")).any():
-            continue
-        if float(np.nanmax(np.abs(delta.drop(index="WT", errors="ignore")))) == 0.0:
+            delta = stats["mean"] - wt_mean
+        sem = np.sqrt(stats["sem"].to_numpy() ** 2 + float(wt_sem) ** 2)
+        body = delta.drop(index="WT", errors="ignore")
+        if not np.isfinite(body).any() or float(np.nanmax(np.abs(body))) == 0.0:
             continue
         raw[label] = delta
-    return pd.DataFrame(raw)
+        err[label] = pd.Series(sem, index=stats.index)
+    return pd.DataFrame(raw), pd.DataFrame(err)
 
 
 def _decimals(largest: float) -> int:
@@ -157,22 +178,25 @@ def main(argv: list[str] | None = None) -> int:
     fold = dict(zip(man.mutation, man.fold_reduction))
 
     all_metrics = {**HOLO_METRICS, **POCKET_METRICS, **PROTEIN_METRICS}
-    raw_holo = wt_referenced(per_rep, "holo", all_metrics)
+    raw_holo, sem_holo = wt_referenced(per_rep, "holo", all_metrics)
     apo_metrics = {**POCKET_METRICS, **PROTEIN_METRICS}
-    raw_apo = wt_referenced(per_rep, "apo", apo_metrics)
+    raw_apo, sem_apo = wt_referenced(per_rep, "apo", apo_metrics)
 
     order = sorted((g for g in raw_holo.index if g != "WT"),
                    key=lambda g: (np.nan_to_num(fold.get(g, np.nan), nan=-1)))
     raw_holo = raw_holo.loc[order]
     raw_apo = raw_apo.reindex(order)
+    sem_holo = sem_holo.reindex(order)
+    sem_apo = sem_apo.reindex(order)
 
-    panels = [("DOR-bound (holo)", raw_holo), ("Unliganded (apo)", raw_apo)]
+    panels = [("DOR-bound (holo)", raw_holo, sem_holo),
+              ("Unliganded (apo)", raw_apo, sem_apo)]
     widths = [p[1].shape[1] for p in panels]
     fig, axes = plt.subplots(
-        1, 2, figsize=(0.62 * sum(widths) + 3.4, 0.34 * len(order) + 2.4),
+        1, 2, figsize=(0.70 * sum(widths) + 3.4, 0.46 * len(order) + 2.4),
         gridspec_kw={"width_ratios": widths, "wspace": 0.05})
 
-    for ax, (title, raw) in zip(axes, panels):
+    for ax, (title, raw, sem) in zip(axes, panels):
         # Colour is scaled per column: each metric spans its own largest shift,
         # so the gradient compares genotypes WITHIN a metric and never across.
         scaled = raw.copy().astype(float)
@@ -192,9 +216,15 @@ def main(argv: list[str] | None = None) -> int:
                             color="0.6", fontsize=7)
                     continue
                 shade = abs(float(scaled.iat[i, j]))
-                ax.text(j, i, f"{v:+.{dec[c]}f}", ha="center", va="center",
-                        fontsize=5.5,
-                        color="white" if shade > 0.65 else "0.15")
+                colour = "white" if shade > 0.65 else "0.15"
+                e = sem.iat[i, j] if sem is not None else np.nan
+                # Value and its error on separate lines: one line of
+                # "+56 +/- 12" per cell is unreadable at this density.
+                ax.text(j, i - 0.17, f"{v:+.{dec[c]}f}", ha="center",
+                        va="center", fontsize=5.6, color=colour)
+                if np.isfinite(e):
+                    ax.text(j, i + 0.21, f"\u00b1{e:.{dec[c]}f}", ha="center",
+                            va="center", fontsize=4.6, color=colour, alpha=0.85)
 
         ax.set_xticks(range(raw.shape[1]))
         ax.set_xticklabels([f"{c}\n{UNITS.get(c, '')}" for c in raw.columns],
@@ -220,6 +250,8 @@ def main(argv: list[str] | None = None) -> int:
 
     raw_holo.round(3).to_csv(out / "tables" / "figure3_holo_shift_vs_wt.csv")
     raw_apo.round(3).to_csv(out / "tables" / "figure3_apo_shift_vs_wt.csv")
+    sem_holo.round(3).to_csv(out / "tables" / "figure3_holo_shift_sem.csv")
+    sem_apo.round(3).to_csv(out / "tables" / "figure3_apo_shift_sem.csv")
 
     z_holo, z_apo = raw_holo, raw_apo
     print(f"holo metrics: {z_holo.shape[1]}, apo metrics: {z_apo.shape[1]}, "
