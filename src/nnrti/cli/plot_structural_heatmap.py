@@ -345,9 +345,8 @@ def main(argv: list[str] | None = None) -> int:
         # and counts.
         cb = fig.colorbar(im, ax=ax, fraction=0.030, pad=0.02)
         cb.set_ticks([-1, -0.5, 0, 0.5, 1])
-        cb.set_ticklabels(["\u2212max", "", "0", "", "+max"])
-        cb.set_label("shift, scaled within each column\n"
-                     "(max = largest shift in that metric)", fontsize=30)
+        cb.set_ticklabels(["min", "", "0", "", "max"])
+        cb.set_label("shift from wild type, scaled within each column", fontsize=30)
         cb.ax.tick_params(labelsize=30)
         f = out / "plots" / f"{stem}.png"
         fig.savefig(f, dpi=300, bbox_inches="tight", pad_inches=0.25)

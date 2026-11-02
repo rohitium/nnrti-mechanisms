@@ -17,7 +17,6 @@ For each genotype and feature, against wild type:
     sem        standard error of that difference
     t, df, p   Welch's unequal-variance t test (df ~ 4 for 3 vs 3)
     ci95       shift +/- t(0.975, df) x sem
-    hedges_g   standardised effect size, bias-corrected for small n
 
 A note on thresholds, because it is easy to get wrong at n = 3. A shift of
 twice its standard error is NOT significant here: with df = 4 that is p = 0.12.
@@ -85,17 +84,11 @@ def compare(mut: np.ndarray, wt: np.ndarray, circular: bool) -> dict:
     shift = float(mut.mean() - wt.mean())
     crit = float(stats.t.ppf(0.975, df)) if np.isfinite(df) else np.nan
 
-    # Hedges' g: Cohen's d on the pooled SD, with the small-sample correction
-    # that matters a great deal at n = 3.
-    sp = np.sqrt(((nm - 1) * vm + (nw - 1) * vw) / (nm + nw - 2))
-    d = shift / sp if sp > 0 else np.nan
-    J = 1.0 - 3.0 / (4.0 * (nm + nw) - 9.0)
     return {
         "n_mut": nm, "n_wt": nw, "shift": shift, "sem": sem,
         "t": float(t), "df": df, "p": float(p),
         "ci95_low": shift - crit * sem, "ci95_high": shift + crit * sem,
         "sem_ratio": abs(shift) / sem if sem > 0 else np.nan,
-        "hedges_g": float(d * J) if np.isfinite(d) else np.nan,
     }
 
 
@@ -128,8 +121,7 @@ def main(argv: list[str] | None = None) -> int:
                              "feature": feat, **stats_})
 
     out = pd.DataFrame(rows)
-    for c in ("shift", "sem", "t", "df", "ci95_low", "ci95_high",
-              "sem_ratio", "hedges_g"):
+    for c in ("shift", "sem", "t", "df", "ci95_low", "ci95_high", "sem_ratio"):
         out[c] = out[c].round(4)
     out["p"] = out["p"].round(5)
     out["significant_95"] = (out.p < 0.05)

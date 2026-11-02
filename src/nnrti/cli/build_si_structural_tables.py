@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-"""Build the structural Supporting Information workbooks for the revision.
+"""Build Supplementary Table 4: the structural observables and their statistics.
 
-Two workbooks, both backing Figures 3 and 4, which replace main-text Table 3:
+One workbook backing Figures 3 and 4. It carries the per-replicate values, the
+genotype summaries, and the statistics behind every figure cell, in both the
+bound and the unliganded state. The submitted version was holo only, because
+there was no comparable apo ensemble; there is now 3 x 100 ns for all twenty
+genotypes.
 
-  Supplementary Table 4   per-replicate structural observables, now in BOTH the
-                          bound and unliganded states. The submitted version was
-                          holo only, because there was no comparable apo
-                          ensemble; there is now 3 x 100 ns for all 20 genotypes.
-  Supplementary Table 10  the effect size and 95% confidence interval behind
-                          every cell of Figures 3 and 4, including the metrics
-                          the figures drop for being unresolved. The figure
-                          captions refer to this table.
+Columns are exactly the metrics the figures are built from. An earlier draft
+also carried all eighteen secondary-structure fractions, three of which were
+identically zero in every row and the rest of which move by less than 0.02
+across the whole panel; a column nobody can read a result from is not worth the
+width. The one that does appear in a figure, the beta9-beta10 strand content,
+is in RT_METRICS and so is kept.
+
+The statistics live here too, as two further sheets, rather than in a separate
+workbook. They are the same measurement as the values beside them, not a
+different analysis, and splitting them made a reader hold two files open.
 
 Labels and the derived quantities come from ``plot_structural_heatmap``, so a
 workbook cell and a figure cell cannot disagree: renaming a metric or changing
@@ -117,42 +123,27 @@ DEFINITIONS = [
      "src/nnrti/cli/plot_structural_heatmap.py, which draws Figures 3 and 4."),
 ]
 
-TABLE10_DEFINITIONS = [
-    ("Purpose",
-     "The effect size and interval behind every cell of Figures 3 and 4, and for "
-     "the metrics the figures do not plot. A figure cell says how large a shift "
-     "is; these sheets say whether it is resolved at three replicates."),
+DEFINITIONS += [
     ("Sheet 'Mutant vs WT'",
      "Each genotype's shift from wild type within one state, in the metric's own "
-     "units. Two groups of three replicates, so Welch gives about 4 degrees of "
-     f"freedom and a 95% interval needs {SIGNIFICANCE_BY_PANEL['A']:.3f} standard "
-     "errors, not 2. Figure 3 plots the bound rows of this sheet."),
+     "units, with the standard error of that shift and a Welch two-sided interval "
+     "on it. Two groups of three replicates, so Welch gives about 4 degrees of "
+     "freedom and a 95% interval needs 2.78 standard errors, not 2. Figure 3 plots "
+     "the bound rows of this sheet."),
     ("Sheet 'Induced fit vs WT'",
      "(bound - unliganded) for a genotype minus (bound - unliganded) for wild "
-     "type: how differently the mutation lets DOR reshape the enzyme. Four means "
-     "are subtracted, so four standard errors add in quadrature and the degrees "
-     f"of freedom rise to about 8, where the 95% criterion is "
-     f"{SIGNIFICANCE_BY_PANEL['B']:.3f} standard errors. Near zero means the "
-     "mutation moves both states alike -- concordant remodelling, which cancels "
-     "in ddG_bind by construction. Figure 4 plots this sheet."),
-    ("Hedges' g",
-     "The shift divided by the pooled replicate standard deviation, with the "
-     "small-sample correction J = 1 - 3/(4(n1+n2)-9). It is large throughout "
-     "because the replicate-to-replicate spread within a genotype is small, not "
-     "because the shifts are large; read it beside the interval, never alone."),
+     "type: how differently the mutation lets doravirine reshape the enzyme. Four "
+     "means are subtracted, so four standard errors add in quadrature and the "
+     "degrees of freedom rise to about 8, where the 95% criterion is 2.31 standard "
+     "errors. A value near zero means the mutation moves the bound and unliganded "
+     "states alike, which cancels in a thermodynamic cycle and is invisible to "
+     "ddG_bind by construction. Figure 4 plots this sheet."),
     ("Multiplicity",
      "Of 1,287 genotype-by-feature comparisons across both states, 66 have a 95% "
-     "interval excluding zero. That is the null expectation for this many tests, "
-     "so the panel as a whole does not establish that most structural features "
-     "differ between genotypes. The pre-specified comparisons -- the V106 "
-     "displacement toward Ser105 and the residue 103 anchor -- are a different "
-     "matter and are resolved by a wide margin."),
-    ("Provenance",
-     "Generated by src/nnrti/cli/build_si_structural_tables.py. The 'Mutant vs WT' "
-     "and 'Induced fit vs WT' sheets are computed by shift_vs_wt and "
-     "induced_fit_vs_wt imported from plot_structural_heatmap, the same functions "
-     "that draw the figures. The 'All features' sheet is "
-     "results/analysis/structural_metrics/tables/structural_effect_sizes.csv."),
+     "interval excluding zero, close to the number expected if none differed. The "
+     "panel as a whole therefore does not establish that most structural features "
+     "differ between genotypes; the comparisons interpreted in the text are those "
+     "that clear the threshold by a wide margin."),
 ]
 
 
@@ -203,18 +194,8 @@ def _metric_columns() -> list[tuple[str, str]]:
     return [(l, c) for l, c in DOR_METRICS.items()] + [(l, c) for l, c in RT_METRICS.items()]
 
 
-def _secondary_structure_columns(per_rep: pd.DataFrame) -> list[tuple[str, str]]:
-    """Helix and strand fractions, which no figure plots but the text cites."""
-    out = []
-    for c in per_rep.columns:
-        if c.startswith(("helix_frac_", "strand_frac_")):
-            kind, region = c.split("_frac_", 1)
-            out.append((f"{kind.capitalize()} content, {region.replace('_', ' ')} (fraction)", c))
-    return sorted(out)
-
-
 def table4(per_rep: pd.DataFrame) -> dict[str, pd.DataFrame]:
-    cols = _metric_columns() + _secondary_structure_columns(per_rep)
+    cols = _metric_columns()
 
     detail = pd.DataFrame({
         "Category": per_rep.genotype.map(CATEGORY),
@@ -276,35 +257,25 @@ def _long(val: pd.DataFrame, err: pd.DataFrame, tcrit: float, state: str) -> pd.
     return out.assign(_r=_rank(out.Genotype)).sort_values(["_r", "Metric"]).drop(columns="_r")
 
 
-def table10(per_rep: pd.DataFrame, effects: pd.DataFrame) -> dict[str, pd.DataFrame]:
-    sheets: dict[str, pd.DataFrame] = {}
+def statistics_sheets(per_rep: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    """The two comparisons the figures draw, each with its Welch statistics.
 
+    One sheet per panel, because the two use different degrees of freedom and
+    therefore different 95% criteria, and putting them in one sheet invites a
+    reader to apply the wrong one.
+    """
     frames = []
     for state, label in _STATES.items():
         metrics = {**DOR_METRICS, **RT_METRICS} if state == "holo" else RT_METRICS
         val, err = shift_vs_wt(per_rep, state, metrics)
         if not val.empty:
             frames.append(_long(val, err, SIGNIFICANCE_BY_PANEL["A"], label))
-    sheets["Mutant vs WT"] = pd.concat(frames, ignore_index=True)
+    mutant = pd.concat(frames, ignore_index=True)
 
     val, err = induced_fit_vs_wt(per_rep, RT_METRICS)
-    sheets["Induced fit vs WT"] = (
-        _long(val, err, SIGNIFICANCE_BY_PANEL["B"], "Bound minus unliganded")
-        .drop(columns="State").reset_index(drop=True))
-
-    all_feat = effects.rename(columns={
-        "structure_type": "State", "genotype": "Genotype", "feature": "Feature",
-        "n_mut": "n genotype", "n_wt": "n WT", "shift": "Shift", "sem": "SEM",
-        "t": "Welch t", "df": "Welch df", "p": "p", "ci95_low": "CI95 low",
-        "ci95_high": "CI95 high", "sem_ratio": "Shift / SEM",
-        "hedges_g": "Hedges g", "significant_95": "Resolved at 95%"})
-    all_feat["State"] = all_feat["State"].map(_STATES)
-    all_feat = all_feat.assign(_r=_rank(all_feat.Genotype)).sort_values(
-        ["_r", "State", "Feature"]).drop(columns="_r")
-    sheets["All features"] = all_feat.round(4).reset_index(drop=True)
-
-    sheets["Definitions"] = pd.DataFrame(TABLE10_DEFINITIONS, columns=["Item", "Description"])
-    return sheets
+    induced = (_long(val, err, SIGNIFICANCE_BY_PANEL["B"], "Bound minus unliganded")
+               .drop(columns="State").reset_index(drop=True))
+    return {"Mutant vs WT": mutant, "Induced fit vs WT": induced}
 
 
 def _write(path: Path, sheets: dict[str, pd.DataFrame]) -> None:
@@ -325,17 +296,21 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--per-replicate", type=Path,
                    default=root / "results/analysis/structural_metrics/tables/"
                                   "structural_metrics_per_replicate.csv")
-    p.add_argument("--effect-sizes", type=Path,
-                   default=root / "results/analysis/structural_metrics/tables/"
-                                  "structural_effect_sizes.csv")
     p.add_argument("--out-dir", type=Path, default=root / "revisions")
     a = p.parse_args(argv)
 
     per_rep = pd.read_csv(a.per_replicate)
-    effects = pd.read_csv(a.effect_sizes)
     a.out_dir.mkdir(parents=True, exist_ok=True)
-    _write(a.out_dir / "Supplementary-Table-4.xlsx", table4(per_rep))
-    _write(a.out_dir / "Supplementary-Table-10.xlsx", table10(per_rep, effects))
+    sheets = table4(per_rep)
+    stats = statistics_sheets(per_rep)
+    # Definitions last, so the data sheets come first in the tab bar.
+    defs = sheets.pop("Definitions")
+    _write(a.out_dir / "Supplementary-Table-4.xlsx", {**sheets, **stats, "Definitions": defs})
+
+    stale = a.out_dir / "Supplementary-Table-10.xlsx"
+    if stale.exists():
+        stale.unlink()
+        print(f"removed {stale.name}: its sheets are now tabs of Table 4")
     return 0
 
 
