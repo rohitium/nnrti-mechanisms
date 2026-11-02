@@ -50,20 +50,22 @@ if [ -n "${NAME_REFERENCE}" ]; then
     NAME_REFERENCE_ARG=(--name-reference "${NAME_REFERENCE}")
 fi
 
-# Prep once, here, rather than in the jobs: three jobs starting together would
-# all see the assets missing and race to write the same two files. It is a few
-# seconds of CPU on ~2,500 atoms, which is light enough for a login node.
+# Prep does NOT happen here. Parameterising the ligand needs openff.toolkit,
+# which the py-openmm module does not ship, so the whole panel is prepared
+# locally and the cluster only ever consumes the serialized System -- which is
+# self-contained, and needs nothing but openmm to deserialize. Build the assets
+# on the workstation and copy them up:
+#
+#   PYTHONPATH=src python -m nnrti.cli.run_dor_solvent prep
+#   rsync -a results/md_runs/dor_solvent/prepared/ \
+#       sherlock:${RUNS_ROOT}/prepared/
 if [ ! -f "${RUNS_ROOT}/prepared/dor_solvent_system.xml" ]; then
-    echo "[prep] building solvated DOR assets in ${RUNS_ROOT}/prepared"
-    module reset >/dev/null 2>&1 || true
-    module load chemistry py-openmm/8.1.1_py312
-    PYTHONPATH="${GROUP_HOME}/nnrti-mechanisms-repo/src:${PYTHONPATH:-}" \
-        python3 -m nnrti.cli.run_dor_solvent \
-            --root "${RUNS_ROOT}" \
-            prep "${NAME_REFERENCE_ARG[@]+"${NAME_REFERENCE_ARG[@]}"}"
-else
-    echo "[prep] reusing ${RUNS_ROOT}/prepared"
+    echo "Prepared assets missing: ${RUNS_ROOT}/prepared/dor_solvent_system.xml" >&2
+    echo "Parameterisation needs openff.toolkit, which is not available here." >&2
+    echo "Run \`prep\` locally and copy results/md_runs/dor_solvent/prepared/ up." >&2
+    exit 1
 fi
+echo "[prep] using ${RUNS_ROOT}/prepared"
 
 for REP in ${REPLICATES}; do
     REP2=$(printf "%02d" "${REP}")
