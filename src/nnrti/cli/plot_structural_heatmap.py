@@ -74,6 +74,12 @@ UNITS = {
     "RMSF thumb": "Å", "RMSF connection": "Å", "strand β9–β10": "frac",
 }
 
+#: Points to the left of the axis for the category label. The longest tick
+#: label ("V106I+F227C  105x", 17 characters at 10 pt) runs to about 102 pt, and
+#: the rotated category text is ~12 pt wide about its centre, so anything under
+#: ~115 pt overlaps and clips the first letter off the longest genotypes.
+CATEGORY_LABEL_PAD_PT = 132.0
+
 #: Category order of Table 1 in the manuscript.
 CATEGORY_ORDER = ("Susceptible", "Resistant", "Uncertain")
 
@@ -234,11 +240,10 @@ def main(argv: list[str] | None = None) -> int:
         return (rank, np.nan_to_num(fold.get(g, np.nan), nan=np.inf))
 
     mutants = sorted((g for g in dor_v.index if g != "WT" and g in cat), key=key)
-    labels = [f"{g}   {fold.get(g):g}\u00d7" if np.isfinite(fold.get(g, np.nan))
+    labels = [f"{g}  {fold.get(g):g}\u00d7" if np.isfinite(fold.get(g, np.nan))
               else g for g in mutants]
 
     def rule_and_label(ax, rows):
-        from matplotlib.transforms import blended_transform_factory
         cats = [cat[g] for g in rows]
         for i in range(1, len(cats)):
             if cats[i] != cats[i - 1]:
@@ -246,10 +251,15 @@ def main(argv: list[str] | None = None) -> int:
         seen, start_i = cats[0], 0
         for i in range(1, len(cats) + 1):
             if i == len(cats) or cats[i] != seen:
-                tr = blended_transform_factory(ax.transAxes, ax.transData)
-                ax.text(-0.33, (start_i + i - 1) / 2.0, seen, rotation=90,
-                        ha="center", va="center", fontsize=12, fontweight="bold",
-                        color="0.25", transform=tr, clip_on=False)
+                # Offset in POINTS, not axes fraction: a fraction of the
+                # axes width is ~5 inches on a 20-inch-wide panel, which
+                # stranded these labels far out in the margin.
+                ax.annotate(seen, xy=(0, (start_i + i - 1) / 2.0),
+                            xycoords=("axes fraction", "data"),
+                            xytext=(-CATEGORY_LABEL_PAD_PT, 0),
+                            textcoords="offset points", rotation=90,
+                            ha="center", va="center", fontsize=12,
+                            fontweight="bold", color="0.25", clip_on=False)
                 if i < len(cats):
                     seen, start_i = cats[i], i
 
@@ -283,7 +293,7 @@ def main(argv: list[str] | None = None) -> int:
                      "(max = largest shift in that metric)", fontsize=10)
         cb.ax.tick_params(labelsize=10)
         f = out / "plots" / f"{stem}.png"
-        fig.savefig(f, dpi=300)
+        fig.savefig(f, dpi=300, bbox_inches="tight", pad_inches=0.25)
         plt.close(fig)
         written.append(f)
         v.round(3).to_csv(out / "tables" / f"{tstem}_shift_vs_wt.csv")
