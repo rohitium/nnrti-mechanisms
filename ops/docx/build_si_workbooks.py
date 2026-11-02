@@ -2,9 +2,14 @@
 """Build the Supporting Information table workbooks.
 
 Supplementary Tables 1-4 are XLSX, so Tables 5-7 are too rather than being
-embedded in the Supplementary Text. Each workbook carries the summary the
-text refers to, the per-genotype values behind it, and a Notes sheet stating
-how the numbers were produced.
+embedded in the Supplementary Text. Each workbook carries the summary the text
+refers to and the per-genotype values behind it.
+
+There is deliberately no Notes sheet. Every column that has a unit says so in
+its name (``_kcal``, ``_A3``, ``_deg``, ``_e``), so a number can be read where
+it sits. What a Notes sheet cannot express -- why a protocol was chosen, what a
+measurement does not account for -- is prose and belongs in the Supplementary
+Text, not in a tab beside the data.
 
 Usage
 -----
@@ -21,222 +26,248 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "revisions"
 REL = ROOT / "results/analysis/relaxation_sensitivity/tables"
 
+#: Columns holding a physical quantity must end in one of these, so the unit
+#: travels with the number instead of living in a note.
+_UNIT_SUFFIXES = ("_kcal", "_A3", "_A", "_deg", "_e", "_p", "_ns")
 
-def _write(path: Path, sheets: dict[str, pd.DataFrame], notes: list[str]) -> None:
+#: Counts, labels and dimensionless ratios, which need no unit.
+_UNITLESS = {
+    "genotype", "energy_component", "relaxation_protocol", "replicate",
+    "n_replicates", "n_genotypes", "n_frames", "n_ca_atoms", "element",
+    "atom_index", "source", "state", "sign_agreement", "dor_fold_reduction",
+    "R2_vs_log10_fold", "spearman_h_relax_vs_full_min", "spearman_vs_log10_fold",
+}
+
+#: Energy columns in the MM/GBSA checkpoints and the component stem each maps
+#: to. The stems are the same on every sheet, so moving between a summary and
+#: its per-replicate data needs no translation.
+_ENERGY_COLUMNS = {
+    "binding_dg": "total",
+    "binding_dg_vdw": "vdw",
+    "binding_dg_electrostatic": "elec",
+    "binding_dg_gb": "gb",
+}
+
+#: Per-replicate numbers for each MM/GBSA variant.
+_CHECKPOINTS = {
+    "full_min": "results/.checkpoints/.checkpoint_mmgbsa_cpu2000_2026-08-29.csv",
+    "h_relax": "results/.checkpoints/.checkpoint_mmgbsa_relaxsens_h_relax.csv",
+    "gasteiger": "results/.checkpoints/.checkpoint_mmgbsa_cpu2000_2026-08-29.csv",
+    "am1bcc": "results/.checkpoints/.checkpoint_mmgbsa_am1bcc_extended.csv",
+}
+
+#: kJ/mol in the checkpoints; every sheet reports kcal/mol.
+_KJ_PER_KCAL = 4.184
+
+
+def _check_columns_self_describing(path: Path, sheets: dict[str, pd.DataFrame]) -> None:
+    """Fail the build rather than ship a column whose unit is unstated.
+
+    With no Notes sheet there is nowhere else a unit could be written down, so
+    this is the only thing between a reader and a number they cannot interpret.
+    """
+    bad = [f"{sheet}:{c}" for sheet, df in sheets.items() for c in map(str, df.columns)
+           if c not in _UNITLESS and not c.endswith(_UNIT_SUFFIXES)]
+    if bad:
+        raise AssertionError(
+            f"{path.name}: these columns state neither a unit nor a known unitless "
+            f"quantity, and there is no Notes sheet to explain them: {', '.join(bad)}")
+
+
+def _write(path: Path, sheets: dict[str, pd.DataFrame]) -> None:
+    _check_columns_self_describing(path, sheets)
     with pd.ExcelWriter(path, engine="openpyxl") as xl:
         for name, df in sheets.items():
             df.to_excel(xl, sheet_name=name[:31], index=False)
-        pd.DataFrame({"Notes": notes}).to_excel(
-            xl, sheet_name="Notes", index=False, header=False)
-    print(f"wrote {path.relative_to(ROOT)}  sheets: "
-          f"{list(sheets) + ['Notes']}")
-
-
+    print(f"wrote {path.relative_to(ROOT)}  sheets: {list(sheets)}")
 
 
 def _display(label: str) -> str:
     """Genotype label as the tables print it: WT, V106A, K103N+M230L.
 
-    A rule rather than a lookup, so a genotype added later is formatted
-    without anyone remembering to extend a dictionary. It reproduces the
-    DISPLAY map in build_si_tables.py exactly on every entry that map has.
+    A rule rather than a lookup, so a genotype added later is formatted without
+    anyone remembering to extend a dictionary.
     """
     if label.lower() == "wt":
         return "WT"
     return label.upper().replace("_", "+")
 
 
-#: Energy columns in the MM/GBSA checkpoints, and the component stem each maps
-#: to. The stems are shared with sheet 'Table 6' so a reader moving between
-#: sheets does not have to translate names.
-_ENERGY_COLUMNS = {
-    "binding_dg": "Total",
-    "binding_dg_vdw": "vdW",
-    "binding_dg_electrostatic": "elec",
-    "binding_dg_gb": "GB",
-}
-
-#: kJ/mol in the checkpoints; every table reports kcal/mol.
-_KJ_PER_KCAL = 4.184
-
-_CHARGE_SOURCES = {
-    "gasteiger": "results/.checkpoints/.checkpoint_mmgbsa_cpu2000_2026-08-29.csv",
-    "am1bcc": "results/.checkpoints/.checkpoint_mmgbsa_am1bcc_extended.csv",
-}
+def _stem(component: pd.Series) -> pd.Series:
+    """ddE_Total -> Total. The column name already says these are ddE values."""
+    return component.astype(str).str.replace("ddE_", "", regex=False)
 
 
-def _per_replicate_both_models(genotypes: list[str]) -> pd.DataFrame:
-    """One row per genotype and replicate, both charge models side by side."""
+def _per_replicate_pair(sources: dict[str, str], genotypes: list[str]) -> pd.DataFrame:
+    """One row per genotype and replicate, two variants side by side.
+
+    Checkpoint energies are kJ/mol and every sheet here is kcal/mol, so they
+    are converted. The summary sheets were always kcal/mol while the
+    per-replicate sheets used to be dumped raw, leaving two sheets of one
+    workbook differing by a factor of 4.184 with nothing saying so.
+    """
+    names = list(sources)
+    wanted = {_display(g) for g in genotypes} | {"WT"}
     frames = {}
-    for model, rel in _CHARGE_SOURCES.items():
+    for variant, rel in sources.items():
         d = pd.read_csv(ROOT / rel)
-        d = d[d.safe_label.isin(list(genotypes) + ["wt"])]
-        frames[model] = d.set_index(["safe_label", "replicate"])
+        # Match on the DISPLAY name, not safe_label. Callers hand us whichever
+        # form their summary sheet uses, and filtering "K103N+M230L" against a
+        # safe_label of "K103N_M230L" silently drops every compound genotype.
+        d = d.assign(genotype=d.safe_label.map(_display))
+        frames[variant] = (d[d.genotype.isin(wanted)]
+                           .set_index(["genotype", "replicate"]))
 
-    # Only rows present under BOTH models can be compared; a genotype scored
-    # under one and not the other would otherwise appear as a half-empty row
-    # that looks like a missing value rather than work not yet done.
-    common = frames["gasteiger"].index.intersection(frames["am1bcc"].index)
+    # Only rows present under BOTH variants can be compared; one scored under
+    # a single variant would appear as a half-empty row that reads as a missing
+    # value rather than as work not yet done.
+    common = frames[names[0]].index.intersection(frames[names[1]].index)
     # Sort ONCE and index everything with the sorted order. Building the frame
     # from common.sort_values() while pulling values with the unsorted common
     # silently pairs each row with another row's numbers.
     common = common.sort_values()
     out = pd.DataFrame(index=common).reset_index()
-    out["genotype"] = out.safe_label.map(_display)
-    out["fold_reduction"] = frames["gasteiger"].loc[common, "fold_reduction"].values
+    out["dor_fold_reduction"] = frames[names[0]].loc[common, "fold_reduction"].values
 
-    cols = ["genotype", "replicate", "fold_reduction"]
+    # Dropping genotypes quietly is how the compound ones went missing before.
+    # Say which, and why, rather than shipping a shorter sheet than the summary.
+    got = set(out.genotype)
+    if wanted - got:
+        missing = {g: [v for v in names
+                       if g not in frames[v].index.get_level_values("genotype")]
+                   for g in sorted(wanted - got)}
+        raise AssertionError(
+            "per-replicate sheet would omit genotypes the summary reports: "
+            + "; ".join(f"{g} (absent from {', '.join(v)})" for g, v in missing.items()))
+
+    cols = ["genotype", "replicate", "dor_fold_reduction"]
     for col, stem in _ENERGY_COLUMNS.items():
-        for model in ("gasteiger", "am1bcc"):
-            name = f"{model}_{stem}"
-            out[name] = (frames[model].loc[common, col].values / _KJ_PER_KCAL).round(3)
+        for variant in names:
+            name = f"{variant}_{stem}_kcal"
+            out[name] = (frames[variant].loc[common, col].values / _KJ_PER_KCAL).round(3)
             cols.append(name)
 
-    # Cheap guard against the row-pairing bug above ever returning: every row
-    # must carry the fold reduction its own genotype has in the manifest.
-    for model, f in frames.items():
-        got = f.loc[common, "fold_reduction"].values
-        if not pd.Series(got).equals(pd.Series(out.fold_reduction.values)):
+    # Guard against the row-pairing bug above ever returning: every row must
+    # carry the fold reduction its own genotype has in the manifest.
+    for variant, f in frames.items():
+        got = pd.Series(f.loc[common, "fold_reduction"].values)
+        if not got.equals(pd.Series(out.dor_fold_reduction.values)):
             raise AssertionError(
-                f"{model} rows are not aligned with the output rows; "
-                "the per-replicate sheet would pair genotypes with the wrong numbers")
+                f"{variant} rows are not aligned with the output rows; the "
+                "per-replicate sheet would pair genotypes with the wrong numbers")
     return out[cols].sort_values(["genotype", "replicate"])
-
-def table5() -> None:
-    panel = pd.read_csv(REL / "relaxation_panel_long.csv")
-    agree = pd.read_csv(REL / "relaxation_protocol_agreement.csv")
-    pheno = pd.read_csv(REL / "relaxation_phenotype_correlation.csv")
-    per_rep = pd.read_csv(
-        ROOT / "results/.checkpoints/.checkpoint_mmgbsa_relaxsens_h_relax.csv")
-    keep = ["structure", "mutation", "safe_label", "replicate", "fold_reduction",
-            "binding_dg", "binding_dg_sem", "binding_dg_vdw", "binding_dg_vdw_sem",
-            "binding_dg_electrostatic", "binding_dg_electrostatic_sem",
-            "binding_dg_gb", "binding_dg_gb_sem", "mmgbsa_snapshot_relaxation"]
-    _write(OUT / "Supplementary-Table-5.xlsx",
-           {"Table 5": panel, "Table 5b agreement": agree,
-            "Table 5b phenotype": pheno,
-            "Per replicate h_relax": per_rep[[c for c in keep if c in per_rep]]},
-           [
-               "Supplementary Table 5. Sensitivity of MM/GBSA energies to the snapshot "
-               "relaxation protocol.",
-               "",
-               "Sheet 'Table 5': WT-referenced ddE in kcal/mol for all 19 mutant "
-               "genotypes, mean +/- SEM over three replicates, under two protocols.",
-               "  h_relax    hydrogens relaxed, heavy atoms restrained (k = 10000 kJ/mol/nm^2)",
-               "  full_min   all atoms free; the protocol used for Table 2 of the main text",
-               "",
-               "Sheet 'Table 5b agreement': Spearman correlation between the two protocols "
-               "across the 19 genotypes, per energy component.",
-               "Sheet 'Table 5b phenotype': each protocol against log10 fold reduction in "
-               "susceptibility, over the 13 genotypes with an established phenotype.",
-               "",
-               "Sampling is identical across protocols and matches the main-text run: 100 "
-               "snapshots spread evenly over the post-equilibration region of each 100 ns "
-               "replicate, 0.25 discard fraction, 2000 iteration cap, CPU platform, double "
-               "precision.",
-               "",
-               "Single-point evaluation, with no relaxation, was tested on six genotypes and "
-               "is described in the Supplementary Text. It is not tabulated here: its mean is "
-               "set by a small number of snapshots carrying steric contacts rather than by the "
-               "protocol, so the values are not comparable with the two columns above.",
-           ])
-
 
 
 def _check_sheets_agree(summary: pd.DataFrame, per_rep: pd.DataFrame,
-                        tol: float = 0.01) -> None:
-    """The two sheets must tell the same story.
+                        variants: tuple[str, str], tol: float = 0.01) -> None:
+    """The summary and per-replicate sheets must tell the same story.
 
-    Sheet 'Table 6' is WT-referenced and sheet 'Per replicate' is absolute, so
-    they are built from the checkpoints by different routes and nothing forces
-    them to agree. Re-derive the first from the second and compare, rather than
-    publishing two tables that could silently diverge.
+    One is WT-referenced and the other absolute, built from the checkpoints by
+    different routes, so nothing otherwise forces them to agree. Re-derive the
+    first from the second rather than publishing two sheets that could
+    silently diverge.
     """
     wt = per_rep[per_rep.genotype == "WT"]
     if wt.empty:
         raise AssertionError("per-replicate sheet has no WT rows to reference against")
-    for model in ("gasteiger", "am1bcc"):
-        ref = wt[f"{model}_Total"].mean()
+    for variant in variants:
+        ref = wt[f"{variant}_total_kcal"].mean()
         for g, rows in per_rep[per_rep.genotype != "WT"].groupby("genotype"):
-            derived = rows[f"{model}_Total"].mean() - ref
+            derived = rows[f"{variant}_total_kcal"].mean() - ref
             stated = summary[(summary.genotype == g)
-                             & (summary.component == "ddE_Total")][f"{model}_mean"]
+                             & (summary.energy_component == "Total")][f"{variant}_ddE_kcal"]
             if stated.empty:
                 continue
             if abs(derived - float(stated.iloc[0])) > tol:
                 raise AssertionError(
-                    f"{g} {model} ddE_Total: per-replicate sheet gives "
-                    f"{derived:+.3f} but Table 6 states {float(stated.iloc[0]):+.3f}")
+                    f"{g} {variant} ddE Total: per-replicate sheet gives {derived:+.3f} "
+                    f"but the summary states {float(stated.iloc[0]):+.3f}")
+
+
+def table5() -> None:
+    """Snapshot relaxation protocol: hydrogens-only against full minimisation."""
+    panel = pd.read_csv(REL / "relaxation_panel_long.csv")
+    agree = pd.read_csv(REL / "relaxation_protocol_agreement.csv")
+    pheno = pd.read_csv(REL / "relaxation_phenotype_correlation.csv")
+
+    summary = pd.DataFrame({
+        "genotype": panel.genotype.map(_display),
+        "energy_component": _stem(panel.component),
+        "h_relax_ddE_kcal": panel.h_relax_mean,
+        "h_relax_sem_kcal": panel.h_relax_sem,
+        "full_min_ddE_kcal": panel.full_min_mean,
+        "full_min_sem_kcal": panel.full_min_sem,
+    })
+    summary["full_min_minus_h_relax_kcal"] = (
+        summary.full_min_ddE_kcal - summary.h_relax_ddE_kcal).round(3)
+
+    agreement = pd.DataFrame({
+        "energy_component": _stem(agree.component),
+        "n_genotypes": agree.n,
+        "spearman_h_relax_vs_full_min": agree.protocol_spearman,
+        "spearman_p": agree.protocol_p,
+        "sign_agreement": agree.sign_agreement,
+    })
+
+    phenotype = pd.DataFrame({
+        "energy_component": _stem(pheno.component),
+        "relaxation_protocol": pheno.protocol,
+        "n_genotypes": pheno.n,
+        "R2_vs_log10_fold": pheno.R2_vs_log10_fold,
+        "ols_p": pheno.ols_p,
+        "spearman_vs_log10_fold": pheno.spearman,
+        "spearman_p": pheno.spearman_p,
+    })
+
+    per_rep = _per_replicate_pair(
+        {"h_relax": _CHECKPOINTS["h_relax"], "full_min": _CHECKPOINTS["full_min"]},
+        sorted(panel.genotype.unique()))
+    _check_sheets_agree(summary, per_rep, ("h_relax", "full_min"))
+
+    _write(OUT / "Supplementary-Table-5.xlsx",
+           {"Table 5": summary,
+            "Table 5b agreement": agreement,
+            "Table 5b phenotype": phenotype,
+            "Per replicate": per_rep})
+
 
 def table6() -> None:
-    """Charge model: Gasteiger (used throughout) against AM1-BCC.
-
-    Column naming follows Table 5, its sibling sensitivity analysis: the
-    variant's name prefixes `_mean` and `_sem`, and the component stems
-    (Total, vdW, elec, GB) are the same on every sheet. The per-replicate
-    sheet carries BOTH charge models side by side -- showing only the AM1-BCC
-    half left the reader to fetch the Gasteiger values from another workbook
-    to make the comparison the table exists for.
-    """
+    """Ligand charge model: Gasteiger (used throughout) against AM1-BCC."""
     comp = pd.read_csv(REL / "charge_model_comparison.csv")
     charges = pd.read_csv(REL / "dor_charge_models.csv")
 
     order = ["ddE_Total", "ddE_vdW", "ddE_elec", "ddE_GB"]
     comp["component"] = pd.Categorical(comp.component, order, ordered=True)
     comp = comp.sort_values(["genotype", "component"])
-    # n_gast and n_am1bcc are 3 on every row by construction; the Notes say so
-    # once instead of the table saying it eight times.
+    # n_gast and n_am1bcc were 3 on every row by construction; a column that
+    # never varies tells the reader nothing.
     summary = pd.DataFrame({
         "genotype": comp.genotype.map(_display),
-        "component": comp.component.astype(str),
-        "gasteiger_mean": comp.mean_gast,
-        "gasteiger_sem": comp.sem_gast,
-        "am1bcc_mean": comp.mean_am1bcc,
-        "am1bcc_sem": comp.sem_am1bcc,
-        "difference": comp.difference,
+        "energy_component": _stem(comp.component),
+        "gasteiger_ddE_kcal": comp.mean_gast,
+        "gasteiger_sem_kcal": comp.sem_gast,
+        "am1bcc_ddE_kcal": comp.mean_am1bcc,
+        "am1bcc_sem_kcal": comp.sem_am1bcc,
+        "am1bcc_minus_gasteiger_kcal": comp.difference,
     })
 
-    per_rep = _per_replicate_both_models(sorted(comp.genotype.unique()))
-    _check_sheets_agree(summary, per_rep)
+    per_rep = _per_replicate_pair(
+        {"gasteiger": _CHECKPOINTS["gasteiger"], "am1bcc": _CHECKPOINTS["am1bcc"]},
+        sorted(comp.genotype.unique()))
+    _check_sheets_agree(summary, per_rep, ("gasteiger", "am1bcc"))
 
-    done = sorted(summary.genotype.unique())
+    partial_charges = pd.DataFrame({
+        "atom_index": charges["index"],
+        "element": charges.element,
+        "gasteiger_charge_e": charges.gasteiger.round(4),
+        "am1bcc_charge_e": charges.am1bcc.round(4),
+        "am1bcc_minus_gasteiger_e": charges.difference.round(4),
+    })
+
     _write(OUT / "Supplementary-Table-6.xlsx",
            {"Table 6": summary,
             "Per replicate": per_rep,
-            "DOR partial charges": charges},
-           [
-               "Supplementary Table 6. Sensitivity of the MM/GBSA energies to the ligand "
-               "partial charge model.",
-               "",
-               "Sheet 'Table 6': WT-referenced ddE in kcal/mol, mean and SEM over three "
-               "replicates per genotype, for each energy component under both charge "
-               "models. difference = am1bcc_mean - gasteiger_mean.",
-               "  gasteiger   Gasteiger charges, as used throughout the manuscript",
-               "  am1bcc      AM1-BCC charges assigned by openff-toolkit",
-               "The same trajectories and the same snapshots are scored under both models, "
-               "so the difference isolates the charge assignment.",
-               "",
-               "Sheet 'Per replicate': the individual replicate values behind those means, "
-               "under BOTH charge models, so each pair can be compared directly. These are "
-               "absolute binding energies in kcal/mol, not WT-referenced; the wild-type "
-               "rows are the reference subtracted to give sheet 'Table 6'. Component stems "
-               "match that sheet: Total, vdW, elec, GB. The snapshot-level SEM within each "
-               "replicate is omitted here for width and is kept in the checkpoint CSVs.",
-               "",
-               "Sheet 'DOR partial charges': per-atom charges under both models. AM1-BCC is "
-               "the more polarised assignment (mean |q| 0.228 e against 0.138 e; RMS "
-               "difference 0.165 e, maximum 0.390 e), with the largest differences on the "
-               "triazolinone and pyridinone carbonyl and amide atoms.",
-               "",
-               "Sampling is identical across charge models and matches the main-text run: "
-               "100 snapshots spread evenly over the post-equilibration region of each "
-               "100 ns replicate, 0.25 discard fraction, 2000 iteration cap, unrestrained "
-               "relaxation, CPU platform, double precision. n = 3 replicates throughout.",
-               "",
-               f"Genotypes re-scored under AM1-BCC: {', '.join(done)}, each against the "
-               "wild-type reference. Re-scoring is a per-replicate MM/GBSA calculation on "
-               "the existing trajectories and does not require new molecular dynamics.",
-           ])
+            "DOR partial charges": partial_charges})
 
 
 def table7() -> None:
@@ -246,56 +277,48 @@ def table7() -> None:
     crystal = pd.read_csv(ROOT / "results/analysis/apo_ensembles/tables/apo_crystal_reference.csv")
     frames = pd.read_csv(ROOT / "results/analysis/apo_ensembles/tables/apo_frame_metrics.csv")
 
-    apo = apo.assign(mutation=apo.safe_label.str.upper().str.replace("_", "+", regex=False))
-    t = apo.merge(holo, on="mutation", how="left").rename(columns={
-        "pocket_volume": "apo_volume", "pocket_volume_sd": "apo_volume_sd",
-        "volume_mean": "holo_volume", "volume_sem": "holo_volume_sem"})
-    t["induced_fit_opening"] = (t.holo_volume - t.apo_volume).round(1)
-    t = t[["mutation", "n_rep", "apo_volume", "apo_volume_sd", "holo_volume",
-           "holo_volume_sem", "induced_fit_opening", "chi1_Y181", "chi1_Y188",
-           "dVolume_vs_WT"]].sort_values("mutation").reset_index(drop=True)
-    t[["holo_volume", "holo_volume_sem"]] = t[["holo_volume", "holo_volume_sem"]].round(1)
+    apo = apo.assign(mutation=apo.safe_label.map(_display))
+    t = apo.merge(holo, on="mutation", how="left")
+    summary = pd.DataFrame({
+        "genotype": t.mutation,
+        "n_replicates": t.n_rep,
+        "apo_volume_A3": t.pocket_volume.round(1),
+        "apo_volume_sd_A3": t.pocket_volume_sd.round(1),
+        "holo_volume_A3": t.volume_mean.round(1),
+        "holo_volume_sem_A3": t.volume_sem.round(1),
+        "induced_fit_opening_A3": (t.volume_mean - t.pocket_volume).round(1),
+        "apo_chi1_Y181_deg": t.chi1_Y181.round(1),
+        "apo_chi1_Y188_deg": t.chi1_Y188.round(1),
+        "apo_volume_vs_WT_A3": t.dVolume_vs_WT.round(1),
+    }).sort_values("genotype").reset_index(drop=True)
 
     per_rep = (frames[frames.window == "matched_10ns"]
                .groupby(["safe_label", "replicate"], as_index=False)
-               .agg(apo_volume_mean=("pocket_volume", "mean"),
-                    apo_volume_std=("pocket_volume", "std"),
+               .agg(apo_volume_mean_A3=("pocket_volume", "mean"),
+                    apo_volume_sd_A3=("pocket_volume", "std"),
                     n_frames=("pocket_volume", "size"),
-                    chi1_Y181=("chi1_Y181", "mean"),
-                    chi1_Y188=("chi1_Y188", "mean")))
+                    apo_chi1_Y181_deg=("chi1_Y181", "mean"),
+                    apo_chi1_Y188_deg=("chi1_Y188", "mean")))
+    per_rep.insert(0, "genotype", per_rep.pop("safe_label").map(_display))
+    for c in per_rep.columns:
+        if c.endswith(("_A3", "_deg")):
+            per_rep[c] = per_rep[c].round(1)
+
+    crystal_ref = pd.DataFrame({
+        "source": crystal.source,
+        "state": crystal.state,
+        "pocket_volume_A3": crystal.pocket_volume.round(1),
+        "n_ca_atoms": crystal.n_ca,
+    })
 
     _write(OUT / "Supplementary-Table-7.xlsx",
-           {"Table 7": t, "Per replicate apo": per_rep, "Crystal reference": crystal},
-           [
-               "Supplementary Table 7. Unliganded (apo) and bound (holo) NNIBP volume.",
-               "",
-               "Volumes are the convex-hull proxy over the 16 NNIBP-lining Calpha atoms, "
-               "in cubic angstroms.",
-               "",
-               "Sheet 'Table 7': per genotype, the apo volume over the matched window beside "
-               "the bound-state volume of Table 3 of the main text.",
-               "  apo_volume           mean over three replicates; sd is across frames",
-               "  holo_volume          bound state, over full production",
-               "  induced_fit_opening  holo minus apo: the opening DOR has to pay for",
-               "  chi1_Y181, chi1_Y188 mean side-chain chi1 in the apo ensemble, degrees",
-               "  dVolume_vs_WT        apo volume relative to wild-type apo",
-               "",
-               "The wild-type apo trajectories are 10 ns and set the comparison window, so "
-               "every apo trajectory is cut to a matched 10 ns window. The bound-state "
-               "volumes come from full 100 ns production, so the two columns are not matched "
-               "in sampling; the apo column is the shorter of the two.",
-               "",
-               "Sheet 'Crystal reference': the same proxy evaluated on crystal structures. "
-               "The unliganded crystals 1DLO and 1HMV bracket the simulated apo ensemble, "
-               "and the DOR-bound 4NCG sits well above both.",
-               "",
-               "The apo pockets reported here were equilibrated without relocating bulk water "
-               "into the cavity, which leaves the cavity under-solvated and biases the volume "
-               "low. The induced-fit openings are therefore upper bounds.",
-           ])
+           {"Table 7": summary,
+            "Per replicate apo": per_rep,
+            "Crystal reference": crystal_ref})
 
 
 def main() -> int:
+    OUT.mkdir(parents=True, exist_ok=True)
     table5()
     table6()
     table7()
