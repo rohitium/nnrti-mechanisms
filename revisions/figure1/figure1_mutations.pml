@@ -39,8 +39,11 @@ set cartoon_transparency, 0.45, NNIBP
 
 hide everything, DOR and hydro
 show sticks, DOR
-color deepteal, DOR and elem C
-util.cnc('DOR')
+color yellow,  DOR and elem C
+color blue,    DOR and elem N
+color red,     DOR and elem O
+color aquamarine, DOR and elem F
+color green,   DOR and elem Cl
 show spheres, DOR
 set sphere_scale, 0.20, DOR
 
@@ -51,9 +54,16 @@ set sphere_scale, 0.26, mutations and name CA
 show cartoon, NNIBP
 color palecyan, NNIBP
 
-# ---- colour the mutated sites by phenotype severity -----------------
-# b-factor is overwritten with log10(max fold reduction) at each mutated
-# position, so the spectrum below is a phenotype scale, not a thermal one.
+# ---- colour the mutated sites --------------------------------------
+color orange, mutations
+color orange, mutations and elem C
+color blue,   mutations and elem N
+color red,    mutations and elem O
+color yellow, mutations and elem S
+
+# b-factor at each mutated position is log10(fold reduction in DOR
+# susceptibility), left in place so the sites can be coloured by
+# phenotype instead of flat orange. Uncomment the spectrum line.
 alter RT_DOR, b=0.0
 alter mut_A98, b=1.968
 alter mut_L100, b=0.833
@@ -68,8 +78,7 @@ alter mut_M230, b=1.556
 alter mut_L234, b=2.207
 alter mut_Y318, b=1.041
 rebuild
-spectrum b, white_yellow_orange_red, mutations, minimum=0.00, maximum=2.21
-
+# spectrum b, yellow_orange_red, mutations, minimum=0.00, maximum=2.21
 # ---- labels ----------------------------------------------------------
 # Canonical numbering, which is what the manuscript uses.
 label mut_A98 and name CA, "A98"

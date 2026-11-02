@@ -183,13 +183,17 @@ def write_pml(pml: Path, structure: Path, muts: pd.DataFrame,
           "set cartoon_transparency, 0.90, p51",
           "set cartoon_transparency, 0.45, NNIBP",
           "",
-          # DOR carbons in a cool colour on purpose: the mutated sites are
-          # spectrum-coloured white->yellow->orange->red by phenotype, so a
-          # yellow ligand is indistinguishable from a low-fold residue.
+          # DOR: yellow carbons with explicit CPK heteroatoms. Set element by
+          # element rather than calling util.cnc, so fluorine is the aqua asked
+          # for instead of PyMOL's default pale green and nothing depends on
+          # which element palette a given PyMOL build ships.
           "hide everything, DOR and hydro",
           "show sticks, DOR",
-          "color deepteal, DOR and elem C",
-          "util.cnc('DOR')",
+          "color yellow,  DOR and elem C",
+          "color blue,    DOR and elem N",
+          "color red,     DOR and elem O",
+          "color aquamarine, DOR and elem F",
+          "color green,   DOR and elem Cl",
           "show spheres, DOR",
           "set sphere_scale, 0.20, DOR",
           "",
@@ -211,19 +215,34 @@ def write_pml(pml: Path, structure: Path, muts: pd.DataFrame,
           "show cartoon, NNIBP",
           "color palecyan, NNIBP",
           "",
-          "# ---- colour the mutated sites by phenotype severity -----------------",
-          "# b-factor is overwritten with log10(max fold reduction) at each mutated",
-          "# position, so the spectrum below is a phenotype scale, not a thermal one.",
-          "alter RT_DOR, b=0.0",
+          "# ---- colour the mutated sites --------------------------------------",
+          "color orange, mutations",
+          "color orange, mutations and elem C",
+          "color blue,   mutations and elem N",
+          "color red,    mutations and elem O",
+          "color yellow, mutations and elem S",
+    ]
+
+    # The b-factor still carries log10(fold reduction) at each mutated position,
+    # so the flat orange above can be swapped for a phenotype scale by
+    # uncommenting one line. Nothing else in the session depends on it.
+    L += [
+        "",
+        "# b-factor at each mutated position is log10(fold reduction in DOR",
+        "# susceptibility), left in place so the sites can be coloured by",
+        "# phenotype instead of flat orange. Uncomment the spectrum line.",
+        "alter RT_DOR, b=0.0",
     ]
     for r in muts.itertuples():
         b = float(np.log10(r.max_fold_reduction)) if r.max_fold_reduction > 0 else 0.0
         L.append(f'alter mut_{r.wt_aa}{r.canonical}, b={b:.3f}')
-    lo, hi = 0.0, float(np.log10(muts.max_fold_reduction.max()))
+    hi = float(np.log10(muts.max_fold_reduction.max()))
     L += [
         "rebuild",
-        f"spectrum b, white_yellow_orange_red, mutations, minimum={lo:.2f}, maximum={hi:.2f}",
-        "",
+        f"# spectrum b, yellow_orange_red, mutations, minimum=0.00, maximum={hi:.2f}",
+    ]
+
+    L += [
         "# ---- labels ----------------------------------------------------------",
         "# Canonical numbering, which is what the manuscript uses.",
     ]
