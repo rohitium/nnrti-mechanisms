@@ -75,6 +75,14 @@ BASIN_HALF_WIDTH = 60.0
 #: Frames a state must persist before a change of state is accepted.
 MIN_RUN_FRAMES = 3
 
+#: Marker area and opacity per column, free then bound. Same size, with
+#: opacity scaled so the two columns lay down comparable total ink: the free
+#: runs hold ~4.6x more frames purely because they were written more often, and
+#: matching the opacity too would make that output setting look like a
+#: difference in the data.
+MARKER_SIZE = (1.8, 1.8)
+MARKER_ALPHA = (0.28, 0.60)
+
 FREE = "dor_solvent"
 BOUND_REF = "wt"
 
@@ -220,11 +228,13 @@ def main(argv: list[str] | None = None) -> int:
                    help="Lower edge of the plotted period. positive: 0-360 "
                         "(default). signed: -180..180. auto: per-torsion cut at "
                         "the emptiest angle.")
-    p.add_argument("--trace", choices=("broken", "cylinder"), default="broken",
-                   help="broken (default): wrapped to one period, line cut at "
-                        "the seam. cylinder: unwrapped but drawn once per turn "
-                        "on the same one-period axis, so a trace leaves the top "
-                        "and re-enters at the bottom instead of breaking.")
+    p.add_argument("--trace", choices=("points", "broken", "cylinder"),
+                   default="points",
+                   help="points (default): scattered samples, no line, so the "
+                        "branch cut costs nothing. broken: line cut at the "
+                        "seam. cylinder: unwrapped but drawn once per turn on "
+                        "the same one-period axis, so a line leaves the top and "
+                        "re-enters at the bottom instead of breaking.")
     args = p.parse_args(argv)
 
     plt = _style()
@@ -287,13 +297,21 @@ def main(argv: list[str] | None = None) -> int:
                 time_ns = (np.arange(len(g)) + 1) * dt
                 ang = _wrap(g[t].to_numpy(), cut)
                 pooled.append(ang)
-                if args.trace == "cylinder":
-                    segs = _cylinder_copies(time_ns, ang, lo, hi)
+                if args.trace == "points":
+                    # No line, so no seam: a wrapped angle needs a branch cut
+                    # only because a line has to be drawn across it. Points
+                    # sidestep the whole problem and show the plateaus more
+                    # honestly, since the ink is where the samples are.
+                    ax.scatter(time_ns, ang, s=MARKER_SIZE[j],
+                               alpha=MARKER_ALPHA[j], color=colour,
+                               linewidths=0, marker=".", rasterized=True)
                 else:
-                    segs = [_break_at_seam(time_ns, ang)]
-                for xs, ys in segs:
-                    ax.plot(xs, ys, lw=0.35, alpha=0.75, color=colour,
-                            rasterized=True)
+                    segs = (_cylinder_copies(time_ns, ang, lo, hi)
+                            if args.trace == "cylinder"
+                            else [_break_at_seam(time_ns, ang)])
+                    for xs, ys in segs:
+                        ax.plot(xs, ys, lw=0.35, alpha=0.75, color=colour,
+                                rasterized=True)
 
             dens, _, _ = axm.hist(np.concatenate(pooled), bins=bins, density=True,
                                    orientation="horizontal", color=colour,
@@ -324,7 +342,7 @@ def main(argv: list[str] | None = None) -> int:
     fig.suptitle("Binding abolishes rotamer exchange in doravirine", fontsize=10)
     fig.tight_layout(rect=(0, 0, 1, 0.98))
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    suffix = "" if args.trace == "broken" else f"_{args.trace}"
+    suffix = "" if args.trace == "points" else f"_{args.trace}"
     f1 = args.output_dir / f"dor_torsion_trajectories{suffix}.png"
     fig.savefig(f1, dpi=300)
     plt.close(fig)
