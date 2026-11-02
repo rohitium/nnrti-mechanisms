@@ -309,8 +309,11 @@ def main(argv: list[str] | None = None) -> int:
         # leaves the type the same size relative to the cells and only makes
         # the file enormous -- doubling the fonts and the figure gave a 46 inch
         # wide image that read exactly as before.
-        fig, ax = plt.subplots(figsize=(2.5 * v.shape[1] + 7.0,
-                                        1.05 * len(mutants) + 6.0))
+        # Shrinking the canvas while the fonts stay fixed in points makes the
+        # type larger relative to the cells, which is the goal, and keeps the
+        # render under 8000 px on its long side so it can be viewed anywhere.
+        fig, ax = plt.subplots(figsize=(2.05 * v.shape[1] + 5.0,
+                                        0.92 * len(mutants) + 5.0))
         im = draw(ax, v, e, title, labels, True)
         rule_and_label(ax, mutants)
         # Colour is normalised per column, so the bar is a relative scale: the
