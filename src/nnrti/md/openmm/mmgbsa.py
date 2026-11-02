@@ -692,3 +692,149 @@ def compute_mmgbsa_from_trajectory(
         per_frame_binding_dg=tuple(float(x) for x in d_tot),
         per_frame_vdw=tuple(float(x) for x in d_vdw),
     )
+
+
+@dataclass(frozen=True)
+class ReceptorEnergyResult:
+    """Receptor-phase MM/GBSA energy from a ligand-free trajectory."""
+
+    n_snapshots: int
+    frame_indices: tuple[int, ...]
+    #: Per-term means over the sampled snapshots, kcal/mol.
+    means: dict[str, float]
+    stds: dict[str, float]
+    sems: dict[str, float]
+    #: Per-snapshot totals, so a caller can block-average or bootstrap.
+    totals: tuple[float, ...]
+
+
+def compute_receptor_energy_from_trajectory(
+    topology_pdb_path: Path,
+    trajectory_dcd_path: Path,
+    ligand_sdf: Path,
+    n_snapshots: int = 100,
+    discard_fraction: float = 0.25,
+    snapshot_relaxation: str = "unrestrained",
+    charge_method: str = "gasteiger",
+    relaxation_iterations: int = 100,
+    frame_sampling: str = "even",
+    atom_indices: np.ndarray | None = None,
+) -> ReceptorEnergyResult:
+    """MM/GBSA receptor energy from an apo (ligand-free) trajectory.
+
+    NOT USABLE for a reorganisation energy, and kept only so the finding is not
+    re-derived. Measured 01-Nov-2026 on apo WT rep_01, six identical snapshots:
+    the absolute receptor energy slides -185,072 -> -186,474 -> -187,275
+    kcal/mol at 100, 300 and 1,000 relaxation iterations and is still falling.
+    At 1,000 iterations it coincides with the holo receptor energy (-187,293) to
+    within 18 kcal/mol, so the entire apparent 2,258 kcal/mol apo-vs-holo gap is
+    minimiser progress, not protein reorganisation.
+
+    The published single-trajectory ddE_Total is unaffected: complex, receptor
+    and ligand come from one frame and get one identical relaxation, so the
+    minimiser term largely cancels in complex - receptor - ligand. Nothing
+    cancels when two independently relaxed ensembles are differenced, and
+    running to convergence is not a fix either -- it drifts ~1.1 A from the
+    sampled geometry, which measures minimised structures rather than the
+    ensemble.
+
+    For the pre-organisation term, count populations instead of differencing
+    energies: see nnrti.cli.compute_dor_preorganization.
+
+    The published ddE_Total is single-trajectory: the receptor is the complex
+    frame with the DOR residue deleted, so receptor and complex share one
+    ensemble and the strain of holding the pocket open cancels exactly. This
+    evaluates the same receptor terms against an independently sampled apo
+    ensemble, which is what makes a reorganization energy
+
+        dE_reorg = <E_receptor>_holo - <E_receptor>_apo
+
+    computable at all. Note what that costs: the two averages are no longer
+    correlated, so their uncertainties add instead of cancelling.
+
+    Everything else is held to the published protocol -- the same force field
+    and charge method, the same capped unrestrained per-snapshot minimisation,
+    100 evenly spaced snapshots after a 25% discard.
+
+    ``atom_indices`` restricts the evaluation to a subset of the topology, for
+    the pocket-only variant: the bulk of the protein is identical between the
+    two ensembles and contributes fluctuation but no signal, so excluding it
+    is the one lever that improves the signal-to-noise of the difference.
+    """
+    import MDAnalysis as mda
+
+    app = require_module("openmm.app")
+
+    with open(topology_pdb_path, "r") as handle:
+        solute_pdb = app.PDBFile(handle)
+
+    ligand = load_ligand_molecule(ligand_sdf, charge_method=charge_method)
+    forcefield = build_forcefield([ligand], charge_method=charge_method)
+
+    topology = solute_pdb.topology
+    if atom_indices is not None:
+        keep = set(int(i) for i in atom_indices)
+        modeller = app.Modeller(topology, solute_pdb.positions)
+        drop = [
+            res for res in modeller.topology.residues()
+            if not any(a.index in keep for a in res.atoms())
+        ]
+        modeller.delete(drop)
+        topology = modeller.topology
+        subset_idx = np.asarray(sorted(keep), dtype=int)
+    else:
+        subset_idx = None
+
+    contexts = {
+        "vdw": _make_context(_build_component_system(topology, forcefield, "vdw")),
+        "elec": _make_context(_build_component_system(topology, forcefield, "elec")),
+        "gb_total": _make_context(_build_gb_system(topology, forcefield, include_sa=True)),
+        "gb_polar": _make_context(_build_gb_system(topology, forcefield, include_sa=False)),
+    }
+    relax_ctx = _build_min_context(topology, forcefield) if snapshot_relaxation == "unrestrained" else None
+
+    u = mda.Universe(str(topology_pdb_path), str(trajectory_dcd_path))
+    n_frames = len(u.trajectory)
+    if n_frames < 1:
+        raise ValueError("Empty trajectory for receptor-energy evaluation.")
+
+    snap_idx = _select_snapshot_indices(
+        n_frames=n_frames,
+        discard_fraction=discard_fraction,
+        n_snapshots=n_snapshots,
+        dt_ps=getattr(u.trajectory, "dt", None),
+        allowed_frames=range(n_frames),
+        frame_sampling=frame_sampling,
+    )
+
+    acc: dict[str, list[float]] = {k: [] for k in ("vdw", "elec", "gb", "sa", "total")}
+    for frame in snap_idx:
+        u.trajectory[int(frame)]
+        pos_nm = np.asarray(u.atoms.positions, dtype=float) / 10.0
+        if subset_idx is not None:
+            pos_nm = _subset_positions(pos_nm, subset_idx)
+        if relax_ctx is not None:
+            pos_nm = _apply_unrestrained_min(relax_ctx, pos_nm, max_iters=relaxation_iterations)
+        e_vdw = _energy_of(contexts["vdw"], pos_nm, 1)
+        e_elec = _energy_of(contexts["elec"], pos_nm, 1)
+        gb_total = _energy_of(contexts["gb_total"], pos_nm, 2)
+        gb_polar = _energy_of(contexts["gb_polar"], pos_nm, 2)
+        e_sa = gb_total - gb_polar
+        acc["vdw"].append(e_vdw)
+        acc["elec"].append(e_elec)
+        acc["gb"].append(gb_polar)
+        acc["sa"].append(e_sa)
+        acc["total"].append(e_vdw + e_elec + gb_polar + e_sa)
+
+    n = len(acc["total"])
+    means = {k: float(np.mean(v)) for k, v in acc.items()}
+    stds = {k: float(np.std(v, ddof=1)) if n > 1 else 0.0 for k, v in acc.items()}
+    sems = {k: (stds[k] / np.sqrt(n) if n > 1 else 0.0) for k in acc}
+    return ReceptorEnergyResult(
+        n_snapshots=n,
+        frame_indices=tuple(int(f) for f in snap_idx),
+        means=means,
+        stds=stds,
+        sems=sems,
+        totals=tuple(float(x) for x in acc["total"]),
+    )

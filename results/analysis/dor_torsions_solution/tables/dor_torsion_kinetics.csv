@@ -1,0 +1,5 @@
+torsion,bound_centre_deg,free_escapes_per_100ns_matched,free_escapes_per_100ns_full,bound_escapes_total_60reps,free_time_in_basin,bound_time_in_basin
+tau1,-62.3,7.5,21.0,1,0.6639999999999999,0.9997222222222223
+tau2,-43.1,4.5,18.5,1,0.31475,0.9995646822691813
+tau3,78.1,2.5,3.0,0,0.316,1.0
+tau4,94.2,3.5,49.5,1,0.32825000000000004,0.9979213907785336
