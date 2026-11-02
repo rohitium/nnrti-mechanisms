@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""WT-referenced heatmap of the Table 3 structural metrics.
+"""Figure 3: WT-referenced structural metrics across the panel.
 
-Reviewer 1 (comment 4) noted that the structural results are spread across
-dense tables and asked for a WT-referenced heatmap to make the patterns legible.
+Reviewer 1 (comment 4) asked for a WT-referenced heatmap summarising the
+structural metrics, because they are currently spread across dense tables and
+patterns in DOR contacts, pocket size and remodelling are hard to see.
 
-Each cell is the genotype's deviation from wild type expressed in standard
-errors of that metric, using the pooled replicate SEM across the panel as the
-scale. Standard errors rather than raw units because the metrics have
-incompatible units -- angstroms, contact counts, degrees, cubic angstroms --
-and a single colour scale over raw values would be dominated by the pocket
-volume. Expressing everything on a common uncertainty scale also makes the
-colour a reader can trust: a cell beyond about two units is a shift the
-replicates support, and a pale cell is a difference within noise.
+Each cell is a genotype's shift from wild type in units of the pooled
+replicate standard deviation of that metric. Raw units are not comparable --
+an angstrom of contact distance and a cubic angstrom of pocket volume are not
+the same size of change -- so expressing every metric as "how many replicate
+error bars from WT" is what makes one colour scale legitimate across columns.
+The per-genotype values in their own units are in Supplementary Table 4.
+
+Rows are ordered by DOR fold resistance, so a reader can see whether
+structural change tracks phenotype at all.
 
 Usage
 -----
@@ -21,102 +23,153 @@ Usage
 from __future__ import annotations
 
 import argparse
-import re
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.colors import TwoSlopeNorm
+
+#: Display name -> column, in the order they appear across the heatmap.
+HOLO_METRICS = {
+    "d(103 C=O···N4x)": "res103_CO_to_triazolinone_N_A",
+    "d(103 sc···DOR)": "res103_sidechain_to_DOR_A",
+    "N(chlorophenyl)": "chlorocyanophenyl_contacts_n",
+    "θ(Y188/chl)": "Tyr188_chlorophenyl_angle_deg",
+    "d(179···DOR)": "res179_to_DOR_A",
+    "d(S105···DOR)": "Ser105_to_DOR_A",
+    "d(106···DOR)": "res106_to_DOR_A",
+    "N(pyridinone)": "pyridinone_contacts_n",
+}
+POCKET_METRICS = {
+    "V(NNIBP)": "nnibp_volume_A3",
+    "χ1 Tyr181": "chi1_Tyr181_deg",
+    "χ1 Tyr188": "chi1_Tyr188_deg",
+}
+PROTEIN_METRICS = {
+    "RMSF pocket": "rmsf_A_nnibp_lining",
+    "RMSF primer grip": "rmsf_A_primer_grip",
+    "RMSF YMDD": "rmsf_A_ymdd",
+    "RMSF fingers": "rmsf_A_fingers",
+    "RMSF thumb": "rmsf_A_thumb",
+    "RMSF connection": "rmsf_A_connection",
+    "helix YMDD": "helix_frac_ymdd",
+    "strand β9–β10": "strand_frac_beta9_beta10",
+}
+
+#: Colour saturates here, in replicate standard deviations.
+CLIP = 4.0
 
 
-def parse_cell(s: str) -> tuple[float, float]:
-    """'2.97 ± 0.01' -> (2.97, 0.01); '*' and blanks -> (nan, nan)."""
-    if not isinstance(s, str):
-        return (float("nan"), float("nan"))
-    m = re.match(r"\s*(-?[\d.]+)\s*±\s*([\d.]+)", s)
-    if not m:
-        return (float("nan"), float("nan"))
-    return (float(m.group(1)), float(m.group(2)))
+def _style():
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        "font.size": 8, "axes.labelsize": 8, "axes.titlesize": 9,
+        "xtick.labelsize": 7, "ytick.labelsize": 7, "legend.fontsize": 7,
+        "figure.dpi": 300, "savefig.bbox": "tight",
+    })
+    return plt
+
+
+def wt_referenced(per_rep: pd.DataFrame, state: str,
+                  metrics: dict[str, str]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Shift from WT in pooled replicate SDs, plus the raw shift."""
+    d = per_rep[per_rep.structure_type == state]
+    z, raw = {}, {}
+    for label, col in metrics.items():
+        if col not in d or d[col].isna().all():
+            continue
+        g = d.groupby("genotype")[col]
+        means = g.mean()
+        # Pool the within-genotype replicate SD across the panel: a single
+        # scale for the metric, rather than one noisy SD per genotype.
+        sd = float(np.sqrt((g.var(ddof=1).dropna()).mean()))
+        if not np.isfinite(sd) or sd == 0:
+            continue
+        wt = means.get("WT")
+        if wt is None or not np.isfinite(wt):
+            continue
+        raw[label] = (means - wt).round(3)
+        z[label] = ((means - wt) / sd).round(3)
+    return pd.DataFrame(z), pd.DataFrame(raw)
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--table", type=Path, default=Path("paper/tables/Table-3-structural.csv"))
-    p.add_argument("--output-dir", type=Path, default=Path("results/analysis/mechanisms/plots"))
-    p.add_argument("--dpi", type=int, default=300)
+    p.add_argument("--per-replicate", type=Path,
+                   default=Path("results/analysis/structural_metrics/tables/"
+                                "structural_metrics_per_replicate.csv"))
+    p.add_argument("--manifest", type=Path, default=Path("manifests/md_manifest.csv"))
+    p.add_argument("--output-dir", type=Path,
+                   default=Path("results/analysis/structural_metrics"))
     args = p.parse_args(argv)
 
-    d = pd.read_csv(args.table)
-    metric_cols = [c for c in d.columns if c not in ("Category", "Genotype")]
+    plt = _style()
+    from matplotlib.colors import TwoSlopeNorm
 
-    means = pd.DataFrame({c: d[c].map(lambda s: parse_cell(s)[0]) for c in metric_cols})
-    sems = pd.DataFrame({c: d[c].map(lambda s: parse_cell(s)[1]) for c in metric_cols})
-    means.index = d.Genotype
-    sems.index = d.Genotype
+    per_rep = pd.read_csv(args.per_replicate)
+    man = pd.read_csv(args.manifest)[["mutation", "fold_reduction"]].drop_duplicates()
+    fold = dict(zip(man.mutation, man.fold_reduction))
 
-    wt = means.loc["WT"]
-    # Pooled SEM per metric: typical replicate uncertainty across the panel.
-    scale = sems.replace(0, np.nan).median()
-    z = (means - wt) / scale
-    z = z.drop(index="WT")
-    cats = d.set_index("Genotype").Category.drop(index="WT")
+    all_metrics = {**HOLO_METRICS, **POCKET_METRICS, **PROTEIN_METRICS}
+    z_holo, raw_holo = wt_referenced(per_rep, "holo", all_metrics)
+    apo_metrics = {**POCKET_METRICS, **PROTEIN_METRICS}
+    z_apo, raw_apo = wt_referenced(per_rep, "apo", apo_metrics)
 
-    order = [g for c in ("Susceptible", "Resistant", "Uncertain") for g in cats[cats == c].index]
-    z = z.loc[order]
+    order = sorted((g for g in z_holo.index if g != "WT"),
+                   key=lambda g: (np.nan_to_num(fold.get(g, np.nan), nan=-1)))
+    z_holo = z_holo.loc[order]
+    z_apo = z_apo.reindex(order)
 
-    fig, ax = plt.subplots(figsize=(9.5, 7.2))
-    lim = float(np.nanpercentile(np.abs(z.to_numpy()), 97))
-    norm = TwoSlopeNorm(vmin=-lim, vcenter=0.0, vmax=lim)
-    im = ax.imshow(z.to_numpy(), cmap="RdBu_r", norm=norm, aspect="auto")
+    norm = TwoSlopeNorm(vmin=-CLIP, vcenter=0.0, vmax=CLIP)
+    panels = [("DOR-bound (holo)", z_holo), ("Unliganded (apo)", z_apo)]
+    widths = [p[1].shape[1] for p in panels]
+    fig, axes = plt.subplots(
+        1, 2, figsize=(0.30 * sum(widths) + 4.2, 0.26 * len(order) + 1.9),
+        gridspec_kw={"width_ratios": widths, "wspace": 0.06})
 
-    ax.set_xticks(range(len(metric_cols)))
-    ax.set_xticklabels(metric_cols, rotation=40, ha="right", fontsize=8)
-    ax.set_yticks(range(len(z)))
-    ax.set_yticklabels(z.index, fontsize=8)
+    for ax, (title, z) in zip(axes, panels):
+        im = ax.imshow(z.to_numpy(dtype=float), cmap="RdBu_r", norm=norm,
+                       aspect="auto")
+        ax.set_xticks(range(z.shape[1]))
+        ax.set_xticklabels(z.columns, rotation=90, ha="center")
+        ax.set_yticks(range(len(order)))
+        ax.set_yticklabels([f"{g}  ({fold.get(g):g}×)" if np.isfinite(
+            fold.get(g, np.nan)) else g for g in order] if ax is axes[0] else [])
+        ax.set_title(title, fontsize=9)
+        ax.set_xticks(np.arange(-0.5, z.shape[1], 1), minor=True)
+        ax.set_yticks(np.arange(-0.5, len(order), 1), minor=True)
+        ax.grid(which="minor", color="white", lw=0.6)
+        ax.tick_params(which="minor", length=0)
+        # A blank cell is a metric that cannot exist, not a missing measurement.
+        for i in range(z.shape[0]):
+            for j in range(z.shape[1]):
+                if not np.isfinite(z.iat[i, j]):
+                    ax.text(j, i, "·", ha="center", va="center",
+                            color="0.6", fontsize=7)
 
-    # annotate each cell, and mark those beyond 2 SEM
-    for i in range(z.shape[0]):
-        for j in range(z.shape[1]):
-            v = z.iat[i, j]
-            if not np.isfinite(v):
-                ax.text(j, i, "n/a", ha="center", va="center", fontsize=6, color="0.4")
-                continue
-            ax.text(j, i, f"{v:.1f}", ha="center", va="center", fontsize=6,
-                    color="white" if abs(v) > lim * 0.6 else "black",
-                    fontweight="bold" if abs(v) >= 2 else "normal")
+    cb = fig.colorbar(im, ax=axes, fraction=0.025, pad=0.02, extend="both")
+    cb.set_label("shift from WT (replicate SD)", fontsize=7)
+    fig.suptitle("Structural change across the panel, referenced to wild type",
+                 fontsize=10, y=1.0)
 
-    # category separators
-    bounds, seen = [], None
-    for i, g in enumerate(z.index):
-        c = cats[g]
-        if seen is not None and c != seen:
-            bounds.append(i - 0.5)
-        seen = c
-    for b in bounds:
-        ax.axhline(b, color="black", lw=1.4)
+    out = args.output_dir
+    (out / "plots").mkdir(parents=True, exist_ok=True)
+    (out / "tables").mkdir(parents=True, exist_ok=True)
+    f = out / "plots" / "figure3_structural_heatmap.png"
+    fig.savefig(f, dpi=300)
+    plt.close(fig)
 
-    cb = fig.colorbar(im, ax=ax, fraction=0.03, pad=0.02)
-    cb.set_label("deviation from WT (pooled replicate SEM)", fontsize=8)
-    cb.ax.tick_params(labelsize=7)
-    ax.set_title("WT-referenced structural metrics\nbold cells differ from WT by at least 2 SEM",
-                 fontsize=10)
-    fig.tight_layout()
+    for name, df in (("holo_z", z_holo), ("apo_z", z_apo),
+                     ("holo_raw", raw_holo.loc[order]),
+                     ("apo_raw", raw_apo.reindex(order))):
+        df.to_csv(out / "tables" / f"figure3_{name}.csv")
 
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    for ext in ("png", "pdf"):
-        fig.savefig(args.output_dir / f"structural_heatmap_wt_referenced.{ext}",
-                    dpi=args.dpi, bbox_inches="tight")
-    tab = args.output_dir.parent / "tables"
-    tab.mkdir(parents=True, exist_ok=True)
-    z.round(2).to_csv(tab / "structural_heatmap_wt_referenced.csv")
-
-    print(f"wrote {args.output_dir}/structural_heatmap_wt_referenced.png|pdf")
-    big = (z.abs() >= 2).sum().sort_values(ascending=False)
-    print("\nmetrics with the most genotypes beyond 2 SEM from WT:")
-    print(big.to_string())
+    print(f"holo metrics: {z_holo.shape[1]}, apo metrics: {z_apo.shape[1]}, "
+          f"genotypes: {len(order)}")
+    print(f"largest |shift| holo: {np.nanmax(np.abs(z_holo.to_numpy())):.1f} SD")
+    print(f"largest |shift| apo : {np.nanmax(np.abs(z_apo.to_numpy())):.1f} SD")
+    print(f"\nwrote {f}")
     return 0
 
 
