@@ -32,12 +32,15 @@ Two traps this script is built around:
         deviation         6   220   594   258
         emptiest cut      2    34     5    75
 
-    0..360 is the default: it is the convention a reader expects, it is the
-    best or near-best frame for three of the four, and tau1's 53 crossings are
-    visually harmless once the line is broken at the seam. ``--angle-frame
-    auto`` instead puts each torsion's cut at its emptiest angle. Neither helps
-    tau2 or tau4 much, and that is not a plotting defect: the free ligand
-    genuinely samples the whole circle on those two, so no cut is empty.
+    The trajectories sidestep the cut entirely by unrolling the angle, so a
+    trace is never broken and the plateau-and-jump structure is visible. The
+    price is drift: free tau4 makes ~14 net turns and spans 5600 degrees. That
+    is why the two columns of a row SHARE a y-range. Letting each autoscale
+    draws the bound trace's ~50 degrees of jitter at the same visual amplitude
+    as the free trace's thousands, so the bound ligand looks as mobile as the
+    free one -- the exact opposite of the result. ``--trace cylinder`` keeps
+    continuity on a one-period axis instead; ``--trace broken`` wraps and cuts.
+    The ``--angle-frame`` cut still sets the period shown by those two.
 
 Time axes come from each run's recorded ``analysis_dt_ps``, cross-checked
 against ``production_ns_completed``; never from the DCD header or frame index.
@@ -124,6 +127,31 @@ def _wrap(a: np.ndarray, cut: float) -> np.ndarray:
 
 
 
+
+def _cylinder_copies(t: np.ndarray, ang_deg: np.ndarray, lo: float, hi: float
+                     ) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Continuous copies of a trace, offset by whole turns, that cross [lo, hi].
+
+    A dihedral is periodic, so a plot of one has a branch cut and a trace that
+    crosses it must either break or drift. Unwrapping removes the break but not
+    the drift: free tau4 makes ~14 net turns in 100 ns and spans 5600 degrees,
+    which flattens every panel. Drawing the unwrapped trace once per turn, on an
+    axis one period tall, keeps both -- the line leaves the top and re-enters at
+    the bottom, which is the correct reading of a cylinder cut open, and no
+    segment is ever artificially broken.
+    """
+    u = np.rad2deg(np.unwrap(np.deg2rad(np.asarray(ang_deg, float))))
+    kmin = int(np.floor((lo - u.max()) / 360.0))
+    kmax = int(np.ceil((hi - u.min()) / 360.0))
+    out = []
+    for k in range(kmin, kmax + 1):
+        y = u + 360.0 * k
+        if y.max() < lo or y.min() > hi:
+            continue
+        out.append((t, y))
+    return out
+
+
 def _basin_bands(centre: float, half: float, lo: float,
                  hi: float) -> list[tuple[float, float]]:
     """The basin as 1 or 2 spans, splitting it if it runs off the plotted range."""
@@ -189,8 +217,16 @@ def main(argv: list[str] | None = None) -> int:
                    default=Path("results/analysis/dor_torsions_solution/plots"))
     p.add_argument("--angle-frame", choices=("positive", "signed", "auto"),
                    default="positive",
-                   help="positive: 0-360 (default). signed: -180..180. "
-                        "auto: per-torsion branch cut at the emptiest angle.")
+                   help="Lower edge of the plotted period. positive: 0-360 "
+                        "(default). signed: -180..180. auto: per-torsion cut at "
+                        "the emptiest angle.")
+    p.add_argument("--trace", choices=("unwrap", "cylinder", "broken"),
+                   default="unwrap",
+                   help="unwrap (default): angles unrolled so a trace is never "
+                        "cut, with the row's y-range shared between columns. "
+                        "cylinder: unwrapped but drawn once per turn on a "
+                        "one-period axis, so traces leave the top and re-enter "
+                        "at the bottom. broken: wrapped, line cut at the seam.")
     args = p.parse_args(argv)
 
     plt = _style()
@@ -231,22 +267,29 @@ def main(argv: list[str] | None = None) -> int:
             # The bound basin is a band about the bound value; if it runs off an
             # edge of the plotted range the remainder is drawn at the other edge,
             # because the axis is a circle cut open at `cut`.
-            for b0, b1 in _basin_bands(c_plot, BASIN_HALF_WIDTH, lo, hi):
-                ax.axhspan(b0, b1, color=colour, alpha=0.08, lw=0)
-            ax.axhline(c_plot, color="0.4", lw=0.5, ls="--", zorder=1)
+            if args.trace != "unwrap":
+                for b0, b1 in _basin_bands(c_plot, BASIN_HALF_WIDTH, lo, hi):
+                    ax.axhspan(b0, b1, color=colour, alpha=0.08, lw=0)
+                ax.axhline(c_plot, color="0.4", lw=0.5, ls="--", zorder=1)
             for rep, g in g_all.groupby("replicate"):
                 g = g.sort_values("frame")
                 dt = dts.get(rep) or dt_free
                 time_ns = (np.arange(len(g)) + 1) * dt
-                ang = _wrap(g[t].to_numpy(), cut)
-                # Break the line at the seam, or matplotlib draws a vertical
-                # stroke across the panel and the plateaus between hops vanish
-                # into a solid block.
-                time_ns, ang = _break_at_seam(time_ns, ang)
-                ax.plot(time_ns, ang, lw=0.35, alpha=0.75, color=colour,
-                        rasterized=True)
-            ax.set_ylim(lo, hi)
-            ax.set_yticks(np.arange(lo, hi + 1, 90))
+                raw = g[t].to_numpy()
+                if args.trace == "cylinder":
+                    segs = _cylinder_copies(time_ns, _wrap(raw, cut), lo, hi)
+                elif args.trace == "unwrap":
+                    segs = [(time_ns,
+                             np.rad2deg(np.unwrap(np.deg2rad(raw)))
+                             + (cut - _branch_cut("signed")))]
+                else:
+                    segs = [_break_at_seam(time_ns, _wrap(raw, cut))]
+                for xs, ys in segs:
+                    ax.plot(xs, ys, lw=0.35, alpha=0.75, color=colour,
+                            rasterized=True)
+            if args.trace != "unwrap":
+                ax.set_ylim(lo, hi)
+                ax.set_yticks(np.arange(lo, hi + 1, 90))
             ax.set_xlim(0, 100)
             if i == 0:
                 ax.set_title(which, color=colour)
@@ -254,10 +297,20 @@ def main(argv: list[str] | None = None) -> int:
                 ax.set_ylabel(f"{TAU_LABELS[t]}\n(°)", fontsize=7)
             if i == 3:
                 ax.set_xlabel("time (ns)")
+        if args.trace == "unwrap":
+            # Share the row's y-range across columns. Letting each panel
+            # autoscale shows the bound trace's ~50 degrees of jitter at the
+            # same visual amplitude as the free trace's hundreds, which inverts
+            # the result the figure exists to show.
+            ylo = min(axes[i, j].get_ylim()[0] for j in (0, 1))
+            yhi = max(axes[i, j].get_ylim()[1] for j in (0, 1))
+            for j in (0, 1):
+                axes[i, j].set_ylim(ylo, yhi)
     fig.suptitle("Binding abolishes rotamer exchange in doravirine", y=0.995, fontsize=10)
     fig.tight_layout()
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    f1 = args.output_dir / "dor_torsion_trajectories.png"
+    suffix = "" if args.trace == "unwrap" else f"_{args.trace}"
+    f1 = args.output_dir / f"dor_torsion_trajectories{suffix}.png"
     fig.savefig(f1, dpi=300)
     plt.close(fig)
 
