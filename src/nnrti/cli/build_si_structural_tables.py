@@ -236,22 +236,25 @@ def table4(per_rep: pd.DataFrame) -> dict[str, pd.DataFrame]:
             "Definitions": pd.DataFrame(DEFINITIONS, columns=["Item", "Description"])}
 
 
-def _welch_df(sems, ns) -> float:
-    """Welch-Satterthwaite degrees of freedom for a sum of independent means.
+def _pooled_df(sems, ns) -> float:
+    """Degrees of freedom for a pooled-variance test over these groups.
 
-    The standard two-group formula generalised to however many group means the
-    comparison subtracts: two for a genotype against WT, four for an induced
-    fit, which is (holo - apo) for the genotype minus the same for WT. With
-    three replicates per group it returns about 4 and about 8 respectively,
-    which is where the 2.78 and 2.31 criteria the figures use come from.
+    Every group contributes n - 1, so a genotype against WT has 4 and an
+    induced fit, which subtracts four group means, has 8. That is where the
+    2.776 and 2.306 criteria the figures use come from.
+
+    A Welch test was tried here first and is the wrong tool at this sample
+    size. With three replicates the standard error is identical either way --
+    pooling the variances and propagating the standard errors are the same
+    arithmetic when the groups are the same size -- so the only thing Welch
+    changes is the degrees of freedom, and it estimates those from variances
+    that themselves carry 2 degrees of freedom. The estimate ranged from 1.0 to
+    4.0 against a nominal 4, which cost real power and bought nothing: Welch
+    earns its keep for unequal group sizes, and these are equal by design.
     """
-    num, den = 0.0, 0.0
-    for s, n in zip(sems, ns):
-        if not np.isfinite(s) or n < 2:
-            return np.nan
-        num += s ** 2
-        den += s ** 4 / (n - 1)
-    return num ** 2 / den if den > 0 else np.nan
+    del sems
+    total = sum(n - 1 for n in ns if n >= 2)
+    return float(total) if total > 0 else np.nan
 
 
 def _group_stats(frame: pd.DataFrame, col: str, circular: bool) -> dict:
@@ -286,7 +289,7 @@ def _long(val, err, tcrit: float, state: str, components: dict) -> pd.DataFrame:
                 continue
             half = tcrit * e if np.isfinite(e) else np.nan
             sems, ns = components.get((gt, metric), ((), ()))
-            df = _welch_df(sems, ns) if sems else np.nan
+            df = _pooled_df(sems, ns) if ns else np.nan
             t = float(v) / float(e) if np.isfinite(e) and e > 0 else np.nan
             p = (float(2 * sstats.t.sf(abs(t), df))
                  if np.isfinite(t) and np.isfinite(df) else np.nan)
@@ -295,8 +298,8 @@ def _long(val, err, tcrit: float, state: str, components: dict) -> pd.DataFrame:
                 "Metric": metric,
                 "Shift": round(float(v), 3),
                 "SEM": round(float(e), 3) if np.isfinite(e) else "",
-                "Welch t": round(t, 2) if np.isfinite(t) else "",
-                "Welch df": round(df, 1) if np.isfinite(df) else "",
+                "t": round(t, 2) if np.isfinite(t) else "",
+                "df": int(df) if np.isfinite(df) else "",
                 "p": (float(f"{p:.3g}") if np.isfinite(p) else ""),
                 "CI95 low": round(float(v - half), 3) if np.isfinite(half) else "",
                 "CI95 high": round(float(v + half), 3) if np.isfinite(half) else "",
@@ -307,7 +310,7 @@ def _long(val, err, tcrit: float, state: str, components: dict) -> pd.DataFrame:
 
 
 def statistics_sheets(per_rep: pd.DataFrame) -> dict[str, pd.DataFrame]:
-    """The two comparisons the figures draw, each with its Welch statistics.
+    """The two comparisons the figures draw, each with the test behind it.
 
     One sheet per panel, because the two use different degrees of freedom and
     therefore different 95% criteria, and putting them in one sheet invites a
@@ -359,7 +362,8 @@ def statistics_sheets(per_rep: pd.DataFrame) -> dict[str, pd.DataFrame]:
         clash = ((num < 0.05) != (sheet["Resolved at 95%"] == "yes")) & num.notna()
         if clash.any():
             print(f"  {name}: {clash.sum()} row(s) where p and the panel criterion differ "
-                  f"(a genotype with fewer than three usable replicates): "
+                  f"(a genotype with fewer than three usable replicates, so its df is "
+                  f"lower than the panel's): "
                   + ", ".join(f"{r.Genotype}/{r.Metric}" for r in sheet[clash].itertuples()))
     return {"Mutant vs WT": mutant, "Induced fit vs WT": induced}
 
