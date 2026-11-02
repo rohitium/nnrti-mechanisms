@@ -31,48 +31,54 @@ Usage
 from __future__ import annotations
 
 import argparse
+import textwrap
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 #: Panel A: contacts between RT and DOR. Undefined without a ligand.
+#:
+#: Names are copied verbatim from Table 3 of the manuscript, units included,
+#: so a reader moving between the table and the figure meets one wording for
+#: each quantity. The compact symbolic forms (d(103 C=O...N4x) and the like)
+#: live only in the main-text table's own header row.
 DOR_METRICS = {
-    "d(103 C=O···N4x)": "res103_CO_to_triazolinone_N_A",
-    "d(103 sc···DOR)": "res103_sidechain_to_DOR_A",
-    "N(chlorophenyl)": "chlorocyanophenyl_contacts_n",
-    "θ(Y188/chl)": "Tyr188_chlorophenyl_angle_deg",
-    "d(179···DOR)": "res179_to_DOR_A",
-    "d(S105···DOR)": "Ser105_to_DOR_A",
-    "d(106···DOR)": "res106_to_DOR_A",
-    "N(pyridinone)": "pyridinone_contacts_n",
+    "Lys103 C=O to DOR triazolinone N (\u00c5)": "res103_CO_to_triazolinone_N_A",
+    "Lys103 side-chain polar atoms to DOR (\u00c5)": "res103_sidechain_to_DOR_A",
+    "RT heavy-atom contacts < 4.0 \u00c5 of chlorocyanophenyl ring":
+        "chlorocyanophenyl_contacts_n",
+    "Tyr188 / chlorocyanophenyl interplanar angle (\u00b0)":
+        "Tyr188_chlorophenyl_angle_deg",
+    "Val179 to DOR minimum distance (\u00c5)": "res179_to_DOR_A",
+    "Ser105 to DOR minimum distance (\u00c5)": "Ser105_to_DOR_A",
+    "Val106 to DOR minimum distance (\u00c5)": "res106_to_DOR_A",
+    "Pyridinone moiety contacts < 4.0 \u00c5": "pyridinone_contacts_n",
 }
 
 #: Panel B: RT's own conformation, measurable with or without the ligand.
+#: Named in the same style, since these are not in Table 3.
 RT_METRICS = {
-    "V(NNIBP)": "nnibp_volume_A3",
-    "χ1 Tyr181": "chi1_Tyr181_deg",
-    "χ1 Tyr188": "chi1_Tyr188_deg",
-    "RMSF pocket": "rmsf_A_nnibp_lining",
-    "RMSF primer grip": "rmsf_A_primer_grip",
-    "RMSF YMDD": "rmsf_A_ymdd",
-    "RMSF fingers": "rmsf_A_fingers",
-    "RMSF thumb": "rmsf_A_thumb",
-    "RMSF connection": "rmsf_A_connection",
-    "strand β9–β10": "strand_frac_beta9_beta10",
+    "NNIBP volume (\u00c5\u00b3)": "nnibp_volume_A3",
+    "Tyr181 side-chain \u03c71 (\u00b0)": "chi1_Tyr181_deg",
+    "Tyr188 side-chain \u03c71 (\u00b0)": "chi1_Tyr188_deg",
+    "C\u03b1 RMSF, NNIBP lining (\u00c5)": "rmsf_A_nnibp_lining",
+    "C\u03b1 RMSF, primer grip 225\u2013235 (\u00c5)": "rmsf_A_primer_grip",
+    "C\u03b1 RMSF, YMDD motif 183\u2013186 (\u00c5)": "rmsf_A_ymdd",
+    "C\u03b1 RMSF, p66 fingers (\u00c5)": "rmsf_A_fingers",
+    "C\u03b1 RMSF, p66 thumb (\u00c5)": "rmsf_A_thumb",
+    "C\u03b1 RMSF, p66 connection (\u00c5)": "rmsf_A_connection",
+    "\u03b29\u2013\u03b210 strand content (fraction)": "strand_frac_beta9_beta10",
 }
 
 #: Dihedrals: mean and difference must both be taken on the circle.
-CIRCULAR = {"χ1 Tyr181", "χ1 Tyr188"}
+#: Dihedral metrics, keyed off RT_METRICS so a rename cannot silently turn the
+#: circular handling off. It did exactly that once: the labels were rewritten
+#: to the Table 3 wording while this set still held the old names, nothing
+#: matched, and Y318F's Tyr188 shift printed as -272 degrees instead of +88.
+CIRCULAR = {k for k, v in RT_METRICS.items() if v.startswith("chi1_")}
+assert CIRCULAR, "no dihedral metrics found; check the chi1_ column prefix"
 
-UNITS = {
-    "d(103 C=O···N4x)": "Å", "d(103 sc···DOR)": "Å", "N(chlorophenyl)": "count",
-    "θ(Y188/chl)": "°", "d(179···DOR)": "Å", "d(S105···DOR)": "Å",
-    "d(106···DOR)": "Å", "N(pyridinone)": "count", "V(NNIBP)": "Å³",
-    "χ1 Tyr181": "°", "χ1 Tyr188": "°", "RMSF pocket": "Å",
-    "RMSF primer grip": "Å", "RMSF YMDD": "Å", "RMSF fingers": "Å",
-    "RMSF thumb": "Å", "RMSF connection": "Å", "strand β9–β10": "frac",
-}
 
 #: Points to the left of the axis for the category label. The longest tick
 #: label ("V106I+F227C  105x", 17 characters at 10 pt) runs to about 102 pt, and
@@ -198,8 +204,11 @@ def draw(ax, val, err, title, ylabels, show_y):
                         fontsize=23, color=colour, alpha=0.9)
 
     ax.set_xticks(range(val.shape[1]))
-    ax.set_xticklabels([f"{c}  ({UNITS.get(c, '')})" for c in val.columns],
-                       rotation=45, ha="right", rotation_mode="anchor", fontsize=32)
+    # Wrapped: the Table 3 names are long, and a single 45-degree line of them
+    # would need more bottom margin than the heatmap itself.
+    ax.set_xticklabels([textwrap.fill(str(c), 26) for c in val.columns],
+                       rotation=45, ha="right", rotation_mode="anchor",
+                       fontsize=26)
     ax.set_yticks(range(val.shape[0]))
     ax.set_yticklabels(ylabels if show_y else [], fontsize=32)
     ax.set_title(title, fontsize=44, pad=32)

@@ -1,4 +1,4 @@
-genotype,V(NNIBP),χ1 Tyr181,χ1 Tyr188,RMSF pocket,RMSF primer grip,RMSF fingers
+genotype,NNIBP volume (Å³),Tyr181 side-chain χ1 (°),Tyr188 side-chain χ1 (°),"Cα RMSF, NNIBP lining (Å)","Cα RMSF, primer grip 225–235 (Å)","Cα RMSF, p66 fingers (Å)"
 V106I,17.325,4.383,32.067,0.03,0.056,0.415
 K103N,18.515,9.891,44.948,0.041,0.08,0.419
 Y181C,22.005,,47.271,0.045,0.09,0.417

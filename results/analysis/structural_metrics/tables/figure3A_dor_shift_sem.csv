@@ -1,4 +1,4 @@
-genotype,d(103 C=O···N4x),d(103 sc···DOR),N(chlorophenyl),θ(Y188/chl),d(179···DOR),d(S105···DOR),d(106···DOR),N(pyridinone)
+genotype,Lys103 C=O to DOR triazolinone N (Å),Lys103 side-chain polar atoms to DOR (Å),RT heavy-atom contacts < 4.0 Å of chlorocyanophenyl ring,Tyr188 / chlorocyanophenyl interplanar angle (°),Val179 to DOR minimum distance (Å),Ser105 to DOR minimum distance (Å),Val106 to DOR minimum distance (Å),Pyridinone moiety contacts < 4.0 Å
 V106I,0.3,0.525,0.598,2.379,0.211,0.169,0.114,1.565
 K103N,0.06,0.153,0.799,1.741,0.142,0.135,0.161,2.159
 Y181C,0.066,0.302,2.611,1.605,0.14,0.177,0.185,1.755
