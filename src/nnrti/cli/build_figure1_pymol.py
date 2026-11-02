@@ -202,7 +202,11 @@ def write_pml(pml: Path, structure: Path, muts: pd.DataFrame,
           "show sticks, mutations and not hydro and not (name C+O) "
           "and not (name N and not resn PRO)",
           "show spheres, mutations and name CA",
-          "set sphere_scale, 0.45, mutations and name CA",
+          # Small enough not to swallow the side chain it marks. At 0.45 the
+          # sphere covered proline's CA vertex and the two ring bonds meeting
+          # there, so P225 read as an open chain even with every ring atom
+          # drawn.
+          "set sphere_scale, 0.26, mutations and name CA",
           "",
           "show cartoon, NNIBP",
           "color palecyan, NNIBP",
