@@ -52,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     holo = pd.read_csv(args.holo)
     holo = holo.rename(columns={"pocket_volume_proxy_angstrom3": "volume"})
     apo = pd.read_csv(args.apo)
-    apo = apo[apo.window == "matched_10ns"].rename(columns={"pocket_volume": "volume"})
+    apo = apo[apo.window == "matched"].rename(columns={"pocket_volume": "volume"})
     # The holo tables capitalise the genotype label and the apo runs do not;
     # normalise before any join or the two states never line up.
     holo["safe_label"] = holo["safe_label"].str.lower()

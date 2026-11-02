@@ -292,7 +292,7 @@ def table7() -> None:
         "apo_volume_vs_WT_A3": t.dVolume_vs_WT.round(1),
     }).sort_values("genotype").reset_index(drop=True)
 
-    per_rep = (frames[frames.window == "matched_10ns"]
+    per_rep = (frames[frames.window == "matched"]
                .groupby(["safe_label", "replicate"], as_index=False)
                .agg(apo_volume_mean_A3=("pocket_volume", "mean"),
                     apo_volume_sd_A3=("pocket_volume", "std"),

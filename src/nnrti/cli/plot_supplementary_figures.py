@@ -384,7 +384,7 @@ def figure4(plt, out: Path) -> None:
 def figure5(plt, out: Path) -> None:
     holo = pd.read_csv(ROOT / "results/.checkpoints/.checkpoint_pocket_volume_profiles.csv")
     apo = pd.read_csv(RES / "apo_ensembles/tables/apo_frame_metrics.csv")
-    apo = apo[apo.window == "matched_10ns"]
+    apo = apo[apo.window == "matched"]
 
     # A handful of frames return the grid-saturation value, where the measuring
     # grid has landed in bulk solvent instead of the pocket. The Calpha cage

@@ -190,7 +190,11 @@ def main(argv: list[str] | None = None) -> int:
 
         for i in range(t.n_frames):
             u.atoms.positions = traj[i]
-            window = "matched_10ns" if times[i] <= args.match_ns else "beyond_10ns"
+            # Label the window by role, not by a length it may not have:
+            # this said "matched_10ns" whatever --match-ns was set to, so a
+            # 100 ns window was recorded as a 10 ns one and every consumer
+            # filtered on a name that had stopped being true.
+            window = "matched" if times[i] <= args.match_ns else "beyond"
             rows.append({
                 "safe_label": label, "replicate": rep, "frame": i,
                 "time_ns": float(times[i]), "window": window,
@@ -261,7 +265,7 @@ def main(argv: list[str] | None = None) -> int:
         (lbl, rep) in long_enough for lbl, rep in zip(d.safe_label, d.replicate)
     ]
 
-    m = d[(d.window == "matched_10ns") & d.in_matched_window]
+    m = d[(d.window == "matched") & d.in_matched_window]
     summ = (m.groupby("safe_label")
               .agg(n_rep=("replicate", "nunique"),
                    pocket_volume=("pocket_volume", "mean"),
@@ -278,17 +282,17 @@ def main(argv: list[str] | None = None) -> int:
 
     drift = []
     for lbl, g in d[d.total_ns > 20].groupby("safe_label"):
-        head = g[g.window == "matched_10ns"].pocket_volume
-        tail = g[g.window == "beyond_10ns"].pocket_volume
+        head = g[g.window == "matched"].pocket_volume
+        tail = g[g.window == "beyond"].pocket_volume
         if head.empty or tail.empty:
             continue
         a, b = head.mean(), tail.mean()
         drift.append({"safe_label": lbl, "n_rep": g.replicate.nunique(),
-                      "first_10ns": round(a, 1),
-                      "beyond_10ns": round(b, 1), "drift": round(b - a, 1)})
+                      "in_window": round(a, 1),
+                      "beyond_window": round(b, 1), "drift": round(b - a, 1)})
     if drift:
         dr = pd.DataFrame(drift)
-        dr.to_csv(out / "apo_drift_beyond_10ns.csv", index=False)
+        dr.to_csv(out / "apo_drift_beyond_window.csv", index=False)
         print("\n=== does the pocket volume drift after 10 ns? (long runs only) ===")
         print(dr.to_string(index=False))
     print(f"\nwrote {out}")
