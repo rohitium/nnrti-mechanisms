@@ -1,5 +1,5 @@
 {
-  "task_id": 19,
+  "task_id": 0,
   "structure": "wt",
   "mutation": "wt",
   "safe_label": "wt",
@@ -17,9 +17,9 @@
   "checkpoint_path": "results/md_runs/apo/wt/rep_02/wt_rep02_md.chk",
   "md_heating_steps": 12500,
   "md_production_steps": 50000000,
-  "md_production_steps_completed": 5000000,
-  "md_total_steps": 5012500,
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50012500,
   "resumed_from_checkpoint": false,
-  "elapsed_seconds": 20484.314247902017,
+  "elapsed_seconds": 150633.0922391438,
   "status": "ok"
 }

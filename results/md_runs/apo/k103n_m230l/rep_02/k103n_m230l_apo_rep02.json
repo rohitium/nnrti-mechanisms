@@ -1,5 +1,5 @@
 {
-  "task_id": 7,
+  "task_id": 0,
   "structure": "k103n_m230l",
   "mutation": "k103n+m230l",
   "safe_label": "k103n_m230l",
@@ -15,13 +15,11 @@
   "state_csv": "results/md_runs/apo/k103n_m230l/rep_02/k103n_m230l_rep02_md_state.csv",
   "final_pdb": "results/md_runs/apo/k103n_m230l/rep_02/k103n_m230l_rep02_md_final.pdb",
   "checkpoint_path": "results/md_runs/apo/k103n_m230l/rep_02/k103n_m230l_rep02_md.chk",
-  "md_heating_steps": 12500,
+  "md_heating_steps": 0,
   "md_production_steps": 50000000,
-  "md_production_steps_completed": 19488000,
-  "md_total_steps": 19500500,
-  "resumed_from_checkpoint": false,
-  "elapsed_seconds": 14726.147836371325,
-  "status": "ok",
-  "production_ns_completed": 38.976,
-  "metadata_repaired": "2026-08-13"
+  "md_production_steps_completed": 50000000,
+  "md_total_steps": 50000000,
+  "resumed_from_checkpoint": true,
+  "elapsed_seconds": 96126.97186883492,
+  "status": "ok"
 }
