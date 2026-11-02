@@ -220,13 +220,11 @@ def main(argv: list[str] | None = None) -> int:
                    help="Lower edge of the plotted period. positive: 0-360 "
                         "(default). signed: -180..180. auto: per-torsion cut at "
                         "the emptiest angle.")
-    p.add_argument("--trace", choices=("unwrap", "cylinder", "broken"),
-                   default="unwrap",
-                   help="unwrap (default): angles unrolled so a trace is never "
-                        "cut, with the row's y-range shared between columns. "
-                        "cylinder: unwrapped but drawn once per turn on a "
-                        "one-period axis, so traces leave the top and re-enter "
-                        "at the bottom. broken: wrapped, line cut at the seam.")
+    p.add_argument("--trace", choices=("broken", "cylinder"), default="broken",
+                   help="broken (default): wrapped to one period, line cut at "
+                        "the seam. cylinder: unwrapped but drawn once per turn "
+                        "on the same one-period axis, so a trace leaves the top "
+                        "and re-enters at the bottom instead of breaking.")
     args = p.parse_args(argv)
 
     plt = _style()
@@ -254,62 +252,79 @@ def main(argv: list[str] | None = None) -> int:
     print(f"angle frame {args.angle_frame!r}: " + ", ".join(
         f"{t} cut {cuts[t]:.0f}° ({seam[t]} seam crossings/100 ns free)" for t in TAUS))
 
-    # ---------------- Figure 1: trajectories ----------------
-    fig, axes = plt.subplots(4, 2, figsize=(7.2, 7.6), sharex="col")
+    # ---------------- Figure 1: trajectories, each with its projection -------
+    # Four column pairs: a trace and, immediately right of it on a shared y
+    # axis, the same data projected onto the angle axis. The marginal is the
+    # trace's own histogram, so what the eye integrates vertically is exactly
+    # what the bars show.
+    fig, axes = plt.subplots(
+        4, 4, figsize=(8.0, 7.6), sharex="col",
+        gridspec_kw={"width_ratios": [3.0, 0.85, 3.0, 0.85], "wspace": 0.08})
     for i, t in enumerate(TAUS):
         c, cut = ref[t], cuts[t]
         lo, hi = cut, cut + 360.0
         c_plot = float(_wrap(np.array([c]), cut)[0])
+        bands = _basin_bands(c_plot, BASIN_HALF_WIDTH, lo, hi)
+        bins = np.arange(lo, hi + 0.1, 7.5)
+        peak = {}
         for j, (which, g_all, colour, dts) in enumerate([
-                ("DOR free in water", sol, C_FREE, {r: dt_free for r in sol.replicate.unique()}),
+                ("DOR free in water", sol, C_FREE,
+                 {r: dt_free for r in sol.replicate.unique()}),
                 ("DOR bound to WT RT", wt, C_BOUND, dt_wt)]):
-            ax = axes[i, j]
-            # The bound basin is a band about the bound value; if it runs off an
-            # edge of the plotted range the remainder is drawn at the other edge,
-            # because the axis is a circle cut open at `cut`.
-            if args.trace != "unwrap":
-                for b0, b1 in _basin_bands(c_plot, BASIN_HALF_WIDTH, lo, hi):
-                    ax.axhspan(b0, b1, color=colour, alpha=0.08, lw=0)
-                ax.axhline(c_plot, color="0.4", lw=0.5, ls="--", zorder=1)
+            ax, axm = axes[i, 2 * j], axes[i, 2 * j + 1]
+            for a in (ax, axm):
+                # The basin is a band about the bound value; where it runs off
+                # an edge the remainder is drawn at the other, because the axis
+                # is a circle cut open at `cut`.
+                for b0, b1 in bands:
+                    a.axhspan(b0, b1, color=colour, alpha=0.08, lw=0)
+                a.axhline(c_plot, color="0.4", lw=0.5, ls="--", zorder=1)
+
+            pooled = []
             for rep, g in g_all.groupby("replicate"):
                 g = g.sort_values("frame")
                 dt = dts.get(rep) or dt_free
                 time_ns = (np.arange(len(g)) + 1) * dt
-                raw = g[t].to_numpy()
+                ang = _wrap(g[t].to_numpy(), cut)
+                pooled.append(ang)
                 if args.trace == "cylinder":
-                    segs = _cylinder_copies(time_ns, _wrap(raw, cut), lo, hi)
-                elif args.trace == "unwrap":
-                    segs = [(time_ns,
-                             np.rad2deg(np.unwrap(np.deg2rad(raw)))
-                             + (cut - _branch_cut("signed")))]
+                    segs = _cylinder_copies(time_ns, ang, lo, hi)
                 else:
-                    segs = [_break_at_seam(time_ns, _wrap(raw, cut))]
+                    segs = [_break_at_seam(time_ns, ang)]
                 for xs, ys in segs:
                     ax.plot(xs, ys, lw=0.35, alpha=0.75, color=colour,
                             rasterized=True)
-            if args.trace != "unwrap":
-                ax.set_ylim(lo, hi)
-                ax.set_yticks(np.arange(lo, hi + 1, 90))
+
+            dens, _, _ = axm.hist(np.concatenate(pooled), bins=bins, density=True,
+                                   orientation="horizontal", color=colour,
+                                   alpha=0.75, lw=0)
+            peak[j] = float(np.max(dens))
+
+            for a in (ax, axm):
+                a.set_ylim(lo, hi)
+            ax.set_yticks(np.arange(lo, hi + 1, 90))
             ax.set_xlim(0, 100)
+            axm.set_yticks(np.arange(lo, hi + 1, 90))
+            axm.set_yticklabels([])
+            axm.set_xticks([])
+            axm.spines["bottom"].set_visible(False)
             if i == 0:
-                ax.set_title(which, color=colour)
+                ax.set_title(which, color=colour, loc="left")
             if j == 0:
                 ax.set_ylabel(f"{TAU_LABELS[t]}\n(°)", fontsize=7)
             if i == 3:
                 ax.set_xlabel("time (ns)")
-        if args.trace == "unwrap":
-            # Share the row's y-range across columns. Letting each panel
-            # autoscale shows the bound trace's ~50 degrees of jitter at the
-            # same visual amplitude as the free trace's hundreds, which inverts
-            # the result the figure exists to show.
-            ylo = min(axes[i, j].get_ylim()[0] for j in (0, 1))
-            yhi = max(axes[i, j].get_ylim()[1] for j in (0, 1))
-            for j in (0, 1):
-                axes[i, j].set_ylim(ylo, yhi)
-    fig.suptitle("Binding abolishes rotamer exchange in doravirine", y=0.995, fontsize=10)
-    fig.tight_layout()
+                axm.set_xlabel("density", fontsize=6)
+        # One density scale for the row. Letting each marginal autoscale draws
+        # the bound peak and the much flatter free distribution at the same
+        # height, which hides the concentration the figure is about.
+        xmax = max(peak.values()) * 1.08
+        for j in (0, 1):
+            axes[i, 2 * j + 1].set_xlim(0, xmax)
+    fig.suptitle("Binding abolishes rotamer exchange in doravirine", fontsize=10)
+    fig.tight_layout(rect=(0, 0, 1, 0.98))
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    suffix = "" if args.trace == "unwrap" else f"_{args.trace}"
+    suffix = "" if args.trace == "broken" else f"_{args.trace}"
     f1 = args.output_dir / f"dor_torsion_trajectories{suffix}.png"
     fig.savefig(f1, dpi=300)
     plt.close(fig)
