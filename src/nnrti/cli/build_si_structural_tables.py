@@ -39,6 +39,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from scipy import stats as sstats
 
 from nnrti.cli.build_supplementary_table_4 import CATEGORY, PANEL_ORDER
 from nnrti.cli.plot_structural_heatmap import (
@@ -235,8 +236,48 @@ def table4(per_rep: pd.DataFrame) -> dict[str, pd.DataFrame]:
             "Definitions": pd.DataFrame(DEFINITIONS, columns=["Item", "Description"])}
 
 
-def _long(val: pd.DataFrame, err: pd.DataFrame, tcrit: float, state: str) -> pd.DataFrame:
-    """One row per genotype and metric, with the interval the figures use."""
+def _welch_df(sems, ns) -> float:
+    """Welch-Satterthwaite degrees of freedom for a sum of independent means.
+
+    The standard two-group formula generalised to however many group means the
+    comparison subtracts: two for a genotype against WT, four for an induced
+    fit, which is (holo - apo) for the genotype minus the same for WT. With
+    three replicates per group it returns about 4 and about 8 respectively,
+    which is where the 2.78 and 2.31 criteria the figures use come from.
+    """
+    num, den = 0.0, 0.0
+    for s, n in zip(sems, ns):
+        if not np.isfinite(s) or n < 2:
+            return np.nan
+        num += s ** 2
+        den += s ** 4 / (n - 1)
+    return num ** 2 / den if den > 0 else np.nan
+
+
+def _group_stats(frame: pd.DataFrame, col: str, circular: bool) -> dict:
+    """Per genotype: mean, standard error and n, on the circle where needed."""
+    out = {}
+    for gt, grp in frame.groupby("genotype"):
+        v = pd.to_numeric(grp.get(col), errors="coerce").dropna()
+        if v.empty:
+            continue
+        if circular:
+            mean, sem = _circ_mean(v.to_numpy()), _circ_sem(v.to_numpy())
+        else:
+            mean = float(v.mean())
+            sem = float(v.sem()) if v.size > 1 else np.nan
+        out[gt] = (mean, sem, int(v.size))
+    return out
+
+
+def _long(val, err, tcrit: float, state: str, components: dict) -> pd.DataFrame:
+    """One row per genotype and metric: the figure's cell, and the test behind it.
+
+    `components` carries the per-group standard errors and counts that the cell
+    was built from, which is what the degrees of freedom need. Deriving them
+    here rather than assuming 4 and 8 means a genotype with a missing replicate
+    gets its own df instead of the panel's nominal one.
+    """
     rows = []
     for gt in val.index:
         for metric in val.columns:
@@ -244,11 +285,19 @@ def _long(val: pd.DataFrame, err: pd.DataFrame, tcrit: float, state: str) -> pd.
             if not np.isfinite(v):
                 continue
             half = tcrit * e if np.isfinite(e) else np.nan
+            sems, ns = components.get((gt, metric), ((), ()))
+            df = _welch_df(sems, ns) if sems else np.nan
+            t = float(v) / float(e) if np.isfinite(e) and e > 0 else np.nan
+            p = (float(2 * sstats.t.sf(abs(t), df))
+                 if np.isfinite(t) and np.isfinite(df) else np.nan)
             rows.append({
                 "Category": CATEGORY.get(gt, ""), "Genotype": gt, "State": state,
                 "Metric": metric,
                 "Shift": round(float(v), 3),
                 "SEM": round(float(e), 3) if np.isfinite(e) else "",
+                "Welch t": round(t, 2) if np.isfinite(t) else "",
+                "Welch df": round(df, 1) if np.isfinite(df) else "",
+                "p": (float(f"{p:.3g}") if np.isfinite(p) else ""),
                 "CI95 low": round(float(v - half), 3) if np.isfinite(half) else "",
                 "CI95 high": round(float(v + half), 3) if np.isfinite(half) else "",
                 "Resolved at 95%": ("yes" if np.isfinite(half) and abs(v) > half else "no"),
@@ -268,13 +317,50 @@ def statistics_sheets(per_rep: pd.DataFrame) -> dict[str, pd.DataFrame]:
     for state, label in _STATES.items():
         metrics = {**DOR_METRICS, **RT_METRICS} if state == "holo" else RT_METRICS
         val, err = shift_vs_wt(per_rep, state, metrics)
-        if not val.empty:
-            frames.append(_long(val, err, SIGNIFICANCE_BY_PANEL["A"], label))
+        if val.empty:
+            continue
+        # Two group means are subtracted here: the genotype's and WT's.
+        comp = {}
+        frame = per_rep[per_rep.structure_type == state]
+        for metric, col in metrics.items():
+            if metric not in val.columns:
+                continue
+            g = _group_stats(frame, col, metric in CIRCULAR)
+            if "WT" not in g:
+                continue
+            for gt, (_m, sem, n) in g.items():
+                comp[(gt, metric)] = ((sem, g["WT"][1]), (n, g["WT"][2]))
+        frames.append(_long(val, err, SIGNIFICANCE_BY_PANEL["A"], label, comp))
     mutant = pd.concat(frames, ignore_index=True)
 
     val, err = induced_fit_vs_wt(per_rep, RT_METRICS)
-    induced = (_long(val, err, SIGNIFICANCE_BY_PANEL["B"], "Bound minus unliganded")
+    # Four group means are subtracted: holo and apo, for the genotype and WT.
+    comp = {}
+    holo = per_rep[per_rep.structure_type == "holo"]
+    apo = per_rep[per_rep.structure_type == "apo"]
+    for metric, col in RT_METRICS.items():
+        if metric not in val.columns:
+            continue
+        h, a = _group_stats(holo, col, metric in CIRCULAR), _group_stats(apo, col, metric in CIRCULAR)
+        if "WT" not in h or "WT" not in a:
+            continue
+        for gt in set(h) & set(a):
+            comp[(gt, metric)] = ((h[gt][1], a[gt][1], h["WT"][1], a["WT"][1]),
+                                  (h[gt][2], a[gt][2], h["WT"][2], a["WT"][2]))
+    induced = (_long(val, err, SIGNIFICANCE_BY_PANEL["B"], "Bound minus unliganded", comp)
                .drop(columns="State").reset_index(drop=True))
+
+    # The 95% column comes from the panel's nominal criterion and p comes from
+    # the row's own degrees of freedom. They agree unless a genotype is short a
+    # replicate, so a disagreement is a signal, not noise: report it rather
+    # than let the two columns quietly contradict each other.
+    for name, sheet in (("Mutant vs WT", mutant), ("Induced fit vs WT", induced)):
+        num = pd.to_numeric(sheet["p"], errors="coerce")
+        clash = ((num < 0.05) != (sheet["Resolved at 95%"] == "yes")) & num.notna()
+        if clash.any():
+            print(f"  {name}: {clash.sum()} row(s) where p and the panel criterion differ "
+                  f"(a genotype with fewer than three usable replicates): "
+                  + ", ".join(f"{r.Genotype}/{r.Metric}" for r in sheet[clash].itertuples()))
     return {"Mutant vs WT": mutant, "Induced fit vs WT": induced}
 
 
