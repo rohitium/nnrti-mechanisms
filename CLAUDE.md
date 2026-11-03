@@ -37,6 +37,17 @@ or from frame index or frame count. Resumed runs append to the DCD, so frame
 counts exceed the nominal 200 (up to 380) with duplication at segment
 boundaries. Derive time from the step record.
 
+## Apo analysis windows
+
+`compare_apo_ensembles` compares genotypes on a matched time window set by
+`--match-ns`. The module default was `10.0` long after every apo replicate
+reached 100 ns, so running the script with no arguments silently produced a
+10 ns analysis: WT apo volume 88.7 instead of 76.4, and every genotype off by
+15–35 A^3 against the documents. It has caused a wrong recompute three times.
+The default is now `100.0`, but check the window the run reports before
+believing any apo number, and re-derive the documents' numbers rather than
+assuming the defaults still match them.
+
 ## PBC-corrected sidecars
 
 `nnrti.cli.fix_pbc_trajectories` skips existing `*_analysis_pbcfix.dcd` files,

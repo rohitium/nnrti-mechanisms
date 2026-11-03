@@ -41,7 +41,12 @@ warnings.filterwarnings("ignore")
 
 RESID_OFFSET = -3
 NNIBP_P66 = (100, 101, 103, 106, 107, 108, 179, 181, 188, 189, 190, 227, 229, 234, 318)
-MATCH_NS = 10.0
+# Every apo replicate now runs to 100 ns, so this is the full window. It was
+# 10.0 while the apo runs were short, and leaving it there was a trap: running
+# the script with no arguments silently produced a 10 ns analysis whose numbers
+# then disagreed with the documents by 15-35 A^3 per genotype. That has now
+# happened three times. The default follows the data.
+MATCH_NS = 100.0
 
 # A replicate that was extended keeps its original frames and appends new ones
 # at the longer run's stride, so the analysis DCD is not uniformly spaced.
