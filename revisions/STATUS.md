@@ -123,54 +123,60 @@ excludes. K103N+M230L's primer grip (p = 0.04, at the edge) is the worked
 example; the text rests it on M230's location and the literature, not on the
 margin. Do not go trawling the ~650 unresolved comparisons for stories.
 
-## 5. Simulations, and the one job in flight
+## 5. Simulations — all 60 apo replicates are at 100 ns
 
-**I could not reach Sherlock at the end of this session — SSH returned
-"Permission denied", so the credential has expired.** Re-authenticate before
-assuming anything below is current.
+Job **50786462** (v106a rep_02) **finished cleanly at 14:25 on 02-Nov**: 50,000,000
+steps = 100.0 ns, run JSON written, queue empty. The MD for this revision is
+complete. Nothing is running on Sherlock.
 
-Last known state (02-Nov 12:23): all 60 apo replicates are at 100 ns **except
-v106a rep_02**, job **50786462**, which was at 92.6 ns and running on
-sh02-13n13, having resumed correctly into the canonical tree
-(`$SCRATCH/nnrti-mechanisms-git`). It has either finished or hit its wall clock
-by now. Locally that replicate still reads 34.3 ns, so it is *excluded* from
-every current number and V106A apo is n = 2.
+(An earlier SSH failure in this session was transient; `ssh -o BatchMode=yes
+sherlock` works. `ops/sync/rsync_apo.sh` does **not**, because it opens its own
+ControlMaster connection that wants Duo. Use plain `rsync -e "ssh -o
+BatchMode=yes"` against
+`sherlock:/scratch/users/rsatija/nnrti-mechanisms-git/...` instead.)
 
-### When it lands, regenerate in this order
+### Regeneration: partly done, finish it
+
+Done already:
+
+1. Pulled the finished replicate (dcd, state csv, run json). Originals backed
+   up to `.backup/20261102-v106a-rep02/`.
+2. Rebuilt its PBC sidecar with `--force`. **The trap fired exactly as
+   predicted**: the raw DCD had 380 frames and the existing
+   `*_analysis_pbcfix.dcd` 248, and the fixer skips existing sidecars silently.
+   It is 380 now. If any other replicate is ever extended, check this.
+
+Still to do, in order:
 
 ```bash
-SHERLOCK_USER=rsatija bash ops/sync/rsync_apo.sh pull      # trajectory + state
-PYTHONPATH=src python -m nnrti.cli.fix_pbc_trajectories    # SEE WARNING BELOW
-PYTHONPATH=src python -m nnrti.cli.compare_apo_ensembles
-PYTHONPATH=src python -m nnrti.cli.compute_pocket_opening_cost
-PYTHONPATH=src python -m nnrti.cli.compare_apo_to_crystal
-PYTHONPATH=src python -m nnrti.cli.build_structural_metrics_table
-PYTHONPATH=src python -m nnrti.cli.compute_structural_effect_sizes
-PYTHONPATH=src python -m nnrti.cli.plot_structural_heatmap
-PYTHONPATH=src python -m nnrti.cli.build_si_structural_tables
-PYTHONPATH=src python ops/docx/build_si_workbooks.py
+PY=~/miniconda3/envs/nnrti-prep/bin/python
+PYTHONPATH=src $PY -m nnrti.cli.compare_apo_ensembles        # was running at session end
+PYTHONPATH=src $PY -m nnrti.cli.compute_pocket_opening_cost
+PYTHONPATH=src $PY -m nnrti.cli.compare_apo_to_crystal
+PYTHONPATH=src $PY -m nnrti.cli.build_structural_metrics_table
+PYTHONPATH=src $PY -m nnrti.cli.compute_structural_effect_sizes
+PYTHONPATH=src $PY -m nnrti.cli.plot_structural_heatmap
+PYTHONPATH=src $PY -m nnrti.cli.build_si_structural_tables
+PYTHONPATH=src $PY ops/docx/build_si_workbooks.py
 ```
 
-Use `~/miniconda3/envs/nnrti-prep/bin/python` — bare `python` lacks MDAnalysis
-and MDTraj. **Analysis runs locally; Sherlock is for MD only.**
+Analysis runs locally; Sherlock is for MD only. Bare `python` lacks MDAnalysis
+and MDTraj.
 
-**`fix_pbc_trajectories` skips existing `*_analysis_pbcfix.dcd` files**, so the
-extended v106a rep_02 will keep a stale 34 ns sidecar and nothing will warn
-you. Compare its frame count against the raw `*_analysis.dcd` and pass
-`--force` for that replicate only. DCDs are gitignored — back up before
-forcing.
+### Then update these, and only these
 
-### Text that changes when V106A reaches n = 3
+V106A apo goes from n = 2 to n = 3, so every V106A apo number moves:
 
-- Results, the pocket-volume paragraph: "V106A exceeds the WT apo volume by
-  52 ± 11 Å³" and the V106A-class sentence.
-- Supplementary Text section 9: "One replicate, V106A replicate 2, reached only
-  34 ns and is excluded from the matched comparison" — delete it.
-- Supplementary Table 7's V106A row (n goes 2 → 3) and Table 4 throughout.
-- Re-run both checks in §3 afterwards.
+- **Results**, pocket-volume paragraph: "V106A exceeds the WT apo volume by
+  52 ± 11 Å³" and the V106A-class sentence ("by 40 to 50 Å³").
+- **Supplementary Text section 9**: delete "One replicate, V106A replicate 2,
+  reached only 34 ns and is excluded from the matched comparison."
+- **Supplementary Table 7** V106A row, and Table 4 throughout — both rebuilt by
+  the commands above.
+- Re-run both checks in §3.
 
-The V106A-class conclusion itself does not depend on this replicate: three
-combination genotypes carry it at n = 3 each.
+The V106A-class conclusion does not depend on this replicate; three combination
+genotypes carry it at n = 3 each.
 
 ## 6. Open work
 
