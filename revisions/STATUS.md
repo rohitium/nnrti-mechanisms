@@ -135,64 +135,38 @@ ControlMaster connection that wants Duo. Use plain `rsync -e "ssh -o
 BatchMode=yes"` against
 `sherlock:/scratch/users/rsatija/nnrti-mechanisms-git/...` instead.)
 
-### Regeneration: done, except two locked files
+### Regeneration: complete
 
-Run and verified: the replicate was pulled, its PBC sidecar rebuilt with
-`--force` (the trap fired exactly as predicted, 380 raw frames against a stale
-248), and the whole chain re-run. Apo is now 60/60 replicates.
+The replicate was pulled, its PBC sidecar rebuilt with `--force` (the trap
+fired as predicted: 380 raw frames against a stale 248), the whole chain
+re-run, both figures and all of Tables 4–7 rebuilt, and the text corrected.
+Apo is 60/60 replicates. Both checks in §3 pass.
 
-**A trap fired that was not in this file, and it matters.**
-`compare_apo_ensembles` takes `--match-ns`, whose module default was still
-`10.0` from when the apo runs were short. Running it with no flag produced a
-silent 10 ns analysis: WT apo 88.7 Å³ instead of 76.4, every genotype off by
-15–35 Å³. It was caught because only V106A's replicate count had changed yet
-every genotype moved, which one replicate cannot do. **The default is now
-`100.0`** and the trap is written up in `CLAUDE.md`. After the fix, 19 of 20
-genotypes reproduce the committed values to 0.05 Å³ and only V106A changes, as
-it should.
+**A trap fired that was not in this file.** `compare_apo_ensembles` takes
+`--match-ns`, whose module default was still `10.0` from when the apo runs were
+short, so running it with no flag produced a silent 10 ns analysis: WT apo
+88.7 Å³ instead of 76.4, every genotype off by 15–35 Å³. It was caught because
+only V106A's replicate count had changed yet every genotype moved, which one
+replicate cannot do. **The default is now `100.0`**, and `CLAUDE.md` records
+it. After the fix, 19 of 20 genotypes reproduce the committed values to
+0.05 Å³ and only V106A changes.
 
-**Two files were not rebuilt because they were open in Excel/Word:**
+### What the third V106A replicate changed
 
-```bash
-PYTHONPATH=src ~/miniconda3/envs/nnrti-prep/bin/python -m nnrti.cli.build_si_structural_tables
-```
-
-That writes `Supplementary-Table-4.xlsx`. Tables 5, 6 and 7 are rebuilt and
-current. Check for `revisions/~$*` lock files before running it.
-
-### What the third V106A replicate changed, and the text it affects
-
-V106A apo volume **128.5 Å³ (n = 2) → 105.7 Å³ (n = 3)**. The new replicate is
-much tighter than the other two, and this weakens the V106A claim:
+V106A apo volume **128.5 Å³ (n = 2) → 105.7 Å³ (n = 3)** — the new replicate is
+much tighter than the other two, and this weakens that genotype's claim:
 
 | | before (n = 2) | now (n = 3) |
 |---|---|---|
 | V106A apo vs WT | +52 ± 11 Å³, resolved (p = 0.02) | **+29.3 ± 24.9 Å³, not resolved** |
 | V106A opening cost vs WT | −18.9 Å³ | **−7.3 ± 28.6 Å³, not resolved** |
 
-Of the four V106A genotypes, only **V106A+F227L (+42.5 ± 10.9)** and
-**V106A+P225H (+42.8 ± 11.9)** now have an apo pocket resolved against WT;
-V106A itself and V106A+L234I do not. Figure 4's resolved set is unchanged at
-12 cells, and every other genotype is untouched.
-
-**Edit these, in this order, then re-run both checks in §3:**
-
-1. **Results**, pocket-volume paragraph. "V106A exceeds the WT apo volume by
-   52 ± 11 Å³, and V106A+L234I, V106A+P225H and V106A+F227L by 40 to 50 Å³"
-   is now wrong. The V106A-class statement has to rest on the combination
-   genotypes: two of the three are resolved, V106A alone is not.
-2. **Supplementary Text section 9.** Delete "One replicate, V106A replicate 2,
-   reached only 34 ns and is excluded from the matched comparison." Its claim
-   that the apo volume separates from WT "for only three, and all three are
-   V106A-containing ... V106A by +52 ± 11 Å³ (p = 0.02), with V106A+F227L and
-   V106A+P225H likewise" is now two, not three, and V106A is not one of them.
-3. **Response**: the sampling block quotes that SI paragraph verbatim, so
-   re-sync it after step 2 rather than editing it directly.
-4. Rebuild Supplementary Table 4 as above.
-
-The V106A-class *conclusion* survives — the unliganded pocket of this class is
-wider than wild type's — but it now rests on the combination genotypes rather
-than on V106A itself, and the paper should say so.
+Of the four V106A genotypes only **V106A+F227L (+42.5 ± 10.9)** and
+**V106A+P225H (+42.8 ± 11.9)** have an apo pocket resolved against WT. The
+class conclusion survives — this class does arrive with a wider unliganded
+pocket — but it now rests on the combination genotypes, and the Results
+paragraph and Supplementary Text section 9 both say so. Figure 4's resolved set
+is unchanged at 12 cells and no other genotype moved.
 
 ## 6. Open work
 
