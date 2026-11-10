@@ -169,7 +169,7 @@ def main() -> int:
     man = pd.read_csv(args.manifest)
     man = man[man.mutation.isin(args.mutations)]
 
-    rows, resrows = [], []
+    rows, resrows, framerows = [], [], []
     for _, r in man.sort_values(["mutation", "replicate"]).iterrows():
         js = _remap(Path(str(r["output_json"])), repo_root)
         data = json.loads(js.read_text())
@@ -186,12 +186,24 @@ def main() -> int:
 
         rec = {"mutation": r["mutation"], "replicate": int(r["replicate"]),
                "n_frames": traj.n_frames}
+        per_frame = {}
         for name, atoms in moi.items():
             pc, ac = _counts(traj, np.asarray(atoms, dtype=int), prot)
             rec[name] = float(pc.mean())
             rec[f"{name}_sd"] = float(pc.std(ddof=1))
             rec[f"{name}_atoms"] = float(ac.mean())
+            per_frame[name] = pc
         rows.append(rec)
+        # Per-frame companion. The per-replicate means above are three numbers
+        # per genotype, which is a mean and an error bar but not a
+        # distribution; the violin figures need the frames themselves, and
+        # they must come from this same pass so the two cannot disagree.
+        for i in range(traj.n_frames):
+            fr = {"mutation": r["mutation"], "replicate": int(r["replicate"]),
+                  "frame": i}
+            for name, pc in per_frame.items():
+                fr[name] = float(pc[i])
+            framerows.append(fr)
         print(f"  {r['mutation']:14s} rep{r['replicate']}  "
               f"whole {rec['whole_ligand']:6.1f}  "
               f"chl {rec['chlorocyanophenyl']:5.1f}  "
@@ -206,6 +218,9 @@ def main() -> int:
     df = pd.DataFrame(rows)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     df.to_csv(args.output_dir / "dor_moiety_contacts_per_replicate.csv", index=False)
+    if framerows:
+        pd.DataFrame(framerows).to_csv(
+            args.output_dir / "dor_moiety_contacts_per_frame.csv", index=False)
 
     moieties = ["whole_ligand", "chlorocyanophenyl", "pyridinone", "triazolinone", "linker"]
     cols = moieties + [f"{c}_atoms" for c in moieties]

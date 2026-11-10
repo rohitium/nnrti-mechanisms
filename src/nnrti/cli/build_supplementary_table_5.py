@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Supplementary Table 5: MM/GBSA sensitivity to snapshot relaxation.
+"""Legacy relaxation-sensitivity workbook builder (not current STable 5).
 
 Reviewer 3 (comment 3b) asked how sensitive ddE_Total and its components are to
 the choice of relaxing each snapshot before scoring, and suggested recomputing
@@ -55,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--checkpoint-dir", type=Path, default=Path("results/.checkpoints"))
     p.add_argument("--output-dir", type=Path, default=Path("results/analysis/relaxation_sensitivity"))
     p.add_argument("--xlsx", type=Path,
-                   default=Path("revisions/Supplementary-Table-5.xlsx"))
+                   default=Path("paper/generated/legacy/relaxation-sensitivity.xlsx"))
     p.add_argument("--published", type=Path,
                    default=Path("results/.checkpoints/.checkpoint_mmgbsa_cpu2000_2026-08-29.csv"),
                    help="Main-text MM/GBSA checkpoint, used for the unrestrained column "

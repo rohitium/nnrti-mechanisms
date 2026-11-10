@@ -1,36 +1,10 @@
 #!/usr/bin/env python3
-"""Build Supplementary Table 4: the structural observables and their statistics.
+"""Build formula-based Supplementary Table 4 from full-precision replicate CSVs.
 
-One workbook backing Figures 3 and 4. It carries the per-replicate values, the
-genotype summaries, and the statistics behind every figure cell, in both the
-bound and the unliganded state. The submitted version was holo only, because
-there was no comparable apo ensemble; there is now 3 x 100 ns for all twenty
-genotypes.
-
-Columns are exactly the metrics the figures are built from. An earlier draft
-also carried all eighteen secondary-structure fractions, three of which were
-identically zero in every row and the rest of which move by less than 0.02
-across the whole panel; a column nobody can read a result from is not worth the
-width. The one that does appear in a figure, the beta9-beta10 strand content,
-is in RT_METRICS and so is kept.
-
-The statistics live here too, as two further sheets, rather than in a separate
-workbook. They are the same measurement as the values beside them, not a
-different analysis, and splitting them made a reader hold two files open.
-
-Labels and the derived quantities come from ``plot_structural_heatmap``, so a
-workbook cell and a figure cell cannot disagree: renaming a metric or changing
-how a shift is computed changes both or neither. That mattered once already --
-the heatmap's circular-metric set was keyed on labels that a rename had moved
-out from under it, and a chi1 shift printed as -272 degrees.
-
-The holo half of Table 4 reproduces the submitted workbook to rounding on all
-60 replicates and all 8 metrics, which is the check ``CLAUDE.md`` asks for
-before a regenerated table is reported.
-
-Usage
------
-    PYTHONPATH=src python -m nnrti.cli.build_si_structural_tables
+The workbook contains both-state inputs, summaries, within-state comparisons,
+binding-associated interactions and a formula helper sheet. Replicate means
+are the statistical unit; χ1 uses circular statistics. Excel or LibreOffice
+must recalculate newly generated formula caches before display-only use.
 """
 from __future__ import annotations
 
@@ -62,90 +36,6 @@ _DEFAULT_DECIMALS = 2
 
 #: State labels as they appear in the workbook, in the order they are listed.
 _STATES = {"holo": "Bound (RT+DOR)", "apo": "Unliganded (RT only)"}
-
-DEFINITIONS = [
-    ("Scope",
-     "One row per genotype, state and production replicate. 19 genotypes plus WT, "
-     "three independent 100 ns replicates in each state. The bound-state rows are "
-     "those of the submitted Supplementary Table 4 and are unchanged; the "
-     "unliganded rows and the metrics below the NNIBP volume are new in this "
-     "revision."),
-    ("States",
-     "Bound is the RT+DOR complex. Unliganded is RT simulated with no inhibitor, "
-     "same force field, solvation, thermostat and 100 ns protocol. The two are "
-     "independent ensembles, not two halves of one trajectory."),
-    ("Metrics measurable in one state only",
-     "Everything defined against the drug -- the residue 103 distances, the "
-     "contact counts, the interplanar angle and the three minimum distances to "
-     "DOR -- has no unliganded counterpart, so those cells are blank for the "
-     "unliganded rows. The NNIBP volume, the two side-chain dihedrals, the "
-     "fluctuations and the secondary-structure fractions are properties of RT "
-     "alone and are reported in both states."),
-    ("Aggregation",
-     "Per-replicate values are means over every analysed frame of that replicate. "
-     "The Summary sheet averages the replicate means and reports the standard "
-     "error across replicates, so the replicate is the unit of replication. "
-     "Frames within a replicate are autocorrelated and are never pooled across "
-     "replicates."),
-    ("Dihedrals",
-     "Tyr181 and Tyr188 chi1 are averaged on the circle, not linearly, and their "
-     "differences are wrapped to (-180, 180]. A linear mean of angles either side "
-     "of the branch cut is meaningless. Undefined where the residue is mutated "
-     "away: Tyr181 chi1 is blank for Y181C, Tyr188 chi1 and the interplanar angle "
-     "for Y188L."),
-    ("Excluded replicate",
-     "One unliganded replicate is excluded, G190E replicate 2, which loses 158 of "
-     "200 frames to the pocket-Ca radius-of-gyration filter (10.5-42.1 A against a "
-     "10 A ceiling): the region unfolds locally and no longer bounds a pocket. It "
-     "is the only exclusion in either state."),
-    ("Periodic boundaries",
-     "p66 and p51 are separate molecules and drift into different periodic images, "
-     "so making each molecule whole is not sufficient. Every frame is re-imaged "
-     "with p66 as the anchor molecule before any distance, volume or fluctuation "
-     "is computed."),
-    ("NNIBP volume",
-     "Per frame on a 0.75 A cubic grid over a 10 A sphere centred on the Ca "
-     "centroid of the sixteen pocket-lining residues (p66 L100, K101, K103, V106, "
-     "T107, V108, V179, Y181, Y188, V189, G190, F227, W229, L234, Y318; p51 E138), "
-     "counting grid points further from every protein heavy atom than that atom's "
-     "van der Waals radius plus a 1.4 A probe. Ligand-independent, so the bound "
-     "and unliganded columns are directly comparable. The unliganded cavity is not "
-     "re-solvated with bulk water before measurement, which biases unliganded "
-     "volumes low, so an induced-fit opening derived from them is an upper bound."),
-    ("Contacts",
-     "Counted as protein-ligand heavy-atom PAIRS within 4.0 A, so one RT atom "
-     "close to several ligand atoms contributes once per pair. Ring burial covers "
-     "the chlorocyanophenyl ring atoms only; the pyridinone entry is a moiety "
-     "count, ring plus exocyclic substituents. The two are not on a common scale."),
-    ("Provenance",
-     "Generated by src/nnrti/cli/build_si_structural_tables.py from "
-     "results/analysis/structural_metrics/tables/structural_metrics_per_replicate.csv. "
-     "Labels and derived shifts are imported from "
-     "src/nnrti/cli/plot_structural_heatmap.py, which draws Figures 3 and 4."),
-]
-
-DEFINITIONS += [
-    ("Sheet 'Mutant vs WT'",
-     "Each genotype's shift from wild type within one state, in the metric's own "
-     "units, with the standard error of that shift and a Welch two-sided interval "
-     "on it. Two groups of three replicates, so Welch gives about 4 degrees of "
-     "freedom and a 95% interval needs 2.78 standard errors, not 2. Figure 3 plots "
-     "the bound rows of this sheet."),
-    ("Sheet 'Induced fit vs WT'",
-     "(bound - unliganded) for a genotype minus (bound - unliganded) for wild "
-     "type: how differently the mutation lets doravirine reshape the enzyme. Four "
-     "means are subtracted, so four standard errors add in quadrature and the "
-     "degrees of freedom rise to about 8, where the 95% criterion is 2.31 standard "
-     "errors. A value near zero means the mutation moves the bound and unliganded "
-     "states alike, which cancels in a thermodynamic cycle and is invisible to "
-     "ddG_bind by construction. Figure 4 plots this sheet."),
-    ("Multiplicity",
-     "Of 1,287 genotype-by-feature comparisons across both states, 66 have a 95% "
-     "interval excluding zero, close to the number expected if none differed. The "
-     "panel as a whole therefore does not establish that most structural features "
-     "differ between genotypes; the comparisons interpreted in the text are those "
-     "that clear the threshold by a wide margin."),
-]
 
 
 def _rank(genotypes: pd.Series) -> pd.Series:
@@ -205,7 +95,7 @@ def table4(per_rep: pd.DataFrame) -> dict[str, pd.DataFrame]:
         "Replicate": per_rep.replicate,
     })
     for label, col in cols:
-        detail[label] = pd.to_numeric(per_rep.get(col), errors="coerce").round(_dec(col))
+        detail[label] = pd.to_numeric(per_rep.get(col), errors="coerce")
     detail = (detail.assign(_r=_rank(detail.Genotype),
                             _s=detail.State.map({v: i for i, v in enumerate(_STATES.values())}))
               .sort_values(["_r", "_s", "Replicate"]).drop(columns=["_r", "_s"]))
@@ -232,26 +122,11 @@ def table4(per_rep: pd.DataFrame) -> dict[str, pd.DataFrame]:
                .sort_values(["_r", "_s"]).drop(columns=["_r", "_s"]))
 
     return {"Summary": summary.reset_index(drop=True),
-            "Per-replicate": detail.reset_index(drop=True),
-            "Definitions": pd.DataFrame(DEFINITIONS, columns=["Item", "Description"])}
+            "Per-replicate": detail.reset_index(drop=True)}
 
 
 def _pooled_df(sems, ns) -> float:
-    """Degrees of freedom for a pooled-variance test over these groups.
-
-    Every group contributes n - 1, so a genotype against WT has 4 and an
-    induced fit, which subtracts four group means, has 8. That is where the
-    2.776 and 2.306 criteria the figures use come from.
-
-    A Welch test was tried here first and is the wrong tool at this sample
-    size. With three replicates the standard error is identical either way --
-    pooling the variances and propagating the standard errors are the same
-    arithmetic when the groups are the same size -- so the only thing Welch
-    changes is the degrees of freedom, and it estimates those from variances
-    that themselves carry 2 degrees of freedom. The estimate ranged from 1.0 to
-    4.0 against a nominal 4, which cost real power and bought nothing: Welch
-    earns its keep for unequal group sizes, and these are equal by design.
-    """
+    """Sum n−1 over independent groups (df=4 or 8 for groups of three)."""
     del sems
     total = sum(n - 1 for n in ns if n >= 2)
     return float(total) if total > 0 else np.nan
@@ -287,9 +162,9 @@ def _long(val, err, tcrit: float, state: str, components: dict) -> pd.DataFrame:
             v, e = val.loc[gt, metric], err.loc[gt, metric]
             if not np.isfinite(v):
                 continue
-            half = tcrit * e if np.isfinite(e) else np.nan
             sems, ns = components.get((gt, metric), ((), ()))
             df = _pooled_df(sems, ns) if ns else np.nan
+            half = float(sstats.t.ppf(0.975, df)) * e if np.isfinite(e) and np.isfinite(df) else np.nan
             t = float(v) / float(e) if np.isfinite(e) and e > 0 else np.nan
             p = (float(2 * sstats.t.sf(abs(t), df))
                  if np.isfinite(t) and np.isfinite(df) else np.nan)
@@ -303,7 +178,7 @@ def _long(val, err, tcrit: float, state: str, components: dict) -> pd.DataFrame:
                 "p": (float(f"{p:.3g}") if np.isfinite(p) else ""),
                 "CI95 low": round(float(v - half), 3) if np.isfinite(half) else "",
                 "CI95 high": round(float(v + half), 3) if np.isfinite(half) else "",
-                "Resolved at 95%": ("yes" if np.isfinite(half) and abs(v) > half else "no"),
+                "95% CI excludes zero": ("yes" if np.isfinite(half) and abs(v) > half else "no"),
             })
     out = pd.DataFrame(rows)
     return out.assign(_r=_rank(out.Genotype)).sort_values(["_r", "Metric"]).drop(columns="_r")
@@ -359,7 +234,7 @@ def statistics_sheets(per_rep: pd.DataFrame) -> dict[str, pd.DataFrame]:
     # than let the two columns quietly contradict each other.
     for name, sheet in (("Mutant vs WT", mutant), ("Induced fit vs WT", induced)):
         num = pd.to_numeric(sheet["p"], errors="coerce")
-        clash = ((num < 0.05) != (sheet["Resolved at 95%"] == "yes")) & num.notna()
+        clash = ((num < 0.05) != (sheet["95% CI excludes zero"] == "yes")) & num.notna()
         if clash.any():
             print(f"  {name}: {clash.sum()} row(s) where p and the panel criterion differ "
                   f"(a genotype with fewer than three usable replicates, so its df is "
@@ -386,21 +261,18 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--per-replicate", type=Path,
                    default=root / "results/analysis/structural_metrics/tables/"
                                   "structural_metrics_per_replicate.csv")
-    p.add_argument("--out-dir", type=Path, default=root / "revisions")
+    p.add_argument("--out-dir", type=Path, default=root / "paper/generated/tables")
     a = p.parse_args(argv)
 
     per_rep = pd.read_csv(a.per_replicate)
     a.out_dir.mkdir(parents=True, exist_ok=True)
     sheets = table4(per_rep)
     stats = statistics_sheets(per_rep)
-    # Definitions last, so the data sheets come first in the tab bar.
-    defs = sheets.pop("Definitions")
-    _write(a.out_dir / "Supplementary-Table-4.xlsx", {**sheets, **stats, "Definitions": defs})
+    output = a.out_dir / "Supplementary-Table-4.xlsx"
+    _write(output, {**sheets, **stats})
+    from nnrti.analysis.structural_workbook import add_formulas
+    add_formulas(output)
 
-    stale = a.out_dir / "Supplementary-Table-10.xlsx"
-    if stale.exists():
-        stale.unlink()
-        print(f"removed {stale.name}: its sheets are now tabs of Table 4")
     return 0
 
 

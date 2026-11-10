@@ -1,110 +1,48 @@
-# Reproducing the results in the manuscript
+# Reproducing the November 2026 revision
 
-*Molecular Simulation of Doravirine Resistance in HIV-1 Reverse Transcriptase*
+## Setup and first check
 
-This file maps every table and figure in the paper to the command that produces
-it.
-
-## Setup
+Use `environment.yml` for the full scientific environment, then `pip install -e .`. Plotting and workbook generation require the Python dependencies in `pyproject.toml`; structure/trajectory operations additionally require the conda environment. GROMACS switching simulations used the cluster GPU build of GROMACS 2023.1. The environment specifies minor versions; it is not a complete lockfile for every transitive dependency.
 
 ```bash
-conda env create -f environment.yml && conda activate nnrti-prep
-pip install -e .          # or: export PYTHONPATH=src
-pytest tests -q
+python -m nnrti.cli.manuscript --check --export
+python -m nnrti.cli.manuscript --list
+./workflows/05_manuscript_artifacts.sh
 ```
 
-## What the repository carries
+`--check` verifies the frozen submission. `--export` extracts the exact 13 embedded figure images and their captions, exports the main tables as CSV, and copies all seven submitted SI workbooks into `paper/generated/`. This preserves final artwork even where figure composition was manual.
 
-| In the repository | Supports |
-| --- | --- |
-| Per-switch work values, `results/analysis/fep_pmx/legs/**/analysis/integ_*.dat` | The free energy panel, Table 2, Figure 2, Supp. Fig. 2 |
-| Susceptibility data, `data/DRM-susceptibilities.csv.xlsx` | Table 1 |
-| Derived tables under `results/analysis/` | Tables 2 and 3, Supp. Tables 3 and 4 |
-
-The free energies are recomputed rather than cached: the BAR, Crooks and
-Jarzynski estimates are derived from the per-switch work values, which is the
-step that determines every ΔΔG reported.
-
-Production trajectories (13 GB stripped to protein plus ligand) are not in git.
-They are needed only to rebuild the MM/GBSA side and the structural observables,
-and are available from the corresponding author.
-
-## Manuscript artifacts
-
-Everything below is wrapped in `./workflows/05_manuscript_artifacts.sh`; the
-trajectory analyses that feed it are in `./workflows/04_analysis.sh`. The table
-says which command produces which number, which the wrapper cannot.
-
-| # | Artifact | Command |
-| --- | --- | --- |
-| 1 | **Table 1** — DOR susceptibility panel | `python -m nnrti.cli.plot_dor_susceptibility_bars` |
-| 2 | **Table 2** — ΔΔE and ΔΔG | `python -m nnrti.cli.build_table_2` |
-| 3 | **Table 3** — RT–DOR interface observables | `python -m nnrti.cli.build_supplementary_table_4` |
-| 4 | **Supp. Table 3** — per-replicate ΔΔE and ΔΔG | `python -m nnrti.cli.build_supplementary_table_3` |
-| 5 | **Supp. Table 4** — per-replicate structural observables | `python -m nnrti.cli.build_supplementary_table_4` (same command as Table 3) |
-| 6 | **Figure 1** — crystal structure | PyMOL session, not scripted; source `data/structures/` (PDB 4NCG) |
-| 7 | **Figure 2** — FEP protocol (A–C) and ΔΔG vs fold (D) | `python -m nnrti.fep.plot_protocol_schematic` then `python -m nnrti.cli.plot_panel_by_resistance_category` |
-| 8 | **Figure 3** — resistance mechanisms | `python -m nnrti.cli.compute_mechanism_coordinates` then `python -m nnrti.cli.plot_mechanism_panel` |
-| 9 | **Supp. Figure 1** — MD convergence | `python -m nnrti.cli.compute_md_convergence` then `python -m nnrti.cli.plot_convergence_panel` |
-| 10 | **Supp. Figure 2** — FEP work distributions | `python -m nnrti.cli.plot_fep_work_distributions` |
-| 11 | Supp. Table 1 — isolate-level phenotypes | From the Stanford HIV Drug Resistance Database; not generated here |
-| 12 | Supp. Table 2 — RT variant sequences | From the prepared systems in `data/prepared/dor_4ncg/` |
-
-## Rebuilding Table 2 and Supp. Table 3
-
-Both read `results/analysis/binding_energy/tables/ddg_full.csv` and
-`results/analysis/fep_pmx/panel_ddg.csv`.
-
-MM/GBSA, from the production trajectories (~25 h on 12 cores):
+`--rebuild all` regenerates the supported analysis plots and Tables 2, S3 and S4 from derived data. Choose individual targets, for example:
 
 ```bash
-OPENMM_PLATFORM=CPU OPENMM_CPU_THREADS=1 python -m nnrti.cli.compute_mmgbsa_safe \
-  --frame-sampling even --snapshots 100 --discard-fraction 0.25 \
-  --snapshot-relaxation unrestrained --relaxation-iterations 2000 \
-  --workers 12 --force \
-  --output results/.checkpoints/.checkpoint_mmgbsa.csv
-
-python -m nnrti.cli.rebuild_binding_energy_sources \
-  --mmgbsa-csv results/.checkpoints/.checkpoint_mmgbsa.csv
+python -m nnrti.cli.manuscript --rebuild heatmaps mechanisms protein table4
+python -m nnrti.cli.manuscript --rebuild dor-violins rt-violins
 ```
 
-Free energies, from the per-switch work values:
+See [paper/ARTIFACTS.md](paper/ARTIFACTS.md) for current numbering. Rebuilt files are candidates for review, not replacements for the submitted package. Fonts, plotting-library versions and manual composition can affect appearance. The build does not rerun MD or FEP, download missing data, or modify the submitted documents. Run from the repository root if invoking an individual legacy CLI directly.
+
+## Statistical provenance
+
+- Phenotypes: `data/DRM-susceptibilities.csv.xlsx` is authoritative; do not substitute manifest annotations.
+- FEP: `results/analysis/fep_pmx/panel_ddg.csv`, with per-leg/per-replicate analysis beneath `legs/`. Recombining a subset of targets overwrites a subset panel: always supply the complete intended target list. Re-analysis with `--force` requires raw switching data.
+- MM/GBSA: `results/analysis/binding_energy/tables/ddg_full.csv`, WT referenced across three replicates. The manuscript protocol uses 100 snapshots per replicate over the final 75 ns, with 2,000 unrestrained minimization steps. `mutation_component_summary.csv` is not the authoritative current table.
+- Structural observables: `results/analysis/structural_metrics/tables/structural_metrics_per_replicate.csv` contains full-precision replicate means for both states. Frames are not independent replicates. Figure code and S4 share metric definitions and circular-angle handling.
+- `build_si_structural_tables` writes live Excel formulas for means, SEMs, t statistics, p values and confidence intervals. Open the generated workbook in Excel or recalculate with LibreOffice before using cached values in a viewer. `openpyxl` writes formulas but does not evaluate them. The frozen submitted workbook already contains recalculated caches.
+- The S4 flag means **95% CI excludes zero**. Figure highlighting additionally applies the manuscript's minimum interpretable differences; these are distinct criteria.
+
+## Recomputing from trajectories
+
+The numbered workflow scripts describe preparation, MD, FEP, trajectory analysis and artifact generation. Stages 1–4 are expensive and depend on raw files not distributed through Git. Stage 4 is a starting point, not a complete automatic rebuild of every revision-specific analysis; use the artifact map and individual CLI help for apo metrics, frame series and sensitivity calculations.
+
+Do not rerun holo simulations as part of routine manuscript regeneration. Before analysing recovered trajectories, verify completed steps, physical times, PBC sidecar freshness and the matched apo/holo window. The G190E apo pocket filter must be retained: replicate 2 loses 158 of 200 frames to the 10 Å pocket-Cα radius-of-gyration ceiling, with an additional volume-specific filter. The relevant implementations are in `compute_pocket_volume`, `compute_block_metrics` and the structural table builder.
+
+Raw-data storage, durable copies, backup limitations and restart rules are in [docs/methods/md-run-data.md](docs/methods/md-run-data.md). Storage status there is dated historical evidence; inspect current files and live jobs before assuming a copy is complete. Never clean an analysis checkout recursively: ignored trajectories may be its only local copy.
+
+## Verification
 
 ```bash
-python -m nnrti.fep.combine_neq --targets \
-  F227C G190A G190E G190S V106A V106I V106M Y181C Y188L Y318F \
-  A98G+F227C V106A+F227L V106A+L234I V106A+P225H V106I+F227C \
-  K103N K103N+M230L K103N+P225H L100I+K103N --replicates 3
+pytest -q
+python -m nnrti.cli.manuscript --check
 ```
 
-`combine_neq --targets X` rewrites `panel_ddg.csv` with only those targets, so
-pass the full list. `--force` re-analyses each leg from raw `dgdl.xvg`, which is
-not distributed.
-
-## Parameters that determine the numbers
-
-- MM/GBSA scores 100 frames spaced evenly across the post-equilibration
-  trajectory (final 75 ns of each 100 ns replicate).
-- No frames are excluded. Close atomic contacts are resolved by minimization,
-  since excluding configurations by energy biases an ensemble average.
-- Minimization runs to convergence, 2000 iterations.
-- The WT reference is the mean of the three WT replicates, not index-matched.
-- Structural quantities are averaged within a replicate before being averaged
-  across replicates, so uncertainties are between-replicate.
-
-## Regenerating the simulations (GPU cluster, several weeks)
-
-Not required to reproduce the published numbers.
-
-**MD** — `ops/slurm/cluster/submit_md_batched.sh` (holo) and
-`submit_apo_md_batched.sh` (apo). 19 genotypes × 3 replicates × 100 ns, roughly
-38 GPU-hours per run. System preparation is
-`src/nnrti/structure_prep/preparation.py`; it is idempotent, so `--replicates N`
-adds replicates with fresh jitter seeds and leaves existing ones untouched.
-
-**FEP** — pmx non-equilibrium switching; see `ops/slurm/fep/README.md`.
-
-## Checksums
-
-`manifests/` records what exists in durable storage. Verify a restored copy with
-`sha256sum -c`.
+Tests check panel definitions, energy-table consistency, current structural-table inputs and formula/statistical propagation. Submission checksums provide a separate guard against accidental editing of the submitted package.

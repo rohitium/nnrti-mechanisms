@@ -1,0 +1,70 @@
+[
+  {
+    "from": "revisions/archive",
+    "to": "archive/revision-history"
+  },
+  {
+    "from": "archive/revision-history/history/archive",
+    "to": "archive/revision-history/history/earlier-drafts"
+  },
+  {
+    "from": "revisions/submission-ready/_archive",
+    "to": "archive/retired-upload-files"
+  },
+  {
+    "from": "revisions/analysis-updates",
+    "to": "archive/analysis-updates"
+  },
+  {
+    "from": "archive/analysis-updates/published-tables-backup-20261105",
+    "to": "archive/analysis-updates/table-snapshot-20261105"
+  },
+  {
+    "from": ".backup",
+    "to": "archive/local-snapshots"
+  },
+  {
+    "from": "paper/submission",
+    "to": "archive/original-submission"
+  },
+  {
+    "from": "paper/sources/Figures.pptx",
+    "to": "archive/original-figure-deck.pptx"
+  },
+  {
+    "from": "paper/tables/Table-3-structural.csv",
+    "to": "archive/original-table-3.csv"
+  },
+  {
+    "from": "revisions/STATUS.md",
+    "to": "archive/revision-status.md"
+  },
+  {
+    "from": "revisions/Discussion-Literature-Support.md",
+    "to": "archive/discussion-literature-support.md"
+  },
+  {
+    "from": "revisions/Figures.pptx",
+    "to": "paper/sources/Figures.pptx"
+  },
+  {
+    "from": "archive/revision-history/supporting-assets/figure1",
+    "to": "paper/sources/figure1"
+  },
+  {
+    "from": "ops/docx/sync_response_quotes.py",
+    "to": "archive/legacy-document-edits/sync_response_quotes.py"
+  },
+  {
+    "from": "ops/docx/revise_results_section.py",
+    "to": "archive/legacy-document-edits/revise_results_section.py"
+  },
+  {
+    "from": "ops/docx/apply_discussion_revision.py",
+    "to": "archive/legacy-document-edits/apply_discussion_revision.py"
+  },
+  {
+    "from": "ops/docx/build_si_tables.py",
+    "to": "archive/legacy-document-edits/build_si_tables.py"
+  }
+]

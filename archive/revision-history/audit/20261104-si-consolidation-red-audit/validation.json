@@ -1,0 +1,49 @@
+{
+  "existing_bibliography_entries_verified_black": 85,
+  "genuinely_new_bibliography_entries_red": 6,
+  "clean_marked_text_and_citation_identity": true,
+  "unchanged_example_paragraph_verified_black": true,
+  "table7_sheets": [
+    "Summary",
+    "NNIBP residues",
+    "Subdomains",
+    "DOR moieties",
+    "DOR dihedrals",
+    "NNIBP gates",
+    "NNRTI tyrosines",
+    "Tyrosine atoms"
+  ],
+  "all_merged_values_preserved": true,
+  "manuscript_prose_only_agreed_changes": true,
+  "author_input_hashes": {
+    "Response-to-Reviewers.docx": "05034a1b2d640241a465a3303a45bd00b1cffc47d56812f7eecf01b3ed92eddf",
+    "Supporting-Information-Clean.pdf": "b9ba4a77ead11b3e4b21f9c2da77127ad00d1c4f27c583594885d0778ac31880",
+    "Supplementary-Table-6.xlsx": "46f46c83b8038a03ba81726b5dc0ce00809dca375c42bafaead850e471568a47",
+    "Supplementary-Table-7.xlsx": "fdc67254522eb49927fb8b45bdca980782e8516a89363b98b6703b62ab6d6e01",
+    "Supporting-Information-Cover-Page-Clean.docx": "b2321a1a3973e0a787720e5ce07c9c1de1d51550dbcaa78b8cc8de2dbc421d3c",
+    "TOC-Graphic.pdf": "068714c79ed05fdd6b72d0bdc4447bbdd7d809bf66fd937cc66065c7da4ddc29",
+    "TOC-Graphic.tif": "9860a59fd251653305a730e68a9cbbfada11d4d0e6fc19e6ca7c96867f7f6449",
+    "Manuscript-Clean.docx": "65cea3412e996e4f3b8395bca99d60daed8c8cdeee65285a4d827a41adaf6bc2",
+    "Manuscript-Marked.docx": "b461304b8e200776521bbcd02f98529f70e5e8cce746f7266f465f18b0c34e94",
+    "Supplementary-Table-1.xlsx": "ef2ae8505151347fb4f606d2ef342c9c7788a725cdc188744bcb4c2047a71359",
+    "README.md": "33470d2e450222c0347226b209022ff4b8903c7c40d5a5847ace9d48fca0342d",
+    "Supplementary-Table-2.xlsx": "2c85f8bd97bfac9e39ca0dfaa767b8ef3b38de39df3a3d95c1c2dd10886672ff",
+    "Supplementary-Table-3.xlsx": "03773f88de0eba8e1649547ffbbf62a706e720887ff289fc920c5e6318aa261c",
+    "Supplementary-Table-8.xlsx": "4939d44c486c1fbf919dcfdcfa89f783d957808a2cd7ae77ee6dbdfb8a1f5f37",
+    "Supplementary-Table-4.xlsx": "1b8b5d1e5a06b1c7ccf4d4a6e7ff23d26b87d2e6591fcd46baf034f312d27f50",
+    "Supplementary-Table-5.xlsx": "59d57bf2f4a1010801ff095547aa02e2b31abf1f8a9adfdf2b1d159f264d9814",
+    "Supporting-Information-Clean.docx": "98a0bc337479416d3ef2a8b300aba3f73dca78e38d478d3089798bb8347ea536"
+  },
+  "updated_files": [
+    "Manuscript-Marked.docx",
+    "Manuscript-Clean.docx",
+    "Response-to-Reviewers.docx",
+    "Supporting-Information-Clean.docx",
+    "Supporting-Information-Cover-Page-Clean.docx",
+    "Supplementary-Table-7.xlsx",
+    "Supporting-Information-Clean.pdf",
+    "README.md"
+  ],
+  "retired_upload": "Supplementary-Table-8.xlsx",
+  "backup": "archive/history/20261104-si-consolidation-red-audit"
+}

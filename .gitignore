@@ -295,3 +295,19 @@ logistic_regression_only_residue/
 # live in /env at the repository root, so un-ignore that one directory only.
 !/env/
 !/env/*.yml
+
+# Local recovery copies; deliberately not part of the public research archive.
+/archive/local-snapshots/
+/archive/revision-history/history/backups/
+/archive/retired-upload-files/
+/paper/generated/
+
+# Runtime outputs stay local even when historical runs are relocated.
+*.trr
+*.xtc
+*.tpr
+*.cpt
+*.nc
+*.tar.gz
+*.zip
+results/analysis/fep_pmx/_archive/**

@@ -374,7 +374,7 @@ def main(argv: list[str] | None = None) -> int:
                         "crystal structure, -3 for the simulation topology. "
                         "Detected from the structure when not given.")
     p.add_argument("--manifest", type=Path, default=Path("manifests/md_manifest.csv"))
-    p.add_argument("--output-dir", type=Path, default=Path("revisions/figure1"))
+    p.add_argument("--output-dir", type=Path, default=Path("paper/generated/figure1"))
     p.add_argument("--pymol", type=Path, default=PYMOL_APP)
     args = p.parse_args(argv)
 

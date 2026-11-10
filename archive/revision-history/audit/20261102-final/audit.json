@@ -1,0 +1,17 @@
+{
+  "checks": 8464,
+  "failures": [],
+  "counts": {
+    "Table 1": 53,
+    "Table 2": 108,
+    "Table 3 FEP": 26,
+    "Table 4 summaries": 555,
+    "Table 4 replicates": 1665,
+    "Table 3": 170,
+    "Table 4 statistics": 5271,
+    "Figure matrix": 428,
+    "Table 5": 32,
+    "Table 6": 152,
+    "Table 6 agreement": 4
+  }
+}

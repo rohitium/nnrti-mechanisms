@@ -1,54 +1,30 @@
 # Doravirine resistance in HIV-1 reverse transcriptase
 
-Simulation code and derived data for *Molecular Simulation of Doravirine
-Resistance in HIV-1 Reverse Transcriptase* (Satija, Tao & Shafer).
+Code, derived data and manuscript materials for the JCIM revision submitted **10 November 2026** (ci-2026-030865). The study compares WT RT with 18 resistance-associated genotypes using equilibrium MD, nonequilibrium FEP and MM/GBSA. F227C is an additional alchemical intermediate.
 
-Wild-type HIV-1 RT and 18 doravirine-associated genotypes were simulated in
-explicit solvent, three 100 ns replicates each. For every genotype the effect of
-the substitution on doravirine binding was estimated two ways — a
-non-equilibrium alchemical free energy (ΔΔG_bind, pmx) and a
-wild-type-referenced MM/GBSA interface energy (ΔΔE_Total) — and compared with
-measured phenotypic susceptibility.
-
-## Install
+Start with the [submitted manuscript and SI](revisions/submission-ready/). The [artifact map](paper/ARTIFACTS.md) connects the current figure/table numbers to source data and commands. [REPRODUCE.md](REPRODUCE.md) explains setup, rebuilding and recovery of simulation data.
 
 ```bash
-conda env create -f environment.yml && conda activate nnrti-prep
-pip install -e .          # or: export PYTHONPATH=src
-pytest tests -q
+conda env create -f environment.yml
+conda activate nnrti-prep
+pip install -e .
+python -m nnrti.cli.manuscript --check --export
+# Rebuild plots and numerical tables from deposited derived data:
+./workflows/05_manuscript_artifacts.sh
+pytest -q
 ```
 
-## Quickstart
+Exports and rebuilds go to ignored `paper/generated/`. The submitted Word, PDF and Excel files are protected by SHA-256 checksums and are never build destinations. Figure 1, Figure 2 and some SI tables include curated composition or experimental inputs; their exact submitted versions can be exported without recreating that manual work.
 
-```bash
-./workflows/05_manuscript_artifacts.sh    # every table and figure, ~5 min
-```
-
-To go further back, `workflows/04_analysis.sh` rebuilds the derived tables from
-the trajectories (~2 h). Stages 1–3 build the systems and run the simulations
-and need a GPU cluster; see [REPRODUCE.md](REPRODUCE.md), which maps every
-numbered table and figure to the command that produces it.
-
-## Layout
-
-| Path | Contents |
+| Directory | Purpose |
 |---|---|
-| `workflows/` | Five numbered entry points, in the order the study ran |
-| `src/nnrti/` | The package: `md/` simulation protocol, `fep/` alchemical free energy, `analysis/` analysis library, `cli/` artifact scripts, `structure_prep/` system building |
-| `ops/` | Cluster operations: Slurm submission and runbooks, sync helpers, maintenance utilities |
-| `data/` | Inputs: structures, ligand, prepared systems, susceptibility data |
-| `results/` | Generated output — see [results/README.md](results/README.md) |
-| `paper/` | The manuscript and its artifacts — see [paper/ARTIFACTS.md](paper/ARTIFACTS.md) |
-| `manifests/` | Run manifests and archive inventories |
-| `docs/` | Methods notes and the project's decision record |
-| `environment.yml` | Conda specification (one file, all steps) |
+| `revisions/submission-ready/` | Frozen November submission: clean/marked manuscript, response, SI and seven workbooks |
+| `paper/` | Artifact map, submission checksums, editable figure sources and generated exports |
+| `src/nnrti/` | Scientific code and analysis CLIs |
+| `data/`, `manifests/` | Experimental inputs, structures, preparation inputs and run provenance |
+| `results/analysis/` | Derived numerical data and plots; source filenames may retain earlier figure numbers |
+| `workflows/` | Preparation, simulation, analysis and manuscript entry points |
+| `ops/` | Cluster jobs, transfers and document utilities |
+| `archive/` | All superseded documents, audits and local recovery copies |
 
-Directory constants are in `src/nnrti/paths.py`.
-
-## Data
-
-Raw solvent-stripped trajectories and per-switch free energy data are are available upon request.
-
-## Citing
-
-See [CITATION.cff](CITATION.cff). Licensed under the MIT License.
+Raw trajectories and large simulation intermediates are excluded from Git. Their storage locations and recovery limits are documented in [MD run data](docs/methods/md-run-data.md). GitHub does not back them up.

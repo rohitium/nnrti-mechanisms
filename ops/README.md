@@ -26,3 +26,5 @@ Submitted jobs set `PYTHONPATH` themselves; interactive shells do not.
   `git reset --hard` and `git add -A` will take the untracked data with them.
 - `/scratch` is purged after 90 days; durable copies carry a checksum manifest.
 - A run's progress is the last step in its `state.csv`.
+
+`docx/` contains reusable document inspection/editing utilities and the optional sensitivity-workbook builder. One-off scripts targeting retired revision drafts are preserved under `archive/legacy-document-edits/` and must not be used against the frozen submission. Manuscript export/rebuild uses `python -m nnrti.cli.manuscript`.

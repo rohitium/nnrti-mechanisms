@@ -24,6 +24,7 @@ Usage
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 import zipfile
@@ -32,6 +33,28 @@ import xml.etree.ElementTree as ET
 
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 ET.register_namespace("w", W[1:-1])
+
+
+def register_document_namespaces(xml: bytes) -> None:
+    """Keep the document's own namespace prefixes across a round trip.
+
+    ElementTree resolves by URI and invents a prefix for every namespace it
+    was not told about, so a document that went in with r:embed and wp:extent
+    comes out with ns3:embed and ns4:extent. Word does not care -- it reads
+    the URI -- but everything else does: ops/docx/replace_figure.py looks for
+    r:embed, a human diffing word/document.xml sees every drawing rewritten,
+    and the next tool to match on a prefix breaks silently on documents that
+    have passed through here.
+
+    Registering the prefixes the file actually declares makes the edit touch
+    only the runs it means to touch.
+    """
+    for prefix, uri in re.findall(
+            r'xmlns:([A-Za-z0-9_.-]+)="([^"]+)"', xml.decode("utf8", "replace")):
+        try:
+            ET.register_namespace(prefix, uri)
+        except ValueError:
+            pass
 
 
 def _runs(par):
@@ -100,6 +123,7 @@ def apply_edits(src: Path, dest: Path, edits: list[dict],
         names = z.namelist()
         blobs = {n: z.read(n) for n in names}
 
+    register_document_namespaces(blobs["word/document.xml"])
     root = ET.fromstring(blobs["word/document.xml"])
     body = root.find(f"{W}body")
     pars = [p for p in body.iter(f"{W}p")]
@@ -107,9 +131,15 @@ def apply_edits(src: Path, dest: Path, edits: list[dict],
     report = []
     for e in edits:
         old, new = e["old"], e["new"]
+        # A paragraph carrying a Zotero field is skipped unless the edit says
+        # otherwise. Several Results paragraphs cite a reference and also
+        # name a figure, and the figure renumbering has to reach them; the
+        # replacement still touches only the runs the match spans, so the
+        # field itself is never opened.
+        ok_fields = allow_fields or bool(e.get("allow_fields"))
         hits = [p for p in pars
                 if old in "".join(_run_text(r) for r in _runs(p))
-                and (allow_fields or not has_field(p))]
+                and (ok_fields or not has_field(p))]
         if len(hits) != 1:
             raise SystemExit(
                 f"REFUSED: {len(hits)} matches for {old[:70]!r}; "

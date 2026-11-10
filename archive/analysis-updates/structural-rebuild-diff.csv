@@ -1,0 +1,258 @@
+level,metric,state,genotype,replicate,published,rebuilt,change,published_err,rebuilt_err,was_resolved,now_resolved
+replicate,Tyr181 side-chain χ1 (°),apo,G190A,1.0,-75.73,-65.58,10.15,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,G190A,2.0,-58.57,-51.2,7.37,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,G190S,1.0,-57.76,-62.99,-5.23,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,G190S,3.0,-59.65,-57.91,1.74,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,K103N,3.0,-35.73,-47.83,-12.1,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,K103N+M230L,1.0,-67.68,-174.27,-106.59,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,K103N+M230L,3.0,-59.81,-78.35,-18.54,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,K103N+P225H,1.0,-89.38,-83.76,5.62,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,K103N+P225H,3.0,-69.21,-68.11,1.1,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,L100I+K103N,1.0,-86.8,-85.57,1.23,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,L100I+K103N,2.0,-53.7,-53.05,0.65,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,L100I+K103N,3.0,-78.17,-79.75,-1.58,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,V106A,2.0,-87.22,-83.35,3.87,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,V106A,3.0,-80.11,-81.36,-1.25,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,V106A+F227L,1.0,-79.91,-78.58,1.33,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,V106A+F227L,2.0,-74.62,-79.98,-5.36,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,V106A+F227L,3.0,-86.81,-122.15,-35.34,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,V106A+L234I,3.0,-70.6,-56.3,14.3,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,V106I,2.0,-49.88,-54.87,-4.99,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,V106I,3.0,-52.22,-46.75,5.47,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,V106I+F227C,3.0,-58.86,-60.05,-1.19,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,V106M,1.0,-44.33,-53.74,-9.41,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,WT,2.0,-65.26,-67.4,-2.14,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,WT,3.0,-72.56,-71.04,1.52,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,Y188L,1.0,-73.66,-64.21,9.45,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,Y188L,2.0,-60.11,-79.67,-19.56,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,Y188L,3.0,-52.38,-80.81,-28.43,,,,
+replicate,Tyr181 side-chain χ1 (°),apo,Y318F,3.0,-66.71,-65.93,0.78,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,G190A,1.0,-74.51,-124.79,-50.28,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,G190A,2.0,-73.83,-74.86,-1.03,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,G190S,1.0,-165.77,-174.21,-8.44,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,G190S,3.0,-68.49,-68.1,0.39,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,K103N,3.0,-77.1,178.88,-104.02,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,K103N+M230L,1.0,-76.14,-65.75,10.39,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,K103N+M230L,3.0,-90.93,-124.45,-33.52,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,K103N+P225H,1.0,-68.8,-67.96,0.84,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,K103N+P225H,3.0,174.34,174.92,0.58,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,L100I+K103N,1.0,-173.13,-178.48,-5.35,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,L100I+K103N,2.0,-72.28,-72.16,0.12,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,L100I+K103N,3.0,178.73,176.45,-2.28,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,V106A,2.0,173.56,172.71,-0.85,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,V106A,3.0,-72.64,-71.98,0.66,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,V106A+F227L,1.0,-68.34,-68.21,0.13,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,V106A+F227L,2.0,-76.67,-106.4,-29.73,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,V106A+F227L,3.0,-58.2,-90.27,-32.07,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,V106A+L234I,3.0,-68.79,-64.84,3.95,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,V106I,2.0,-75.82,-83.21,-7.39,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,V106I,3.0,-73.26,-72.96,0.3,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,V106I+F227C,3.0,-166.02,-172.85,-6.83,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,V106M,1.0,-70.81,-94.13,-23.32,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,WT,2.0,-178.6,-179.89,-1.29,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,WT,3.0,-69.55,-69.39,0.16,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,Y181C,2.0,-58.95,20.62,79.57,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,Y181C,3.0,-79.15,-75.63,3.52,,,,
+replicate,Tyr188 side-chain χ1 (°),apo,Y318F,3.0,174.76,174.7,-0.06,,,,
+replicate,"Cα RMSF, NNIBP lining (Å)",apo,V106A,2.0,0.461,0.479,0.018,,,,
+replicate,"Cα RMSF, NNIBP lining (Å)",apo,V106A,3.0,0.391,0.427,0.036,,,,
+replicate,"Cα RMSF, primer grip 225–235 (Å)",apo,V106A,2.0,0.632,0.638,0.006,,,,
+replicate,"Cα RMSF, primer grip 225–235 (Å)",apo,V106A,3.0,0.531,0.586,0.055,,,,
+replicate,"Cα RMSF, YMDD motif 183–186 (Å)",apo,V106A,2.0,0.711,0.834,0.123,,,,
+replicate,"Cα RMSF, YMDD motif 183–186 (Å)",apo,V106A,3.0,0.805,0.828,0.023,,,,
+replicate,"Cα RMSF, p66 fingers (Å)",apo,V106A,2.0,2.245,2.49,0.245,,,,
+replicate,"Cα RMSF, p66 fingers (Å)",apo,V106A,3.0,2.115,2.437,0.322,,,,
+replicate,"Cα RMSF, p66 thumb (Å)",apo,V106A,2.0,1.811,1.933,0.122,,,,
+replicate,"Cα RMSF, p66 thumb (Å)",apo,V106A,3.0,1.734,1.899,0.165,,,,
+replicate,"Cα RMSF, p66 connection (Å)",apo,V106A,2.0,1.459,1.623,0.164,,,,
+replicate,"Cα RMSF, p66 connection (Å)",apo,V106A,3.0,1.307,1.347,0.04,,,,
+replicate,β9–β10 strand content (fraction),apo,V106A,2.0,0.828,0.826,-0.002,,,,
+replicate,β9–β10 strand content (fraction),apo,V106A,3.0,0.771,0.775,0.004,,,,
+figure5,NNIBP volume (Å³),,A98G+F227C,,22.45,22.45,0.0,18.9,18.9,False,False
+figure5,NNIBP volume (Å³),,F227C,,-2.51,-2.51,0.0,18.67,18.67,False,False
+figure5,NNIBP volume (Å³),,G190A,,20.25,20.25,0.0,15.72,15.72,False,False
+figure5,NNIBP volume (Å³),,G190E,,70.71,70.71,0.0,26.2,26.2,True,True
+figure5,NNIBP volume (Å³),,G190S,,65.13,65.13,0.0,27.01,27.01,True,True
+figure5,NNIBP volume (Å³),,K103N,,10.5,10.5,0.0,18.51,18.51,False,False
+figure5,NNIBP volume (Å³),,K103N+M230L,,1.83,1.83,0.0,28.39,28.39,False,False
+figure5,NNIBP volume (Å³),,K103N+P225H,,-10.77,-10.77,0.0,18.96,18.96,False,False
+figure5,NNIBP volume (Å³),,L100I+K103N,,18.36,18.36,0.0,19.44,19.44,False,False
+figure5,NNIBP volume (Å³),,V106A,,-7.28,-7.28,0.0,28.64,28.64,False,False
+figure5,NNIBP volume (Å³),,V106A+F227L,,-31.77,-31.77,0.0,16.37,16.37,False,False
+figure5,NNIBP volume (Å³),,V106A+L234I,,-40.78,-40.78,0.0,28.31,28.31,False,False
+figure5,NNIBP volume (Å³),,V106A+P225H,,-47.9,-47.9,0.0,18.28,18.28,True,True
+figure5,NNIBP volume (Å³),,V106I,,39.65,39.65,0.0,17.33,17.33,False,False
+figure5,NNIBP volume (Å³),,V106I+F227C,,18.52,18.52,0.0,24.74,24.74,False,False
+figure5,NNIBP volume (Å³),,V106M,,33.47,33.47,0.0,27.08,27.08,False,False
+figure5,NNIBP volume (Å³),,Y181C,,1.67,1.67,0.0,22.0,22.0,False,False
+figure5,NNIBP volume (Å³),,Y188L,,34.66,34.66,0.0,22.5,22.5,False,False
+figure5,NNIBP volume (Å³),,Y318F,,18.31,18.31,0.0,19.85,19.85,False,False
+figure5,Tyr181 side-chain χ1 (°),,A98G+F227C,,-75.95,-76.15,-0.21,13.42,13.31,True,True
+figure5,Tyr181 side-chain χ1 (°),,F227C,,17.53,17.33,-0.21,6.22,5.97,True,True
+figure5,Tyr181 side-chain χ1 (°),,G190A,,0.38,-5.66,-6.04,9.29,7.03,False,False
+figure5,Tyr181 side-chain χ1 (°),,G190E,,-1.16,-1.37,-0.21,37.54,37.5,False,False
+figure5,Tyr181 side-chain χ1 (°),,G190S,,-82.93,-81.97,0.96,33.11,33.21,True,True
+figure5,Tyr181 side-chain χ1 (°),,K103N,,-12.54,-8.71,3.82,12.08,9.83,False,False
+figure5,Tyr181 side-chain χ1 (°),,K103N+M230L,,7.9,45.87,37.97,9.07,30.81,False,False
+figure5,Tyr181 side-chain χ1 (°),,K103N+P225H,,-3.39,-5.82,-2.43,17.45,16.41,False,False
+figure5,Tyr181 side-chain χ1 (°),,L100I+K103N,,9.61,9.32,-0.29,12.26,12.21,False,False
+figure5,Tyr181 side-chain χ1 (°),,V106A,,-34.53,-35.63,-1.1,33.15,33.14,False,False
+figure5,Tyr181 side-chain χ1 (°),,V106A+F227L,,6.68,19.29,12.61,6.03,15.0,False,False
+figure5,Tyr181 side-chain χ1 (°),,V106A+L234I,,-10.04,-15.01,-4.97,8.51,8.28,False,False
+figure5,Tyr181 side-chain χ1 (°),,V106A+P225H,,23.32,23.12,-0.21,16.82,16.73,False,False
+figure5,Tyr181 side-chain χ1 (°),,V106I,,-15.98,-16.35,-0.37,5.37,5.55,True,True
+figure5,Tyr181 side-chain χ1 (°),,V106I+F227C,,9.27,9.45,0.18,9.97,9.53,False,False
+figure5,Tyr181 side-chain χ1 (°),,V106M,,-0.31,2.72,3.03,15.03,13.44,False,False
+figure5,Tyr181 side-chain χ1 (°),,Y188L,,-2.56,10.1,12.67,13.43,12.93,False,False
+figure5,Tyr181 side-chain χ1 (°),,Y318F,,11.74,11.28,-0.47,7.16,7.1,False,False
+figure5,Tyr188 side-chain χ1 (°),,A98G+F227C,,33.35,33.34,-0.02,49.87,50.21,False,False
+figure5,Tyr188 side-chain χ1 (°),,F227C,,-4.64,-4.65,-0.02,43.75,44.13,False,False
+figure5,Tyr188 side-chain χ1 (°),,G190A,,-5.8,12.39,18.19,41.06,41.27,False,False
+figure5,Tyr188 side-chain χ1 (°),,G190E,,43.29,43.27,-0.02,48.89,49.24,False,False
+figure5,Tyr188 side-chain χ1 (°),,G190S,,42.06,45.78,3.73,50.6,51.89,False,False
+figure5,Tyr188 side-chain χ1 (°),,K103N,,6.8,56.59,49.79,52.25,53.49,False,False
+figure5,Tyr188 side-chain χ1 (°),,K103N+M230L,,-20.77,-14.05,6.72,38.31,42.98,False,False
+figure5,Tyr188 side-chain χ1 (°),,K103N+P225H,,5.82,5.39,-0.43,53.29,53.57,False,False
+figure5,Tyr188 side-chain χ1 (°),,L100I+K103N,,56.7,60.11,3.41,51.21,52.41,False,False
+figure5,Tyr188 side-chain χ1 (°),,V106A,,9.49,9.27,-0.22,52.14,52.75,False,False
+figure5,Tyr188 side-chain χ1 (°),,V106A+F227L,,-27.35,-6.77,20.58,37.58,39.25,False,False
+figure5,Tyr188 side-chain χ1 (°),,V106A+L234I,,-19.94,-21.27,-1.33,37.78,38.28,False,False
+figure5,Tyr188 side-chain χ1 (°),,V106A+P225H,,-18.66,-18.68,-0.02,37.62,38.07,False,False
+figure5,Tyr188 side-chain χ1 (°),,V106I,,-18.66,-16.3,2.35,37.27,37.77,False,False
+figure5,Tyr188 side-chain χ1 (°),,V106I+F227C,,5.3,6.5,1.2,48.1,49.91,False,False
+figure5,Tyr188 side-chain χ1 (°),,V106M,,-25.96,-18.21,7.74,37.3,38.26,False,False
+figure5,Tyr188 side-chain χ1 (°),,Y181C,,3.4,-28.14,-31.54,54.65,71.04,False,False
+figure5,Tyr188 side-chain χ1 (°),,Y318F,,95.48,95.49,0.0,37.27,37.72,True,True
+figure5,"Cα RMSF, NNIBP lining (Å)",,A98G+F227C,,0.11,0.11,0.0,0.04,0.04,True,True
+figure5,"Cα RMSF, NNIBP lining (Å)",,F227C,,0.05,0.05,0.0,0.03,0.03,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,G190A,,-0.01,-0.01,0.0,0.06,0.06,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,G190E,,0.04,0.04,0.0,0.11,0.11,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,G190S,,0.07,0.07,0.0,0.06,0.06,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,K103N,,0.05,0.05,0.0,0.04,0.04,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,K103N+M230L,,-0.05,-0.05,0.0,0.05,0.05,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,K103N+P225H,,-0.01,-0.01,0.0,0.08,0.08,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,L100I+K103N,,0.05,0.05,0.0,0.03,0.03,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,V106A,,0.01,-0.01,-0.02,0.06,0.05,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,V106A+F227L,,-0.05,-0.05,0.0,0.04,0.04,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,V106A+L234I,,-0.03,-0.03,0.0,0.04,0.04,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,V106A+P225H,,-0.03,-0.03,0.0,0.05,0.05,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,V106I,,0.07,0.07,0.0,0.03,0.03,True,True
+figure5,"Cα RMSF, NNIBP lining (Å)",,V106I+F227C,,0.01,0.01,0.0,0.03,0.03,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,V106M,,0.06,0.06,0.0,0.09,0.09,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,Y181C,,0.03,0.03,0.0,0.05,0.05,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,Y188L,,0.02,0.02,0.0,0.04,0.04,False,False
+figure5,"Cα RMSF, NNIBP lining (Å)",,Y318F,,0.05,0.05,0.0,0.03,0.03,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,A98G+F227C,,0.08,0.08,0.0,0.08,0.08,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,F227C,,-0.0,-0.0,0.0,0.05,0.05,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,G190A,,0.03,0.03,0.0,0.06,0.06,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,G190E,,-0.08,-0.08,0.0,0.19,0.19,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,G190S,,0.04,0.04,0.0,0.06,0.06,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,K103N,,0.04,0.04,0.0,0.08,0.08,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,K103N+M230L,,-0.16,-0.16,0.0,0.06,0.06,True,True
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,K103N+P225H,,0.06,0.06,0.0,0.09,0.09,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,L100I+K103N,,0.04,0.04,0.0,0.07,0.07,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,V106A,,-0.04,-0.06,-0.02,0.09,0.08,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,V106A+F227L,,-0.04,-0.04,0.0,0.07,0.07,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,V106A+L234I,,-0.07,-0.07,0.0,0.1,0.1,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,V106A+P225H,,-0.07,-0.07,0.0,0.08,0.08,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,V106I,,0.14,0.14,0.0,0.06,0.06,True,True
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,V106I+F227C,,-0.0,-0.0,0.0,0.06,0.06,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,V106M,,0.1,0.1,0.0,0.12,0.12,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,Y181C,,-0.02,-0.02,0.0,0.09,0.09,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,Y188L,,0.06,0.06,0.0,0.07,0.07,False,False
+figure5,"Cα RMSF, primer grip 225–235 (Å)",,Y318F,,0.06,0.06,0.0,0.06,0.06,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,A98G+F227C,,0.24,0.24,0.0,0.24,0.24,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,F227C,,0.06,0.06,0.0,0.23,0.23,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,G190A,,0.02,0.02,0.0,0.24,0.24,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,G190E,,0.08,0.08,0.0,0.29,0.29,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,G190S,,0.33,0.33,0.0,0.22,0.22,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,K103N,,0.17,0.17,0.0,0.25,0.25,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,K103N+M230L,,-0.28,-0.28,0.0,0.36,0.36,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,K103N+P225H,,0.03,0.03,0.0,0.32,0.32,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,L100I+K103N,,0.01,0.01,0.0,0.23,0.23,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,V106A,,-0.13,-0.18,-0.05,0.28,0.26,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,V106A+F227L,,-0.15,-0.15,0.0,0.27,0.27,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,V106A+L234I,,-0.1,-0.1,0.0,0.24,0.24,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,V106A+P225H,,-0.18,-0.18,0.0,0.26,0.26,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,V106I,,-0.0,-0.0,0.0,0.31,0.31,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,V106I+F227C,,0.2,0.2,0.0,0.24,0.24,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,V106M,,0.16,0.16,0.0,0.21,0.21,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,Y181C,,-0.01,-0.01,0.0,0.21,0.21,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,Y188L,,0.01,0.01,0.0,0.22,0.22,False,False
+figure5,"Cα RMSF, YMDD motif 183–186 (Å)",,Y318F,,0.12,0.12,0.0,0.22,0.22,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,A98G+F227C,,0.65,0.65,0.0,0.32,0.32,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,F227C,,0.29,0.29,0.0,0.35,0.35,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,G190A,,0.25,0.25,0.0,0.32,0.32,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,G190E,,0.51,0.51,0.0,0.36,0.36,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,G190S,,0.55,0.55,0.0,0.37,0.37,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,K103N,,0.72,0.72,0.0,0.42,0.42,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,K103N+M230L,,0.38,0.38,0.0,0.54,0.54,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,K103N+P225H,,0.1,0.1,0.0,0.78,0.78,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,L100I+K103N,,0.34,0.34,0.0,0.3,0.3,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,V106A,,0.48,0.29,-0.19,0.39,0.35,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,V106A+F227L,,0.2,0.2,0.0,0.31,0.31,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,V106A+L234I,,0.04,0.04,0.0,0.37,0.37,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,V106A+P225H,,0.35,0.35,0.0,0.37,0.37,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,V106I,,0.42,0.42,0.0,0.41,0.41,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,V106I+F227C,,0.16,0.16,0.0,0.34,0.34,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,V106M,,0.25,0.25,0.0,0.32,0.32,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,Y181C,,0.54,0.54,0.0,0.42,0.42,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,Y188L,,0.36,0.36,0.0,0.35,0.35,False,False
+figure5,"Cα RMSF, p66 fingers (Å)",,Y318F,,0.61,0.61,0.0,0.33,0.33,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,A98G+F227C,,0.19,0.19,0.0,0.4,0.4,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,F227C,,0.33,0.33,0.0,0.38,0.38,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,G190A,,-0.06,-0.06,0.0,0.39,0.39,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,G190E,,-0.49,-0.49,0.0,0.82,0.82,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,G190S,,0.12,0.12,0.0,0.43,0.43,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,K103N,,0.06,0.06,0.0,0.4,0.4,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,K103N+M230L,,-0.5,-0.5,0.0,0.46,0.46,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,K103N+P225H,,-1.15,-1.15,0.0,0.98,0.98,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,L100I+K103N,,0.14,0.14,0.0,0.4,0.4,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,V106A,,-0.26,-0.35,-0.1,0.53,0.49,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,V106A+F227L,,-0.32,-0.32,0.0,0.38,0.38,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,V106A+L234I,,-0.31,-0.31,0.0,0.42,0.42,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,V106A+P225H,,-0.16,-0.16,0.0,0.41,0.41,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,V106I,,0.17,0.17,0.0,0.39,0.39,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,V106I+F227C,,-0.04,-0.04,0.0,0.48,0.48,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,V106M,,0.06,0.06,0.0,0.45,0.45,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,Y181C,,0.26,0.26,0.0,0.48,0.48,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,Y188L,,0.12,0.12,0.0,0.42,0.42,False,False
+figure5,"Cα RMSF, p66 thumb (Å)",,Y318F,,-0.31,-0.31,0.0,0.42,0.42,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,A98G+F227C,,0.3,0.3,0.0,0.18,0.18,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,F227C,,0.33,0.33,0.0,0.2,0.2,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,G190A,,-0.03,-0.03,0.0,0.16,0.16,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,G190E,,-0.18,-0.18,0.0,0.7,0.7,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,G190S,,0.25,0.25,0.0,0.18,0.18,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,K103N,,0.13,0.13,0.0,0.22,0.22,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,K103N+M230L,,-0.07,-0.07,0.0,0.18,0.18,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,K103N+P225H,,-1.51,-1.51,0.0,1.17,1.17,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,L100I+K103N,,0.06,0.06,0.0,0.18,0.18,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,V106A,,-0.06,-0.12,-0.07,0.31,0.29,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,V106A+F227L,,-0.19,-0.19,0.0,0.17,0.17,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,V106A+L234I,,-0.28,-0.28,0.0,0.18,0.18,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,V106A+P225H,,-0.13,-0.13,0.0,0.18,0.18,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,V106I,,0.09,0.09,0.0,0.21,0.21,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,V106I+F227C,,0.07,0.07,0.0,0.33,0.33,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,V106M,,0.2,0.2,0.0,0.28,0.28,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,Y181C,,0.27,0.27,0.0,0.21,0.21,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,Y188L,,-0.01,-0.01,0.0,0.21,0.21,False,False
+figure5,"Cα RMSF, p66 connection (Å)",,Y318F,,0.15,0.15,0.0,0.19,0.19,False,False
+figure5,β9–β10 strand content (fraction),,A98G+F227C,,-0.05,-0.05,0.0,0.06,0.06,False,False
+figure5,β9–β10 strand content (fraction),,F227C,,-0.04,-0.04,0.0,0.06,0.06,False,False
+figure5,β9–β10 strand content (fraction),,G190A,,-0.04,-0.04,0.0,0.06,0.06,False,False
+figure5,β9–β10 strand content (fraction),,G190E,,-0.12,-0.12,0.0,0.07,0.07,False,False
+figure5,β9–β10 strand content (fraction),,G190S,,-0.04,-0.04,0.0,0.06,0.06,False,False
+figure5,β9–β10 strand content (fraction),,K103N,,-0.06,-0.06,0.0,0.07,0.07,False,False
+figure5,β9–β10 strand content (fraction),,K103N+M230L,,-0.04,-0.04,0.0,0.06,0.06,False,False
+figure5,β9–β10 strand content (fraction),,K103N+P225H,,0.01,0.01,0.0,0.07,0.07,False,False
+figure5,β9–β10 strand content (fraction),,L100I+K103N,,-0.05,-0.05,0.0,0.07,0.07,False,False
+figure5,β9–β10 strand content (fraction),,V106A,,-0.02,-0.03,-0.0,0.06,0.06,False,False
+figure5,β9–β10 strand content (fraction),,V106A+F227L,,-0.04,-0.04,0.0,0.07,0.07,False,False
+figure5,β9–β10 strand content (fraction),,V106A+L234I,,-0.06,-0.06,0.0,0.07,0.07,False,False
+figure5,β9–β10 strand content (fraction),,V106A+P225H,,-0.04,-0.04,0.0,0.06,0.06,False,False
+figure5,β9–β10 strand content (fraction),,V106I,,-0.03,-0.03,0.0,0.06,0.06,False,False
+figure5,β9–β10 strand content (fraction),,V106I+F227C,,-0.05,-0.05,0.0,0.06,0.06,False,False
+figure5,β9–β10 strand content (fraction),,V106M,,-0.06,-0.06,0.0,0.09,0.09,False,False
+figure5,β9–β10 strand content (fraction),,Y181C,,-0.04,-0.04,0.0,0.06,0.06,False,False
+figure5,β9–β10 strand content (fraction),,Y188L,,-0.02,-0.02,0.0,0.07,0.07,False,False
+figure5,β9–β10 strand content (fraction),,Y318F,,-0.03,-0.03,0.0,0.06,0.06,False,False

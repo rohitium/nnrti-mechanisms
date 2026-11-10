@@ -1,0 +1,7 @@
+pose,family,rmsd_angstrom,long_axis_tilt_deg,centroid_shift_angstrom,min_contact_angstrom,n_contacts_below_2.0,n_contacts_below_2.5,n_contacts_below_3.0
+crystal,reference,0.0,0.0,0.0,2.791,0,0,1
+tilt_01,alternative,2.439,36.22,0.774,1.94,2,10,29
+tilt_02,alternative,6.701,107.32,0.796,1.982,1,15,43
+tilt_03,alternative,5.417,95.32,0.679,1.95,2,15,36
+tilt_04,alternative,1.716,25.81,0.785,2.046,0,13,40
+tilt_05,alternative,6.947,161.26,0.899,1.901,3,15,47

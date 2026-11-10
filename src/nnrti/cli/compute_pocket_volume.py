@@ -78,6 +78,12 @@ def _process_job(job: dict, pocket_max_frames: int) -> dict:
         "pocket_volume_mean": float(np.mean(vals)),
         "pocket_volume_std": float(np.std(vals)),
         "total_ns": float(job["production_ps"] / 1000.0),
+        # The frames themselves, so a distribution can be drawn over the same
+        # values the per-replicate mean is taken from. A violin over three
+        # replicate means shows the spread between replicates, not the spread
+        # of the pocket, and the two are not the same quantity.
+        "frames": [int(f) for f in idx],
+        "volumes": [float(v) for v in vals],
     }
 
 
@@ -134,6 +140,19 @@ def main() -> int:
     per_rep = pd.DataFrame(rows).sort_values(["mutation", "replicate"]).reset_index(drop=True)
     per_rep = per_rep[["mutation", "replicate", "pocket_volume_mean", "pocket_volume_std", "total_ns"]]
     per_rep.to_csv(tables / "pocket_volume_per_rep.csv", index=False)
+
+    # Per-frame companion. Same trajectories, same frame subset and the same
+    # volume proxy as the per-replicate means above, so the distribution and
+    # the published mean cannot drift apart.
+    frame_rows = []
+    for r in rows:
+        for f, v in zip(r.get("frames", []), r.get("volumes", [])):
+            frame_rows.append({"mutation": r["mutation"], "replicate": r["replicate"],
+                               "frame": f, "pocket_volume": v,
+                               "total_ns": r["total_ns"]})
+    if frame_rows:
+        pd.DataFrame(frame_rows).to_csv(tables / "pocket_volume_per_frame.csv",
+                                        index=False)
 
     per_geno = (
         per_rep.groupby("mutation", as_index=False)["pocket_volume_mean"]

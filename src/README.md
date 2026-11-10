@@ -1,29 +1,16 @@
-# `src/nnrti/`
+# Scientific package
 
-The package. Importable as `nnrti` after `pip install -e .` or
-`export PYTHONPATH=src`. Every entry point is
-`python -m nnrti.<subpackage>.<module>`.
+Install with `pip install -e .`, or set `PYTHONPATH=src`. CLI entry points use `python -m nnrti.cli.MODULE`; the manuscript entry point is `nnrti.cli.manuscript`.
 
-| Subpackage | Contents |
+| Package | Purpose |
 |---|---|
-| `structure_prep/` | Structure and mutation preparation: run specifications, WT and mutant system building, manifest creation, mutation parsing and numbering |
-| `md/` | MD runtime: task schema and CSV IO, the one-task execution entry point, and `openmm/` — staged heating and NPT production, minimisation, restraints, ligand parameterisation, MM/GBSA |
-| `fep/` | Non-equilibrium alchemical free energy with pmx and GROMACS: hybrid topology preparation, switching, BAR/CGI/Jarzynski estimation, charge correction, panel assembly |
-| `analysis/` | Analysis library: trajectory metrics, periodic-boundary handling, unit conversion, susceptibility loading, the genotype panel definition, result collection |
-| `cli/` | The 16 scripts that produce a numbered figure or table. `paper/ARTIFACTS.md` maps each to its artifact |
-| `utils/` | CIF parsing, mutation string handling, residue mapping, path helpers |
+| `structure_prep/` | Structures, mutation parsing, residue numbering and preparation manifests |
+| `md/` | OpenMM preparation, production, minimization and MM/GBSA |
+| `fep/` | pmx/GROMACS switching, estimators, corrections and panel assembly |
+| `analysis/` | Trajectory metrics, PBC, susceptibility, panel definitions and workbook formulas |
+| `cli/` | Analysis, plotting and table commands, including exploratory and legacy utilities |
+| `utils/` | Shared structure and path helpers |
 
-Directory constants are in `paths.py`.
+`nnrti.paths` defines common directories. [The artifact map](../paper/ARTIFACTS.md) identifies current publication commands; not every CLI produces a current figure.
 
-## Trajectory time
-
-Simulation time is derived from the run record rather than read from trajectory
-metadata, which is not reliable for these files:
-
-```python
-production_ps = md_production_steps_completed * timestep_fs / 1000.0
-time_ps = (frame_index + 1) * production_ps / n_frames
-```
-
-`analysis/md_timing.py` implements this; the profile workers in
-`analysis/result_collector.py` use it.
+DCD header times and run JSON status can be misleading. Some legacy analysis routines use timing fingerprints and interpolation; inspect them before analysing new or extended runs. Verify physical time from the step records and restart history rather than assuming frame count gives duration. See [MD run data](../docs/methods/md-run-data.md).

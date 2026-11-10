@@ -438,12 +438,14 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--output-dir", type=Path,
                     default=RES / "supplementary_figures")
+    ap.add_argument("--convergence-only", action="store_true", help="Build current Supplementary Figure 3 only.")
     args = ap.parse_args(argv)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     plt = _style()
     figure1(plt, args.output_dir)
-    figure4(plt, args.output_dir)
-    figure5(plt, args.output_dir)
+    if not args.convergence_only:
+        figure4(plt, args.output_dir)
+        figure5(plt, args.output_dir)
     print(f"wrote to {args.output_dir.relative_to(ROOT)}")
     return 0
 

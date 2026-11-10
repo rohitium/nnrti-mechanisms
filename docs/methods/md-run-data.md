@@ -1,5 +1,7 @@
 # MD run data
 
+Storage inventory below was recorded in October–November 2026, not verified by the repository cleanup. Check current manifests and live job paths before assuming any backup is complete.
+
 Where every class of simulation data lives, which copies are durable, and how
 to tell a finished run from an interrupted one. `CLAUDE.md` carries the short
 version; this is the reference.
@@ -34,7 +36,7 @@ under `/scratch/users/$USER/` before concluding that any data is missing.**
 | path | role |
 |---|---|
 | `$SCRATCH/nnrti-mechanisms-git` | **the canonical Sherlock working tree.** 550 GB: all 60 apo replicates, `results/analysis/fep_pmx`, holo runs, pose ladders. Jobs are submitted against this. Its own git checkout is stale — ignore it |
-| `$SCRATCH/nnrti-mechanisms` | a purged shell. Held no real files as of 2026-10-31 beyond a transient apo staging copy. Not the project tree |
+| `$SCRATCH/nnrti-mechanisms` | historically a mostly purged shell as of 2026-10-31; some resumed jobs may still reference this path. Inspect squeue/logs before treating it as unused |
 | `$GROUP_HOME/nnrti-mechanisms-repo` | the durable **code** checkout, kept in sync with GitHub |
 | `$GROUP_HOME/nnrti-mechanisms` | durable **data**: `fep_raw/` archives and an `md_runs/` mirror |
 

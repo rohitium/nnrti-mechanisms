@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Two-panel molecular-mechanism figure.
+"""Three-panel molecular-mechanism figure.
 
 One panel per mechanism, each showing the replicate-averaged trajectory of the
 coordinate that best separates the genotype group from WT:
 
   A  Y188L   burial of the DOR chlorocyanophenyl ring
   B  V106A   displacement of DOR toward Ser105, with loss of overall packing
+  C  G190    expansion of the NNIBP, graded by the size of the residue 190
+             side chain
 
 Traces are means over replicates on a common time grid truncated to the
 shortest replicate; shading is the SEM across replicates, matching the
@@ -17,6 +19,8 @@ import argparse
 from pathlib import Path
 
 import numpy as np
+import textwrap
+
 import pandas as pd
 
 WT_COLOUR = "#B2182B"
@@ -28,16 +32,18 @@ PANELS = [
         column="chl_ring_burial",
         # A count of atom PAIRS within 4.0 A, not of atoms: an RT atom close to
         # three ring atoms contributes three.
-        ylabel="DOR ring burial\n(RT heavy-atom contacts < 4.0 Å)",
-        title="Y188L: loss of aromatic packing",
+        ylabel="DOR chlorocyanophenyl ring burial\n(RT heavy-atom contacts < 4.0 Å)",
+        title="Y188L causes loss of aromatic packing between the DOR "
+              "chlorocyanophenyl ring and Tyr188 sidechain",
         legend_loc="upper center",
         series=[("Y188L", "#08519C", 2.4, "-")],
     ),
     dict(
         tag="B",
         column="dor_to_S105_mindist",
-        ylabel="DOR displacement\n(distance to Ser105, Å)",
-        title="V106A: DOR slips out of position",
+        ylabel="DOR displacement from the crystallographic pose\n"
+               "(minimum distance to Ser105, Å)",
+        title="V106A causes DOR to slip out of its crystal structure pose",
         legend_loc="upper center",
         series=[
             ("V106A", "#08519C", 2.2, "-"),
@@ -46,32 +52,67 @@ PANELS = [
             ("V106A+P225H", "#6BAED6", 1.6, "-"),
         ],
     ),
+    dict(
+        tag="C",
+        # Not in mechanism_coordinates.csv: the pocket volume is computed by a
+        # separate pass over the PBC-corrected trajectories.
+        csv=Path("results/analysis/pocket_volume/tables/"
+                 "holo_volume_per_frame.csv"),
+        column="pocket_volume",
+        ylabel="NNIBP volume (\u00c5\u00b3)",
+        # Only G190E is resolved against WT (+57 +/- 10 A^3); G190A is +5 A^3
+        # and is plotted as the contrast, so the title names only G190E.
+        title="G190E expands the DOR binding pocket",
+        legend_loc="upper center",
+        # G190E rep_03 stops at 77.7 ns; carry the trace to the end of the
+        # longest replicate rather than truncating the genotype there.
+        extend=True,
+        # Ordered by side-chain size, and shaded to match.
+        series=[
+            ("G190A", "#6BAED6", 1.8, "-"),
+            ("G190E", "#08519C", 2.2, "-"),
+        ],
+    ),
 ]
 
 
-def traces(df: pd.DataFrame, column: str, mutations: list[str]) -> dict:
+def traces(df: pd.DataFrame, column: str, mutations: list[str],
+           extend: bool = False) -> dict:
+    """Replicate mean and SEM of `column` on a common time grid.
+
+    By default the grid stops at the shortest replicate. With `extend`, it
+    runs to the longest, and past a replicate's own end that replicate drops
+    out of the average: the trace continues on the remaining replicates
+    rather than ending, and its SEM band changes width where n changes.
+    """
     out = {}
     for mutation in mutations:
         block = df[df["mutation"] == mutation]
         reps = [r for _k, r in block.groupby("replicate") if r[column].notna().any()]
         if len(reps) < 2:
             continue
-        t_end = min(float(r["time_ns"].max()) for r in reps)
-        grid = np.linspace(0.0, t_end, GRID_POINTS)
-        curves = np.vstack(
-            [
-                np.interp(
-                    grid,
-                    r["time_ns"].to_numpy(),
-                    pd.to_numeric(r[column], errors="coerce")
-                    .interpolate(limit_direction="both")
-                    .to_numpy(),
-                )
-                for r in reps
-            ]
-        )
-        n = curves.shape[0]
-        out[mutation] = (grid, curves.mean(axis=0), curves.std(axis=0, ddof=1) / np.sqrt(n))
+        ends = [float(r["time_ns"].max()) for r in reps]
+        grid = np.linspace(0.0, max(ends) if extend else min(ends), GRID_POINTS)
+        rows = []
+        for r in reps:
+            t = r["time_ns"].to_numpy()
+            y = (
+                pd.to_numeric(r[column], errors="coerce")
+                .interpolate(limit_direction="both")
+                .to_numpy()
+            )
+            curve = np.interp(grid, t, y)
+            # np.interp holds the last value flat beyond the data; blank it
+            # instead so a finished replicate does not fake a plateau.
+            curve[grid > t.max()] = np.nan
+            rows.append(curve)
+        curves = np.vstack(rows)
+        n = np.isfinite(curves).sum(axis=0)
+        with np.errstate(invalid="ignore"):
+            mean = np.nanmean(curves, axis=0)
+            sd = np.nanstd(curves, axis=0, ddof=1)
+        sem = np.where(n > 1, sd / np.sqrt(np.maximum(n, 1)), 0.0)
+        out[mutation] = (grid, mean, sem)
     return out
 
 
@@ -96,11 +137,25 @@ def main() -> int:
     args = p.parse_args()
 
     df = pd.read_csv(args.csv)
-    fig, axes = plt.subplots(1, 2, figsize=(13.0, 5.2))
+    # A panel may read its coordinate from its own file; cache so a second
+    # panel on the same file does not re-read it.
+    extra: dict[Path, pd.DataFrame] = {}
 
-    for spec, ax in zip(PANELS, axes.ravel()):
+    def frame_for(spec) -> pd.DataFrame:
+        path = spec.get("csv")
+        if path is None:
+            return df
+        if path not in extra:
+            extra[path] = pd.read_csv(path)
+        return extra[path]
+
+    fig, axes = plt.subplots(1, len(PANELS),
+                             figsize=(6.5 * len(PANELS), 5.6))
+
+    for spec, ax in zip(PANELS, np.atleast_1d(axes).ravel()):
         wanted = ["WT"] + [s[0] for s in spec["series"]]
-        tr = traces(df, spec["column"], wanted)
+        tr = traces(frame_for(spec), spec["column"], wanted,
+                    extend=bool(spec.get("extend")))
         for name, colour, lw, ls in spec["series"]:
             if name not in tr:
                 continue
@@ -114,7 +169,11 @@ def main() -> int:
 
         ax.set_xlabel("Time (ns)", fontsize=12)
         ax.set_ylabel(spec["ylabel"], fontsize=12)
-        ax.set_title(spec["title"], fontsize=13, pad=10)
+        # The titles are full sentences now, so they wrap rather than run off
+        # the axes; A is two lines and B one, and both panels reserve two so
+        # the two plots keep a common top edge.
+        ax.set_title(textwrap.fill(spec["title"], 58), fontsize=12.5, pad=10,
+                     linespacing=1.25)
         ax.tick_params(labelsize=11)
         ax.grid(alpha=0.25, lw=0.6)
         ax.set_axisbelow(True)
@@ -122,8 +181,8 @@ def main() -> int:
             ax.spines[side].set_visible(False)
         ax.set_xlim(0, max(g.max() for g, _m, _e in tr.values()))
         # headroom so the legend sits in blank space rather than over the traces
-        lo = min(float((m - e).min()) for _g, m, e in tr.values())
-        hi = max(float((m + e).max()) for _g, m, e in tr.values())
+        lo = min(float(np.nanmin(m - e)) for _g, m, e in tr.values())
+        hi = max(float(np.nanmax(m + e)) for _g, m, e in tr.values())
         span = hi - lo
         ax.set_ylim(lo - 0.06 * span, hi + 0.30 * span)
         ax.legend(fontsize=8.5, frameon=False, loc="upper center", ncol=3,
@@ -148,7 +207,7 @@ def main() -> int:
     rows = []
     for spec in PANELS:
         col = spec["column"]
-        rep = df.groupby(["mutation", "replicate"])[col].mean()
+        rep = frame_for(spec).groupby(["mutation", "replicate"])[col].mean()
         m = rep.groupby("mutation").mean()
         s = rep.groupby("mutation").std() / np.sqrt(3)
         for mutation in ["WT"] + [x[0] for x in spec["series"]]:
@@ -163,7 +222,7 @@ def main() -> int:
                     )
                 )
     table = pd.DataFrame(rows)
-    tpath = args.output.parent.parent / "mechanism_summary.csv"
+    tpath = args.output.parent / "mechanism_summary.csv"
     table.to_csv(tpath, index=False)
     print(f"wrote {tpath}")
     return 0

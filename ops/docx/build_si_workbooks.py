@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Build the Supporting Information table workbooks.
 
-Supplementary Tables 1-4 are XLSX, so Tables 5-7 are too rather than being
-embedded in the Supplementary Text. Each workbook carries the summary the text
+Supplementary Tables 1-4 are XLSX, so Tables 5-6 are too rather than being
+embedded in the Supplementary Text. Pocket volumes are consolidated in
+Supplementary Table 4; this builder must not overwrite the structural
+comparison workbook now numbered Supplementary Table 7. Each workbook carries the summary the text
 refers to and the per-genotype values behind it.
 
 There is deliberately no Notes sheet. Every column that has a unit says so in
@@ -23,7 +25,7 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "revisions"
+OUT = ROOT / "paper/generated/tables"
 REL = ROOT / "results/analysis/relaxation_sensitivity/tables"
 
 #: Columns holding a physical quantity must end in one of these, so the unit
@@ -184,7 +186,7 @@ def _check_sheets_agree(summary: pd.DataFrame, per_rep: pd.DataFrame,
                     f"but the summary states {float(stated.iloc[0]):+.3f}")
 
 
-def table5() -> None:
+def relaxation_table6() -> None:
     """Snapshot relaxation protocol: hydrogens-only against full minimisation."""
     panel = pd.read_csv(REL / "relaxation_panel_long.csv")
     agree = pd.read_csv(REL / "relaxation_protocol_agreement.csv")
@@ -224,14 +226,14 @@ def table5() -> None:
         sorted(panel.genotype.unique()))
     _check_sheets_agree(summary, per_rep, ("h_relax", "full_min"))
 
-    _write(OUT / "Supplementary-Table-5.xlsx",
-           {"Table 5": summary,
-            "Table 5b agreement": agreement,
-            "Table 5b phenotype": phenotype,
+    _write(OUT / "Supplementary-Table-6.xlsx",
+           {"Table 6": summary,
+            "Table 6b agreement": agreement,
+            "Table 6b phenotype": phenotype,
             "Per replicate": per_rep})
 
 
-def table6() -> None:
+def charge_table5() -> None:
     """Ligand charge model: Gasteiger (used throughout) against AM1-BCC."""
     comp = pd.read_csv(REL / "charge_model_comparison.csv")
     charges = pd.read_csv(REL / "dor_charge_models.csv")
@@ -264,64 +266,17 @@ def table6() -> None:
         "am1bcc_minus_gasteiger_e": charges.difference.round(4),
     })
 
-    _write(OUT / "Supplementary-Table-6.xlsx",
-           {"Table 6": summary,
+    _write(OUT / "Supplementary-Table-5.xlsx",
+           {"Table 5": summary,
             "Per replicate": per_rep,
             "DOR partial charges": partial_charges})
 
 
-def table7() -> None:
-    """Unliganded pocket volume beside the bound-state volume."""
-    apo = pd.read_csv(ROOT / "results/analysis/apo_ensembles/tables/apo_matched_window_summary.csv")
-    holo = pd.read_csv(ROOT / "results/analysis/pocket_volume/tables/pocket_volume_genotype.csv")
-    crystal = pd.read_csv(ROOT / "results/analysis/apo_ensembles/tables/apo_crystal_reference.csv")
-    frames = pd.read_csv(ROOT / "results/analysis/apo_ensembles/tables/apo_frame_metrics.csv")
-
-    apo = apo.assign(mutation=apo.safe_label.map(_display))
-    t = apo.merge(holo, on="mutation", how="left")
-    summary = pd.DataFrame({
-        "genotype": t.mutation,
-        "n_replicates": t.n_rep,
-        "apo_volume_A3": t.pocket_volume.round(1),
-        "apo_volume_sd_A3": t.pocket_volume_sd.round(1),
-        "holo_volume_A3": t.volume_mean.round(1),
-        "holo_volume_sem_A3": t.volume_sem.round(1),
-        "induced_fit_opening_A3": (t.volume_mean - t.pocket_volume).round(1),
-        "apo_chi1_Y181_deg": t.chi1_Y181.round(1),
-        "apo_chi1_Y188_deg": t.chi1_Y188.round(1),
-        "apo_volume_vs_WT_A3": t.dVolume_vs_WT.round(1),
-    }).sort_values("genotype").reset_index(drop=True)
-
-    per_rep = (frames[frames.window == "matched"]
-               .groupby(["safe_label", "replicate"], as_index=False)
-               .agg(apo_volume_mean_A3=("pocket_volume", "mean"),
-                    apo_volume_sd_A3=("pocket_volume", "std"),
-                    n_frames=("pocket_volume", "size"),
-                    apo_chi1_Y181_deg=("chi1_Y181", "mean"),
-                    apo_chi1_Y188_deg=("chi1_Y188", "mean")))
-    per_rep.insert(0, "genotype", per_rep.pop("safe_label").map(_display))
-    for c in per_rep.columns:
-        if c.endswith(("_A3", "_deg")):
-            per_rep[c] = per_rep[c].round(1)
-
-    crystal_ref = pd.DataFrame({
-        "source": crystal.source,
-        "state": crystal.state,
-        "pocket_volume_A3": crystal.pocket_volume.round(1),
-        "n_ca_atoms": crystal.n_ca,
-    })
-
-    _write(OUT / "Supplementary-Table-7.xlsx",
-           {"Table 7": summary,
-            "Per replicate apo": per_rep,
-            "Crystal reference": crystal_ref})
-
-
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
-    table5()
-    table6()
-    table7()
+    OUT.mkdir(parents=True, exist_ok=True)
+    charge_table5()
+    relaxation_table6()
     return 0
 
 

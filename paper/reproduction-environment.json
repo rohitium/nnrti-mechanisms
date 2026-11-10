@@ -1,0 +1,16 @@
+{
+  "scope": "Successful derived-data artifact rebuild and statistical tests, 10 November 2026; not a simulation environment lock",
+  "python": "3.12.12",
+  "packages": {
+    "numpy": "2.4.4",
+    "pandas": "2.3.3",
+    "scipy": "1.17.0",
+    "matplotlib": "3.10.8",
+    "openpyxl": "3.1.5",
+    "python-docx": "1.2.0",
+    "lxml": "6.1.1",
+    "MDAnalysis": "2.10.0",
+    "mdtraj": "1.11.1",
+    "pytest": "9.1.1"
+  }
+}

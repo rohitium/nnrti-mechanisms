@@ -1,0 +1,77 @@
+[
+  [
+    "−83 ± 28° ([−148, −18]°, p = 0.04)",
+    "−83 ± 28° ([−148, −18]°, p = 0.02)",
+    2
+  ],
+  [
+    "+95 ± 32° ([22, 169]°, p = 0.03)",
+    "+95 ± 32° ([22, 169]°, p = 0.02)",
+    2
+  ],
+  [
+    "([1.25, 2.45] Å)",
+    "([1.45, 2.24] Å)",
+    2
+  ],
+  [
+    "[−9.3, +2.9]",
+    "[−9.2, +2.8]",
+    2
+  ],
+  [
+    "[−3.95, −0.68]",
+    "[−3.95, −0.67]",
+    1
+  ],
+  [
+    "the residual on ΔΔGbind is at most 0.003 kcal/mol — two to three orders of magnitude below the 0.2–1.2 kcal/mol per-leg statistical uncertainties in Table 2.",
+    "the residual on ΔΔGbind is below 0.004 kcal/mol, at least 40-fold smaller than the 0.16–1.06 kcal/mol per-leg standard errors derived from Supplementary Table 3.",
+    2
+  ],
+  [
+    "17 have a 95% confidence interval excluding zero",
+    "22 have a 95% confidence interval excluding zero",
+    1
+  ],
+  [
+    "more mobile in nine of the nineteen genotypes, by 0.08 to 0.16 Å",
+    "more mobile in eleven of the nineteen genotypes, by 0.07 to 0.17 Å",
+    1
+  ],
+  [
+    "more mobile than wild type in four regions at once: the pocket lining, the primer grip, β6, and the p66 fingers",
+    "more mobile than wild type in five regions at once: the pocket lining, the primer grip, β6, the p66 palm, and the p66 fingers",
+    1
+  ],
+  [
+    "only 4 of 342 such comparisons",
+    "only 9 of 342 such comparisons",
+    1
+  ],
+  [
+    "Aromatic packing of DOR therefore hinges on Tyr188 alone",
+    "Aromatic packing of DOR therefore depends on Tyr188 alone",
+    1
+  ],
+  [
+    "axis.Results",
+    "axis. Results",
+    1
+  ],
+  [
+    "freedom.The",
+    "freedom. The",
+    1
+  ],
+  [
+    "transformations.Forward",
+    "transformations. Forward",
+    1
+  ],
+  [
+    "standard error this mean",
+    "standard error of this mean",
+    2
+  ]
+]

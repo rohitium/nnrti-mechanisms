@@ -119,6 +119,26 @@ def build(root: Path) -> pd.DataFrame:
         apo_f = apo_f[apo_f.pocket_intact]
     else:
         apo_f = apo_f[apo_f.pocket_rg <= POCKET_RG_MAX_A]
+    # The radius-of-gyration filter above catches the G190E replicate 2
+    # unfolding three frames late. Frames 39-41, at 20.0-21.0 ns, have Rg
+    # 8.7-9.2 A against its 10 A ceiling and pocket volumes of 578, 597 and
+    # 942 A^3 -- larger than any pocket in the panel with doravirine inside
+    # it, which is impossible for an empty one and means the cavity has opened
+    # to bulk solvent and the grid proxy is measuring solvent.
+    #
+    # They are the only unliganded frames in all twenty genotypes above that
+    # bound, and 3 of 14,182 in total, but they sat on only 42 surviving
+    # frames and carried the G190E unliganded mean from 46.1 to 102.6 A^3.
+    #
+    # The ceiling used is the largest per-replicate BOUND mean in the panel,
+    # which is stricter than the largest bound frame and still removes exactly
+    # these three: the next unliganded frame down is 273 A^3.
+    holo_max = float(holo_v.nnibp_volume_A3.max())
+    n_before_ceiling = len(apo_f)
+    apo_f = apo_f[apo_f.pocket_volume <= holo_max]
+    if len(apo_f) != n_before_ceiling:
+        print(f"  apo: dropped {n_before_ceiling - len(apo_f)} frame(s) above the "
+              f"largest bound pocket ({holo_max:.0f} A^3)")
     apo_f = apo_f[apo_f.window == "matched"]
     total = apo_f.groupby(["safe_label", "replicate"]).total_ns.first()
     window_ns = apo_f.time_ns.max()

@@ -1,0 +1,1129 @@
+metric,genotype,state,replicate,value
+NNIBP volume (Å³),WT,Bound (RT+DOR),1,207.2
+NNIBP volume (Å³),WT,Bound (RT+DOR),2,247.5
+NNIBP volume (Å³),WT,Bound (RT+DOR),3,230.7
+NNIBP volume (Å³),V106I,Bound (RT+DOR),1,256.6
+NNIBP volume (Å³),V106I,Bound (RT+DOR),2,250.9
+NNIBP volume (Å³),V106I,Bound (RT+DOR),3,234.4
+NNIBP volume (Å³),K103N,Bound (RT+DOR),1,236.7
+NNIBP volume (Å³),K103N,Bound (RT+DOR),2,243.3
+NNIBP volume (Å³),K103N,Bound (RT+DOR),3,230.3
+NNIBP volume (Å³),Y181C,Bound (RT+DOR),1,257.6
+NNIBP volume (Å³),Y181C,Bound (RT+DOR),2,254.4
+NNIBP volume (Å³),Y181C,Bound (RT+DOR),3,259.9
+NNIBP volume (Å³),G190A,Bound (RT+DOR),1,230.5
+NNIBP volume (Å³),G190A,Bound (RT+DOR),2,235.4
+NNIBP volume (Å³),G190A,Bound (RT+DOR),3,234.0
+NNIBP volume (Å³),Y318F,Bound (RT+DOR),1,230.2
+NNIBP volume (Å³),Y318F,Bound (RT+DOR),2,248.7
+NNIBP volume (Å³),Y318F,Bound (RT+DOR),3,222.5
+NNIBP volume (Å³),V106A,Bound (RT+DOR),1,263.4
+NNIBP volume (Å³),V106A,Bound (RT+DOR),2,236.2
+NNIBP volume (Å³),V106A,Bound (RT+DOR),3,251.9
+NNIBP volume (Å³),A98G+F227C,Bound (RT+DOR),1,251.9
+NNIBP volume (Å³),A98G+F227C,Bound (RT+DOR),2,244.4
+NNIBP volume (Å³),A98G+F227C,Bound (RT+DOR),3,218.1
+NNIBP volume (Å³),V106I+F227C,Bound (RT+DOR),1,237.0
+NNIBP volume (Å³),V106I+F227C,Bound (RT+DOR),2,223.7
+NNIBP volume (Å³),V106I+F227C,Bound (RT+DOR),3,237.8
+NNIBP volume (Å³),V106A+F227L,Bound (RT+DOR),1,244.8
+NNIBP volume (Å³),V106A+F227L,Bound (RT+DOR),2,240.5
+NNIBP volume (Å³),V106A+F227L,Bound (RT+DOR),3,232.3
+NNIBP volume (Å³),Y188L,Bound (RT+DOR),1,229.4
+NNIBP volume (Å³),Y188L,Bound (RT+DOR),2,254.0
+NNIBP volume (Å³),Y188L,Bound (RT+DOR),3,241.3
+NNIBP volume (Å³),V106A+P225H,Bound (RT+DOR),1,208.5
+NNIBP volume (Å³),V106A+P225H,Bound (RT+DOR),2,232.0
+NNIBP volume (Å³),V106A+P225H,Bound (RT+DOR),3,229.4
+NNIBP volume (Å³),V106A+L234I,Bound (RT+DOR),1,241.7
+NNIBP volume (Å³),V106A+L234I,Bound (RT+DOR),2,214.5
+NNIBP volume (Å³),V106A+L234I,Bound (RT+DOR),3,255.5
+NNIBP volume (Å³),K103N+M230L,Bound (RT+DOR),1,251.1
+NNIBP volume (Å³),K103N+M230L,Bound (RT+DOR),2,248.1
+NNIBP volume (Å³),K103N+M230L,Bound (RT+DOR),3,252.2
+NNIBP volume (Å³),V106M,Bound (RT+DOR),1,198.1
+NNIBP volume (Å³),V106M,Bound (RT+DOR),2,244.8
+NNIBP volume (Å³),V106M,Bound (RT+DOR),3,275.7
+NNIBP volume (Å³),G190S,Bound (RT+DOR),1,290.1
+NNIBP volume (Å³),G190S,Bound (RT+DOR),2,231.7
+NNIBP volume (Å³),G190S,Bound (RT+DOR),3,282.5
+NNIBP volume (Å³),L100I+K103N,Bound (RT+DOR),1,216.1
+NNIBP volume (Å³),L100I+K103N,Bound (RT+DOR),2,236.5
+NNIBP volume (Å³),L100I+K103N,Bound (RT+DOR),3,237.0
+NNIBP volume (Å³),K103N+P225H,Bound (RT+DOR),1,259.5
+NNIBP volume (Å³),K103N+P225H,Bound (RT+DOR),2,239.8
+NNIBP volume (Å³),K103N+P225H,Bound (RT+DOR),3,219.9
+NNIBP volume (Å³),G190E,Bound (RT+DOR),1,289.1
+NNIBP volume (Å³),G190E,Bound (RT+DOR),2,285.5
+NNIBP volume (Å³),G190E,Bound (RT+DOR),3,278.3
+NNIBP volume (Å³),WT,Unliganded (RT only),1,86.5
+NNIBP volume (Å³),WT,Unliganded (RT only),2,57.6
+NNIBP volume (Å³),WT,Unliganded (RT only),3,85.0
+NNIBP volume (Å³),V106I,Unliganded (RT only),1,49.7
+NNIBP volume (Å³),V106I,Unliganded (RT only),2,50.3
+NNIBP volume (Å³),V106I,Unliganded (RT only),3,66.7
+NNIBP volume (Å³),K103N,Unliganded (RT only),1,94.1
+NNIBP volume (Å³),K103N,Unliganded (RT only),2,60.5
+NNIBP volume (Å³),K103N,Unliganded (RT only),3,67.9
+NNIBP volume (Å³),Y181C,Unliganded (RT only),1,71.7
+NNIBP volume (Å³),Y181C,Unliganded (RT only),2,122.7
+NNIBP volume (Å³),Y181C,Unliganded (RT only),3,116.2
+NNIBP volume (Å³),G190A,Unliganded (RT only),1,52.0
+NNIBP volume (Å³),G190A,Unliganded (RT only),2,64.6
+NNIBP volume (Å³),G190A,Unliganded (RT only),3,66.3
+NNIBP volume (Å³),Y318F,Unliganded (RT only),1,46.7
+NNIBP volume (Å³),Y318F,Unliganded (RT only),2,82.6
+NNIBP volume (Å³),Y318F,Unliganded (RT only),3,60.9
+NNIBP volume (Å³),V106A,Unliganded (RT only),1,134.7
+NNIBP volume (Å³),V106A,Unliganded (RT only),2,60.1
+NNIBP volume (Å³),V106A,Unliganded (RT only),3,122.3
+NNIBP volume (Å³),A98G+F227C,Unliganded (RT only),1,64.9
+NNIBP volume (Å³),A98G+F227C,Unliganded (RT only),2,71.9
+NNIBP volume (Å³),A98G+F227C,Unliganded (RT only),3,53.9
+NNIBP volume (Å³),V106I+F227C,Unliganded (RT only),1,90.2
+NNIBP volume (Å³),V106I+F227C,Unliganded (RT only),2,70.8
+NNIBP volume (Å³),V106I+F227C,Unliganded (RT only),3,25.6
+NNIBP volume (Å³),V106A+F227L,Unliganded (RT only),1,128.4
+NNIBP volume (Å³),V106A+F227L,Unliganded (RT only),2,109.4
+NNIBP volume (Å³),V106A+F227L,Unliganded (RT only),3,118.9
+NNIBP volume (Å³),Y188L,Unliganded (RT only),1,25.2
+NNIBP volume (Å³),Y188L,Unliganded (RT only),2,75.7
+NNIBP volume (Å³),Y188L,Unliganded (RT only),3,63.6
+NNIBP volume (Å³),V106A+P225H,Unliganded (RT only),1,132.9
+NNIBP volume (Å³),V106A+P225H,Unliganded (RT only),2,107.8
+NNIBP volume (Å³),V106A+P225H,Unliganded (RT only),3,116.6
+NNIBP volume (Å³),V106A+L234I,Unliganded (RT only),1,111.5
+NNIBP volume (Å³),V106A+L234I,Unliganded (RT only),2,166.9
+NNIBP volume (Å³),V106A+L234I,Unliganded (RT only),3,99.5
+NNIBP volume (Å³),K103N+M230L,Unliganded (RT only),1,133.4
+NNIBP volume (Å³),K103N+M230L,Unliganded (RT only),2,105.0
+NNIBP volume (Å³),K103N+M230L,Unliganded (RT only),3,51.3
+NNIBP volume (Å³),V106M,Unliganded (RT only),1,54.4
+NNIBP volume (Å³),V106M,Unliganded (RT only),2,52.9
+NNIBP volume (Å³),V106M,Unliganded (RT only),3,54.8
+NNIBP volume (Å³),G190S,Unliganded (RT only),1,48.3
+NNIBP volume (Å³),G190S,Unliganded (RT only),2,74.6
+NNIBP volume (Å³),G190S,Unliganded (RT only),3,29.8
+NNIBP volume (Å³),L100I+K103N,Unliganded (RT only),1,79.2
+NNIBP volume (Å³),L100I+K103N,Unliganded (RT only),2,44.7
+NNIBP volume (Å³),L100I+K103N,Unliganded (RT only),3,54.4
+NNIBP volume (Å³),K103N+P225H,Unliganded (RT only),1,100.7
+NNIBP volume (Å³),K103N+P225H,Unliganded (RT only),2,100.0
+NNIBP volume (Å³),K103N+P225H,Unliganded (RT only),3,94.6
+NNIBP volume (Å³),G190E,Unliganded (RT only),1,31.7
+NNIBP volume (Å³),G190E,Unliganded (RT only),2,102.6
+NNIBP volume (Å³),G190E,Unliganded (RT only),3,50.2
+Tyr181 side-chain χ1 (°),WT,Bound (RT+DOR),1,-88.6
+Tyr181 side-chain χ1 (°),WT,Bound (RT+DOR),2,-86.7
+Tyr181 side-chain χ1 (°),WT,Bound (RT+DOR),3,-82.6
+Tyr181 side-chain χ1 (°),V106I,Bound (RT+DOR),1,-83.4
+Tyr181 side-chain χ1 (°),V106I,Bound (RT+DOR),2,-94.3
+Tyr181 side-chain χ1 (°),V106I,Bound (RT+DOR),3,-79.7
+Tyr181 side-chain χ1 (°),K103N,Bound (RT+DOR),1,-76.5
+Tyr181 side-chain χ1 (°),K103N,Bound (RT+DOR),2,-74.1
+Tyr181 side-chain χ1 (°),K103N,Bound (RT+DOR),3,-95.3
+Tyr181 side-chain χ1 (°),G190A,Bound (RT+DOR),1,-87.2
+Tyr181 side-chain χ1 (°),G190A,Bound (RT+DOR),2,-74.9
+Tyr181 side-chain χ1 (°),G190A,Bound (RT+DOR),3,-74.7
+Tyr181 side-chain χ1 (°),Y318F,Bound (RT+DOR),1,-73.3
+Tyr181 side-chain χ1 (°),Y318F,Bound (RT+DOR),2,-90.7
+Tyr181 side-chain χ1 (°),Y318F,Bound (RT+DOR),3,-80.3
+Tyr181 side-chain χ1 (°),V106A,Bound (RT+DOR),1,-155.7
+Tyr181 side-chain χ1 (°),V106A,Bound (RT+DOR),2,-78.5
+Tyr181 side-chain χ1 (°),V106A,Bound (RT+DOR),3,173.10000000000002
+Tyr181 side-chain χ1 (°),A98G+F227C,Bound (RT+DOR),1,174.89999999999998
+Tyr181 side-chain χ1 (°),A98G+F227C,Bound (RT+DOR),2,-153.7
+Tyr181 side-chain χ1 (°),A98G+F227C,Bound (RT+DOR),3,-146.6
+Tyr181 side-chain χ1 (°),V106I+F227C,Bound (RT+DOR),1,-83.3
+Tyr181 side-chain χ1 (°),V106I+F227C,Bound (RT+DOR),2,-91.9
+Tyr181 side-chain χ1 (°),V106I+F227C,Bound (RT+DOR),3,-70.6
+Tyr181 side-chain χ1 (°),V106A+F227L,Bound (RT+DOR),1,-93.2
+Tyr181 side-chain χ1 (°),V106A+F227L,Bound (RT+DOR),2,-84.7
+Tyr181 side-chain χ1 (°),V106A+F227L,Bound (RT+DOR),3,-98.0
+Tyr181 side-chain χ1 (°),Y188L,Bound (RT+DOR),1,-106.0
+Tyr181 side-chain χ1 (°),Y188L,Bound (RT+DOR),2,-71.8
+Tyr181 side-chain χ1 (°),Y188L,Bound (RT+DOR),3,-71.1
+Tyr181 side-chain χ1 (°),V106A+P225H,Bound (RT+DOR),1,-69.1
+Tyr181 side-chain χ1 (°),V106A+P225H,Bound (RT+DOR),2,-88.5
+Tyr181 side-chain χ1 (°),V106A+P225H,Bound (RT+DOR),3,-81.0
+Tyr181 side-chain χ1 (°),V106A+L234I,Bound (RT+DOR),1,-79.2
+Tyr181 side-chain χ1 (°),V106A+L234I,Bound (RT+DOR),2,-103.8
+Tyr181 side-chain χ1 (°),V106A+L234I,Bound (RT+DOR),3,-98.5
+Tyr181 side-chain χ1 (°),K103N+M230L,Bound (RT+DOR),1,-84.0
+Tyr181 side-chain χ1 (°),K103N+M230L,Bound (RT+DOR),2,-76.6
+Tyr181 side-chain χ1 (°),K103N+M230L,Bound (RT+DOR),3,-84.9
+Tyr181 side-chain χ1 (°),V106M,Bound (RT+DOR),1,-74.6
+Tyr181 side-chain χ1 (°),V106M,Bound (RT+DOR),2,-81.3
+Tyr181 side-chain χ1 (°),V106M,Bound (RT+DOR),3,-81.4
+Tyr181 side-chain χ1 (°),G190S,Bound (RT+DOR),1,174.0
+Tyr181 side-chain χ1 (°),G190S,Bound (RT+DOR),2,-84.5
+Tyr181 side-chain χ1 (°),G190S,Bound (RT+DOR),3,-175.7
+Tyr181 side-chain χ1 (°),L100I+K103N,Bound (RT+DOR),1,-68.8
+Tyr181 side-chain χ1 (°),L100I+K103N,Bound (RT+DOR),2,-85.3
+Tyr181 side-chain χ1 (°),L100I+K103N,Bound (RT+DOR),3,-90.5
+Tyr181 side-chain χ1 (°),K103N+P225H,Bound (RT+DOR),1,-117.4
+Tyr181 side-chain χ1 (°),K103N+P225H,Bound (RT+DOR),2,-71.5
+Tyr181 side-chain χ1 (°),K103N+P225H,Bound (RT+DOR),3,-87.1
+Tyr181 side-chain χ1 (°),G190E,Bound (RT+DOR),1,-54.7
+Tyr181 side-chain χ1 (°),G190E,Bound (RT+DOR),2,-166.2
+Tyr181 side-chain χ1 (°),G190E,Bound (RT+DOR),3,-53.599999999999994
+Tyr181 side-chain χ1 (°),WT,Unliganded (RT only),1,-65.5
+Tyr181 side-chain χ1 (°),WT,Unliganded (RT only),2,-65.3
+Tyr181 side-chain χ1 (°),WT,Unliganded (RT only),3,-72.6
+Tyr181 side-chain χ1 (°),V106I,Unliganded (RT only),1,-52.7
+Tyr181 side-chain χ1 (°),V106I,Unliganded (RT only),2,-49.900000000000006
+Tyr181 side-chain χ1 (°),V106I,Unliganded (RT only),3,-52.2
+Tyr181 side-chain χ1 (°),K103N,Unliganded (RT only),1,-49.099999999999994
+Tyr181 side-chain χ1 (°),K103N,Unliganded (RT only),2,-68.8
+Tyr181 side-chain χ1 (°),K103N,Unliganded (RT only),3,-35.69999999999999
+Tyr181 side-chain χ1 (°),G190A,Unliganded (RT only),1,-75.7
+Tyr181 side-chain χ1 (°),G190A,Unliganded (RT only),2,-58.599999999999994
+Tyr181 side-chain χ1 (°),G190A,Unliganded (RT only),3,-49.19999999999999
+Tyr181 side-chain χ1 (°),Y318F,Unliganded (RT only),1,-78.6
+Tyr181 side-chain χ1 (°),Y318F,Unliganded (RT only),2,-79.5
+Tyr181 side-chain χ1 (°),Y318F,Unliganded (RT only),3,-66.7
+Tyr181 side-chain χ1 (°),V106A,Unliganded (RT only),1,-104.5
+Tyr181 side-chain χ1 (°),V106A,Unliganded (RT only),2,-87.2
+Tyr181 side-chain χ1 (°),V106A,Unliganded (RT only),3,-80.1
+Tyr181 side-chain χ1 (°),A98G+F227C,Unliganded (RT only),1,-78.6
+Tyr181 side-chain χ1 (°),A98G+F227C,Unliganded (RT only),2,-63.400000000000006
+Tyr181 side-chain χ1 (°),A98G+F227C,Unliganded (RT only),3,-60.5
+Tyr181 side-chain χ1 (°),V106I+F227C,Unliganded (RT only),1,-82.8
+Tyr181 side-chain χ1 (°),V106I+F227C,Unliganded (RT only),2,-77.2
+Tyr181 side-chain χ1 (°),V106I+F227C,Unliganded (RT only),3,-58.900000000000006
+Tyr181 side-chain χ1 (°),V106A+F227L,Unliganded (RT only),1,-79.9
+Tyr181 side-chain χ1 (°),V106A+F227L,Unliganded (RT only),2,-74.6
+Tyr181 side-chain χ1 (°),V106A+F227L,Unliganded (RT only),3,-86.8
+Tyr181 side-chain χ1 (°),Y188L,Unliganded (RT only),1,-73.7
+Tyr181 side-chain χ1 (°),Y188L,Unliganded (RT only),2,-60.099999999999994
+Tyr181 side-chain χ1 (°),Y188L,Unliganded (RT only),3,-52.400000000000006
+Tyr181 side-chain χ1 (°),V106A+P225H,Unliganded (RT only),1,-115.8
+Tyr181 side-chain χ1 (°),V106A+P225H,Unliganded (RT only),2,-65.7
+Tyr181 side-chain χ1 (°),V106A+P225H,Unliganded (RT only),3,-73.6
+Tyr181 side-chain χ1 (°),V106A+L234I,Unliganded (RT only),1,-61.0
+Tyr181 side-chain χ1 (°),V106A+L234I,Unliganded (RT only),2,-65.3
+Tyr181 side-chain χ1 (°),V106A+L234I,Unliganded (RT only),3,-70.6
+Tyr181 side-chain χ1 (°),K103N+M230L,Unliganded (RT only),1,-67.7
+Tyr181 side-chain χ1 (°),K103N+M230L,Unliganded (RT only),2,-87.2
+Tyr181 side-chain χ1 (°),K103N+M230L,Unliganded (RT only),3,-59.8
+Tyr181 side-chain χ1 (°),V106M,Unliganded (RT only),1,-44.30000000000001
+Tyr181 side-chain χ1 (°),V106M,Unliganded (RT only),2,-48.5
+Tyr181 side-chain χ1 (°),V106M,Unliganded (RT only),3,-90.0
+Tyr181 side-chain χ1 (°),G190S,Unliganded (RT only),1,-57.8
+Tyr181 side-chain χ1 (°),G190S,Unliganded (RT only),2,-38.099999999999994
+Tyr181 side-chain χ1 (°),G190S,Unliganded (RT only),3,-59.599999999999994
+Tyr181 side-chain χ1 (°),L100I+K103N,Unliganded (RT only),1,-86.8
+Tyr181 side-chain χ1 (°),L100I+K103N,Unliganded (RT only),2,-53.7
+Tyr181 side-chain χ1 (°),L100I+K103N,Unliganded (RT only),3,-78.2
+Tyr181 side-chain χ1 (°),K103N+P225H,Unliganded (RT only),1,-89.4
+Tyr181 side-chain χ1 (°),K103N+P225H,Unliganded (RT only),2,-52.3
+Tyr181 side-chain χ1 (°),K103N+P225H,Unliganded (RT only),3,-69.2
+Tyr181 side-chain χ1 (°),G190E,Unliganded (RT only),1,-66.1
+Tyr181 side-chain χ1 (°),G190E,Unliganded (RT only),2,-68.0
+Tyr181 side-chain χ1 (°),G190E,Unliganded (RT only),3,-59.400000000000006
+Tyr188 side-chain χ1 (°),WT,Bound (RT+DOR),1,-44.80000000000001
+Tyr188 side-chain χ1 (°),WT,Bound (RT+DOR),2,-43.599999999999994
+Tyr188 side-chain χ1 (°),WT,Bound (RT+DOR),3,-43.19999999999999
+Tyr188 side-chain χ1 (°),V106I,Bound (RT+DOR),1,-41.80000000000001
+Tyr188 side-chain χ1 (°),V106I,Bound (RT+DOR),2,-44.0
+Tyr188 side-chain χ1 (°),V106I,Bound (RT+DOR),3,-42.5
+Tyr188 side-chain χ1 (°),K103N,Bound (RT+DOR),1,-39.5
+Tyr188 side-chain χ1 (°),K103N,Bound (RT+DOR),2,-44.69999999999999
+Tyr188 side-chain χ1 (°),K103N,Bound (RT+DOR),3,-42.400000000000006
+Tyr188 side-chain χ1 (°),Y181C,Bound (RT+DOR),1,-45.099999999999994
+Tyr188 side-chain χ1 (°),Y181C,Bound (RT+DOR),2,-40.19999999999999
+Tyr188 side-chain χ1 (°),Y181C,Bound (RT+DOR),3,-44.19999999999999
+Tyr188 side-chain χ1 (°),G190A,Bound (RT+DOR),1,-42.0
+Tyr188 side-chain χ1 (°),G190A,Bound (RT+DOR),2,-45.80000000000001
+Tyr188 side-chain χ1 (°),G190A,Bound (RT+DOR),3,-43.599999999999994
+Tyr188 side-chain χ1 (°),Y318F,Bound (RT+DOR),1,-38.19999999999999
+Tyr188 side-chain χ1 (°),Y318F,Bound (RT+DOR),2,-34.099999999999994
+Tyr188 side-chain χ1 (°),Y318F,Bound (RT+DOR),3,-41.19999999999999
+Tyr188 side-chain χ1 (°),V106A,Bound (RT+DOR),1,-39.19999999999999
+Tyr188 side-chain χ1 (°),V106A,Bound (RT+DOR),2,-45.400000000000006
+Tyr188 side-chain χ1 (°),V106A,Bound (RT+DOR),3,-48.599999999999994
+Tyr188 side-chain χ1 (°),A98G+F227C,Bound (RT+DOR),1,-52.2
+Tyr188 side-chain χ1 (°),A98G+F227C,Bound (RT+DOR),2,-42.400000000000006
+Tyr188 side-chain χ1 (°),A98G+F227C,Bound (RT+DOR),3,-37.69999999999999
+Tyr188 side-chain χ1 (°),V106I+F227C,Bound (RT+DOR),1,-42.400000000000006
+Tyr188 side-chain χ1 (°),V106I+F227C,Bound (RT+DOR),2,-42.80000000000001
+Tyr188 side-chain χ1 (°),V106I+F227C,Bound (RT+DOR),3,-44.30000000000001
+Tyr188 side-chain χ1 (°),V106A+F227L,Bound (RT+DOR),1,-40.69999999999999
+Tyr188 side-chain χ1 (°),V106A+F227L,Bound (RT+DOR),2,-40.599999999999994
+Tyr188 side-chain χ1 (°),V106A+F227L,Bound (RT+DOR),3,-45.0
+Tyr188 side-chain χ1 (°),V106A+P225H,Bound (RT+DOR),1,-46.099999999999994
+Tyr188 side-chain χ1 (°),V106A+P225H,Bound (RT+DOR),2,-30.69999999999999
+Tyr188 side-chain χ1 (°),V106A+P225H,Bound (RT+DOR),3,-38.900000000000006
+Tyr188 side-chain χ1 (°),V106A+L234I,Bound (RT+DOR),1,-46.900000000000006
+Tyr188 side-chain χ1 (°),V106A+L234I,Bound (RT+DOR),2,-40.900000000000006
+Tyr188 side-chain χ1 (°),V106A+L234I,Bound (RT+DOR),3,-24.69999999999999
+Tyr188 side-chain χ1 (°),K103N+M230L,Bound (RT+DOR),1,-46.599999999999994
+Tyr188 side-chain χ1 (°),K103N+M230L,Bound (RT+DOR),2,-41.599999999999994
+Tyr188 side-chain χ1 (°),K103N+M230L,Bound (RT+DOR),3,-41.599999999999994
+Tyr188 side-chain χ1 (°),V106M,Bound (RT+DOR),1,-48.0
+Tyr188 side-chain χ1 (°),V106M,Bound (RT+DOR),2,-43.099999999999994
+Tyr188 side-chain χ1 (°),V106M,Bound (RT+DOR),3,-48.400000000000006
+Tyr188 side-chain χ1 (°),G190S,Bound (RT+DOR),1,-48.0
+Tyr188 side-chain χ1 (°),G190S,Bound (RT+DOR),2,-41.0
+Tyr188 side-chain χ1 (°),G190S,Bound (RT+DOR),3,-51.599999999999994
+Tyr188 side-chain χ1 (°),L100I+K103N,Bound (RT+DOR),1,-32.5
+Tyr188 side-chain χ1 (°),L100I+K103N,Bound (RT+DOR),2,-44.5
+Tyr188 side-chain χ1 (°),L100I+K103N,Bound (RT+DOR),3,-38.30000000000001
+Tyr188 side-chain χ1 (°),K103N+P225H,Bound (RT+DOR),1,-44.900000000000006
+Tyr188 side-chain χ1 (°),K103N+P225H,Bound (RT+DOR),2,-40.599999999999994
+Tyr188 side-chain χ1 (°),K103N+P225H,Bound (RT+DOR),3,-41.5
+Tyr188 side-chain χ1 (°),G190E,Bound (RT+DOR),1,-40.900000000000006
+Tyr188 side-chain χ1 (°),G190E,Bound (RT+DOR),2,-42.900000000000006
+Tyr188 side-chain χ1 (°),G190E,Bound (RT+DOR),3,-37.900000000000006
+Tyr188 side-chain χ1 (°),WT,Unliganded (RT only),1,-64.8
+Tyr188 side-chain χ1 (°),WT,Unliganded (RT only),2,-178.6
+Tyr188 side-chain χ1 (°),WT,Unliganded (RT only),3,-69.6
+Tyr188 side-chain χ1 (°),V106I,Unliganded (RT only),1,-82.2
+Tyr188 side-chain χ1 (°),V106I,Unliganded (RT only),2,-75.8
+Tyr188 side-chain χ1 (°),V106I,Unliganded (RT only),3,-73.3
+Tyr188 side-chain χ1 (°),K103N,Unliganded (RT only),1,-67.6
+Tyr188 side-chain χ1 (°),K103N,Unliganded (RT only),2,177.8
+Tyr188 side-chain χ1 (°),K103N,Unliganded (RT only),3,-77.1
+Tyr188 side-chain χ1 (°),Y181C,Unliganded (RT only),1,172.10000000000002
+Tyr188 side-chain χ1 (°),Y181C,Unliganded (RT only),2,-59.0
+Tyr188 side-chain χ1 (°),Y181C,Unliganded (RT only),3,-79.2
+Tyr188 side-chain χ1 (°),G190A,Unliganded (RT only),1,-74.5
+Tyr188 side-chain χ1 (°),G190A,Unliganded (RT only),2,-73.8
+Tyr188 side-chain χ1 (°),G190A,Unliganded (RT only),3,-126.4
+Tyr188 side-chain χ1 (°),Y318F,Unliganded (RT only),1,170.3
+Tyr188 side-chain χ1 (°),Y318F,Unliganded (RT only),2,176.10000000000002
+Tyr188 side-chain χ1 (°),Y318F,Unliganded (RT only),3,174.8
+Tyr188 side-chain χ1 (°),V106A,Unliganded (RT only),1,-82.0
+Tyr188 side-chain χ1 (°),V106A,Unliganded (RT only),2,173.60000000000002
+Tyr188 side-chain χ1 (°),V106A,Unliganded (RT only),3,-72.6
+Tyr188 side-chain χ1 (°),A98G+F227C,Unliganded (RT only),1,170.39999999999998
+Tyr188 side-chain χ1 (°),A98G+F227C,Unliganded (RT only),2,-128.2
+Tyr188 side-chain χ1 (°),A98G+F227C,Unliganded (RT only),3,-75.5
+Tyr188 side-chain χ1 (°),V106I+F227C,Unliganded (RT only),1,-77.5
+Tyr188 side-chain χ1 (°),V106I+F227C,Unliganded (RT only),2,-71.7
+Tyr188 side-chain χ1 (°),V106I+F227C,Unliganded (RT only),3,-166.0
+Tyr188 side-chain χ1 (°),V106A+F227L,Unliganded (RT only),1,-68.3
+Tyr188 side-chain χ1 (°),V106A+F227L,Unliganded (RT only),2,-76.7
+Tyr188 side-chain χ1 (°),V106A+F227L,Unliganded (RT only),3,-58.2
+Tyr188 side-chain χ1 (°),V106A+P225H,Unliganded (RT only),1,-65.5
+Tyr188 side-chain χ1 (°),V106A+P225H,Unliganded (RT only),2,-77.1
+Tyr188 side-chain χ1 (°),V106A+P225H,Unliganded (RT only),3,-76.0
+Tyr188 side-chain χ1 (°),V106A+L234I,Unliganded (RT only),1,-69.5
+Tyr188 side-chain χ1 (°),V106A+L234I,Unliganded (RT only),2,-73.4
+Tyr188 side-chain χ1 (°),V106A+L234I,Unliganded (RT only),3,-68.8
+Tyr188 side-chain χ1 (°),K103N+M230L,Unliganded (RT only),1,-76.1
+Tyr188 side-chain χ1 (°),K103N+M230L,Unliganded (RT only),2,-59.400000000000006
+Tyr188 side-chain χ1 (°),K103N+M230L,Unliganded (RT only),3,-90.9
+Tyr188 side-chain χ1 (°),V106M,Unliganded (RT only),1,-70.8
+Tyr188 side-chain χ1 (°),V106M,Unliganded (RT only),2,-78.6
+Tyr188 side-chain χ1 (°),V106M,Unliganded (RT only),3,-71.3
+Tyr188 side-chain χ1 (°),G190S,Unliganded (RT only),1,-165.8
+Tyr188 side-chain χ1 (°),G190S,Unliganded (RT only),2,-175.6
+Tyr188 side-chain χ1 (°),G190S,Unliganded (RT only),3,-68.5
+Tyr188 side-chain χ1 (°),L100I+K103N,Unliganded (RT only),1,-173.1
+Tyr188 side-chain χ1 (°),L100I+K103N,Unliganded (RT only),2,-72.3
+Tyr188 side-chain χ1 (°),L100I+K103N,Unliganded (RT only),3,178.7
+Tyr188 side-chain χ1 (°),K103N+P225H,Unliganded (RT only),1,-68.8
+Tyr188 side-chain χ1 (°),K103N+P225H,Unliganded (RT only),2,-73.7
+Tyr188 side-chain χ1 (°),K103N+P225H,Unliganded (RT only),3,174.3
+Tyr188 side-chain χ1 (°),G190E,Unliganded (RT only),1,-69.5
+Tyr188 side-chain χ1 (°),G190E,Unliganded (RT only),2,-168.6
+Tyr188 side-chain χ1 (°),G190E,Unliganded (RT only),3,-160.2
+"Cα RMSF, NNIBP lining (Å)",WT,Bound (RT+DOR),1,0.32
+"Cα RMSF, NNIBP lining (Å)",WT,Bound (RT+DOR),2,0.4
+"Cα RMSF, NNIBP lining (Å)",WT,Bound (RT+DOR),3,0.37
+"Cα RMSF, NNIBP lining (Å)",V106I,Bound (RT+DOR),1,0.44
+"Cα RMSF, NNIBP lining (Å)",V106I,Bound (RT+DOR),2,0.43
+"Cα RMSF, NNIBP lining (Å)",V106I,Bound (RT+DOR),3,0.47
+"Cα RMSF, NNIBP lining (Å)",K103N,Bound (RT+DOR),1,0.38
+"Cα RMSF, NNIBP lining (Å)",K103N,Bound (RT+DOR),2,0.36
+"Cα RMSF, NNIBP lining (Å)",K103N,Bound (RT+DOR),3,0.4
+"Cα RMSF, NNIBP lining (Å)",Y181C,Bound (RT+DOR),1,0.43
+"Cα RMSF, NNIBP lining (Å)",Y181C,Bound (RT+DOR),2,0.42
+"Cα RMSF, NNIBP lining (Å)",Y181C,Bound (RT+DOR),3,0.44
+"Cα RMSF, NNIBP lining (Å)",G190A,Bound (RT+DOR),1,0.4
+"Cα RMSF, NNIBP lining (Å)",G190A,Bound (RT+DOR),2,0.36
+"Cα RMSF, NNIBP lining (Å)",G190A,Bound (RT+DOR),3,0.4
+"Cα RMSF, NNIBP lining (Å)",Y318F,Bound (RT+DOR),1,0.38
+"Cα RMSF, NNIBP lining (Å)",Y318F,Bound (RT+DOR),2,0.4
+"Cα RMSF, NNIBP lining (Å)",Y318F,Bound (RT+DOR),3,0.4
+"Cα RMSF, NNIBP lining (Å)",V106A,Bound (RT+DOR),1,0.42
+"Cα RMSF, NNIBP lining (Å)",V106A,Bound (RT+DOR),2,0.36
+"Cα RMSF, NNIBP lining (Å)",V106A,Bound (RT+DOR),3,0.39
+"Cα RMSF, NNIBP lining (Å)",A98G+F227C,Bound (RT+DOR),1,0.42
+"Cα RMSF, NNIBP lining (Å)",A98G+F227C,Bound (RT+DOR),2,0.42
+"Cα RMSF, NNIBP lining (Å)",A98G+F227C,Bound (RT+DOR),3,0.4
+"Cα RMSF, NNIBP lining (Å)",V106I+F227C,Bound (RT+DOR),1,0.4
+"Cα RMSF, NNIBP lining (Å)",V106I+F227C,Bound (RT+DOR),2,0.38
+"Cα RMSF, NNIBP lining (Å)",V106I+F227C,Bound (RT+DOR),3,0.42
+"Cα RMSF, NNIBP lining (Å)",V106A+F227L,Bound (RT+DOR),1,0.4
+"Cα RMSF, NNIBP lining (Å)",V106A+F227L,Bound (RT+DOR),2,0.39
+"Cα RMSF, NNIBP lining (Å)",V106A+F227L,Bound (RT+DOR),3,0.36
+"Cα RMSF, NNIBP lining (Å)",Y188L,Bound (RT+DOR),1,0.43
+"Cα RMSF, NNIBP lining (Å)",Y188L,Bound (RT+DOR),2,0.44
+"Cα RMSF, NNIBP lining (Å)",Y188L,Bound (RT+DOR),3,0.38
+"Cα RMSF, NNIBP lining (Å)",V106A+P225H,Bound (RT+DOR),1,0.33
+"Cα RMSF, NNIBP lining (Å)",V106A+P225H,Bound (RT+DOR),2,0.38
+"Cα RMSF, NNIBP lining (Å)",V106A+P225H,Bound (RT+DOR),3,0.42
+"Cα RMSF, NNIBP lining (Å)",V106A+L234I,Bound (RT+DOR),1,0.39
+"Cα RMSF, NNIBP lining (Å)",V106A+L234I,Bound (RT+DOR),2,0.38
+"Cα RMSF, NNIBP lining (Å)",V106A+L234I,Bound (RT+DOR),3,0.46
+"Cα RMSF, NNIBP lining (Å)",K103N+M230L,Bound (RT+DOR),1,0.36
+"Cα RMSF, NNIBP lining (Å)",K103N+M230L,Bound (RT+DOR),2,0.37
+"Cα RMSF, NNIBP lining (Å)",K103N+M230L,Bound (RT+DOR),3,0.35
+"Cα RMSF, NNIBP lining (Å)",V106M,Bound (RT+DOR),1,0.39
+"Cα RMSF, NNIBP lining (Å)",V106M,Bound (RT+DOR),2,0.48
+"Cα RMSF, NNIBP lining (Å)",V106M,Bound (RT+DOR),3,0.48
+"Cα RMSF, NNIBP lining (Å)",G190S,Bound (RT+DOR),1,0.43
+"Cα RMSF, NNIBP lining (Å)",G190S,Bound (RT+DOR),2,0.39
+"Cα RMSF, NNIBP lining (Å)",G190S,Bound (RT+DOR),3,0.53
+"Cα RMSF, NNIBP lining (Å)",L100I+K103N,Bound (RT+DOR),1,0.41
+"Cα RMSF, NNIBP lining (Å)",L100I+K103N,Bound (RT+DOR),2,0.35
+"Cα RMSF, NNIBP lining (Å)",L100I+K103N,Bound (RT+DOR),3,0.39
+"Cα RMSF, NNIBP lining (Å)",K103N+P225H,Bound (RT+DOR),1,0.42
+"Cα RMSF, NNIBP lining (Å)",K103N+P225H,Bound (RT+DOR),2,0.45
+"Cα RMSF, NNIBP lining (Å)",K103N+P225H,Bound (RT+DOR),3,0.38
+"Cα RMSF, NNIBP lining (Å)",G190E,Bound (RT+DOR),1,0.5
+"Cα RMSF, NNIBP lining (Å)",G190E,Bound (RT+DOR),2,0.5
+"Cα RMSF, NNIBP lining (Å)",G190E,Bound (RT+DOR),3,0.47
+"Cα RMSF, NNIBP lining (Å)",WT,Unliganded (RT only),1,0.43
+"Cα RMSF, NNIBP lining (Å)",WT,Unliganded (RT only),2,0.47
+"Cα RMSF, NNIBP lining (Å)",WT,Unliganded (RT only),3,0.45
+"Cα RMSF, NNIBP lining (Å)",V106I,Unliganded (RT only),1,0.44
+"Cα RMSF, NNIBP lining (Å)",V106I,Unliganded (RT only),2,0.47
+"Cα RMSF, NNIBP lining (Å)",V106I,Unliganded (RT only),3,0.47
+"Cα RMSF, NNIBP lining (Å)",K103N,Unliganded (RT only),1,0.46
+"Cα RMSF, NNIBP lining (Å)",K103N,Unliganded (RT only),2,0.36
+"Cα RMSF, NNIBP lining (Å)",K103N,Unliganded (RT only),3,0.44
+"Cα RMSF, NNIBP lining (Å)",Y181C,Unliganded (RT only),1,0.51
+"Cα RMSF, NNIBP lining (Å)",Y181C,Unliganded (RT only),2,0.55
+"Cα RMSF, NNIBP lining (Å)",Y181C,Unliganded (RT only),3,0.42
+"Cα RMSF, NNIBP lining (Å)",G190A,Unliganded (RT only),1,0.57
+"Cα RMSF, NNIBP lining (Å)",G190A,Unliganded (RT only),2,0.41
+"Cα RMSF, NNIBP lining (Å)",G190A,Unliganded (RT only),3,0.49
+"Cα RMSF, NNIBP lining (Å)",Y318F,Unliganded (RT only),1,0.44
+"Cα RMSF, NNIBP lining (Å)",Y318F,Unliganded (RT only),2,0.44
+"Cα RMSF, NNIBP lining (Å)",Y318F,Unliganded (RT only),3,0.43
+"Cα RMSF, NNIBP lining (Å)",V106A,Unliganded (RT only),1,0.57
+"Cα RMSF, NNIBP lining (Å)",V106A,Unliganded (RT only),2,0.46
+"Cα RMSF, NNIBP lining (Å)",V106A,Unliganded (RT only),3,0.39
+"Cα RMSF, NNIBP lining (Å)",A98G+F227C,Unliganded (RT only),1,0.42
+"Cα RMSF, NNIBP lining (Å)",A98G+F227C,Unliganded (RT only),2,0.42
+"Cα RMSF, NNIBP lining (Å)",A98G+F227C,Unliganded (RT only),3,0.34
+"Cα RMSF, NNIBP lining (Å)",V106I+F227C,Unliganded (RT only),1,0.48
+"Cα RMSF, NNIBP lining (Å)",V106I+F227C,Unliganded (RT only),2,0.48
+"Cα RMSF, NNIBP lining (Å)",V106I+F227C,Unliganded (RT only),3,0.49
+"Cα RMSF, NNIBP lining (Å)",V106A+F227L,Unliganded (RT only),1,0.47
+"Cα RMSF, NNIBP lining (Å)",V106A+F227L,Unliganded (RT only),2,0.56
+"Cα RMSF, NNIBP lining (Å)",V106A+F227L,Unliganded (RT only),3,0.53
+"Cα RMSF, NNIBP lining (Å)",Y188L,Unliganded (RT only),1,0.48
+"Cα RMSF, NNIBP lining (Å)",Y188L,Unliganded (RT only),2,0.54
+"Cα RMSF, NNIBP lining (Å)",Y188L,Unliganded (RT only),3,0.44
+"Cα RMSF, NNIBP lining (Å)",V106A+P225H,Unliganded (RT only),1,0.57
+"Cα RMSF, NNIBP lining (Å)",V106A+P225H,Unliganded (RT only),2,0.45
+"Cα RMSF, NNIBP lining (Å)",V106A+P225H,Unliganded (RT only),3,0.48
+"Cα RMSF, NNIBP lining (Å)",V106A+L234I,Unliganded (RT only),1,0.51
+"Cα RMSF, NNIBP lining (Å)",V106A+L234I,Unliganded (RT only),2,0.54
+"Cα RMSF, NNIBP lining (Å)",V106A+L234I,Unliganded (RT only),3,0.54
+"Cα RMSF, NNIBP lining (Å)",K103N+M230L,Unliganded (RT only),1,0.43
+"Cα RMSF, NNIBP lining (Å)",K103N+M230L,Unliganded (RT only),2,0.53
+"Cα RMSF, NNIBP lining (Å)",K103N+M230L,Unliganded (RT only),3,0.54
+"Cα RMSF, NNIBP lining (Å)",V106M,Unliganded (RT only),1,0.64
+"Cα RMSF, NNIBP lining (Å)",V106M,Unliganded (RT only),2,0.38
+"Cα RMSF, NNIBP lining (Å)",V106M,Unliganded (RT only),3,0.43
+"Cα RMSF, NNIBP lining (Å)",G190S,Unliganded (RT only),1,0.4
+"Cα RMSF, NNIBP lining (Å)",G190S,Unliganded (RT only),2,0.49
+"Cα RMSF, NNIBP lining (Å)",G190S,Unliganded (RT only),3,0.53
+"Cα RMSF, NNIBP lining (Å)",L100I+K103N,Unliganded (RT only),1,0.42
+"Cα RMSF, NNIBP lining (Å)",L100I+K103N,Unliganded (RT only),2,0.43
+"Cα RMSF, NNIBP lining (Å)",L100I+K103N,Unliganded (RT only),3,0.42
+"Cα RMSF, NNIBP lining (Å)",K103N+P225H,Unliganded (RT only),1,0.4
+"Cα RMSF, NNIBP lining (Å)",K103N+P225H,Unliganded (RT only),2,0.48
+"Cα RMSF, NNIBP lining (Å)",K103N+P225H,Unliganded (RT only),3,0.66
+"Cα RMSF, NNIBP lining (Å)",G190E,Unliganded (RT only),1,0.44
+"Cα RMSF, NNIBP lining (Å)",G190E,Unliganded (RT only),2,0.74
+"Cα RMSF, NNIBP lining (Å)",G190E,Unliganded (RT only),3,0.43
+"Cα RMSF, primer grip 225–235 (Å)",WT,Bound (RT+DOR),1,0.39
+"Cα RMSF, primer grip 225–235 (Å)",WT,Bound (RT+DOR),2,0.45
+"Cα RMSF, primer grip 225–235 (Å)",WT,Bound (RT+DOR),3,0.45
+"Cα RMSF, primer grip 225–235 (Å)",V106I,Bound (RT+DOR),1,0.6
+"Cα RMSF, primer grip 225–235 (Å)",V106I,Bound (RT+DOR),2,0.61
+"Cα RMSF, primer grip 225–235 (Å)",V106I,Bound (RT+DOR),3,0.54
+"Cα RMSF, primer grip 225–235 (Å)",K103N,Bound (RT+DOR),1,0.52
+"Cα RMSF, primer grip 225–235 (Å)",K103N,Bound (RT+DOR),2,0.44
+"Cα RMSF, primer grip 225–235 (Å)",K103N,Bound (RT+DOR),3,0.55
+"Cα RMSF, primer grip 225–235 (Å)",Y181C,Bound (RT+DOR),1,0.52
+"Cα RMSF, primer grip 225–235 (Å)",Y181C,Bound (RT+DOR),2,0.49
+"Cα RMSF, primer grip 225–235 (Å)",Y181C,Bound (RT+DOR),3,0.5
+"Cα RMSF, primer grip 225–235 (Å)",G190A,Bound (RT+DOR),1,0.53
+"Cα RMSF, primer grip 225–235 (Å)",G190A,Bound (RT+DOR),2,0.49
+"Cα RMSF, primer grip 225–235 (Å)",G190A,Bound (RT+DOR),3,0.52
+"Cα RMSF, primer grip 225–235 (Å)",Y318F,Bound (RT+DOR),1,0.55
+"Cα RMSF, primer grip 225–235 (Å)",Y318F,Bound (RT+DOR),2,0.49
+"Cα RMSF, primer grip 225–235 (Å)",Y318F,Bound (RT+DOR),3,0.48
+"Cα RMSF, primer grip 225–235 (Å)",V106A,Bound (RT+DOR),1,0.5
+"Cα RMSF, primer grip 225–235 (Å)",V106A,Bound (RT+DOR),2,0.44
+"Cα RMSF, primer grip 225–235 (Å)",V106A,Bound (RT+DOR),3,0.48
+"Cα RMSF, primer grip 225–235 (Å)",A98G+F227C,Bound (RT+DOR),1,0.49
+"Cα RMSF, primer grip 225–235 (Å)",A98G+F227C,Bound (RT+DOR),2,0.55
+"Cα RMSF, primer grip 225–235 (Å)",A98G+F227C,Bound (RT+DOR),3,0.53
+"Cα RMSF, primer grip 225–235 (Å)",V106I+F227C,Bound (RT+DOR),1,0.52
+"Cα RMSF, primer grip 225–235 (Å)",V106I+F227C,Bound (RT+DOR),2,0.48
+"Cα RMSF, primer grip 225–235 (Å)",V106I+F227C,Bound (RT+DOR),3,0.55
+"Cα RMSF, primer grip 225–235 (Å)",V106A+F227L,Bound (RT+DOR),1,0.61
+"Cα RMSF, primer grip 225–235 (Å)",V106A+F227L,Bound (RT+DOR),2,0.47
+"Cα RMSF, primer grip 225–235 (Å)",V106A+F227L,Bound (RT+DOR),3,0.49
+"Cα RMSF, primer grip 225–235 (Å)",Y188L,Bound (RT+DOR),1,0.54
+"Cα RMSF, primer grip 225–235 (Å)",Y188L,Bound (RT+DOR),2,0.62
+"Cα RMSF, primer grip 225–235 (Å)",Y188L,Bound (RT+DOR),3,0.51
+"Cα RMSF, primer grip 225–235 (Å)",V106A+P225H,Bound (RT+DOR),1,0.42
+"Cα RMSF, primer grip 225–235 (Å)",V106A+P225H,Bound (RT+DOR),2,0.52
+"Cα RMSF, primer grip 225–235 (Å)",V106A+P225H,Bound (RT+DOR),3,0.55
+"Cα RMSF, primer grip 225–235 (Å)",V106A+L234I,Bound (RT+DOR),1,0.49
+"Cα RMSF, primer grip 225–235 (Å)",V106A+L234I,Bound (RT+DOR),2,0.48
+"Cα RMSF, primer grip 225–235 (Å)",V106A+L234I,Bound (RT+DOR),3,0.72
+"Cα RMSF, primer grip 225–235 (Å)",K103N+M230L,Bound (RT+DOR),1,0.47
+"Cα RMSF, primer grip 225–235 (Å)",K103N+M230L,Bound (RT+DOR),2,0.46
+"Cα RMSF, primer grip 225–235 (Å)",K103N+M230L,Bound (RT+DOR),3,0.5
+"Cα RMSF, primer grip 225–235 (Å)",V106M,Bound (RT+DOR),1,0.5
+"Cα RMSF, primer grip 225–235 (Å)",V106M,Bound (RT+DOR),2,0.68
+"Cα RMSF, primer grip 225–235 (Å)",V106M,Bound (RT+DOR),3,0.63
+"Cα RMSF, primer grip 225–235 (Å)",G190S,Bound (RT+DOR),1,0.54
+"Cα RMSF, primer grip 225–235 (Å)",G190S,Bound (RT+DOR),2,0.49
+"Cα RMSF, primer grip 225–235 (Å)",G190S,Bound (RT+DOR),3,0.53
+"Cα RMSF, primer grip 225–235 (Å)",L100I+K103N,Bound (RT+DOR),1,0.56
+"Cα RMSF, primer grip 225–235 (Å)",L100I+K103N,Bound (RT+DOR),2,0.45
+"Cα RMSF, primer grip 225–235 (Å)",L100I+K103N,Bound (RT+DOR),3,0.46
+"Cα RMSF, primer grip 225–235 (Å)",K103N+P225H,Bound (RT+DOR),1,0.58
+"Cα RMSF, primer grip 225–235 (Å)",K103N+P225H,Bound (RT+DOR),2,0.59
+"Cα RMSF, primer grip 225–235 (Å)",K103N+P225H,Bound (RT+DOR),3,0.49
+"Cα RMSF, primer grip 225–235 (Å)",G190E,Bound (RT+DOR),1,0.58
+"Cα RMSF, primer grip 225–235 (Å)",G190E,Bound (RT+DOR),2,0.57
+"Cα RMSF, primer grip 225–235 (Å)",G190E,Bound (RT+DOR),3,0.52
+"Cα RMSF, primer grip 225–235 (Å)",WT,Unliganded (RT only),1,0.49
+"Cα RMSF, primer grip 225–235 (Å)",WT,Unliganded (RT only),2,0.64
+"Cα RMSF, primer grip 225–235 (Å)",WT,Unliganded (RT only),3,0.58
+"Cα RMSF, primer grip 225–235 (Å)",V106I,Unliganded (RT only),1,0.56
+"Cα RMSF, primer grip 225–235 (Å)",V106I,Unliganded (RT only),2,0.6
+"Cα RMSF, primer grip 225–235 (Å)",V106I,Unliganded (RT only),3,0.61
+"Cα RMSF, primer grip 225–235 (Å)",K103N,Unliganded (RT only),1,0.69
+"Cα RMSF, primer grip 225–235 (Å)",K103N,Unliganded (RT only),2,0.5
+"Cα RMSF, primer grip 225–235 (Å)",K103N,Unliganded (RT only),3,0.61
+"Cα RMSF, primer grip 225–235 (Å)",Y181C,Unliganded (RT only),1,0.77
+"Cα RMSF, primer grip 225–235 (Å)",Y181C,Unliganded (RT only),2,0.71
+"Cα RMSF, primer grip 225–235 (Å)",Y181C,Unliganded (RT only),3,0.52
+"Cα RMSF, primer grip 225–235 (Å)",G190A,Unliganded (RT only),1,0.67
+"Cα RMSF, primer grip 225–235 (Å)",G190A,Unliganded (RT only),2,0.57
+"Cα RMSF, primer grip 225–235 (Å)",G190A,Unliganded (RT only),3,0.64
+"Cα RMSF, primer grip 225–235 (Å)",Y318F,Unliganded (RT only),1,0.61
+"Cα RMSF, primer grip 225–235 (Å)",Y318F,Unliganded (RT only),2,0.58
+"Cα RMSF, primer grip 225–235 (Å)",Y318F,Unliganded (RT only),3,0.57
+"Cα RMSF, primer grip 225–235 (Å)",V106A,Unliganded (RT only),1,0.8
+"Cα RMSF, primer grip 225–235 (Å)",V106A,Unliganded (RT only),2,0.63
+"Cα RMSF, primer grip 225–235 (Å)",V106A,Unliganded (RT only),3,0.53
+"Cα RMSF, primer grip 225–235 (Å)",A98G+F227C,Unliganded (RT only),1,0.66
+"Cα RMSF, primer grip 225–235 (Å)",A98G+F227C,Unliganded (RT only),2,0.63
+"Cα RMSF, primer grip 225–235 (Å)",A98G+F227C,Unliganded (RT only),3,0.46
+"Cα RMSF, primer grip 225–235 (Å)",V106I+F227C,Unliganded (RT only),1,0.72
+"Cα RMSF, primer grip 225–235 (Å)",V106I+F227C,Unliganded (RT only),2,0.66
+"Cα RMSF, primer grip 225–235 (Å)",V106I+F227C,Unliganded (RT only),3,0.6
+"Cα RMSF, primer grip 225–235 (Å)",V106A+F227L,Unliganded (RT only),1,0.66
+"Cα RMSF, primer grip 225–235 (Å)",V106A+F227L,Unliganded (RT only),2,0.76
+"Cα RMSF, primer grip 225–235 (Å)",V106A+F227L,Unliganded (RT only),3,0.68
+"Cα RMSF, primer grip 225–235 (Å)",Y188L,Unliganded (RT only),1,0.57
+"Cα RMSF, primer grip 225–235 (Å)",Y188L,Unliganded (RT only),2,0.72
+"Cα RMSF, primer grip 225–235 (Å)",Y188L,Unliganded (RT only),3,0.63
+"Cα RMSF, primer grip 225–235 (Å)",V106A+P225H,Unliganded (RT only),1,0.79
+"Cα RMSF, primer grip 225–235 (Å)",V106A+P225H,Unliganded (RT only),2,0.64
+"Cα RMSF, primer grip 225–235 (Å)",V106A+P225H,Unliganded (RT only),3,0.68
+"Cα RMSF, primer grip 225–235 (Å)",V106A+L234I,Unliganded (RT only),1,0.67
+"Cα RMSF, primer grip 225–235 (Å)",V106A+L234I,Unliganded (RT only),2,0.83
+"Cα RMSF, primer grip 225–235 (Å)",V106A+L234I,Unliganded (RT only),3,0.82
+"Cα RMSF, primer grip 225–235 (Å)",K103N+M230L,Unliganded (RT only),1,0.7
+"Cα RMSF, primer grip 225–235 (Å)",K103N+M230L,Unliganded (RT only),2,0.84
+"Cα RMSF, primer grip 225–235 (Å)",K103N+M230L,Unliganded (RT only),3,0.78
+"Cα RMSF, primer grip 225–235 (Å)",V106M,Unliganded (RT only),1,0.81
+"Cα RMSF, primer grip 225–235 (Å)",V106M,Unliganded (RT only),2,0.48
+"Cα RMSF, primer grip 225–235 (Å)",V106M,Unliganded (RT only),3,0.64
+"Cα RMSF, primer grip 225–235 (Å)",G190S,Unliganded (RT only),1,0.61
+"Cα RMSF, primer grip 225–235 (Å)",G190S,Unliganded (RT only),2,0.55
+"Cα RMSF, primer grip 225–235 (Å)",G190S,Unliganded (RT only),3,0.68
+"Cα RMSF, primer grip 225–235 (Å)",L100I+K103N,Unliganded (RT only),1,0.62
+"Cα RMSF, primer grip 225–235 (Å)",L100I+K103N,Unliganded (RT only),2,0.54
+"Cα RMSF, primer grip 225–235 (Å)",L100I+K103N,Unliganded (RT only),3,0.63
+"Cα RMSF, primer grip 225–235 (Å)",K103N+P225H,Unliganded (RT only),1,0.52
+"Cα RMSF, primer grip 225–235 (Å)",K103N+P225H,Unliganded (RT only),2,0.62
+"Cα RMSF, primer grip 225–235 (Å)",K103N+P225H,Unliganded (RT only),3,0.76
+"Cα RMSF, primer grip 225–235 (Å)",G190E,Unliganded (RT only),1,0.55
+"Cα RMSF, primer grip 225–235 (Å)",G190E,Unliganded (RT only),2,1.15
+"Cα RMSF, primer grip 225–235 (Å)",G190E,Unliganded (RT only),3,0.65
+"Cα RMSF, YMDD motif 183–186 (Å)",WT,Bound (RT+DOR),1,0.68
+"Cα RMSF, YMDD motif 183–186 (Å)",WT,Bound (RT+DOR),2,1.29
+"Cα RMSF, YMDD motif 183–186 (Å)",WT,Bound (RT+DOR),3,0.8
+"Cα RMSF, YMDD motif 183–186 (Å)",V106I,Bound (RT+DOR),1,1.01
+"Cα RMSF, YMDD motif 183–186 (Å)",V106I,Bound (RT+DOR),2,0.81
+"Cα RMSF, YMDD motif 183–186 (Å)",V106I,Bound (RT+DOR),3,1.31
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N,Bound (RT+DOR),1,1.07
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N,Bound (RT+DOR),2,0.81
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N,Bound (RT+DOR),3,1.27
+"Cα RMSF, YMDD motif 183–186 (Å)",Y181C,Bound (RT+DOR),1,1.09
+"Cα RMSF, YMDD motif 183–186 (Å)",Y181C,Bound (RT+DOR),2,1.03
+"Cα RMSF, YMDD motif 183–186 (Å)",Y181C,Bound (RT+DOR),3,1.12
+"Cα RMSF, YMDD motif 183–186 (Å)",G190A,Bound (RT+DOR),1,0.93
+"Cα RMSF, YMDD motif 183–186 (Å)",G190A,Bound (RT+DOR),2,1.02
+"Cα RMSF, YMDD motif 183–186 (Å)",G190A,Bound (RT+DOR),3,0.93
+"Cα RMSF, YMDD motif 183–186 (Å)",Y318F,Bound (RT+DOR),1,0.82
+"Cα RMSF, YMDD motif 183–186 (Å)",Y318F,Bound (RT+DOR),2,1.07
+"Cα RMSF, YMDD motif 183–186 (Å)",Y318F,Bound (RT+DOR),3,1.12
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A,Bound (RT+DOR),1,0.84
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A,Bound (RT+DOR),2,0.86
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A,Bound (RT+DOR),3,0.91
+"Cα RMSF, YMDD motif 183–186 (Å)",A98G+F227C,Bound (RT+DOR),1,0.8
+"Cα RMSF, YMDD motif 183–186 (Å)",A98G+F227C,Bound (RT+DOR),2,1.02
+"Cα RMSF, YMDD motif 183–186 (Å)",A98G+F227C,Bound (RT+DOR),3,1.15
+"Cα RMSF, YMDD motif 183–186 (Å)",V106I+F227C,Bound (RT+DOR),1,0.9
+"Cα RMSF, YMDD motif 183–186 (Å)",V106I+F227C,Bound (RT+DOR),2,1.14
+"Cα RMSF, YMDD motif 183–186 (Å)",V106I+F227C,Bound (RT+DOR),3,1.35
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+F227L,Bound (RT+DOR),1,0.99
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+F227L,Bound (RT+DOR),2,0.97
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+F227L,Bound (RT+DOR),3,1.01
+"Cα RMSF, YMDD motif 183–186 (Å)",Y188L,Bound (RT+DOR),1,1.02
+"Cα RMSF, YMDD motif 183–186 (Å)",Y188L,Bound (RT+DOR),2,0.86
+"Cα RMSF, YMDD motif 183–186 (Å)",Y188L,Bound (RT+DOR),3,0.94
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+P225H,Bound (RT+DOR),1,0.69
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+P225H,Bound (RT+DOR),2,0.9
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+P225H,Bound (RT+DOR),3,0.93
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+L234I,Bound (RT+DOR),1,0.91
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+L234I,Bound (RT+DOR),2,0.98
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+L234I,Bound (RT+DOR),3,1.21
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N+M230L,Bound (RT+DOR),1,0.85
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N+M230L,Bound (RT+DOR),2,0.84
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N+M230L,Bound (RT+DOR),3,1.07
+"Cα RMSF, YMDD motif 183–186 (Å)",V106M,Bound (RT+DOR),1,1.16
+"Cα RMSF, YMDD motif 183–186 (Å)",V106M,Bound (RT+DOR),2,1.12
+"Cα RMSF, YMDD motif 183–186 (Å)",V106M,Bound (RT+DOR),3,1.18
+"Cα RMSF, YMDD motif 183–186 (Å)",G190S,Bound (RT+DOR),1,1.24
+"Cα RMSF, YMDD motif 183–186 (Å)",G190S,Bound (RT+DOR),2,1.28
+"Cα RMSF, YMDD motif 183–186 (Å)",G190S,Bound (RT+DOR),3,1.24
+"Cα RMSF, YMDD motif 183–186 (Å)",L100I+K103N,Bound (RT+DOR),1,0.93
+"Cα RMSF, YMDD motif 183–186 (Å)",L100I+K103N,Bound (RT+DOR),2,0.73
+"Cα RMSF, YMDD motif 183–186 (Å)",L100I+K103N,Bound (RT+DOR),3,0.77
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N+P225H,Bound (RT+DOR),1,1.22
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N+P225H,Bound (RT+DOR),2,1.44
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N+P225H,Bound (RT+DOR),3,0.75
+"Cα RMSF, YMDD motif 183–186 (Å)",G190E,Bound (RT+DOR),1,0.94
+"Cα RMSF, YMDD motif 183–186 (Å)",G190E,Bound (RT+DOR),2,1.25
+"Cα RMSF, YMDD motif 183–186 (Å)",G190E,Bound (RT+DOR),3,0.86
+"Cα RMSF, YMDD motif 183–186 (Å)",WT,Unliganded (RT only),1,0.9
+"Cα RMSF, YMDD motif 183–186 (Å)",WT,Unliganded (RT only),2,1.0
+"Cα RMSF, YMDD motif 183–186 (Å)",WT,Unliganded (RT only),3,0.71
+"Cα RMSF, YMDD motif 183–186 (Å)",V106I,Unliganded (RT only),1,0.66
+"Cα RMSF, YMDD motif 183–186 (Å)",V106I,Unliganded (RT only),2,1.04
+"Cα RMSF, YMDD motif 183–186 (Å)",V106I,Unliganded (RT only),3,1.27
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N,Unliganded (RT only),1,0.71
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N,Unliganded (RT only),2,0.88
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N,Unliganded (RT only),3,0.89
+"Cα RMSF, YMDD motif 183–186 (Å)",Y181C,Unliganded (RT only),1,0.98
+"Cα RMSF, YMDD motif 183–186 (Å)",Y181C,Unliganded (RT only),2,1.11
+"Cα RMSF, YMDD motif 183–186 (Å)",Y181C,Unliganded (RT only),3,1.01
+"Cα RMSF, YMDD motif 183–186 (Å)",G190A,Unliganded (RT only),1,1.14
+"Cα RMSF, YMDD motif 183–186 (Å)",G190A,Unliganded (RT only),2,0.75
+"Cα RMSF, YMDD motif 183–186 (Å)",G190A,Unliganded (RT only),3,0.78
+"Cα RMSF, YMDD motif 183–186 (Å)",Y318F,Unliganded (RT only),1,0.85
+"Cα RMSF, YMDD motif 183–186 (Å)",Y318F,Unliganded (RT only),2,0.8
+"Cα RMSF, YMDD motif 183–186 (Å)",Y318F,Unliganded (RT only),3,0.83
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A,Unliganded (RT only),1,1.32
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A,Unliganded (RT only),2,0.71
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A,Unliganded (RT only),3,0.8
+"Cα RMSF, YMDD motif 183–186 (Å)",A98G+F227C,Unliganded (RT only),1,0.82
+"Cα RMSF, YMDD motif 183–186 (Å)",A98G+F227C,Unliganded (RT only),2,0.74
+"Cα RMSF, YMDD motif 183–186 (Å)",A98G+F227C,Unliganded (RT only),3,0.54
+"Cα RMSF, YMDD motif 183–186 (Å)",V106I+F227C,Unliganded (RT only),1,0.87
+"Cα RMSF, YMDD motif 183–186 (Å)",V106I+F227C,Unliganded (RT only),2,0.89
+"Cα RMSF, YMDD motif 183–186 (Å)",V106I+F227C,Unliganded (RT only),3,0.88
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+F227L,Unliganded (RT only),1,0.88
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+F227L,Unliganded (RT only),2,0.95
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+F227L,Unliganded (RT only),3,1.43
+"Cα RMSF, YMDD motif 183–186 (Å)",Y188L,Unliganded (RT only),1,0.84
+"Cα RMSF, YMDD motif 183–186 (Å)",Y188L,Unliganded (RT only),2,0.79
+"Cα RMSF, YMDD motif 183–186 (Å)",Y188L,Unliganded (RT only),3,1.0
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+P225H,Unliganded (RT only),1,1.19
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+P225H,Unliganded (RT only),2,0.7
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+P225H,Unliganded (RT only),3,1.0
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+L234I,Unliganded (RT only),1,1.09
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+L234I,Unliganded (RT only),2,1.22
+"Cα RMSF, YMDD motif 183–186 (Å)",V106A+L234I,Unliganded (RT only),3,0.92
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N+M230L,Unliganded (RT only),1,0.83
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N+M230L,Unliganded (RT only),2,1.72
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N+M230L,Unliganded (RT only),3,0.88
+"Cα RMSF, YMDD motif 183–186 (Å)",V106M,Unliganded (RT only),1,0.98
+"Cα RMSF, YMDD motif 183–186 (Å)",V106M,Unliganded (RT only),2,0.94
+"Cα RMSF, YMDD motif 183–186 (Å)",V106M,Unliganded (RT only),3,0.91
+"Cα RMSF, YMDD motif 183–186 (Å)",G190S,Unliganded (RT only),1,1.04
+"Cα RMSF, YMDD motif 183–186 (Å)",G190S,Unliganded (RT only),2,0.76
+"Cα RMSF, YMDD motif 183–186 (Å)",G190S,Unliganded (RT only),3,0.8
+"Cα RMSF, YMDD motif 183–186 (Å)",L100I+K103N,Unliganded (RT only),1,0.76
+"Cα RMSF, YMDD motif 183–186 (Å)",L100I+K103N,Unliganded (RT only),2,0.6
+"Cα RMSF, YMDD motif 183–186 (Å)",L100I+K103N,Unliganded (RT only),3,0.86
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N+P225H,Unliganded (RT only),1,0.86
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N+P225H,Unliganded (RT only),2,0.97
+"Cα RMSF, YMDD motif 183–186 (Å)",K103N+P225H,Unliganded (RT only),3,1.34
+"Cα RMSF, YMDD motif 183–186 (Å)",G190E,Unliganded (RT only),1,0.72
+"Cα RMSF, YMDD motif 183–186 (Å)",G190E,Unliganded (RT only),2,1.2
+"Cα RMSF, YMDD motif 183–186 (Å)",G190E,Unliganded (RT only),3,0.73
+"Cα RMSF, p66 fingers (Å)",WT,Bound (RT+DOR),1,2.0
+"Cα RMSF, p66 fingers (Å)",WT,Bound (RT+DOR),2,2.41
+"Cα RMSF, p66 fingers (Å)",WT,Bound (RT+DOR),3,2.27
+"Cα RMSF, p66 fingers (Å)",V106I,Bound (RT+DOR),1,2.52
+"Cα RMSF, p66 fingers (Å)",V106I,Bound (RT+DOR),2,2.28
+"Cα RMSF, p66 fingers (Å)",V106I,Bound (RT+DOR),3,3.21
+"Cα RMSF, p66 fingers (Å)",K103N,Bound (RT+DOR),1,3.08
+"Cα RMSF, p66 fingers (Å)",K103N,Bound (RT+DOR),2,2.15
+"Cα RMSF, p66 fingers (Å)",K103N,Bound (RT+DOR),3,2.72
+"Cα RMSF, p66 fingers (Å)",Y181C,Bound (RT+DOR),1,2.56
+"Cα RMSF, p66 fingers (Å)",Y181C,Bound (RT+DOR),2,2.35
+"Cα RMSF, p66 fingers (Å)",Y181C,Bound (RT+DOR),3,3.2
+"Cα RMSF, p66 fingers (Å)",G190A,Bound (RT+DOR),1,2.56
+"Cα RMSF, p66 fingers (Å)",G190A,Bound (RT+DOR),2,2.27
+"Cα RMSF, p66 fingers (Å)",G190A,Bound (RT+DOR),3,2.54
+"Cα RMSF, p66 fingers (Å)",Y318F,Bound (RT+DOR),1,2.45
+"Cα RMSF, p66 fingers (Å)",Y318F,Bound (RT+DOR),2,2.44
+"Cα RMSF, p66 fingers (Å)",Y318F,Bound (RT+DOR),3,2.87
+"Cα RMSF, p66 fingers (Å)",V106A,Bound (RT+DOR),1,2.33
+"Cα RMSF, p66 fingers (Å)",V106A,Bound (RT+DOR),2,2.72
+"Cα RMSF, p66 fingers (Å)",V106A,Bound (RT+DOR),3,2.19
+"Cα RMSF, p66 fingers (Å)",A98G+F227C,Bound (RT+DOR),1,2.27
+"Cα RMSF, p66 fingers (Å)",A98G+F227C,Bound (RT+DOR),2,2.22
+"Cα RMSF, p66 fingers (Å)",A98G+F227C,Bound (RT+DOR),3,2.55
+"Cα RMSF, p66 fingers (Å)",V106I+F227C,Bound (RT+DOR),1,2.42
+"Cα RMSF, p66 fingers (Å)",V106I+F227C,Bound (RT+DOR),2,2.21
+"Cα RMSF, p66 fingers (Å)",V106I+F227C,Bound (RT+DOR),3,2.62
+"Cα RMSF, p66 fingers (Å)",V106A+F227L,Bound (RT+DOR),1,2.04
+"Cα RMSF, p66 fingers (Å)",V106A+F227L,Bound (RT+DOR),2,2.26
+"Cα RMSF, p66 fingers (Å)",V106A+F227L,Bound (RT+DOR),3,2.14
+"Cα RMSF, p66 fingers (Å)",Y188L,Bound (RT+DOR),1,2.69
+"Cα RMSF, p66 fingers (Å)",Y188L,Bound (RT+DOR),2,2.54
+"Cα RMSF, p66 fingers (Å)",Y188L,Bound (RT+DOR),3,2.27
+"Cα RMSF, p66 fingers (Å)",V106A+P225H,Bound (RT+DOR),1,2.24
+"Cα RMSF, p66 fingers (Å)",V106A+P225H,Bound (RT+DOR),2,2.52
+"Cα RMSF, p66 fingers (Å)",V106A+P225H,Bound (RT+DOR),3,2.93
+"Cα RMSF, p66 fingers (Å)",V106A+L234I,Bound (RT+DOR),1,2.38
+"Cα RMSF, p66 fingers (Å)",V106A+L234I,Bound (RT+DOR),2,2.08
+"Cα RMSF, p66 fingers (Å)",V106A+L234I,Bound (RT+DOR),3,2.59
+"Cα RMSF, p66 fingers (Å)",K103N+M230L,Bound (RT+DOR),1,2.21
+"Cα RMSF, p66 fingers (Å)",K103N+M230L,Bound (RT+DOR),2,2.29
+"Cα RMSF, p66 fingers (Å)",K103N+M230L,Bound (RT+DOR),3,3.16
+"Cα RMSF, p66 fingers (Å)",V106M,Bound (RT+DOR),1,2.17
+"Cα RMSF, p66 fingers (Å)",V106M,Bound (RT+DOR),2,2.59
+"Cα RMSF, p66 fingers (Å)",V106M,Bound (RT+DOR),3,2.26
+"Cα RMSF, p66 fingers (Å)",G190S,Bound (RT+DOR),1,3.18
+"Cα RMSF, p66 fingers (Å)",G190S,Bound (RT+DOR),2,2.79
+"Cα RMSF, p66 fingers (Å)",G190S,Bound (RT+DOR),3,2.45
+"Cα RMSF, p66 fingers (Å)",L100I+K103N,Bound (RT+DOR),1,2.18
+"Cα RMSF, p66 fingers (Å)",L100I+K103N,Bound (RT+DOR),2,2.17
+"Cα RMSF, p66 fingers (Å)",L100I+K103N,Bound (RT+DOR),3,2.15
+"Cα RMSF, p66 fingers (Å)",K103N+P225H,Bound (RT+DOR),1,3.17
+"Cα RMSF, p66 fingers (Å)",K103N+P225H,Bound (RT+DOR),2,3.05
+"Cα RMSF, p66 fingers (Å)",K103N+P225H,Bound (RT+DOR),3,2.19
+"Cα RMSF, p66 fingers (Å)",G190E,Bound (RT+DOR),1,2.98
+"Cα RMSF, p66 fingers (Å)",G190E,Bound (RT+DOR),2,2.71
+"Cα RMSF, p66 fingers (Å)",G190E,Bound (RT+DOR),3,2.66
+"Cα RMSF, p66 fingers (Å)",WT,Unliganded (RT only),1,3.19
+"Cα RMSF, p66 fingers (Å)",WT,Unliganded (RT only),2,2.36
+"Cα RMSF, p66 fingers (Å)",WT,Unliganded (RT only),3,2.43
+"Cα RMSF, p66 fingers (Å)",V106I,Unliganded (RT only),1,2.49
+"Cα RMSF, p66 fingers (Å)",V106I,Unliganded (RT only),2,2.81
+"Cα RMSF, p66 fingers (Å)",V106I,Unliganded (RT only),3,2.73
+"Cα RMSF, p66 fingers (Å)",K103N,Unliganded (RT only),1,2.15
+"Cα RMSF, p66 fingers (Å)",K103N,Unliganded (RT only),2,2.33
+"Cα RMSF, p66 fingers (Å)",K103N,Unliganded (RT only),3,2.61
+"Cα RMSF, p66 fingers (Å)",Y181C,Unliganded (RT only),1,2.58
+"Cα RMSF, p66 fingers (Å)",Y181C,Unliganded (RT only),2,2.87
+"Cα RMSF, p66 fingers (Å)",Y181C,Unliganded (RT only),3,2.35
+"Cα RMSF, p66 fingers (Å)",G190A,Unliganded (RT only),1,2.73
+"Cα RMSF, p66 fingers (Å)",G190A,Unliganded (RT only),2,2.73
+"Cα RMSF, p66 fingers (Å)",G190A,Unliganded (RT only),3,2.45
+"Cα RMSF, p66 fingers (Å)",Y318F,Unliganded (RT only),1,2.42
+"Cα RMSF, p66 fingers (Å)",Y318F,Unliganded (RT only),2,2.3
+"Cα RMSF, p66 fingers (Å)",Y318F,Unliganded (RT only),3,2.51
+"Cα RMSF, p66 fingers (Å)",V106A,Unliganded (RT only),1,2.76
+"Cα RMSF, p66 fingers (Å)",V106A,Unliganded (RT only),2,2.24
+"Cα RMSF, p66 fingers (Å)",V106A,Unliganded (RT only),3,2.12
+"Cα RMSF, p66 fingers (Å)",A98G+F227C,Unliganded (RT only),1,2.27
+"Cα RMSF, p66 fingers (Å)",A98G+F227C,Unliganded (RT only),2,2.16
+"Cα RMSF, p66 fingers (Å)",A98G+F227C,Unliganded (RT only),3,1.94
+"Cα RMSF, p66 fingers (Å)",V106I+F227C,Unliganded (RT only),1,2.52
+"Cα RMSF, p66 fingers (Å)",V106I+F227C,Unliganded (RT only),2,2.63
+"Cα RMSF, p66 fingers (Å)",V106I+F227C,Unliganded (RT only),3,2.91
+"Cα RMSF, p66 fingers (Å)",V106A+F227L,Unliganded (RT only),1,2.53
+"Cα RMSF, p66 fingers (Å)",V106A+F227L,Unliganded (RT only),2,2.31
+"Cα RMSF, p66 fingers (Å)",V106A+F227L,Unliganded (RT only),3,2.29
+"Cα RMSF, p66 fingers (Å)",Y188L,Unliganded (RT only),1,2.34
+"Cα RMSF, p66 fingers (Å)",Y188L,Unliganded (RT only),2,2.54
+"Cα RMSF, p66 fingers (Å)",Y188L,Unliganded (RT only),3,2.83
+"Cα RMSF, p66 fingers (Å)",V106A+P225H,Unliganded (RT only),1,2.83
+"Cα RMSF, p66 fingers (Å)",V106A+P225H,Unliganded (RT only),2,2.46
+"Cα RMSF, p66 fingers (Å)",V106A+P225H,Unliganded (RT only),3,2.64
+"Cα RMSF, p66 fingers (Å)",V106A+L234I,Unliganded (RT only),1,2.45
+"Cα RMSF, p66 fingers (Å)",V106A+L234I,Unliganded (RT only),2,3.03
+"Cα RMSF, p66 fingers (Å)",V106A+L234I,Unliganded (RT only),3,2.74
+"Cα RMSF, p66 fingers (Å)",K103N+M230L,Unliganded (RT only),1,2.19
+"Cα RMSF, p66 fingers (Å)",K103N+M230L,Unliganded (RT only),2,2.37
+"Cα RMSF, p66 fingers (Å)",K103N+M230L,Unliganded (RT only),3,3.27
+"Cα RMSF, p66 fingers (Å)",V106M,Unliganded (RT only),1,2.56
+"Cα RMSF, p66 fingers (Å)",V106M,Unliganded (RT only),2,2.55
+"Cα RMSF, p66 fingers (Å)",V106M,Unliganded (RT only),3,2.46
+"Cα RMSF, p66 fingers (Å)",G190S,Unliganded (RT only),1,2.74
+"Cα RMSF, p66 fingers (Å)",G190S,Unliganded (RT only),2,2.53
+"Cα RMSF, p66 fingers (Å)",G190S,Unliganded (RT only),3,2.79
+"Cα RMSF, p66 fingers (Å)",L100I+K103N,Unliganded (RT only),1,2.12
+"Cα RMSF, p66 fingers (Å)",L100I+K103N,Unliganded (RT only),2,2.25
+"Cα RMSF, p66 fingers (Å)",L100I+K103N,Unliganded (RT only),3,2.39
+"Cα RMSF, p66 fingers (Å)",K103N+P225H,Unliganded (RT only),1,2.1
+"Cα RMSF, p66 fingers (Å)",K103N+P225H,Unliganded (RT only),2,2.99
+"Cα RMSF, p66 fingers (Å)",K103N+P225H,Unliganded (RT only),3,4.34
+"Cα RMSF, p66 fingers (Å)",G190E,Unliganded (RT only),1,2.58
+"Cα RMSF, p66 fingers (Å)",G190E,Unliganded (RT only),2,3.08
+"Cα RMSF, p66 fingers (Å)",G190E,Unliganded (RT only),3,2.45
+"Cα RMSF, p66 thumb (Å)",WT,Bound (RT+DOR),1,1.29
+"Cα RMSF, p66 thumb (Å)",WT,Bound (RT+DOR),2,2.52
+"Cα RMSF, p66 thumb (Å)",WT,Bound (RT+DOR),3,1.88
+"Cα RMSF, p66 thumb (Å)",V106I,Bound (RT+DOR),1,2.27
+"Cα RMSF, p66 thumb (Å)",V106I,Bound (RT+DOR),2,1.99
+"Cα RMSF, p66 thumb (Å)",V106I,Bound (RT+DOR),3,1.87
+"Cα RMSF, p66 thumb (Å)",K103N,Bound (RT+DOR),1,1.75
+"Cα RMSF, p66 thumb (Å)",K103N,Bound (RT+DOR),2,2.13
+"Cα RMSF, p66 thumb (Å)",K103N,Bound (RT+DOR),3,2.17
+"Cα RMSF, p66 thumb (Å)",Y181C,Bound (RT+DOR),1,2.05
+"Cα RMSF, p66 thumb (Å)",Y181C,Bound (RT+DOR),2,2.1
+"Cα RMSF, p66 thumb (Å)",Y181C,Bound (RT+DOR),3,2.62
+"Cα RMSF, p66 thumb (Å)",G190A,Bound (RT+DOR),1,1.86
+"Cα RMSF, p66 thumb (Å)",G190A,Bound (RT+DOR),2,1.7
+"Cα RMSF, p66 thumb (Å)",G190A,Bound (RT+DOR),3,1.61
+"Cα RMSF, p66 thumb (Å)",Y318F,Bound (RT+DOR),1,1.72
+"Cα RMSF, p66 thumb (Å)",Y318F,Bound (RT+DOR),2,1.75
+"Cα RMSF, p66 thumb (Å)",Y318F,Bound (RT+DOR),3,2.02
+"Cα RMSF, p66 thumb (Å)",V106A,Bound (RT+DOR),1,2.01
+"Cα RMSF, p66 thumb (Å)",V106A,Bound (RT+DOR),2,1.56
+"Cα RMSF, p66 thumb (Å)",V106A,Bound (RT+DOR),3,1.66
+"Cα RMSF, p66 thumb (Å)",A98G+F227C,Bound (RT+DOR),1,1.76
+"Cα RMSF, p66 thumb (Å)",A98G+F227C,Bound (RT+DOR),2,1.83
+"Cα RMSF, p66 thumb (Å)",A98G+F227C,Bound (RT+DOR),3,2.0
+"Cα RMSF, p66 thumb (Å)",V106I+F227C,Bound (RT+DOR),1,1.49
+"Cα RMSF, p66 thumb (Å)",V106I+F227C,Bound (RT+DOR),2,1.85
+"Cα RMSF, p66 thumb (Å)",V106I+F227C,Bound (RT+DOR),3,2.33
+"Cα RMSF, p66 thumb (Å)",V106A+F227L,Bound (RT+DOR),1,1.77
+"Cα RMSF, p66 thumb (Å)",V106A+F227L,Bound (RT+DOR),2,1.55
+"Cα RMSF, p66 thumb (Å)",V106A+F227L,Bound (RT+DOR),3,1.56
+"Cα RMSF, p66 thumb (Å)",Y188L,Bound (RT+DOR),1,2.25
+"Cα RMSF, p66 thumb (Å)",Y188L,Bound (RT+DOR),2,1.82
+"Cα RMSF, p66 thumb (Å)",Y188L,Bound (RT+DOR),3,1.96
+"Cα RMSF, p66 thumb (Å)",V106A+P225H,Bound (RT+DOR),1,1.95
+"Cα RMSF, p66 thumb (Å)",V106A+P225H,Bound (RT+DOR),2,1.42
+"Cα RMSF, p66 thumb (Å)",V106A+P225H,Bound (RT+DOR),3,1.86
+"Cα RMSF, p66 thumb (Å)",V106A+L234I,Bound (RT+DOR),1,1.85
+"Cα RMSF, p66 thumb (Å)",V106A+L234I,Bound (RT+DOR),2,2.14
+"Cα RMSF, p66 thumb (Å)",V106A+L234I,Bound (RT+DOR),3,1.68
+"Cα RMSF, p66 thumb (Å)",K103N+M230L,Bound (RT+DOR),1,1.88
+"Cα RMSF, p66 thumb (Å)",K103N+M230L,Bound (RT+DOR),2,1.7
+"Cα RMSF, p66 thumb (Å)",K103N+M230L,Bound (RT+DOR),3,1.76
+"Cα RMSF, p66 thumb (Å)",V106M,Bound (RT+DOR),1,1.64
+"Cα RMSF, p66 thumb (Å)",V106M,Bound (RT+DOR),2,2.16
+"Cα RMSF, p66 thumb (Å)",V106M,Bound (RT+DOR),3,2.27
+"Cα RMSF, p66 thumb (Å)",G190S,Bound (RT+DOR),1,2.36
+"Cα RMSF, p66 thumb (Å)",G190S,Bound (RT+DOR),2,1.82
+"Cα RMSF, p66 thumb (Å)",G190S,Bound (RT+DOR),3,2.14
+"Cα RMSF, p66 thumb (Å)",L100I+K103N,Bound (RT+DOR),1,1.86
+"Cα RMSF, p66 thumb (Å)",L100I+K103N,Bound (RT+DOR),2,1.98
+"Cα RMSF, p66 thumb (Å)",L100I+K103N,Bound (RT+DOR),3,1.59
+"Cα RMSF, p66 thumb (Å)",K103N+P225H,Bound (RT+DOR),1,1.85
+"Cα RMSF, p66 thumb (Å)",K103N+P225H,Bound (RT+DOR),2,1.6
+"Cα RMSF, p66 thumb (Å)",K103N+P225H,Bound (RT+DOR),3,1.91
+"Cα RMSF, p66 thumb (Å)",G190E,Bound (RT+DOR),1,1.84
+"Cα RMSF, p66 thumb (Å)",G190E,Bound (RT+DOR),2,2.35
+"Cα RMSF, p66 thumb (Å)",G190E,Bound (RT+DOR),3,2.03
+"Cα RMSF, p66 thumb (Å)",WT,Unliganded (RT only),1,1.92
+"Cα RMSF, p66 thumb (Å)",WT,Unliganded (RT only),2,2.21
+"Cα RMSF, p66 thumb (Å)",WT,Unliganded (RT only),3,1.93
+"Cα RMSF, p66 thumb (Å)",V106I,Unliganded (RT only),1,1.86
+"Cα RMSF, p66 thumb (Å)",V106I,Unliganded (RT only),2,2.13
+"Cα RMSF, p66 thumb (Å)",V106I,Unliganded (RT only),3,2.0
+"Cα RMSF, p66 thumb (Å)",K103N,Unliganded (RT only),1,2.25
+"Cα RMSF, p66 thumb (Å)",K103N,Unliganded (RT only),2,1.86
+"Cα RMSF, p66 thumb (Å)",K103N,Unliganded (RT only),3,2.12
+"Cα RMSF, p66 thumb (Å)",Y181C,Unliganded (RT only),1,2.08
+"Cα RMSF, p66 thumb (Å)",Y181C,Unliganded (RT only),2,2.58
+"Cα RMSF, p66 thumb (Å)",Y181C,Unliganded (RT only),3,1.71
+"Cα RMSF, p66 thumb (Å)",G190A,Unliganded (RT only),1,1.84
+"Cα RMSF, p66 thumb (Å)",G190A,Unliganded (RT only),2,1.74
+"Cα RMSF, p66 thumb (Å)",G190A,Unliganded (RT only),3,2.14
+"Cα RMSF, p66 thumb (Å)",Y318F,Unliganded (RT only),1,2.3
+"Cα RMSF, p66 thumb (Å)",Y318F,Unliganded (RT only),2,1.91
+"Cα RMSF, p66 thumb (Å)",Y318F,Unliganded (RT only),3,2.56
+"Cα RMSF, p66 thumb (Å)",V106A,Unliganded (RT only),1,2.83
+"Cα RMSF, p66 thumb (Å)",V106A,Unliganded (RT only),2,1.81
+"Cα RMSF, p66 thumb (Å)",V106A,Unliganded (RT only),3,1.73
+"Cα RMSF, p66 thumb (Å)",A98G+F227C,Unliganded (RT only),1,2.01
+"Cα RMSF, p66 thumb (Å)",A98G+F227C,Unliganded (RT only),2,1.83
+"Cα RMSF, p66 thumb (Å)",A98G+F227C,Unliganded (RT only),3,1.55
+"Cα RMSF, p66 thumb (Å)",V106I+F227C,Unliganded (RT only),1,2.43
+"Cα RMSF, p66 thumb (Å)",V106I+F227C,Unliganded (RT only),2,1.84
+"Cα RMSF, p66 thumb (Å)",V106I+F227C,Unliganded (RT only),3,1.89
+"Cα RMSF, p66 thumb (Å)",V106A+F227L,Unliganded (RT only),1,2.27
+"Cα RMSF, p66 thumb (Å)",V106A+F227L,Unliganded (RT only),2,1.96
+"Cα RMSF, p66 thumb (Å)",V106A+F227L,Unliganded (RT only),3,1.99
+"Cα RMSF, p66 thumb (Å)",Y188L,Unliganded (RT only),1,1.91
+"Cα RMSF, p66 thumb (Å)",Y188L,Unliganded (RT only),2,1.79
+"Cα RMSF, p66 thumb (Å)",Y188L,Unliganded (RT only),3,2.32
+"Cα RMSF, p66 thumb (Å)",V106A+P225H,Unliganded (RT only),1,2.22
+"Cα RMSF, p66 thumb (Å)",V106A+P225H,Unliganded (RT only),2,1.91
+"Cα RMSF, p66 thumb (Å)",V106A+P225H,Unliganded (RT only),3,1.96
+"Cα RMSF, p66 thumb (Å)",V106A+L234I,Unliganded (RT only),1,2.08
+"Cα RMSF, p66 thumb (Å)",V106A+L234I,Unliganded (RT only),2,2.64
+"Cα RMSF, p66 thumb (Å)",V106A+L234I,Unliganded (RT only),3,2.26
+"Cα RMSF, p66 thumb (Å)",K103N+M230L,Unliganded (RT only),1,2.33
+"Cα RMSF, p66 thumb (Å)",K103N+M230L,Unliganded (RT only),2,2.92
+"Cα RMSF, p66 thumb (Å)",K103N+M230L,Unliganded (RT only),3,1.94
+"Cα RMSF, p66 thumb (Å)",V106M,Unliganded (RT only),1,2.26
+"Cα RMSF, p66 thumb (Å)",V106M,Unliganded (RT only),2,1.74
+"Cα RMSF, p66 thumb (Å)",V106M,Unliganded (RT only),3,2.26
+"Cα RMSF, p66 thumb (Å)",G190S,Unliganded (RT only),1,2.15
+"Cα RMSF, p66 thumb (Å)",G190S,Unliganded (RT only),2,1.81
+"Cα RMSF, p66 thumb (Å)",G190S,Unliganded (RT only),3,2.37
+"Cα RMSF, p66 thumb (Å)",L100I+K103N,Unliganded (RT only),1,2.02
+"Cα RMSF, p66 thumb (Å)",L100I+K103N,Unliganded (RT only),2,1.66
+"Cα RMSF, p66 thumb (Å)",L100I+K103N,Unliganded (RT only),3,1.7
+"Cα RMSF, p66 thumb (Å)",K103N+P225H,Unliganded (RT only),1,2.05
+"Cα RMSF, p66 thumb (Å)",K103N+P225H,Unliganded (RT only),2,2.26
+"Cα RMSF, p66 thumb (Å)",K103N+P225H,Unliganded (RT only),3,4.87
+"Cα RMSF, p66 thumb (Å)",G190E,Unliganded (RT only),1,1.86
+"Cα RMSF, p66 thumb (Å)",G190E,Unliganded (RT only),2,4.11
+"Cα RMSF, p66 thumb (Å)",G190E,Unliganded (RT only),3,2.08
+"Cα RMSF, p66 connection (Å)",WT,Bound (RT+DOR),1,1.06
+"Cα RMSF, p66 connection (Å)",WT,Bound (RT+DOR),2,1.52
+"Cα RMSF, p66 connection (Å)",WT,Bound (RT+DOR),3,1.52
+"Cα RMSF, p66 connection (Å)",V106I,Bound (RT+DOR),1,1.48
+"Cα RMSF, p66 connection (Å)",V106I,Bound (RT+DOR),2,1.41
+"Cα RMSF, p66 connection (Å)",V106I,Bound (RT+DOR),3,1.8
+"Cα RMSF, p66 connection (Å)",K103N,Bound (RT+DOR),1,1.52
+"Cα RMSF, p66 connection (Å)",K103N,Bound (RT+DOR),2,1.34
+"Cα RMSF, p66 connection (Å)",K103N,Bound (RT+DOR),3,1.68
+"Cα RMSF, p66 connection (Å)",Y181C,Bound (RT+DOR),1,1.58
+"Cα RMSF, p66 connection (Å)",Y181C,Bound (RT+DOR),2,1.6
+"Cα RMSF, p66 connection (Å)",Y181C,Bound (RT+DOR),3,1.85
+"Cα RMSF, p66 connection (Å)",G190A,Bound (RT+DOR),1,1.3
+"Cα RMSF, p66 connection (Å)",G190A,Bound (RT+DOR),2,1.32
+"Cα RMSF, p66 connection (Å)",G190A,Bound (RT+DOR),3,1.32
+"Cα RMSF, p66 connection (Å)",Y318F,Bound (RT+DOR),1,1.43
+"Cα RMSF, p66 connection (Å)",Y318F,Bound (RT+DOR),2,1.51
+"Cα RMSF, p66 connection (Å)",Y318F,Bound (RT+DOR),3,1.57
+"Cα RMSF, p66 connection (Å)",V106A,Bound (RT+DOR),1,1.62
+"Cα RMSF, p66 connection (Å)",V106A,Bound (RT+DOR),2,1.29
+"Cα RMSF, p66 connection (Å)",V106A,Bound (RT+DOR),3,1.35
+"Cα RMSF, p66 connection (Å)",A98G+F227C,Bound (RT+DOR),1,1.48
+"Cα RMSF, p66 connection (Å)",A98G+F227C,Bound (RT+DOR),2,1.28
+"Cα RMSF, p66 connection (Å)",A98G+F227C,Bound (RT+DOR),3,1.51
+"Cα RMSF, p66 connection (Å)",V106I+F227C,Bound (RT+DOR),1,1.3
+"Cα RMSF, p66 connection (Å)",V106I+F227C,Bound (RT+DOR),2,1.45
+"Cα RMSF, p66 connection (Å)",V106I+F227C,Bound (RT+DOR),3,2.2
+"Cα RMSF, p66 connection (Å)",V106A+F227L,Bound (RT+DOR),1,1.36
+"Cα RMSF, p66 connection (Å)",V106A+F227L,Bound (RT+DOR),2,1.3
+"Cα RMSF, p66 connection (Å)",V106A+F227L,Bound (RT+DOR),3,1.29
+"Cα RMSF, p66 connection (Å)",Y188L,Bound (RT+DOR),1,1.58
+"Cα RMSF, p66 connection (Å)",Y188L,Bound (RT+DOR),2,1.4
+"Cα RMSF, p66 connection (Å)",Y188L,Bound (RT+DOR),3,1.49
+"Cα RMSF, p66 connection (Å)",V106A+P225H,Bound (RT+DOR),1,1.23
+"Cα RMSF, p66 connection (Å)",V106A+P225H,Bound (RT+DOR),2,1.24
+"Cα RMSF, p66 connection (Å)",V106A+P225H,Bound (RT+DOR),3,1.48
+"Cα RMSF, p66 connection (Å)",V106A+L234I,Bound (RT+DOR),1,1.44
+"Cα RMSF, p66 connection (Å)",V106A+L234I,Bound (RT+DOR),2,1.37
+"Cα RMSF, p66 connection (Å)",V106A+L234I,Bound (RT+DOR),3,1.58
+"Cα RMSF, p66 connection (Å)",K103N+M230L,Bound (RT+DOR),1,1.37
+"Cα RMSF, p66 connection (Å)",K103N+M230L,Bound (RT+DOR),2,1.39
+"Cα RMSF, p66 connection (Å)",K103N+M230L,Bound (RT+DOR),3,1.31
+"Cα RMSF, p66 connection (Å)",V106M,Bound (RT+DOR),1,1.33
+"Cα RMSF, p66 connection (Å)",V106M,Bound (RT+DOR),2,1.83
+"Cα RMSF, p66 connection (Å)",V106M,Bound (RT+DOR),3,1.47
+"Cα RMSF, p66 connection (Å)",G190S,Bound (RT+DOR),1,1.76
+"Cα RMSF, p66 connection (Å)",G190S,Bound (RT+DOR),2,1.51
+"Cα RMSF, p66 connection (Å)",G190S,Bound (RT+DOR),3,1.68
+"Cα RMSF, p66 connection (Å)",L100I+K103N,Bound (RT+DOR),1,1.45
+"Cα RMSF, p66 connection (Å)",L100I+K103N,Bound (RT+DOR),2,1.36
+"Cα RMSF, p66 connection (Å)",L100I+K103N,Bound (RT+DOR),3,1.21
+"Cα RMSF, p66 connection (Å)",K103N+P225H,Bound (RT+DOR),1,1.48
+"Cα RMSF, p66 connection (Å)",K103N+P225H,Bound (RT+DOR),2,1.44
+"Cα RMSF, p66 connection (Å)",K103N+P225H,Bound (RT+DOR),3,1.24
+"Cα RMSF, p66 connection (Å)",G190E,Bound (RT+DOR),1,1.5
+"Cα RMSF, p66 connection (Å)",G190E,Bound (RT+DOR),2,1.93
+"Cα RMSF, p66 connection (Å)",G190E,Bound (RT+DOR),3,2.07
+"Cα RMSF, p66 connection (Å)",WT,Unliganded (RT only),1,1.55
+"Cα RMSF, p66 connection (Å)",WT,Unliganded (RT only),2,1.57
+"Cα RMSF, p66 connection (Å)",WT,Unliganded (RT only),3,1.42
+"Cα RMSF, p66 connection (Å)",V106I,Unliganded (RT only),1,1.57
+"Cα RMSF, p66 connection (Å)",V106I,Unliganded (RT only),2,1.78
+"Cα RMSF, p66 connection (Å)",V106I,Unliganded (RT only),3,1.52
+"Cα RMSF, p66 connection (Å)",K103N,Unliganded (RT only),1,1.58
+"Cα RMSF, p66 connection (Å)",K103N,Unliganded (RT only),2,1.33
+"Cα RMSF, p66 connection (Å)",K103N,Unliganded (RT only),3,1.7
+"Cα RMSF, p66 connection (Å)",Y181C,Unliganded (RT only),1,1.53
+"Cα RMSF, p66 connection (Å)",Y181C,Unliganded (RT only),2,1.74
+"Cα RMSF, p66 connection (Å)",Y181C,Unliganded (RT only),3,1.4
+"Cα RMSF, p66 connection (Å)",G190A,Unliganded (RT only),1,1.5
+"Cα RMSF, p66 connection (Å)",G190A,Unliganded (RT only),2,1.46
+"Cα RMSF, p66 connection (Å)",G190A,Unliganded (RT only),3,1.49
+"Cα RMSF, p66 connection (Å)",Y318F,Unliganded (RT only),1,1.44
+"Cα RMSF, p66 connection (Å)",Y318F,Unliganded (RT only),2,1.39
+"Cα RMSF, p66 connection (Å)",Y318F,Unliganded (RT only),3,1.69
+"Cα RMSF, p66 connection (Å)",V106A,Unliganded (RT only),1,2.1
+"Cα RMSF, p66 connection (Å)",V106A,Unliganded (RT only),2,1.46
+"Cα RMSF, p66 connection (Å)",V106A,Unliganded (RT only),3,1.31
+"Cα RMSF, p66 connection (Å)",A98G+F227C,Unliganded (RT only),1,1.28
+"Cα RMSF, p66 connection (Å)",A98G+F227C,Unliganded (RT only),2,1.33
+"Cα RMSF, p66 connection (Å)",A98G+F227C,Unliganded (RT only),3,1.2
+"Cα RMSF, p66 connection (Å)",V106I+F227C,Unliganded (RT only),1,1.59
+"Cα RMSF, p66 connection (Å)",V106I+F227C,Unliganded (RT only),2,1.87
+"Cα RMSF, p66 connection (Å)",V106I+F227C,Unliganded (RT only),3,1.72
+"Cα RMSF, p66 connection (Å)",V106A+F227L,Unliganded (RT only),1,1.6
+"Cα RMSF, p66 connection (Å)",V106A+F227L,Unliganded (RT only),2,1.78
+"Cα RMSF, p66 connection (Å)",V106A+F227L,Unliganded (RT only),3,1.59
+"Cα RMSF, p66 connection (Å)",Y188L,Unliganded (RT only),1,1.64
+"Cα RMSF, p66 connection (Å)",Y188L,Unliganded (RT only),2,1.42
+"Cα RMSF, p66 connection (Å)",Y188L,Unliganded (RT only),3,1.87
+"Cα RMSF, p66 connection (Å)",V106A+P225H,Unliganded (RT only),1,1.64
+"Cα RMSF, p66 connection (Å)",V106A+P225H,Unliganded (RT only),2,1.51
+"Cα RMSF, p66 connection (Å)",V106A+P225H,Unliganded (RT only),3,1.65
+"Cα RMSF, p66 connection (Å)",V106A+L234I,Unliganded (RT only),1,1.86
+"Cα RMSF, p66 connection (Å)",V106A+L234I,Unliganded (RT only),2,1.78
+"Cα RMSF, p66 connection (Å)",V106A+L234I,Unliganded (RT only),3,2.03
+"Cα RMSF, p66 connection (Å)",K103N+M230L,Unliganded (RT only),1,1.41
+"Cα RMSF, p66 connection (Å)",K103N+M230L,Unliganded (RT only),2,1.72
+"Cα RMSF, p66 connection (Å)",K103N+M230L,Unliganded (RT only),3,1.61
+"Cα RMSF, p66 connection (Å)",V106M,Unliganded (RT only),1,1.85
+"Cα RMSF, p66 connection (Å)",V106M,Unliganded (RT only),2,1.33
+"Cα RMSF, p66 connection (Å)",V106M,Unliganded (RT only),3,1.3
+"Cα RMSF, p66 connection (Å)",G190S,Unliganded (RT only),1,1.61
+"Cα RMSF, p66 connection (Å)",G190S,Unliganded (RT only),2,1.5
+"Cα RMSF, p66 connection (Å)",G190S,Unliganded (RT only),3,1.54
+"Cα RMSF, p66 connection (Å)",L100I+K103N,Unliganded (RT only),1,1.5
+"Cα RMSF, p66 connection (Å)",L100I+K103N,Unliganded (RT only),2,1.36
+"Cα RMSF, p66 connection (Å)",L100I+K103N,Unliganded (RT only),3,1.44
+"Cα RMSF, p66 connection (Å)",K103N+P225H,Unliganded (RT only),1,1.69
+"Cα RMSF, p66 connection (Å)",K103N+P225H,Unliganded (RT only),2,2.1
+"Cα RMSF, p66 connection (Å)",K103N+P225H,Unliganded (RT only),3,5.34
+"Cα RMSF, p66 connection (Å)",G190E,Unliganded (RT only),1,1.59
+"Cα RMSF, p66 connection (Å)",G190E,Unliganded (RT only),2,3.47
+"Cα RMSF, p66 connection (Å)",G190E,Unliganded (RT only),3,1.42
+β9–β10 strand content (fraction),WT,Bound (RT+DOR),1,0.83
+β9–β10 strand content (fraction),WT,Bound (RT+DOR),2,0.76
+β9–β10 strand content (fraction),WT,Bound (RT+DOR),3,0.81
+β9–β10 strand content (fraction),V106I,Bound (RT+DOR),1,0.81
+β9–β10 strand content (fraction),V106I,Bound (RT+DOR),2,0.82
+β9–β10 strand content (fraction),V106I,Bound (RT+DOR),3,0.79
+β9–β10 strand content (fraction),K103N,Bound (RT+DOR),1,0.8
+β9–β10 strand content (fraction),K103N,Bound (RT+DOR),2,0.76
+β9–β10 strand content (fraction),K103N,Bound (RT+DOR),3,0.73
+β9–β10 strand content (fraction),Y181C,Bound (RT+DOR),1,0.82
+β9–β10 strand content (fraction),Y181C,Bound (RT+DOR),2,0.8
+β9–β10 strand content (fraction),Y181C,Bound (RT+DOR),3,0.8
+β9–β10 strand content (fraction),G190A,Bound (RT+DOR),1,0.79
+β9–β10 strand content (fraction),G190A,Bound (RT+DOR),2,0.81
+β9–β10 strand content (fraction),G190A,Bound (RT+DOR),3,0.79
+β9–β10 strand content (fraction),Y318F,Bound (RT+DOR),1,0.8
+β9–β10 strand content (fraction),Y318F,Bound (RT+DOR),2,0.81
+β9–β10 strand content (fraction),Y318F,Bound (RT+DOR),3,0.8
+β9–β10 strand content (fraction),V106A,Bound (RT+DOR),1,0.79
+β9–β10 strand content (fraction),V106A,Bound (RT+DOR),2,0.83
+β9–β10 strand content (fraction),V106A,Bound (RT+DOR),3,0.83
+β9–β10 strand content (fraction),A98G+F227C,Bound (RT+DOR),1,0.82
+β9–β10 strand content (fraction),A98G+F227C,Bound (RT+DOR),2,0.8
+β9–β10 strand content (fraction),A98G+F227C,Bound (RT+DOR),3,0.82
+β9–β10 strand content (fraction),V106I+F227C,Bound (RT+DOR),1,0.82
+β9–β10 strand content (fraction),V106I+F227C,Bound (RT+DOR),2,0.8
+β9–β10 strand content (fraction),V106I+F227C,Bound (RT+DOR),3,0.76
+β9–β10 strand content (fraction),V106A+F227L,Bound (RT+DOR),1,0.83
+β9–β10 strand content (fraction),V106A+F227L,Bound (RT+DOR),2,0.79
+β9–β10 strand content (fraction),V106A+F227L,Bound (RT+DOR),3,0.77
+β9–β10 strand content (fraction),Y188L,Bound (RT+DOR),1,0.78
+β9–β10 strand content (fraction),Y188L,Bound (RT+DOR),2,0.83
+β9–β10 strand content (fraction),Y188L,Bound (RT+DOR),3,0.77
+β9–β10 strand content (fraction),V106A+P225H,Bound (RT+DOR),1,0.83
+β9–β10 strand content (fraction),V106A+P225H,Bound (RT+DOR),2,0.83
+β9–β10 strand content (fraction),V106A+P225H,Bound (RT+DOR),3,0.77
+β9–β10 strand content (fraction),V106A+L234I,Bound (RT+DOR),1,0.73
+β9–β10 strand content (fraction),V106A+L234I,Bound (RT+DOR),2,0.82
+β9–β10 strand content (fraction),V106A+L234I,Bound (RT+DOR),3,0.78
+β9–β10 strand content (fraction),K103N+M230L,Bound (RT+DOR),1,0.8
+β9–β10 strand content (fraction),K103N+M230L,Bound (RT+DOR),2,0.81
+β9–β10 strand content (fraction),K103N+M230L,Bound (RT+DOR),3,0.82
+β9–β10 strand content (fraction),V106M,Bound (RT+DOR),1,0.63
+β9–β10 strand content (fraction),V106M,Bound (RT+DOR),2,0.82
+β9–β10 strand content (fraction),V106M,Bound (RT+DOR),3,0.79
+β9–β10 strand content (fraction),G190S,Bound (RT+DOR),1,0.8
+β9–β10 strand content (fraction),G190S,Bound (RT+DOR),2,0.82
+β9–β10 strand content (fraction),G190S,Bound (RT+DOR),3,0.8
+β9–β10 strand content (fraction),L100I+K103N,Bound (RT+DOR),1,0.76
+β9–β10 strand content (fraction),L100I+K103N,Bound (RT+DOR),2,0.75
+β9–β10 strand content (fraction),L100I+K103N,Bound (RT+DOR),3,0.83
+β9–β10 strand content (fraction),K103N+P225H,Bound (RT+DOR),1,0.8
+β9–β10 strand content (fraction),K103N+P225H,Bound (RT+DOR),2,0.82
+β9–β10 strand content (fraction),K103N+P225H,Bound (RT+DOR),3,0.82
+β9–β10 strand content (fraction),G190E,Bound (RT+DOR),1,0.68
+β9–β10 strand content (fraction),G190E,Bound (RT+DOR),2,0.76
+β9–β10 strand content (fraction),G190E,Bound (RT+DOR),3,0.7
+β9–β10 strand content (fraction),WT,Unliganded (RT only),1,0.82
+β9–β10 strand content (fraction),WT,Unliganded (RT only),2,0.64
+β9–β10 strand content (fraction),WT,Unliganded (RT only),3,0.81
+β9–β10 strand content (fraction),V106I,Unliganded (RT only),1,0.79
+β9–β10 strand content (fraction),V106I,Unliganded (RT only),2,0.8
+β9–β10 strand content (fraction),V106I,Unliganded (RT only),3,0.78
+β9–β10 strand content (fraction),K103N,Unliganded (RT only),1,0.78
+β9–β10 strand content (fraction),K103N,Unliganded (RT only),2,0.74
+β9–β10 strand content (fraction),K103N,Unliganded (RT only),3,0.81
+β9–β10 strand content (fraction),Y181C,Unliganded (RT only),1,0.81
+β9–β10 strand content (fraction),Y181C,Unliganded (RT only),2,0.82
+β9–β10 strand content (fraction),Y181C,Unliganded (RT only),3,0.81
+β9–β10 strand content (fraction),G190A,Unliganded (RT only),1,0.81
+β9–β10 strand content (fraction),G190A,Unliganded (RT only),2,0.79
+β9–β10 strand content (fraction),G190A,Unliganded (RT only),3,0.79
+β9–β10 strand content (fraction),Y318F,Unliganded (RT only),1,0.79
+β9–β10 strand content (fraction),Y318F,Unliganded (RT only),2,0.77
+β9–β10 strand content (fraction),Y318F,Unliganded (RT only),3,0.81
+β9–β10 strand content (fraction),V106A,Unliganded (RT only),1,0.8
+β9–β10 strand content (fraction),V106A,Unliganded (RT only),2,0.83
+β9–β10 strand content (fraction),V106A,Unliganded (RT only),3,0.77
+β9–β10 strand content (fraction),A98G+F227C,Unliganded (RT only),1,0.83
+β9–β10 strand content (fraction),A98G+F227C,Unliganded (RT only),2,0.83
+β9–β10 strand content (fraction),A98G+F227C,Unliganded (RT only),3,0.8
+β9–β10 strand content (fraction),V106I+F227C,Unliganded (RT only),1,0.78
+β9–β10 strand content (fraction),V106I+F227C,Unliganded (RT only),2,0.82
+β9–β10 strand content (fraction),V106I+F227C,Unliganded (RT only),3,0.81
+β9–β10 strand content (fraction),V106A+F227L,Unliganded (RT only),1,0.82
+β9–β10 strand content (fraction),V106A+F227L,Unliganded (RT only),2,0.78
+β9–β10 strand content (fraction),V106A+F227L,Unliganded (RT only),3,0.77
+β9–β10 strand content (fraction),Y188L,Unliganded (RT only),1,0.81
+β9–β10 strand content (fraction),Y188L,Unliganded (RT only),2,0.82
+β9–β10 strand content (fraction),Y188L,Unliganded (RT only),3,0.7
+β9–β10 strand content (fraction),V106A+P225H,Unliganded (RT only),1,0.8
+β9–β10 strand content (fraction),V106A+P225H,Unliganded (RT only),2,0.81
+β9–β10 strand content (fraction),V106A+P225H,Unliganded (RT only),3,0.82
+β9–β10 strand content (fraction),V106A+L234I,Unliganded (RT only),1,0.81
+β9–β10 strand content (fraction),V106A+L234I,Unliganded (RT only),2,0.79
+β9–β10 strand content (fraction),V106A+L234I,Unliganded (RT only),3,0.81
+β9–β10 strand content (fraction),K103N+M230L,Unliganded (RT only),1,0.8
+β9–β10 strand content (fraction),K103N+M230L,Unliganded (RT only),2,0.79
+β9–β10 strand content (fraction),K103N+M230L,Unliganded (RT only),3,0.83
+β9–β10 strand content (fraction),V106M,Unliganded (RT only),1,0.8
+β9–β10 strand content (fraction),V106M,Unliganded (RT only),2,0.76
+β9–β10 strand content (fraction),V106M,Unliganded (RT only),3,0.76
+β9–β10 strand content (fraction),G190S,Unliganded (RT only),1,0.82
+β9–β10 strand content (fraction),G190S,Unliganded (RT only),2,0.82
+β9–β10 strand content (fraction),G190S,Unliganded (RT only),3,0.8
+β9–β10 strand content (fraction),L100I+K103N,Unliganded (RT only),1,0.8
+β9–β10 strand content (fraction),L100I+K103N,Unliganded (RT only),2,0.78
+β9–β10 strand content (fraction),L100I+K103N,Unliganded (RT only),3,0.81
+β9–β10 strand content (fraction),K103N+P225H,Unliganded (RT only),1,0.81
+β9–β10 strand content (fraction),K103N+P225H,Unliganded (RT only),2,0.74
+β9–β10 strand content (fraction),K103N+P225H,Unliganded (RT only),3,0.74
+β9–β10 strand content (fraction),G190E,Unliganded (RT only),1,0.78
+β9–β10 strand content (fraction),G190E,Unliganded (RT only),2,0.81
+β9–β10 strand content (fraction),G190E,Unliganded (RT only),3,0.79

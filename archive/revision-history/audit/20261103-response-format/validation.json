@@ -1,0 +1,47 @@
+{
+  "existing_reviewer_paragraphs_preserved": 44,
+  "quotations_verified": 52,
+  "native_citation_fields_retained": 25,
+  "only_submission_file_changed": "Response-to-Reviewers.docx",
+  "new_quote_sources": [
+    [
+      "Manuscript",
+      70
+    ],
+    [
+      "Manuscript",
+      33
+    ],
+    [
+      "Manuscript",
+      31
+    ],
+    [
+      "Supplementary Text",
+      52
+    ],
+    [
+      "Manuscript",
+      32
+    ],
+    [
+      "Supplementary Text",
+      44
+    ],
+    [
+      "Supplementary Text",
+      29
+    ],
+    [
+      "Manuscript",
+      94
+    ],
+    [
+      "Manuscript",
+      97
+    ]
+  ],
+  "final_italicized_excerpt_checks": 52,
+  "nonempty_reviewer_paragraphs": 43,
+  "final_response_sha256": "8757e2007466eb3aac218d421fe0f2089dc33b6f539f2183f1fb4383cd46d2b0"
+}
