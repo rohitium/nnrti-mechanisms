@@ -60,6 +60,7 @@ pick_python() {
             echo "[pmx] Creating conda env ${PMX_CONDA_ENV} (python=${PMX_PYTHON})"
             conda create -n "${PMX_CONDA_ENV}" "python=${PMX_PYTHON}" -y
         fi
+        conda env config vars set -n "${PMX_CONDA_ENV}" PYTHONNOUSERSITE=1
         conda activate "${PMX_CONDA_ENV}"
         echo "[pmx] Using conda env: ${PMX_CONDA_ENV}"
         return
