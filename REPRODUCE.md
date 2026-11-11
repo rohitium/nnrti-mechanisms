@@ -1,8 +1,27 @@
 # Reproducing the November 2026 revision
 
+## Reproduce the paper
+
+After activating the environment and installing the package, run:
+
+```bash
+./workflows/05_manuscript_artifacts.sh
+```
+
+This exports the submitted package, runs all 11 supported numerical rebuilds,
+collects all 22 submitted figures and tables under their final labels, and runs
+the tests. Start browsing at `paper/generated/paper/README.md`. The exact submitted
+files are in `main/` and `supplementary/`; numerical candidates are in `rebuilt/`.
+`paper/generated/reproduction.json` records input/output hashes and package versions.
+`paper/generated/validation/` contains the test log, JUnit report and success record.
+A nonzero command exit indicates a failed build or verification; inspect the log.
+Tests that need an external spreadsheet engine report a skip if none is configured.
+
+For exact export without rebuilding, use `python -m nnrti.cli.manuscript --check --export`.
+
 ## Setup and first check
 
-Use `environment.yml` for the full scientific environment, then `pip install -e .`. Plotting and workbook generation require the Python dependencies in `pyproject.toml`; structure/trajectory operations additionally require the conda environment. GROMACS switching simulations used the cluster GPU build of GROMACS 2023.1. The environment specifies minor versions; it is not a complete lockfile for every transitive dependency.
+Use `environment.yml` for the local `nnrti-prep` scientific environment, then `python -m pip install --no-deps -e .`. Set `PYTHONNOUSERSITE=1` to isolate it from user-installed packages. Sherlock simulations use site modules rather than Conda; the optional legacy pmx tools use a separate local environment. See [environment guide](docs/ENVIRONMENTS.md). Plotting and workbook generation require the Python dependencies in `pyproject.toml`; structure/trajectory operations additionally require the conda environment. GROMACS switching simulations used the cluster GPU build of GROMACS 2023.1. The environment specifies minor versions; it is not a complete lockfile for every transitive dependency.
 
 ```bash
 python -m nnrti.cli.manuscript --check --export

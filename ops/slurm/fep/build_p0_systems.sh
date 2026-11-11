@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Build solvated GROMACS hybrid systems for P0 legs.
-# Requires GROMACS + pmx on PATH (Sherlock login recommended).
+# Requires GROMACS + pmx on PATH; run cluster preparation in a Slurm allocation.
 #
 # Usage:
 #   bash ops/slurm/fep/build_p0_systems.sh
@@ -11,7 +11,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 cd "$PROJECT_ROOT"
 
 REPLICATES="${REPLICATES:-1}"

@@ -111,6 +111,28 @@ def test_export_has_exact_current_figures(tmp_path):
     assert len(list((tmp_path/'submitted-tables').glob('Supplementary-Table-*.xlsx'))) == 7
 
 
+def test_paper_collection_preserves_all_submitted_artifacts(tmp_path):
+    import hashlib
+    import json
+    from nnrti.cli.manuscript import collect_artifacts, export_submission
+    export_submission(tmp_path)
+    report = collect_artifacts(tmp_path)
+    assert len(report['artifacts']) == 22
+    assert len({item['collection'] for item in report['artifacts']}) == 22
+    for item in report['artifacts']:
+        collected = tmp_path/'paper'/item['collection']
+        assert collected.read_bytes() == (tmp_path/item['submitted']).read_bytes()
+        assert hashlib.sha256(collected.read_bytes()).hexdigest() == item['submitted_sha256']
+    assert json.loads((tmp_path/'reproduction.json').read_text())['rebuilt_targets'] == []
+
+
+def test_collection_requires_a_requested_rebuild_to_exist(tmp_path):
+    from nnrti.cli.manuscript import collect_artifacts, export_submission
+    export_submission(tmp_path)
+    with pytest.raises(FileNotFoundError):
+        collect_artifacts(tmp_path, ['table4'])
+
+
 def test_native_spreadsheet_recalculation(tmp_path):
     """Exercise real formula evaluation when a spreadsheet engine is available."""
     import os

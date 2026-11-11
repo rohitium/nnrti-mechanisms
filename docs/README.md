@@ -2,8 +2,10 @@
 
 | Topic | Reference |
 |---|---|
-| Project overview and repository layout | [README](../README.md) |
-| Environment, analysis and verification | [Reproduction guide](../REPRODUCE.md) |
+| Project overview | [README](../README.md) |
+| Directory roles and durable storage layout | [Repository structure](REPOSITORY.md) |
+| Local and cluster environments | [Environment guide](ENVIRONMENTS.md) |
+| Analysis and verification | [Reproduction guide](../REPRODUCE.md) |
 | Submitted figures, tables and source data | [Artifact map](../paper/ARTIFACTS.md) |
 | Simulation files and trajectory validation | [MD run data](methods/md-run-data.md) |
 | Cluster jobs and utilities | [Operations](../ops/README.md) |

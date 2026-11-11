@@ -2,6 +2,12 @@
 
 The reference package is [revisions/submission-ready/](../revisions/submission-ready/). Current numbering is **6 main figures, 2 main tables, 7 supplementary figures, 7 supplementary tables**. Historical filenames below are retained to avoid breaking analysis paths.
 
+The machine-readable [artifact registry](artifacts.json) contains all 22 final labels.
+Run `../workflows/05_manuscript_artifacts.sh` from an activated environment (or the
+root-relative path `./workflows/05_manuscript_artifacts.sh` from the repository root).
+The resulting `generated/paper/README.md` links every submitted artifact and supported
+rebuild; `generated/reproduction.json` and `generated/validation/` record provenance and tests.
+
 ## Exact submitted artwork and tables
 
 ```bash

@@ -13,6 +13,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 PYTHON="${PYTHON:-python}"
 export PYTHONPATH="${PYTHONPATH:-src}"
+export PYTHONNOUSERSITE=1
 
 run() { echo; echo "=== $* ==="; "$@"; }
 

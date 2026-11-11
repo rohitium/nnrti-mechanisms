@@ -18,7 +18,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 
 PMX_REPO="${PMX_REPO:-$HOME/src/pmx}"
 PMX_BRANCH="${PMX_BRANCH:-develop}"
@@ -93,7 +93,7 @@ print(site.getsitepackages()[0])
 PY
 )" -maxdepth 1 -name 'distutils-precedence.pth' -delete 2>/dev/null || true
 
-python -m pip install numpy scipy matplotlib future
+python -m pip install 'numpy>=1.26,<2' 'scipy>=1.11,<1.14' 'matplotlib>=3.8,<3.9' future
 
 mkdir -p "$(dirname "${PMX_REPO}")"
 if [[ ! -d "${PMX_REPO}/.git" ]]; then

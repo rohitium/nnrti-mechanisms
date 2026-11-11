@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "artifacts": [
+    {
+      "id": "Figure-1",
+      "kind": "figure",
+      "submitted": "submitted-figures/Figure-1.png",
+      "rebuild_target": null,
+      "rebuilt": null,
+      "collection": "main/figures/Figure-1.png"
+    },
+    {
+      "id": "Figure-2",
+      "kind": "figure",
+      "submitted": "submitted-figures/Figure-2.png",
+      "rebuild_target": null,
+      "rebuilt": null,
+      "collection": "main/figures/Figure-2.png"
+    },
+    {
+      "id": "Figure-3",
+      "kind": "figure",
+      "submitted": "submitted-figures/Figure-3.png",
+      "rebuild_target": "heatmaps",
+      "rebuilt": "heatmaps/plots/figure3A_rt_dor_contacts.png",
+      "collection": "main/figures/Figure-3.png"
+    },
+    {
+      "id": "Figure-4",
+      "kind": "figure",
+      "submitted": "submitted-figures/Figure-4.png",
+      "rebuild_target": "mechanisms",
+      "rebuilt": "Figure-4.png",
+      "collection": "main/figures/Figure-4.png"
+    },
+    {
+      "id": "Figure-5",
+      "kind": "figure",
+      "submitted": "submitted-figures/Figure-5.png",
+      "rebuild_target": "heatmaps",
+      "rebuilt": "heatmaps/plots/figure3CD_rt_by_state.png",
+      "collection": "main/figures/Figure-5.png"
+    },
+    {
+      "id": "Figure-6",
+      "kind": "figure",
+      "submitted": "submitted-figures/Figure-6.png",
+      "rebuild_target": "protein",
+      "rebuilt": "figure6_protein_level.png",
+      "collection": "main/figures/Figure-6.png"
+    },
+    {
+      "id": "Supplementary-Figure-1",
+      "kind": "figure",
+      "submitted": "submitted-figures/Supplementary-Figure-1.png",
+      "rebuild_target": null,
+      "rebuilt": null,
+      "collection": "supplementary/figures/Supplementary-Figure-1.png"
+    },
+    {
+      "id": "Supplementary-Figure-2",
+      "kind": "figure",
+      "submitted": "submitted-figures/Supplementary-Figure-2.png",
+      "rebuild_target": "pose",
+      "rebuilt": "Supplementary-Figure-2.png",
+      "collection": "supplementary/figures/Supplementary-Figure-2.png"
+    },
+    {
+      "id": "Supplementary-Figure-3",
+      "kind": "figure",
+      "submitted": "submitted-figures/Supplementary-Figure-3.png",
+      "rebuild_target": "convergence",
+      "rebuilt": "convergence/supplementary_figure_1_convergence.png",
+      "collection": "supplementary/figures/Supplementary-Figure-3.png"
+    },
+    {
+      "id": "Supplementary-Figure-4",
+      "kind": "figure",
+      "submitted": "submitted-figures/Supplementary-Figure-4.png",
+      "rebuild_target": "work",
+      "rebuilt": "Supplementary-Figure-4.png",
+      "collection": "supplementary/figures/Supplementary-Figure-4.png"
+    },
+    {
+      "id": "Supplementary-Figure-5",
+      "kind": "figure",
+      "submitted": "submitted-figures/Supplementary-Figure-5.png",
+      "rebuild_target": "dor-violins",
+      "rebuilt": "supplementary_figure_dor_contact_violins.png",
+      "collection": "supplementary/figures/Supplementary-Figure-5.png"
+    },
+    {
+      "id": "Supplementary-Figure-6",
+      "kind": "figure",
+      "submitted": "submitted-figures/Supplementary-Figure-6.png",
+      "rebuild_target": "rt-violins",
+      "rebuilt": "rt-violins/supplementary_figure_rt_metric_violins.png",
+      "collection": "supplementary/figures/Supplementary-Figure-6.png"
+    },
+    {
+      "id": "Supplementary-Figure-7",
+      "kind": "figure",
+      "submitted": "submitted-figures/Supplementary-Figure-7.png",
+      "rebuild_target": "heatmaps",
+      "rebuilt": "heatmaps/plots/figure3B_rt_induced_fit.png",
+      "collection": "supplementary/figures/Supplementary-Figure-7.png"
+    },
+    {
+      "id": "Table-1",
+      "kind": "table",
+      "submitted": "submitted-tables/Table-1.csv",
+      "rebuild_target": null,
+      "rebuilt": null,
+      "collection": "main/tables/Table-1.csv"
+    },
+    {
+      "id": "Table-2",
+      "kind": "table",
+      "submitted": "submitted-tables/Table-2.csv",
+      "rebuild_target": "table2",
+      "rebuilt": "tables/Table-2-energetics.csv",
+      "collection": "main/tables/Table-2.csv"
+    },
+    {
+      "id": "Supplementary-Table-1",
+      "kind": "table",
+      "submitted": "submitted-tables/Supplementary-Table-1.xlsx",
+      "rebuild_target": null,
+      "rebuilt": null,
+      "collection": "supplementary/tables/Supplementary-Table-1.xlsx"
+    },
+    {
+      "id": "Supplementary-Table-2",
+      "kind": "table",
+      "submitted": "submitted-tables/Supplementary-Table-2.xlsx",
+      "rebuild_target": null,
+      "rebuilt": null,
+      "collection": "supplementary/tables/Supplementary-Table-2.xlsx"
+    },
+    {
+      "id": "Supplementary-Table-3",
+      "kind": "table",
+      "submitted": "submitted-tables/Supplementary-Table-3.xlsx",
+      "rebuild_target": "table3",
+      "rebuilt": "tables/Supplementary-Table-3.xlsx",
+      "collection": "supplementary/tables/Supplementary-Table-3.xlsx"
+    },
+    {
+      "id": "Supplementary-Table-4",
+      "kind": "table",
+      "submitted": "submitted-tables/Supplementary-Table-4.xlsx",
+      "rebuild_target": "table4",
+      "rebuilt": "tables/Supplementary-Table-4.xlsx",
+      "collection": "supplementary/tables/Supplementary-Table-4.xlsx"
+    },
+    {
+      "id": "Supplementary-Table-5",
+      "kind": "table",
+      "submitted": "submitted-tables/Supplementary-Table-5.xlsx",
+      "rebuild_target": null,
+      "rebuilt": null,
+      "collection": "supplementary/tables/Supplementary-Table-5.xlsx"
+    },
+    {
+      "id": "Supplementary-Table-6",
+      "kind": "table",
+      "submitted": "submitted-tables/Supplementary-Table-6.xlsx",
+      "rebuild_target": null,
+      "rebuilt": null,
+      "collection": "supplementary/tables/Supplementary-Table-6.xlsx"
+    },
+    {
+      "id": "Supplementary-Table-7",
+      "kind": "table",
+      "submitted": "submitted-tables/Supplementary-Table-7.xlsx",
+      "rebuild_target": null,
+      "rebuilt": null,
+      "collection": "supplementary/tables/Supplementary-Table-7.xlsx"
+    }
+  ],
+  "authoritative_inputs": [
+    "data/DRM-susceptibilities.csv.xlsx",
+    "results/analysis/binding_energy/tables/ddg_full.csv",
+    "results/analysis/fep_pmx/panel_ddg.csv",
+    "results/analysis/structural_metrics/tables/structural_metrics_per_replicate.csv"
+  ]
+}

@@ -106,10 +106,7 @@ if [ -n "${MUTATION_ALLOWLIST}" ]; then
 fi
 echo ""
 
-# Read-only by design. This used to pass --write, which rewrote 25 run JSONs from
-# stale state.csv files on 2026-08-17 (halving md_production_steps_completed and so
-# every analysis time axis derived from it). A submission must never mutate run
-# metadata as a side effect; run reconcile deliberately if you want it to write.
+# Submission inspects progress without modifying run metadata.
 "${PYTHON}" ops/slurm/cluster/reconcile_md_metadata.py \
     --root . \
     --include-apo \
@@ -281,31 +278,21 @@ set -euo pipefail
 
 module reset >/dev/null 2>&1 || true
 module load chemistry py-openmm/8.1.1_py312
+export PYTHONNOUSERSITE=1
 
 cd ${PROJECT_ROOT}
 
-# py-openmm ships openmm on PYTHONPATH rather than in the interpreter's own
-# site-packages, so this line has to KEEP what module load just set. This
-# heredoc is unquoted -- deliberately, so MUTATION, REP_INT and PROJECT_ROOT
-# above resolve at submit time -- which means an unescaped \${PYTHONPATH:-}
-# would expand on the login node, where it is empty, and the job would export
-# ".../src:" over the top of openmm's path. That is exactly how 55 of 55 jobs
-# died with No module named openmm. Escape it so the JOB expands it.
-export PYTHONPATH="$GROUP_HOME/nnrti-mechanisms-repo/src:\${PYTHONPATH:-}"
+# Preserve the module path; escape it so the job expands it at runtime.
+export PYTHONPATH="$GROUP_HOME/nnrti-mechanisms/code/src:\${PYTHONPATH:-}"
 
-# Guard AFTER the export, so it tests the environment the run actually gets.
-# Before, it sat above this line, passed, and the run failed anyway.
+# Verify the final job environment before starting the simulation.
 python3 -c "import openmm, nnrti" || {
     echo "openmm/nnrti not importable on \$(hostname)" >&2
     echo "  PYTHONPATH=\${PYTHONPATH:-<empty>}" >&2
     exit 1
 }
 
-# Four of 27 resumed jobs died with SIGSEGV 7-18 ms after loading the 10 ns
-# checkpoint, before a single integration step. The checkpoints are healthy
-# (no NaN, potential and kinetic energy matching replicates that run fine) and
-# the nodes went on to run other jobs, so record what the GPU looked like and
-# make Python print a traceback from the signal handler rather than dying mute.
+# Record GPU state and enable tracebacks for checkpoint/runtime diagnostics.
 nvidia-smi --query-gpu=name,memory.total,memory.used,compute_mode --format=csv,noheader 2>&1 | sed "s/^/[gpu] /" || true
 
 python3 -X faulthandler -m nnrti.md.sherlock.run_md_job \

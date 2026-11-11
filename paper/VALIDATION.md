@@ -1,8 +1,8 @@
 # Reproduction validation — 10 November 2026
 
-- SHA-256 checks pass for all 15 submitted Word/PDF/Excel/TOC files before and after rebuilding. Submitted content was not edited.
-- All 11 supported artifact targets complete from an isolated copy containing only files intended for GitHub, without local trajectories or checkpoints. Exact exports include six main and seven supplementary figures, their final captions, two main tables and all seven SI workbooks.
-- All 14 tests pass, including native LibreOffice recalculation of the generated structural workbook. Independent NumPy/SciPy calculations verify all 753 statistical comparisons against source replicate data, both for the submitted cached workbook and the regenerated workbook. The generator retains full precision and writes 10,732 formula cells.
-- Rebuilt Figures 3–6 and Supplementary Figure 7 were visually compared with their submitted artwork.
+- All 15 frozen submission files match their SHA-256 reference checksums.
+- All 11 supported numerical rebuild targets complete in the isolated local `nnrti-prep` environment. The paper collection contains all 22 submitted figures and tables under their final publication labels, plus supported rebuilt candidates.
+- All 20 tests pass, including native spreadsheet recalculation and independent verification of all 753 structural statistical comparisons against source replicate data. The structural workbook retains 10,732 live formulas and full-precision inputs.
+- Preservation tests verify binary archive round trips, checksum rejection, source-change detection, retained prior MD copies and compatibility paths after workspace consolidation.
 
-The tested Python package versions are recorded in `reproduction-environment.json`. Figure 1, Figure 2 and curated SI workbooks are preserved through exact export; the artifact map documents their component sources and remaining manual steps.
+`reproduction-environment.json` records the tested local package versions. Each build writes its detailed input/output hashes and environment record to `generated/reproduction.json`, with verification logs under `generated/validation/`. Curated artwork and workbooks remain available through exact export; [ARTIFACTS.md](ARTIFACTS.md) documents their sources and manual composition steps.

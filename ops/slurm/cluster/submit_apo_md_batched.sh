@@ -27,12 +27,7 @@ cleanup_and_exit() {
 trap cleanup_and_exit INT TERM
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# ops/slurm/cluster -> three levels up is the repository root. It was
-# ../.. , which lands on ops/ , so every path built from PROJECT_ROOT
-# gained a second "ops/" and the submitter died on
-# ops/ops/slurm/cluster/reconcile_md_metadata.py. The September
-# reorganisation moved these scripts a level deeper and this did not
-# follow; it only worked while PROJECT_ROOT was set in the environment.
+# Override PROJECT_ROOT with the scratch workspace when invoking shared code.
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 cd "$PROJECT_ROOT"
 
@@ -98,10 +93,7 @@ if [ -n "${MUTATION_ALLOWLIST}" ]; then
 fi
 echo ""
 
-# Read-only by design. This used to pass --write, which rewrote 25 run JSONs from
-# stale state.csv files on 2026-08-17 (halving md_production_steps_completed and so
-# every analysis time axis derived from it). A submission must never mutate run
-# metadata as a side effect; run reconcile deliberately if you want it to write.
+# Submission inspects progress without modifying run metadata.
 "${PYTHON}" ops/slurm/cluster/reconcile_md_metadata.py \
     --root . \
     --include-apo \
@@ -253,6 +245,7 @@ submit_job() {
 set -euo pipefail
 
 module load chemistry py-openmm/8.1.1_py312
+export PYTHONNOUSERSITE=1
 
 cd ${PROJECT_ROOT}
 export PYTHONPATH="${PROJECT_ROOT}/src:\${PYTHONPATH:-}"

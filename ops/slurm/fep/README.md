@@ -11,6 +11,9 @@ quadrature.
 ## Environment
 
 Hybrid preparation and analysis run locally; GROMACS jobs run on the cluster.
+See the [environment guide](../../../docs/ENVIRONMENTS.md): `nnrti-prep` is the
+local default, `pmx` is only for legacy hybrid/raw-work tools, and Sherlock
+production uses site modules without Conda.
 
 ```bash
 bash ops/slurm/fep/setup_pmx_env.sh
@@ -25,14 +28,20 @@ pmx is installed from [deGrootLab/pmx](https://github.com/deGrootLab/pmx); the
 ## Preparation
 
 ```bash
-python -m nnrti.fep.asset_manifest                    # what MD assets exist
 conda activate nnrti-prep
+export PYTHONNOUSERSITE=1
+python -m nnrti.fep.asset_manifest                    # what MD assets exist
 python -m nnrti.fep.export_dor_itp                    # DOR OpenFF -> GROMACS
 conda activate pmx
 bash ops/slurm/fep/prepare_p0_hybrids.sh              # pmx hybrid structures
+# Transfer prepared inputs to the scratch workspace. Inside a Sherlock allocation:
 source ops/slurm/cluster/load_gromacs_module.sh
 bash ops/slurm/fep/build_p0_systems.sh                # solvated hybrid systems
 ```
+
+The legacy GROMACS system builder also needs the pmx CLI/force-field assets.
+Its optional cluster helper is a module-backed Python venv, not Conda; it is
+not required for prepared OpenMM MD or the local paper build.
 
 ## Switching
 

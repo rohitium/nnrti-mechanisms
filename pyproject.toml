@@ -15,9 +15,10 @@ authors = [
     { name = "Robert W. Shafer" },
 ]
 
-# The full environment is specified in environment.yml. This list exists so
-# that `pip install -e .` gives a working analysis environment on top of a
-# conda base that already provides OpenMM, MDAnalysis, MDTraj and RDKit.
+# The local scientific environment is specified in environment.yml. Install
+# this checkout into it with: python -m pip install --no-deps -e .
+# The dependencies below support analysis-only package installation; OpenMM,
+# MDAnalysis, MDTraj, RDKit and OpenFF are supplied by the Conda recipe.
 dependencies = [
     "numpy",
     "pandas",

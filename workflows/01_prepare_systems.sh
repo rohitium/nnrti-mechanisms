@@ -9,6 +9,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 PYTHON="${PYTHON:-python}"
 export PYTHONPATH="${PYTHONPATH:-src}"
+export PYTHONNOUSERSITE=1
 
 "$PYTHON" -m nnrti.structure_prep.preparation "$@"
 echo "Wrote manifests/md_manifest.csv"

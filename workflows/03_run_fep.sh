@@ -5,8 +5,9 @@
 # switches. Submitted from the cluster checkout:
 #
 #   ssh <cluster>
-#   cd nnrti-mechanisms && git pull
-#   ./ops/slurm/fep/prepare_p0_hybrids.sh
+#   cd "$SCRATCH/nnrti-mechanisms-work"
+#   export PROJECT_ROOT="$PWD"
+#   # Prepare hybrids locally first; transfer inputs before cluster submission.
 #   ./ops/slurm/fep/prepare_p0_neq.sh
 #   ./ops/slurm/fep/submit_p0_neq_pipeline.sh
 #
@@ -17,4 +18,4 @@
 # Pipeline reference: ops/slurm/fep/README.md
 
 set -euo pipefail
-sed -n '2,20p' "$(dirname "$0")/03_run_fep.sh" | sed 's/^# \{0,1\}//'
+sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'

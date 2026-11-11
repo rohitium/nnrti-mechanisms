@@ -6,10 +6,11 @@
 # docs/ for the runbooks.
 #
 #   ssh <cluster>
-#   cd nnrti-mechanisms && git pull
+#   cd "$SCRATCH/nnrti-mechanisms-work"
+#   export PROJECT_ROOT="$PWD"
 #   ./ops/slurm/cluster/submit_md_batched.sh
 
 set -euo pipefail
-cat "$(dirname "$0")/02_run_md.sh" | sed -n '2,12p' | sed 's/^# \{0,1\}//'
+sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'
 echo
 echo "Per-task entry point: python -m nnrti.md.sherlock.run_md_job --help"

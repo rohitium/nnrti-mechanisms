@@ -7,19 +7,19 @@ Start with the [submitted manuscript and SI](revisions/submission-ready/). The [
 ```bash
 conda env create -f environment.yml
 conda activate nnrti-prep
-pip install -e .
-python -m nnrti.cli.manuscript --check --export
-# Rebuild plots and numerical tables from deposited derived data:
+export PYTHONNOUSERSITE=1
+python -m pip install --no-deps -e .
 ./workflows/05_manuscript_artifacts.sh
-pytest -q
 ```
+
+Open `paper/generated/paper/README.md` for all 22 figures and tables under their final publication labels, including exact submitted versions and supported rebuilds. `paper/generated/reproduction.json` records hashes and environment versions; `paper/generated/validation/` holds test results.
 
 Exports and rebuilds go to ignored `paper/generated/`. The submitted Word, PDF and Excel files are protected by SHA-256 checksums and are never build destinations. Figure 1, Figure 2 and some SI tables include curated composition or experimental inputs; their exact submitted versions can be exported without recreating that manual work.
 
 | Directory | Purpose |
 |---|---|
 | `revisions/submission-ready/` | Frozen November submission: clean/marked manuscript, response, SI and seven workbooks |
-| `paper/` | Artifact map, submission checksums, editable figure sources and generated exports |
+| `paper/` | Artifact registry and map, submission checksums, editable sources and the generated paper collection |
 | `src/nnrti/` | Scientific code and analysis CLIs |
 | `data/`, `manifests/` | Experimental inputs, structures, preparation inputs and run provenance |
 | `results/analysis/` | Derived numerical data and plots; source filenames may retain earlier figure numbers |
@@ -28,3 +28,7 @@ Exports and rebuilds go to ignored `paper/generated/`. The submitted Word, PDF a
 | `archive/` | Historical materials |
 
 Raw trajectories and large simulation intermediates are excluded from Git. See [MD run data](docs/methods/md-run-data.md) for file formats and validation, and the [documentation index](docs/README.md) for methods and operations.
+
+[Repository structure](docs/REPOSITORY.md) defines code, data, outputs and archive roles locally and on Sherlock.
+
+[Environment guide](docs/ENVIRONMENTS.md): local `nnrti-prep`, Sherlock simulation modules, and the optional legacy pmx tools.

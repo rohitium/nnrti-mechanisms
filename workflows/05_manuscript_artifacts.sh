@@ -3,4 +3,5 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
-exec "${PYTHON:-python}" -m nnrti.cli.manuscript --export --rebuild all "$@"
+export PYTHONNOUSERSITE=1
+exec "${PYTHON:-python}" -m nnrti.cli.manuscript --bundle --verify "$@"
