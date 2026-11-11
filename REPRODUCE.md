@@ -36,7 +36,7 @@ The numbered workflow scripts describe preparation, MD, FEP, trajectory analysis
 
 Do not rerun holo simulations as part of routine manuscript regeneration. Before analysing recovered trajectories, verify completed steps, physical times, PBC sidecar freshness and the matched apo/holo window. The G190E apo pocket filter must be retained: replicate 2 loses 158 of 200 frames to the 10 Å pocket-Cα radius-of-gyration ceiling, with an additional volume-specific filter. The relevant implementations are in `compute_pocket_volume`, `compute_block_metrics` and the structural table builder.
 
-Raw-data storage, durable copies, backup limitations and restart rules are in [docs/methods/md-run-data.md](docs/methods/md-run-data.md). Storage status there is dated historical evidence; inspect current files and live jobs before assuming a copy is complete. Never clean an analysis checkout recursively: ignored trajectories may be its only local copy.
+See [MD run data](docs/methods/md-run-data.md) for trajectory validation and [storage operations](ops/STORAGE.md) for transfers and archive coverage. Verify raw-data availability before starting a trajectory-level rebuild.
 
 ## Verification
 

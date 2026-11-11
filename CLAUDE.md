@@ -17,6 +17,6 @@ MD run JSON status and DCD timestamps are unreliable. Cross-check maximum state.
 
 ## Sherlock data
 
-Read docs/methods/md-run-data.md before recovery or transfer. Check both $SCRATCH/nnrti-mechanisms-git and $SCRATCH/nnrti-mechanisms; jobs may reference either. Determine live job paths from squeue/logs. Do not delete a supposedly obsolete tree or copy/archive a run while jobs are writing to it. Follow the cluster's /etc/agents/AGENTS.md when working there.
+Read ops/STORAGE.md before recovery or transfer. Check both $SCRATCH/nnrti-mechanisms-git and $SCRATCH/nnrti-mechanisms; jobs may reference either. Determine live job paths from squeue/logs. Do not delete a supposedly obsolete tree or copy/archive a run while jobs are writing to it. Follow the cluster's /etc/agents/AGENTS.md when working there.
 
 Durable code: $GROUP_HOME/nnrti-mechanisms-repo. Durable data: $GROUP_HOME/nnrti-mechanisms, including dated fep_raw archives and MD mirrors. Scratch purges after 90 days; no Oak allocation. Backup completeness must be checked from current manifests, not assumed from these historical notes. Large cluster copies run as batch jobs.

@@ -25,6 +25,6 @@ Exports and rebuilds go to ignored `paper/generated/`. The submitted Word, PDF a
 | `results/analysis/` | Derived numerical data and plots; source filenames may retain earlier figure numbers |
 | `workflows/` | Preparation, simulation, analysis and manuscript entry points |
 | `ops/` | Cluster jobs, transfers and document utilities |
-| `archive/` | All superseded documents, audits and local recovery copies |
+| `archive/` | Historical materials |
 
-Raw trajectories and large simulation intermediates are excluded from Git. Their storage locations and recovery limits are documented in [MD run data](docs/methods/md-run-data.md). GitHub does not back them up.
+Raw trajectories and large simulation intermediates are excluded from Git. See [MD run data](docs/methods/md-run-data.md) for file formats and validation, and the [documentation index](docs/README.md) for methods and operations.
