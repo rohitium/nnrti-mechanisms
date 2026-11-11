@@ -4,8 +4,6 @@
 
 Division of Infectious Diseases, School of Medicine, Stanford University
 
-Code, derived data, and manuscript materials accompanying this study of doravirine resistance in HIV-1 reverse transcriptase.
-
 [Manuscript and supporting information](revisions/submission-ready/) · [Reproduce the results](REPRODUCE.md) · [Figures and tables](paper/ARTIFACTS.md) · [Repository guide](docs/REPOSITORY.md)
 
 ![Graphical abstract: molecular simulation of doravirine resistance in HIV-1 reverse transcriptase](paper/sources/TOC-Graphic.png)
