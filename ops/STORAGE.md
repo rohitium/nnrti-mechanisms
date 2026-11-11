@@ -52,7 +52,8 @@ For trajectory format and completion checks, see [MD run data](../docs/methods/m
 
 ## Preserve a completed project
 
-Run `ops/storage/preserve_sherlock.py --snapshot <unique-name>` inside a Slurm
+For the one-time preservation of the legacy two-tree layout, run
+`ops/storage/preserve_sherlock.py --snapshot <unique-name>` inside a Slurm
 allocation after checking that no other jobs are writing project data. The tool
 inventories the reviewed project directories, refreshes the designated MD
 mirror slots while preserving their prior copies, and writes separate archives

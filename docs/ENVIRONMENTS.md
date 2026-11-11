@@ -19,7 +19,8 @@ installable `nnrti` package and its Python dependencies. Keep both: creating the
 environment and installing the project are different operations. `--no-deps`
 keeps pip from replacing Conda-managed numerical packages. User-site packages
 are disabled so `~/.local` cannot silently override the activated environment.
-The paper workflow applies that isolation automatically.
+The environment recipe configures activation to disable user-site overrides;
+the paper workflow also applies that isolation automatically.
 
 The generated `paper/generated/reproduction.json` records the versions and hashes
 actually used for each build. The environment specification is a supported minor
@@ -80,9 +81,14 @@ FEP estimates and integrated work values and does not require pmx.
 
 `ops/slurm/fep/setup_pmx_env.sh` configures this local environment from
 [deGrootLab/pmx](https://github.com/deGrootLab/pmx); the similarly named PyPI package
-is unrelated. Use its pinned numerical compatibility ranges and validate the
+is unrelated. Use its pinned source revision and numerical versions and validate the
 estimators before raw FEP reanalysis. Activating an old environment or successfully
 importing pmx alone does not establish estimator compatibility.
+
+The validated local compatibility stack is pmx `0+untagged.896.ge7b6a00`,
+Python 3.11, NumPy 1.26.4, SciPy 1.13.1 and Matplotlib 3.8.4. It reproduces all
+114 saved phase/replicate BAR estimates from integrated work within their reported
+rounding. This check does not require the original per-switch trajectories.
 
 PyMOL is an external optional tool for regenerating structure artwork; exact
 submitted artwork is always available through the paper export. LibreOffice is

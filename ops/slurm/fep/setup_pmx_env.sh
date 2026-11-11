@@ -7,7 +7,7 @@
 #   bash ops/slurm/fep/setup_pmx_env.sh
 #
 # Creates conda env "pmx" (Python 3.11) unless PMX_VENV is set for a venv path.
-# Clones deGrootLab/pmx develop branch — NOT `pip install pmx` (wrong PyPI package).
+# Uses the validated deGrootLab/pmx revision, not the unrelated PyPI package.
 #
 # Optional:
 #   PMX_REPO=$HOME/src/pmx
@@ -16,12 +16,13 @@
 #   PMX_RECREATE=1
 
 set -euo pipefail
+export PYTHONNOUSERSITE=1
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 
 PMX_REPO="${PMX_REPO:-$HOME/src/pmx}"
-PMX_BRANCH="${PMX_BRANCH:-develop}"
+PMX_BRANCH="${PMX_BRANCH:-e7b6a00c25c12cdd8fabe32929ec2dc2fee76ff3}"
 PMX_GIT_URL="${PMX_GIT_URL:-https://github.com/deGrootLab/pmx.git}"
 PMX_CONDA_ENV="${PMX_CONDA_ENV:-pmx}"
 PMX_VENV="${PMX_VENV:-}"
@@ -93,7 +94,7 @@ print(site.getsitepackages()[0])
 PY
 )" -maxdepth 1 -name 'distutils-precedence.pth' -delete 2>/dev/null || true
 
-python -m pip install 'numpy>=1.26,<2' 'scipy>=1.11,<1.14' 'matplotlib>=3.8,<3.9' future
+python -m pip install 'numpy==1.26.4' 'scipy==1.13.1' 'matplotlib==3.8.4' future
 
 mkdir -p "$(dirname "${PMX_REPO}")"
 if [[ ! -d "${PMX_REPO}/.git" ]]; then
@@ -114,6 +115,19 @@ if ! command -v pmx >/dev/null 2>&1; then
     echo "[pmx] ERROR: pmx CLI not on PATH after install" >&2
     exit 1
 fi
+
+PMX_REQUESTED_REV="${PMX_BRANCH}" python - <<'PY'
+import math
+import os
+from pmx._version import get_versions
+from pmx.estimators import BAR
+revision = get_versions()
+requested = os.environ['PMX_REQUESTED_REV']
+if len(requested) == 40 and all(c in '0123456789abcdef' for c in requested.lower()):
+    assert revision['full-revisionid'] == requested and not revision['dirty'], revision
+assert math.isfinite(BAR(wf=[0.9, 1.0, 1.1], wr=[-0.9, -1.0, -1.1], T=300).dg)
+print('[pmx] Verified source revision and BAR estimator:', revision['version'])
+PY
 
 GMXLIB_PATH="$(python - <<'PY'
 import os

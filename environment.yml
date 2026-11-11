@@ -42,3 +42,6 @@ dependencies:
   - pytest=9.1
 
   - pip
+
+variables:
+  PYTHONNOUSERSITE: "1"
