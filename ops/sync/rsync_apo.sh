@@ -26,11 +26,8 @@ SLEEP_SECONDS="${SLEEP_SECONDS:-10}"
 COMPLETE_ONLY="${COMPLETE_ONLY:-0}"
 PARALLEL_JOBS="${PARALLEL_JOBS:-6}"
 MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-100.0}"
-# Default to the CANONICAL tree. $SCRATCH/nnrti-mechanisms (no -git suffix) is the
-# staging tree: it holds only slots that a job happened to resume into, and the
-# copies there can be either ahead of or behind canonical. Pulling from it gives a
-# partial, mixed-vintage picture of the apo runs. Override only deliberately.
-REMOTE_BASE="${REMOTE_BASE:-/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms-git}"
+# Live scratch transfers only. Archived paper data are in Group Home; see ops/STORAGE.md.
+REMOTE_BASE="${REMOTE_BASE:-/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms-work}"
 REMOTE_HOST="${SHERLOCK_USER}@login.sherlock.stanford.edu"
 LOCAL_APO_RUNS="results/md_runs/apo/"
 LOCAL_MANIFEST="manifests/apo_md_manifest.csv"
@@ -140,7 +137,7 @@ for jp in glob.glob('results/md_runs/apo/*/rep_*/*.json'):
     reconciled = reconcile_json_with_state_csv(
         json_path=json_path,
         state_csv_path=infer_state_csv_path(json_path),
-        write=True,
+        write=False,
         target_steps=target_steps,
     )
     status = reconciled.status

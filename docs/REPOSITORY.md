@@ -51,8 +51,10 @@ proof of completeness. No scratch source is retired before its preservation
 record is complete. Keep deployment inventories in `operations/`, not in public
 method documentation. See [storage operations](../ops/STORAGE.md).
 
-The scratch workspace is `$SCRATCH/nnrti-mechanisms-work/`: `results/` and `logs/`
-are working outputs; `src/`, `ops/`, `workflows/`, `data/` and `manifests/` link to
-the durable checkout. `legacy/` groups historical staging, old code and auxiliary
-runs. Set `PROJECT_ROOT` to this scratch workspace before submitting simulations.
-The older two project-tree names are compatibility links, not additional checkouts.
+The scratch workspace is `$SCRATCH/nnrti-mechanisms-work/`. Its `results/` and
+`logs/` directories start empty: stage only the inputs needed for an active job.
+`src/`, `ops/`, `workflows/`, `data/` and `manifests/` link to the durable checkout.
+Completed historical data live in the verified Group Home archive, not in scratch
+backup folders. Set `PROJECT_ROOT` to the scratch workspace before submitting
+simulations. The two older project-tree names are compatibility links to this
+single workspace, not additional checkouts.

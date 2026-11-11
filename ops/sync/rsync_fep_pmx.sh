@@ -24,7 +24,8 @@ if [[ "${DIRECTION}" != "pull" && "${DIRECTION}" != "push" ]]; then
   exit 1
 fi
 
-REMOTE_BASE="/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms-git"
+# Live scratch transfers only; use Git for deposited derived data and Group Home for archives.
+REMOTE_BASE="${REMOTE_BASE:-/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms-work}"
 REMOTE_HOST="${SHERLOCK_USER}@login.sherlock.stanford.edu"
 SUBPATH="results/analysis/fep_pmx/"
 LOCAL_DIR="${SUBPATH}"

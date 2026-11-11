@@ -1,5 +1,5 @@
 {
-  "scope": "Local derived-data paper build and 20 tests, 10 November 2026; nnrti-prep with user-site packages disabled. Sherlock simulations use site modules; this is not a simulation lockfile.",
+  "scope": "Local derived-data paper build and 21 tests, 10 November 2026; nnrti-prep with user-site packages disabled. Sherlock simulations use site modules; this is not a simulation lockfile.",
   "python": "3.12.12",
   "packages": {
     "numpy": "2.3.5",

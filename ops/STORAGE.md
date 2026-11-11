@@ -82,9 +82,19 @@ preservation outputs are retained separately rather than nested into new archive
 
 After the scratch snapshot is complete and local transfers have finished, run
 `ops/storage/finalize_sherlock.py` in Slurm with `--snapshot <name>` and
-`--local-transfer <name>.incoming`. It independently verifies transferred archives,
-checks scratch membership and modification records, and consolidates the working
-copies under `$SCRATCH/nnrti-mechanisms-work/`. Current results remain at `results/`;
-historical staging, code and auxiliary outputs move beneath `legacy/`. Links expose
-the maintained Group Home code. The two old project-tree paths remain compatibility
-links; no scientific file is deleted. Unexpected changes stop consolidation.
+`--local-transfer <name>.incoming`. Use `--resume` if an earlier stage already
+verified the local transfer. Pass `--retire-scratch` to remove verified inactive
+scratch copies and initialize one empty computation workspace. This mode permits
+already archived files to be missing, but rejects new or modified surviving files.
+It checks the durable archive records and MD mirror before removing any copy.
+
+The workspace links to maintained Group Home code; old project-tree names link
+to that same workspace. Stage only inputs needed for current jobs. Historical
+simulation data, backups and logs remain in the durable archive. Without the
+retirement flag, the tool retains working copies under `legacy/` instead.
+
+The older `ops/sync/rsync_*.sh` helpers transfer **live scratch runs**. They are not
+archive-recovery commands. Recover archived data from the verified Group Home
+snapshot or the `md_runs/` mirror using a fresh destination; the durable project
+README contains a concrete recovery example. Transfers within Sherlock run in
+Slurm. Do not push a full historical dataset back to scratch as a backup.

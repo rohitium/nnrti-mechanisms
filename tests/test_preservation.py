@@ -59,7 +59,8 @@ def test_resume_rejects_source_changes(tmp_path, preservation):
     assert preservation.digest(output/'snapshot.tar') == report['sha256']
 
 
-def test_finalization_preserves_bytes_and_legacy_paths(tmp_path, preservation, monkeypatch):
+@pytest.mark.parametrize('retire', [False, True])
+def test_finalization_preserves_bytes_and_legacy_paths(tmp_path, preservation, monkeypatch, retire):
     import subprocess
     import sys
     scratch, group = tmp_path/'scratch', tmp_path/'group'
@@ -78,6 +79,9 @@ def test_finalization_preserves_bytes_and_legacy_paths(tmp_path, preservation, m
         path = scratch/name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b'preserve these exact bytes')
+    outside = tmp_path/'outside.bin'
+    outside.write_bytes(b'outside retirement scope')
+    (scratch/'apo_collapse/external-link').symlink_to(outside)
     apo = scratch/'nnrti-mechanisms-git/results/md_runs/apo/wt/rep_01'
     apo.mkdir(parents=True)
     (apo/'wt_md_state.csv').write_text('Step,Energy\n50000000,0\n')
@@ -88,8 +92,15 @@ def test_finalization_preserves_bytes_and_legacy_paths(tmp_path, preservation, m
     paths = sorted(path.relative_to(scratch) for path in scratch.rglob('*'))
     record = preservation.archive(scratch, paths, snapshot, 'all')
     (snapshot/'COMPLETE.json').write_text(json.dumps({'archives': [record]}))
+    (snapshot/'SOURCE.json').write_text(json.dumps({'source': str(scratch)}))
+    transfers = []
     for name in ['analysis', 'history', 'inputs', 'md-runs']:
-        preservation.archive(scratch, [Path('migration.log')], incoming, name)
+        transfers.append(preservation.archive(scratch, [Path('migration.log')], incoming, name))
+    if retire:
+        final = project/'archive/local'
+        incoming.rename(final)
+        (final/'COMPLETE.json').write_text(json.dumps({'archives': transfers}))
+        (scratch/'migration.log').unlink()  # Simulate purge after verified preservation.
     monkeypatch.setenv('SCRATCH', str(scratch))
     monkeypatch.setenv('GROUP_HOME', str(group))
     monkeypatch.setenv('SLURM_JOB_ID', '123')
@@ -99,18 +110,30 @@ def test_finalization_preserves_bytes_and_legacy_paths(tmp_path, preservation, m
     spec = importlib.util.spec_from_file_location('finalization', path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    monkeypatch.setattr(sys, 'argv', [str(path), '--snapshot', 'snapshot', '--local-transfer', 'local.incoming'])
+    argv = [str(path), '--snapshot', 'snapshot', '--local-transfer', 'local.incoming']
+    if retire:
+        argv += ['--resume', '--retire-scratch']
+    monkeypatch.setattr(sys, 'argv', argv)
     module.main()
     work = scratch/'nnrti-mechanisms-work'
-    assert (work/'results/trace.bin').read_bytes() == b'preserve these exact bytes'
-    assert (work/'legacy/main-checkout/src/old.py').is_file()
-    assert (work/'legacy/auxiliary/apo_collapse/coordinates.bin').is_file()
-    assert (work/'legacy/auxiliary/migration.log').is_file()
+    if retire:
+        assert not list((work/'results').iterdir())
+        assert not (work/'legacy').exists()
+        assert not (scratch/'apo_collapse').exists()
+        with tarfile.open(snapshot/'all.tar') as archived:
+            assert archived.extractfile('nnrti-mechanisms-git/results/trace.bin').read() == b'preserve these exact bytes'
+        assert (scratch/'nnrti-mechanisms').resolve() == work
+    else:
+        assert (work/'results/trace.bin').read_bytes() == b'preserve these exact bytes'
+        assert (work/'legacy/main-checkout/src/old.py').is_file()
+        assert (work/'legacy/auxiliary/apo_collapse/coordinates.bin').is_file()
+        assert (work/'legacy/auxiliary/migration.log').is_file()
+        assert (scratch/'nnrti-mechanisms').resolve() == work/'legacy/staging'
     assert (scratch/'nnrti-mechanisms-git').resolve() == work
-    assert (scratch/'nnrti-mechanisms').resolve() == work/'legacy/staging'
     assert (work/'src').resolve() == project/'code/src'
     assert (project/'archive/local/COMPLETE.json').is_file()
     assert (mirror/'trajectory.bin').read_bytes() == b'completed trajectory'
     assert preservation.max_step(mirror) == 50000000
     assert preservation.max_step(project/'archive/md-mirror-prior/snapshot/wt/rep_01') == 5000000
     assert (project/'operations/MD-MIRROR-VERIFIED.json').is_file()
+    assert outside.read_bytes() == b'outside retirement scope'

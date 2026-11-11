@@ -37,11 +37,8 @@ SYNC_LOGS="${SYNC_LOGS:-0}"
 COMPLETE_ONLY="${COMPLETE_ONLY:-0}"
 PARALLEL_JOBS="${PARALLEL_JOBS:-6}"
 MD_PRODUCTION_NS="${MD_PRODUCTION_NS:-100.0}"
-# Default to the CANONICAL tree. $SCRATCH/nnrti-mechanisms (no -git suffix) is the
-# staging tree and holds only a partial, mixed-vintage subset of the runs. This
-# script pulls all of results/md_runs/, holo included, so pointing it at staging
-# would overwrite good holo data with whatever happens to be sitting there.
-REMOTE_BASE="${REMOTE_BASE:-/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms-git}"
+# Live scratch transfers only. Archived paper data are in Group Home; see ops/STORAGE.md.
+REMOTE_BASE="${REMOTE_BASE:-/scratch/users/${SHERLOCK_USER}/nnrti-mechanisms-work}"
 REMOTE_HOST="${SHERLOCK_USER}@login.sherlock.stanford.edu"
 LOCAL_MD_RUNS="results/md_runs/"
 LOCAL_MANIFEST="manifests/md_manifest.csv"
@@ -192,7 +189,7 @@ for jp in glob.glob('results/md_runs/*/rep_*/*.json'):
     reconciled = reconcile_json_with_state_csv(
         json_path=json_path,
         state_csv_path=infer_state_csv_path(json_path),
-        write=True,
+        write=False,
         target_steps=target_steps,
     )
     status = reconciled.status
